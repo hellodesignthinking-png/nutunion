@@ -1,8 +1,13 @@
 import { readFileSync } from 'fs';
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = 'https://htmrdefcbslgwttjayxt.supabase.co';
-const SERVICE_KEY = 'REMOVED_SECRET';
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!SUPABASE_URL || !SERVICE_KEY) {
+  console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars');
+  process.exit(1);
+}
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false }
