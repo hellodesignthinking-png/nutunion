@@ -18,12 +18,14 @@ export function AboutBento({ content }: AboutBentoProps) {
       title: c("cell_1_title", "Scene을 설계합니다"),
       body: c("cell_1_body", "공간 기획자, 문화 큐레이터, 플랫폼 빌더, 바이브 메이커가 모여 하나의 Scene을 만듭니다."),
       wide: false,
+      halftone: "halftone-paper",
     },
     {
       bg: "bg-nu-pink text-nu-paper",
       label: c("cell_2_label", "ACTIVE CREWS"),
       huge: c("cell_2_number", "152+"),
       wide: false,
+      halftone: "halftone-paper",
     },
     {
       bg: "",
@@ -31,6 +33,7 @@ export function AboutBento({ content }: AboutBentoProps) {
       title: c("cell_3_title", "Protocol"),
       body: c("cell_3_body", "각자의 전문성을 프로토콜로 연결합니다. 느슨하지만 강력한 유니온."),
       wide: false,
+      halftone: "halftone-pink",
     },
     {
       bg: "bg-nu-yellow text-nu-ink",
@@ -38,12 +41,15 @@ export function AboutBento({ content }: AboutBentoProps) {
       title: c("cell_4_title", "공간을 해석하고 재구성합니다"),
       body: "건축, 인테리어, 부동산 — 물리적 공간에 새로운 의미를 부여합니다.",
       wide: true,
+      halftone: "halftone-ink",
+      image: "/bento.png",
     },
     {
       bg: "bg-nu-blue text-nu-paper",
       label: c("cell_5_label", "CULTURE"),
       title: c("cell_5_title", "문화를 발굴하고 큐레이션합니다"),
       wide: false,
+      halftone: "halftone-paper",
     },
     {
       bg: "",
@@ -51,23 +57,42 @@ export function AboutBento({ content }: AboutBentoProps) {
       title: c("cell_6_title", "플랫폼을 설계하고 빌드합니다"),
       body: "커뮤니티와 서비스를 연결하는 디지털 인프라를 구축합니다.",
       wide: false,
+      halftone: "halftone-blue",
     },
   ];
 
   return (
-    <section id="about" ref={ref} className="border-b border-nu-ink/[0.12]">
+    <section id="about" ref={ref} className="border-b-[3px] border-nu-ink">
       <div className="bento-grid">
         {cells.map((cell, i) => (
           <div
             key={i}
-            className={`bento-cell reveal-item ${cell.bg} ${cell.wide ? "wide" : ""}`}
+            className={`bento-cell reveal-item ${cell.bg} ${cell.wide ? "wide" : ""} relative`}
           >
-            <span className="font-mono-nu text-[10px] font-bold tracking-[0.25em] uppercase opacity-45 mb-5 block">
-              {cell.label}
-            </span>
+            {/* Registration mark */}
+            <span className="absolute top-3 left-3 font-mono-nu text-[10px] opacity-10 select-none" aria-hidden="true">⊕</span>
+
+            {/* Halftone corner decoration */}
+            <div className={`absolute bottom-0 right-0 w-28 h-28 ${cell.halftone} opacity-[0.05]`} aria-hidden="true" />
+
+            {cell.image && (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={cell.image} alt="" className="absolute inset-0 w-full h-full object-cover mix-blend-multiply opacity-25 pointer-events-none" aria-hidden="true" />
+              </>
+            )}
+
+            <div className="relative z-10">
+              <span className="font-mono-nu text-[10px] font-bold tracking-[0.25em] uppercase opacity-45 mb-5 block">
+                {cell.label}
+              </span>
             {cell.huge && (
-              <span className="font-head text-[clamp(56px,6vw,88px)] font-extrabold leading-[0.9] tracking-tighter block">
+              <span className="font-head text-[clamp(56px,6vw,88px)] font-extrabold leading-[0.9] tracking-tighter block relative">
                 {cell.huge}
+                {/* Overprint ghost */}
+                <span className="absolute inset-0 text-nu-paper/20 translate-x-[3px] -translate-y-[2px] mix-blend-soft-light pointer-events-none select-none" aria-hidden="true">
+                  {cell.huge}
+                </span>
               </span>
             )}
             {cell.title && (
@@ -80,6 +105,7 @@ export function AboutBento({ content }: AboutBentoProps) {
                 {cell.body}
               </p>
             )}
+            </div>
           </div>
         ))}
       </div>

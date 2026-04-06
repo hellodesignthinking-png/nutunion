@@ -46,7 +46,7 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
-  /* NutUnion custom colors */
+  /* NutUnion Risograph Color Palette */
   --color-nu-pink: #FF48B0;
   --color-nu-blue: #0055FF;
   --color-nu-yellow: #FFD200;
@@ -77,7 +77,7 @@
   --accent: #FF48B0;
   --accent-foreground: #F4F1EA;
   --destructive: #B83325;
-  --border: rgba(26,26,26,0.12);
+  --border: #0D0D0D;
   --input: rgba(26,26,26,0.12);
   --ring: #FF48B0;
   --chart-1: #FF48B0;
@@ -85,20 +85,25 @@
   --chart-3: #FFD200;
   --chart-4: #C8882A;
   --chart-5: #6B6860;
-  --radius: 0.5rem;
+  --radius: 0px;
   --sidebar: #F4F1EA;
   --sidebar-foreground: #1A1A1A;
   --sidebar-primary: #0D0D0D;
   --sidebar-primary-foreground: #F4F1EA;
   --sidebar-accent: #EDE8DE;
   --sidebar-accent-foreground: #1A1A1A;
-  --sidebar-border: rgba(26,26,26,0.12);
+  --sidebar-border: #0D0D0D;
   --sidebar-ring: #FF48B0;
 
   --font-head: 'Outfit', sans-serif;
   --font-body: 'Space Grotesk', sans-serif;
   --font-mono-nu: 'Space Mono', monospace;
   --font-serif: 'Playfair Display', serif;
+
+  /* Risograph design tokens */
+  --riso-border: 3px solid #0D0D0D;
+  --riso-border-thin: 2px solid #0D0D0D;
+  --riso-border-thick: 4px solid #0D0D0D;
 }
 
 @layer base {
@@ -117,27 +122,156 @@
 }
 
 /* ============================================
-   NUTUNION CUSTOM STYLES
+   RISOGRAPH DESIGN SYSTEM — DOPPLE PRESS STYLE
    ============================================ */
 
-/* Grain overlay */
+/* ---- Grain / Noise overlay ---- */
 body::after {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 9000;
-  opacity: 0.15;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23g)' opacity='0.08'/%3E%3C/svg%3E");
-  background-size: 300px 300px;
+  opacity: 0.22;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='5' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23g)' opacity='0.12'/%3E%3C/svg%3E");
+  background-size: 400px 400px;
 }
 
 @media (max-width: 768px) {
-  body::after { display: none; }
+  body::after { opacity: 0.12; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   body::after { display: none; }
+}
+
+/* ---- Halftone pattern utilities ---- */
+.halftone-pink {
+  background-image: radial-gradient(circle, #FF48B0 1px, transparent 1px);
+  background-size: 6px 6px;
+}
+
+.halftone-blue {
+  background-image: radial-gradient(circle, #0055FF 1px, transparent 1px);
+  background-size: 6px 6px;
+}
+
+.halftone-yellow {
+  background-image: radial-gradient(circle, #FFD200 1.2px, transparent 1.2px);
+  background-size: 8px 8px;
+}
+
+.halftone-ink {
+  background-image: radial-gradient(circle, #0D0D0D 0.8px, transparent 0.8px);
+  background-size: 5px 5px;
+}
+
+.halftone-paper {
+  background-image: radial-gradient(circle, #F4F1EA 1px, transparent 1px);
+  background-size: 6px 6px;
+}
+
+/* ---- Overprint / Color overlay ---- */
+.overprint {
+  mix-blend-mode: multiply;
+}
+
+.overprint-screen {
+  mix-blend-mode: screen;
+}
+
+.overprint-overlay {
+  mix-blend-mode: overlay;
+}
+
+/* ---- Registration marks (decorative) ---- */
+.reg-mark::before {
+  content: '⊕';
+  position: absolute;
+  font-size: 14px;
+  color: rgba(13,13,13,0.15);
+  top: 6px;
+  left: 6px;
+  font-family: var(--font-mono-nu);
+  line-height: 1;
+}
+
+.reg-mark::after {
+  content: '⊕';
+  position: absolute;
+  font-size: 14px;
+  color: rgba(13,13,13,0.15);
+  bottom: 6px;
+  right: 6px;
+  font-family: var(--font-mono-nu);
+  line-height: 1;
+}
+
+/* ---- Risograph border utilities ---- */
+.riso-border {
+  border: var(--riso-border);
+}
+
+.riso-border-thin {
+  border: var(--riso-border-thin);
+}
+
+.riso-border-thick {
+  border: var(--riso-border-thick);
+}
+
+.riso-border-b {
+  border-bottom: var(--riso-border);
+}
+
+.riso-border-t {
+  border-top: var(--riso-border);
+}
+
+.riso-border-l {
+  border-left: var(--riso-border-thick);
+}
+
+/* ---- Ink bleed effect ---- */
+@keyframes ink-bleed {
+  0%, 100% { filter: blur(0px); transform: translate(0, 0); }
+  25% { filter: blur(0.3px); transform: translate(0.5px, -0.3px); }
+  50% { filter: blur(0.2px); transform: translate(-0.3px, 0.5px); }
+  75% { filter: blur(0.4px); transform: translate(0.3px, 0.2px); }
+}
+
+.ink-bleed {
+  animation: ink-bleed 8s ease-in-out infinite;
+}
+
+/* ---- Misregistration effect (offset print) ---- */
+.misregister {
+  position: relative;
+}
+
+.misregister::before {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  color: #FF48B0;
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+  transform: translate(2px, -1px);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.misregister::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  color: #0055FF;
+  opacity: 0.25;
+  mix-blend-mode: multiply;
+  transform: translate(-1.5px, 1px);
+  pointer-events: none;
+  z-index: -1;
 }
 
 /* Custom cursor */
@@ -158,25 +292,25 @@ body::after {
   position: fixed;
   width: 40px;
   height: 40px;
-  border-radius: 50%;
-  border: 1px solid rgba(26,26,26,0.4);
+  border-radius: 0;
+  border: 2px solid #0D0D0D;
   pointer-events: none;
   z-index: 9998;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) rotate(45deg);
   transition: left 0.15s ease-out, top 0.15s ease-out, width 0.12s ease, height 0.12s ease;
 }
 
-/* Ticker animation */
+/* ---- Ticker animation ---- */
 @keyframes ticker-scroll {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
 
 .ticker-track {
-  animation: ticker-scroll 30s linear infinite;
+  animation: ticker-scroll 25s linear infinite;
 }
 
-/* Reveal animation */
+/* ---- Reveal animation ---- */
 .reveal-item {
   opacity: 0;
   transform: translateY(30px);
@@ -188,7 +322,6 @@ body::after {
   transform: translateY(0);
 }
 
-/* Staggered reveal for children */
 .reveal-item:nth-child(1) { transition-delay: 0ms; }
 .reveal-item:nth-child(2) { transition-delay: 80ms; }
 .reveal-item:nth-child(3) { transition-delay: 160ms; }
@@ -196,24 +329,16 @@ body::after {
 .reveal-item:nth-child(5) { transition-delay: 320ms; }
 .reveal-item:nth-child(6) { transition-delay: 400ms; }
 
-/* Image hover zoom */
-.img-zoom {
-  transition: transform 0.6s ease;
-}
-.img-zoom:hover {
-  transform: scale(1.03);
-}
-
-/* Parallax-like subtle float */
+/* ---- Parallax-like subtle float ---- */
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(1deg); }
 }
 .float-anim {
   animation: float 6s ease-in-out infinite;
 }
 
-/* Bento grid */
+/* ---- Bento grid — Risograph style with heavy borders ---- */
 .bento-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -227,11 +352,11 @@ body::after {
 
 .bento-cell {
   padding: 48px 44px;
-  border-right: 1px solid rgba(26,26,26,0.12);
-  border-bottom: 1px solid rgba(26,26,26,0.12);
+  border-right: 3px solid #0D0D0D;
+  border-bottom: 3px solid #0D0D0D;
   position: relative;
   overflow: hidden;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.2s ease;
 }
 
 .bento-cell:nth-child(3n) {
@@ -239,8 +364,7 @@ body::after {
 }
 
 .bento-cell:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+  transform: translate(2px, -2px);
 }
 
 .bento-cell.wide {
@@ -251,33 +375,36 @@ body::after {
   .bento-cell.wide {
     grid-column: span 1;
   }
+  .bento-cell {
+    border-right: none;
+  }
 }
 
-/* Group card hover */
+/* ---- Group/Crew card — Risograph style ---- */
 .group-card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.15s ease;
+  border: 3px solid #0D0D0D;
+  position: relative;
 }
 
 .group-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+  transform: translate(4px, -4px);
+  box-shadow: -4px 4px 0px #0D0D0D;
 }
 
-/* Progress bar */
+/* ---- Progress bar — Risograph ---- */
 .progress-bar {
-  height: 3px;
-  background: rgba(26,26,26,0.08);
-  border-radius: 2px;
+  height: 4px;
+  background: #0D0D0D;
   overflow: hidden;
 }
 
 .progress-bar-fill {
   height: 100%;
-  border-radius: 2px;
   transition: width 0.5s ease;
 }
 
-/* Font utilities */
+/* ---- Font utilities ---- */
 .font-head {
   font-family: var(--font-head);
 }
@@ -294,7 +421,7 @@ body::after {
   font-family: var(--font-serif);
 }
 
-/* Calendar styles */
+/* ---- Calendar styles ---- */
 .calendar-event {
   transition: transform 0.15s ease;
 }
@@ -303,32 +430,31 @@ body::after {
   transform: scale(1.02);
 }
 
-/* Glass effect */
+/* ---- Glass effect — more brutalist ---- */
 .glass {
-  background: rgba(244,241,234,0.88);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(244,241,234,0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
-/* Scrollbar */
+/* ---- Scrollbar — Risograph ---- */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #F4F1EA;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(26,26,26,0.15);
-  border-radius: 3px;
+  background: #0D0D0D;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(26,26,26,0.3);
+  background: #FF48B0;
 }
 
-/* Page content fade-in */
+/* ---- Page content fade-in ---- */
 @keyframes page-fade-in {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
@@ -338,17 +464,52 @@ main, [data-page-content] {
   animation: page-fade-in 0.4s ease-out;
 }
 
-/* Pulse glow for NU text */
-@keyframes pulse-glow {
-  0%, 100% { filter: drop-shadow(0 0 0px transparent); opacity: 0.8; }
-  50% { filter: drop-shadow(0 0 20px rgba(255,72,176,0.25)); opacity: 1; }
+/* ---- Glitch text effect ---- */
+@keyframes glitch-shift {
+  0%, 100% { transform: translate(0); }
+  20% { transform: translate(-2px, 1px); }
+  40% { transform: translate(2px, -1px); }
+  60% { transform: translate(-1px, -1px); }
+  80% { transform: translate(1px, 2px); }
+}
+
+.glitch-text {
+  position: relative;
+}
+
+.glitch-text:hover::before {
+  content: attr(data-text);
+  position: absolute;
+  left: 2px;
+  top: -1px;
+  color: #FF48B0;
+  opacity: 0.6;
+  mix-blend-mode: multiply;
+  animation: glitch-shift 0.3s steps(5) infinite;
+}
+
+.glitch-text:hover::after {
+  content: attr(data-text);
+  position: absolute;
+  left: -2px;
+  top: 1px;
+  color: #0055FF;
+  opacity: 0.4;
+  mix-blend-mode: multiply;
+  animation: glitch-shift 0.3s steps(5) reverse infinite;
+}
+
+/* ---- Pulse glow → Ink pulse ---- */
+@keyframes ink-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 }
 
 .pulse-glow {
-  animation: pulse-glow 4s ease-in-out infinite;
+  animation: ink-pulse 3s ease-in-out infinite;
 }
 
-/* Scroll bounce indicator */
+/* ---- Scroll bounce indicator ---- */
 @keyframes scroll-bounce {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(6px); }
@@ -358,27 +519,83 @@ main, [data-page-content] {
   animation: scroll-bounce 2s ease-in-out infinite;
 }
 
-/* Link hover underline animation */
+/* ---- Stamp rotation on hover ---- */
+@keyframes stamp-press {
+  0% { transform: rotate(-2deg) scale(1); }
+  50% { transform: rotate(0deg) scale(1.03); }
+  100% { transform: rotate(-2deg) scale(1); }
+}
+
+.stamp-hover:hover {
+  animation: stamp-press 0.4s ease-out;
+}
+
+/* ---- Image risograph filter ---- */
+.riso-image {
+  position: relative;
+  overflow: hidden;
+}
+
+.riso-image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,72,176,0.15) 0%, rgba(0,85,255,0.1) 100%);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.riso-image img {
+  filter: contrast(1.15) saturate(0.8) grayscale(0.15);
+}
+
+/* ---- Link hover — brutalist underline ---- */
 a:not(.no-underline):not([class*="uppercase"]) {
   text-decoration: none;
-  background-image: linear-gradient(currentColor, currentColor);
-  background-position: 0% 100%;
-  background-repeat: no-repeat;
-  background-size: 0% 1px;
-  transition: background-size 0.3s ease;
+  position: relative;
 }
 
-a:not(.no-underline):not([class*="uppercase"]):hover {
-  background-size: 100% 1px;
+a:not(.no-underline):not([class*="uppercase"])::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 3px;
+  background: #FF48B0;
+  transition: width 0.2s ease;
 }
 
-/* Improved scrollbar */
+a:not(.no-underline):not([class*="uppercase"]):hover::after {
+  width: 100%;
+}
+
+/* ---- Improved scrollbar ---- */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(26,26,26,0.15) transparent;
+  scrollbar-color: #0D0D0D #F4F1EA;
 }
 
-/* Print styles */
+/* ---- Strikethrough decoration ---- */
+.riso-strike {
+  text-decoration: line-through;
+  text-decoration-color: #FF48B0;
+  text-decoration-thickness: 3px;
+}
+
+/* ---- Skew tag ---- */
+.riso-tag {
+  display: inline-block;
+  transform: rotate(-2deg);
+  border: 2px solid #0D0D0D;
+  padding: 2px 10px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+/* ---- Print styles ---- */
 @media print {
   nav, footer, .nu-cursor-dot, .nu-cursor-ring {
     display: none !important;

@@ -36,19 +36,33 @@ export function Footer({ content }: FooterProps) {
   }
 
   return (
-    <footer className="bg-nu-ink text-nu-paper/60 py-16 px-8" role="contentinfo">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+    <footer className="bg-nu-ink text-nu-paper/60 py-16 px-8 border-t-[3px] border-nu-pink relative overflow-hidden" role="contentinfo">
+      {/* Halftone background */}
+      <div className="absolute inset-0 halftone-paper opacity-[0.01]" aria-hidden="true" />
+
+      {/* Registration marks */}
+      <div className="absolute top-4 left-4 font-mono-nu text-[10px] text-nu-paper/10 select-none" aria-hidden="true">⊕</div>
+      <div className="absolute top-4 right-4 font-mono-nu text-[10px] text-nu-paper/10 select-none" aria-hidden="true">⊕</div>
+
+      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 relative">
         {/* Brand */}
-        <div>
-          <span className="font-head text-xl font-extrabold text-nu-paper block mb-3">
+        <div className="border-r-0 lg:border-r-[3px] lg:border-nu-paper/10 lg:pr-8">
+          <span className="font-head text-2xl font-extrabold text-nu-paper block mb-3 uppercase tracking-tight relative inline-block">
             nutunion
+            {/* Overprint ghost */}
+            <span className="absolute inset-0 text-nu-pink opacity-20 translate-x-[2px] -translate-y-[1px] pointer-events-none select-none mix-blend-screen" aria-hidden="true">
+              nutunion
+            </span>
           </span>
           <p className="text-sm leading-relaxed">{brandText}</p>
+          <div className="mt-4 font-mono-nu text-[8px] text-nu-paper/15 tracking-widest uppercase">
+            EST. 2024 — EDITION 001
+          </div>
         </div>
 
         {/* Navigation */}
         <nav aria-label="Footer navigation">
-          <span className="font-mono-nu text-[10px] uppercase tracking-[0.25em] text-nu-paper/30 mb-4 block">
+          <span className="font-mono-nu text-[10px] uppercase tracking-[0.25em] text-nu-paper/30 mb-4 block border-b-[2px] border-nu-paper/10 pb-2">
             Navigation
           </span>
           <div className="flex flex-col gap-2.5">
@@ -56,9 +70,9 @@ export function Footer({ content }: FooterProps) {
               <a
                 key={l.label}
                 href={l.href}
-                className="text-sm hover:text-nu-paper transition-colors no-underline"
+                className="text-sm hover:text-nu-pink transition-colors no-underline font-mono-nu text-[12px] uppercase tracking-widest"
               >
-                {l.label}
+                <span className="text-nu-pink/40 mr-2">→</span>{l.label}
               </a>
             ))}
           </div>
@@ -66,7 +80,7 @@ export function Footer({ content }: FooterProps) {
 
         {/* Protocol */}
         <div>
-          <span className="font-mono-nu text-[10px] uppercase tracking-[0.25em] text-nu-paper/30 mb-4 block">
+          <span className="font-mono-nu text-[10px] uppercase tracking-[0.25em] text-nu-paper/30 mb-4 block border-b-[2px] border-nu-paper/10 pb-2">
             Protocol
           </span>
           <div className="flex flex-col gap-2.5">
@@ -74,9 +88,9 @@ export function Footer({ content }: FooterProps) {
               <a
                 key={l.label}
                 href={l.href}
-                className="text-sm hover:text-nu-paper transition-colors no-underline"
+                className="text-sm hover:text-nu-pink transition-colors no-underline font-mono-nu text-[12px] uppercase tracking-widest"
               >
-                {l.label}
+                <span className="text-nu-blue/40 mr-2">→</span>{l.label}
               </a>
             ))}
           </div>
@@ -84,19 +98,27 @@ export function Footer({ content }: FooterProps) {
 
         {/* Contact */}
         <div>
-          <span className="font-mono-nu text-[10px] uppercase tracking-[0.25em] text-nu-paper/30 mb-4 block">
+          <span className="font-mono-nu text-[10px] uppercase tracking-[0.25em] text-nu-paper/30 mb-4 block border-b-[2px] border-nu-paper/10 pb-2">
             Contact
           </span>
-          <div className="flex flex-col gap-2.5 text-sm">
+          <div className="flex flex-col gap-2.5 font-mono-nu text-[12px] tracking-wider">
             <span>{contactEmail}</span>
             <span>{contactInsta}</span>
+          </div>
+
+          {/* Decorative stamp */}
+          <div className="mt-6 w-16 h-16 border-[2px] border-nu-paper/10 rotate-6 flex items-center justify-center">
+            <span className="font-mono-nu text-[7px] font-bold text-nu-paper/20 tracking-widest uppercase -rotate-6">NU</span>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto border-t border-white/10 mt-12 pt-6 text-center">
+      <div className="max-w-7xl mx-auto border-t-[3px] border-nu-paper/10 mt-12 pt-6 flex items-center justify-between">
         <span className="font-mono-nu text-[10px] tracking-widest text-nu-paper/25">
           {copyright}
+        </span>
+        <span className="font-mono-nu text-[9px] tracking-widest text-nu-paper/15 hidden md:block">
+          RISOGRAPH EDITION — DOPPLE PRESS INSPIRED
         </span>
       </div>
     </footer>

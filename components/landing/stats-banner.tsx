@@ -58,14 +58,30 @@ export function StatsBanner({ stats }: StatsBannerProps) {
   ];
 
   return (
-    <section className="bg-nu-ink py-16 px-8 border-t border-nu-paper/[0.08] border-b border-b-nu-paper/[0.08]">
-      <div className="max-w-6xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-4">
-        {data.map((s) => (
-          <div key={s.label} className="text-center">
-            <span className="font-head text-[clamp(36px,5vw,56px)] font-extrabold text-nu-paper block leading-none">
-              <AnimatedNumber target={s.num} suffix={s.suffix} />
+    <section className="bg-nu-ink py-16 px-8 border-t-[3px] border-nu-pink border-b-[3px] border-b-nu-blue relative overflow-hidden">
+      {/* Halftone background */}
+      <div className="absolute inset-0 halftone-paper opacity-[0.02]" aria-hidden="true" />
+
+      {/* Overprint stripes */}
+      <div className="absolute top-0 left-[10%] w-[30%] h-full bg-nu-pink/[0.04] mix-blend-screen -skew-x-12" aria-hidden="true" />
+      <div className="absolute top-0 right-[15%] w-[25%] h-full bg-nu-blue/[0.03] mix-blend-screen skew-x-12" aria-hidden="true" />
+
+      <div className="max-w-6xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-0 relative">
+        {data.map((s, i) => (
+          <div key={s.label} className={`text-center py-6 px-4 ${i < data.length - 1 ? 'border-r-[3px] border-nu-paper/10' : ''} relative`}>
+            {/* Large background number ghost */}
+            <span className="absolute inset-0 flex items-center justify-center font-head text-[80px] font-extrabold text-nu-paper/[0.02] select-none pointer-events-none" aria-hidden="true">
+              {String(i + 1).padStart(2, '0')}
             </span>
-            <span className="font-mono-nu text-[10px] uppercase tracking-[0.25em] text-nu-paper/40 mt-2 block">
+
+            <span className="font-head text-[clamp(40px,6vw,64px)] font-extrabold text-nu-paper block leading-none relative">
+              <AnimatedNumber target={s.num} suffix={s.suffix} />
+              {/* Overprint ghost */}
+              <span className="absolute inset-0 text-nu-pink/10 translate-x-[2px] -translate-y-[1px] pointer-events-none select-none" aria-hidden="true">
+                <AnimatedNumber target={s.num} suffix={s.suffix} />
+              </span>
+            </span>
+            <span className="font-mono-nu text-[10px] uppercase tracking-[0.25em] text-nu-paper/40 mt-3 block">
               {s.label}
             </span>
           </div>

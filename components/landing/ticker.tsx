@@ -26,16 +26,19 @@ export function Ticker({ content }: TickerProps) {
 
   return (
     <div
-      className="h-11 bg-nu-ink overflow-hidden flex items-center border-t border-nu-paper/[0.08] border-b border-b-nu-paper/[0.08]"
+      className="h-14 bg-nu-ink overflow-hidden flex items-center border-t-[3px] border-nu-ink border-b-[3px] border-b-nu-pink relative"
       aria-hidden="true"
     >
+      {/* Halftone subtle background */}
+      <div className="absolute inset-0 halftone-pink opacity-[0.03]" />
+
       <div className="ticker-track flex whitespace-nowrap">
         {doubled.map((text, i) => (
           <span
             key={i}
-            className="font-mono-nu text-[11px] font-bold tracking-[0.2em] uppercase text-nu-paper/40 px-12 flex items-center gap-8"
+            className="font-mono-nu text-[12px] font-bold tracking-[0.25em] uppercase text-nu-paper/50 px-12 flex items-center gap-8"
           >
-            <span className="w-1 h-1 rounded-full bg-nu-pink inline-block" />
+            <span className="w-2 h-2 bg-nu-pink inline-block rotate-45" />
             {text}
           </span>
         ))}
