@@ -19,6 +19,10 @@ import {
   Play,
   CheckCircle2,
   Lightbulb,
+  Users,
+  Edit3,
+  Save,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -45,10 +49,15 @@ export default function MeetingDetailPage() {
   const [showSummaryInput, setShowSummaryInput] = useState(false);
   const [summary, setSummary] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [editingSummary, setEditingSummary] = useState(false);
+  const [editedSummary, setEditedSummary] = useState("");
 
   // Next topic
   const [nextTopic, setNextTopic] = useState("");
   const [savingNextTopic, setSavingNextTopic] = useState(false);
+
+  // Attendance
+  const [attendees, setAttendees] = useState<{ userId: string; nickname: string; status: string }[]>([]);
 
   const loadMeeting = useCallback(async () => {
     const supabase = createClient();
@@ -69,6 +78,24 @@ export default function MeetingDetailPage() {
     if (!meetingData) return;
     setMeeting(meetingData);
     setNextTopic(meetingData.next_topic || "");
+    setEditedSummary(meetingData.summary || "");
+
+    // Load group members for attendee state init
+    const { data: groupMembersData } = await supabase
+      .from("group_members")
+      .select("user_id, profile:profiles(nickname)")
+      .eq("group_id", groupId)
+      .eq("status", "active");
+
+    if (groupMembersData) {
+      setAttendees(
+        groupMembersData.map((m: any) => ({
+          userId: m.user_id,
+          nickname: m.profile?.nickname || "?",
+          status: "none",
+        }))
+      );
+    }
 
     // Check edit permission
     const { data: membership } = await supabase
@@ -169,6 +196,22 @@ export default function MeetingDetailPage() {
     setSavingNextTopic(false);
   }
 
+  async function handleSaveEditedSummary() {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("meetings")
+      .update({ summary: editedSummary.trim() || null })
+      .eq("id", meetingId);
+
+    if (error) {
+      toast.error("저장에 실패했습니다");
+    } else {
+      toast.success("회의 요약이 수정되었습니다");
+      setEditingSummary(false);
+      await loadMeeting();
+    }
+  }
+
   if (loading || !meeting) {
     return (
       <div className="max-w-4xl mx-auto px-8 py-12">
@@ -251,15 +294,42 @@ export default function MeetingDetailPage() {
         </div>
       )}
 
-      {/* Summary for completed meetings */}
-      {meeting.status === "completed" && meeting.summary && (
-        <div className="bg-nu-pink/5 border border-nu-pink/20 p-5 mb-6">
-          <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink font-bold mb-2">
-            미팅 요약
-          </p>
-          <p className="text-sm text-nu-ink leading-relaxed">
-            {meeting.summary}
-          </p>
+      {/* Summary for completed meetings — with edit capability */}
+      {meeting.status === "completed" && (
+        <div className="bg-nu-pink/5 border-[2px] border-nu-pink/20 p-5 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink font-bold flex items-center gap-1.5">
+              <FileText size={12} /> 회의 요약
+            </p>
+            {canEdit && !editingSummary && (
+              <button onClick={() => { setEditingSummary(true); setEditedSummary(meeting.summary || ""); }}
+                className="font-mono-nu text-[10px] text-nu-pink hover:underline flex items-center gap-1">
+                <Edit3 size={11} /> 수정
+              </button>
+            )}
+          </div>
+          {editingSummary ? (
+            <div className="flex flex-col gap-2">
+              <Textarea
+                value={editedSummary}
+                onChange={(e) => setEditedSummary(e.target.value)}
+                rows={4}
+                className="border-nu-ink/15 bg-nu-white resize-none text-sm"
+              />
+              <div className="flex gap-2">
+                <Button onClick={handleSaveEditedSummary} className="bg-nu-pink text-nu-paper hover:bg-nu-pink/90 font-mono-nu text-[10px] uppercase tracking-widest">
+                  <Save size={12} /> 저장
+                </Button>
+                <Button variant="outline" onClick={() => setEditingSummary(false)} className="font-mono-nu text-[10px] uppercase tracking-widest">
+                  취소
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-nu-ink leading-relaxed">
+              {meeting.summary || <span className="text-nu-muted italic">요약이 아직 작성되지 않았습니다.</span>}
+            </p>
+          )}
         </div>
       )}
 
@@ -346,6 +416,17 @@ export default function MeetingDetailPage() {
           />
         </TabsContent>
 
+        <TabsContent value="attendance">
+          <div className="bg-nu-white border-[2px] border-nu-ink/[0.08] p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Users size={18} className="text-nu-blue" />
+              <h3 className="font-head text-lg font-extrabold text-nu-ink">출석 체크</h3>
+              <span className="font-mono-nu text-[10px] text-nu-muted ml-auto">{attendees.length}명</span>
+            </div>
+            <MeetingAttendanceCheck meetingId={meetingId} groupId={groupId} canEdit={canEdit} />
+          </div>
+        </TabsContent>
+
         <TabsContent value="next">
           <div className="bg-nu-white border border-nu-ink/[0.08] p-6">
             <div className="flex items-center gap-2 mb-4">
@@ -374,6 +455,100 @@ export default function MeetingDetailPage() {
           </div>
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Meeting Attendance Check Component                                  */
+/* ------------------------------------------------------------------ */
+"use client";
+
+function MeetingAttendanceCheck({
+  meetingId,
+  groupId,
+  canEdit,
+}: {
+  meetingId: string;
+  groupId: string;
+  canEdit: boolean;
+}) {
+  const [members, setMembers] = useState<{ userId: string; nickname: string; attended: boolean }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function load() {
+      const { data: gm } = await supabase
+        .from("group_members")
+        .select("user_id, profile:profiles(nickname)")
+        .eq("group_id", groupId)
+        .eq("status", "active");
+
+      const { data: att } = await supabase
+        .from("meeting_attendances")
+        .select("user_id")
+        .eq("meeting_id", meetingId);
+
+      const attendedSet = new Set((att || []).map((a: any) => a.user_id));
+
+      setMembers(
+        (gm || []).map((m: any) => ({
+          userId: m.user_id,
+          nickname: m.profile?.nickname || "?",
+          attended: attendedSet.has(m.user_id),
+        }))
+      );
+      setLoading(false);
+    }
+    load();
+  }, [meetingId, groupId]);
+
+  async function toggleAttendance(userId: string, currentlyAttended: boolean) {
+    if (!canEdit) return;
+    if (currentlyAttended) {
+      await supabase.from("meeting_attendances").delete().eq("meeting_id", meetingId).eq("user_id", userId);
+    } else {
+      await supabase.from("meeting_attendances").upsert({ meeting_id: meetingId, user_id: userId }, { onConflict: "meeting_id,user_id" });
+    }
+    setMembers((prev) => prev.map((m) => m.userId === userId ? { ...m, attended: !currentlyAttended } : m));
+  }
+
+  const attendedCount = members.filter((m) => m.attended).length;
+
+  if (loading) return <div className="animate-pulse h-20 bg-nu-cream/30" />;
+
+  return (
+    <div>
+      <p className="font-mono-nu text-[10px] text-nu-muted mb-4">
+        출석: {attendedCount}/{members.length}명
+        {members.length > 0 && (
+          <span className="ml-2 text-nu-pink">
+            ({Math.round((attendedCount / members.length) * 100)}%)
+          </span>
+        )}
+      </p>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+        {members.map((m) => (
+          <button
+            key={m.userId}
+            onClick={() => toggleAttendance(m.userId, m.attended)}
+            disabled={!canEdit}
+            className={`flex items-center gap-2.5 px-3 py-2.5 border-[2px] transition-all font-mono-nu text-[11px] ${
+              m.attended
+                ? "bg-green-50 border-green-400 text-green-700"
+                : "border-nu-ink/15 text-nu-muted hover:border-nu-ink/30"
+            } ${canEdit ? "cursor-pointer" : "cursor-default"}`}
+          >
+            {m.attended ? (
+              <CheckCircle2 size={14} className="text-green-500 shrink-0" />
+            ) : (
+              <div className="w-3.5 h-3.5 rounded-full border-[2px] border-nu-ink/20 shrink-0" />
+            )}
+            <span className="truncate">{m.nickname}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
