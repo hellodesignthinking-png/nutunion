@@ -29,6 +29,12 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
+  // IMPORTANT: ALWAYS call getUser() so that the auth token is refreshed
+  // even on public pages like the landing page.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const protectedPaths = ["/dashboard", "/groups", "/admin"];
   const isProtected = protectedPaths.some(
     (path) =>
@@ -36,15 +42,7 @@ export async function updateSession(request: NextRequest) {
       request.nextUrl.pathname.startsWith(path + "/")
   );
 
-  if (!isProtected) {
-    return supabaseResponse;
-  }
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (isProtected && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirectTo", request.nextUrl.pathname);

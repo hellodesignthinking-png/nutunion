@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Menu } from "lucide-react";
+import { Menu, LogOut } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { createClient } from "@/lib/supabase/client";
 
 const links = [
   { label: "About", href: "/#about" },
@@ -16,14 +17,32 @@ const links = [
 export function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
   const pathname = usePathname();
+  const router = useRouter();
   const isHome = pathname === "/";
+  const supabase = createClient();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+
+    // Auth check
+    supabase.auth.getUser().then(({ data: { user } }) => setUser(user));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setUser(session?.user || null);
+    });
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      subscription.unsubscribe();
+    };
   }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.refresh();
+  };
 
   function getHref(href: string) {
     if (isHome && href.startsWith("/#")) return href.replace("/", "");
@@ -68,18 +87,38 @@ export function Nav() {
 
       {/* Desktop right pills — brutalist buttons */}
       <div className="hidden md:flex gap-2 items-center">
-        <Link
-          href="/login"
-          className="font-mono-nu text-[11px] font-bold tracking-[0.08em] uppercase px-5 py-2.5 border-[2px] border-nu-graphite text-nu-graphite bg-transparent hover:bg-nu-graphite hover:text-nu-paper transition-all no-underline"
-        >
-          Login
-        </Link>
-        <Link
-          href="/signup"
-          className="font-mono-nu text-[11px] font-bold tracking-[0.08em] uppercase px-5 py-2.5 border-[2px] border-nu-pink bg-nu-pink text-nu-paper hover:bg-nu-ink hover:border-nu-ink transition-all no-underline hover:translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[-2px_2px_0_#FF48B0]"
-        >
-          Join
-        </Link>
+        {user ? (
+          <>
+            <Link
+              href="/dashboard"
+              className="font-mono-nu text-[11px] font-bold tracking-[0.08em] uppercase px-5 py-2.5 border-[2px] border-nu-pink bg-nu-pink text-nu-paper hover:bg-nu-ink hover:border-nu-ink transition-all no-underline hover:translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[-2px_2px_0_#FF48B0]"
+            >
+              Dashboard
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="p-2.5 border-[2px] border-transparent text-nu-graphite hover:border-nu-graphite transition-all"
+              aria-label="Logout"
+            >
+              <LogOut size={16} />
+            </button>
+          </>
+        ) : (
+          <>
+            <Link
+              href="/login"
+              className="font-mono-nu text-[11px] font-bold tracking-[0.08em] uppercase px-5 py-2.5 border-[2px] border-nu-graphite text-nu-graphite bg-transparent hover:bg-nu-graphite hover:text-nu-paper transition-all no-underline"
+            >
+              Login
+            </Link>
+            <Link
+              href="/signup"
+              className="font-mono-nu text-[11px] font-bold tracking-[0.08em] uppercase px-5 py-2.5 border-[2px] border-nu-pink bg-nu-pink text-nu-paper hover:bg-nu-ink hover:border-nu-ink transition-all no-underline hover:translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[-2px_2px_0_#FF48B0]"
+            >
+              Join
+            </Link>
+          </>
+        )}
       </div>
 
       {/* Mobile menu */}
@@ -102,12 +141,25 @@ export function Nav() {
                 </Link>
               ))}
               <div className="border-t-[3px] border-nu-ink pt-4 flex flex-col gap-3">
-                <Link href="/login" onClick={() => setOpen(false)} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-center py-3 border-[2px] border-nu-graphite text-nu-graphite no-underline">
-                  Login
-                </Link>
-                <Link href="/signup" onClick={() => setOpen(false)} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-center py-3 bg-nu-pink text-nu-paper border-[2px] border-nu-pink no-underline">
-                  Join
-                </Link>
+                {user ? (
+                  <>
+                    <Link href="/dashboard" onClick={() => setOpen(false)} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-center py-3 bg-nu-pink text-nu-paper border-[2px] border-nu-pink no-underline">
+                      Dashboard
+                    </Link>
+                    <button onClick={() => { handleLogout(); setOpen(false); }} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-center py-3 border-[2px] border-nu-graphite text-nu-graphite no-underline">
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/login" onClick={() => setOpen(false)} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-center py-3 border-[2px] border-nu-graphite text-nu-graphite no-underline">
+                      Login
+                    </Link>
+                    <Link href="/signup" onClick={() => setOpen(false)} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-center py-3 bg-nu-pink text-nu-paper border-[2px] border-nu-pink no-underline">
+                      Join
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </SheetContent>
