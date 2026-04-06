@@ -462,7 +462,6 @@ export default function MeetingDetailPage() {
 /* ------------------------------------------------------------------ */
 /*  Meeting Attendance Check Component                                  */
 /* ------------------------------------------------------------------ */
-"use client";
 
 function MeetingAttendanceCheck({
   meetingId,
