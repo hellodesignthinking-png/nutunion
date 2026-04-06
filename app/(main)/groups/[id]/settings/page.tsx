@@ -24,6 +24,8 @@ interface GroupData {
   description: string;
   max_members: number;
   host_id: string;
+  kakao_chat_url: string | null;
+  google_drive_url: string | null;
 }
 
 interface MemberData {
@@ -95,6 +97,8 @@ export default function GroupSettingsPage() {
         category: group.category,
         description: fd.get("description") as string,
         max_members: Math.max(2, Math.min(200, parseInt(fd.get("maxMembers") as string) || 20)),
+        kakao_chat_url: (fd.get("kakao_chat_url") as string) || null,
+        google_drive_url: (fd.get("google_drive_url") as string) || null,
       })
       .eq("id", groupId);
 
@@ -209,6 +213,22 @@ export default function GroupSettingsPage() {
             <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">최대 인원 (2~200)</Label>
             <Input name="maxMembers" type="number" defaultValue={group.max_members} min={2} max={200} className="mt-1.5 border-nu-ink/15 bg-transparent w-32" />
           </div>
+
+          {/* External integrations */}
+          <div className="border-t border-nu-ink/[0.06] pt-5 mt-2">
+            <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink block mb-4">외부 연동</span>
+            <div className="flex flex-col gap-4">
+              <div>
+                <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">카카오톡 오픈채팅 URL</Label>
+                <Input name="kakao_chat_url" defaultValue={group.kakao_chat_url || ""} placeholder="https://open.kakao.com/o/..." className="mt-1.5 border-nu-ink/15 bg-transparent" />
+              </div>
+              <div>
+                <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">Google Drive URL</Label>
+                <Input name="google_drive_url" defaultValue={group.google_drive_url || ""} placeholder="https://drive.google.com/drive/folders/..." className="mt-1.5 border-nu-ink/15 bg-transparent" />
+              </div>
+            </div>
+          </div>
+
           <Button type="submit" disabled={loading} className="self-start bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[11px] uppercase tracking-widest">
             {loading ? "저장 중..." : "저장"}
           </Button>

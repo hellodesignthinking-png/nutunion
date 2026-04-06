@@ -30,7 +30,9 @@ export default async function MainLayout({
     email: user.email || "",
     specialty: null,
     avatar_url: null,
-    role: "member",
+    role: "member" as const,
+    can_create_crew: false,
+    bio: null,
     created_at: new Date().toISOString(),
   };
 

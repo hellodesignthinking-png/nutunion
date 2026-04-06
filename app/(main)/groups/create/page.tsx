@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +21,56 @@ export default function CreateGroupPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [category, setCategory] = useState("");
+  const [permitted, setPermitted] = useState<boolean | null>(null);
+
+  // Permission check on mount
+  useEffect(() => {
+    (async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setPermitted(false);
+        return;
+      }
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("can_create_crew, role")
+        .eq("id", user.id)
+        .single();
+      if (profile?.can_create_crew === true || profile?.role === "admin") {
+        setPermitted(true);
+      } else {
+        setPermitted(false);
+      }
+    })();
+  }, []);
+
+  if (permitted === null) {
+    return (
+      <div className="max-w-2xl mx-auto px-8 py-12 text-center">
+        <p className="text-nu-gray">권한을 확인하는 중...</p>
+      </div>
+    );
+  }
+
+  if (permitted === false) {
+    return (
+      <div className="max-w-2xl mx-auto px-8 py-12 text-center">
+        <h1 className="font-head text-2xl font-extrabold text-nu-ink mb-4">
+          권한이 없습니다
+        </h1>
+        <p className="text-nu-gray mb-6">
+          크루를 생성할 권한이 없습니다. 관리자에게 문의해주세요.
+        </p>
+        <Link
+          href="/crews"
+          className="font-mono-nu text-[11px] uppercase tracking-widest bg-nu-ink text-nu-paper px-6 py-3 no-underline hover:bg-nu-pink transition-colors inline-block"
+        >
+          크루 목록으로 돌아가기
+        </Link>
+      </div>
+    );
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

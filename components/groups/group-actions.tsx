@@ -3,18 +3,23 @@
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { CheckCircle2, Clock, Users } from "lucide-react";
+
+interface GroupActionsProps {
+  groupId: string;
+  userId: string;
+  maxMembers: number;
+  memberCount: number;
+  membershipStatus?: "active" | "pending" | "waitlist" | null;
+}
 
 export function GroupActions({
   groupId,
   userId,
   maxMembers,
   memberCount,
-}: {
-  groupId: string;
-  userId: string;
-  maxMembers: number;
-  memberCount: number;
-}) {
+  membershipStatus,
+}: GroupActionsProps) {
   const router = useRouter();
 
   async function handleJoin() {
@@ -45,6 +50,32 @@ export function GroupActions({
     router.refresh();
   }
 
+  // Status badges for existing members
+  if (membershipStatus === "active") {
+    return (
+      <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-3 bg-green-600 text-white inline-flex items-center gap-2">
+        <CheckCircle2 size={14} /> 참여중
+      </span>
+    );
+  }
+
+  if (membershipStatus === "pending") {
+    return (
+      <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-3 bg-nu-amber text-white inline-flex items-center gap-2">
+        <Clock size={14} /> 승인중
+      </span>
+    );
+  }
+
+  if (membershipStatus === "waitlist") {
+    return (
+      <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-3 bg-nu-gray text-white inline-flex items-center gap-2">
+        <Users size={14} /> 대기중
+      </span>
+    );
+  }
+
+  // Join button for non-members
   const isFull = memberCount >= maxMembers;
 
   return (

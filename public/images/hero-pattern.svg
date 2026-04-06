@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">
+  <defs>
+    <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF48B0" stop-opacity="0.15"/>
+      <stop offset="50%" stop-color="#0055FF" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#FFD200" stop-opacity="0.12"/>
+    </linearGradient>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feBlend in="SourceGraphic" mode="multiply"/>
+    </filter>
+  </defs>
+  <rect width="800" height="800" fill="#0D0D0D"/>
+  <rect width="800" height="800" fill="url(#g1)"/>
+  <!-- Geometric shapes -->
+  <circle cx="200" cy="200" r="120" fill="none" stroke="#FF48B0" stroke-width="1" opacity="0.2"/>
+  <circle cx="600" cy="150" r="80" fill="none" stroke="#0055FF" stroke-width="1" opacity="0.15"/>
+  <circle cx="400" cy="500" r="200" fill="none" stroke="#FFD200" stroke-width="0.5" opacity="0.1"/>
+  <rect x="500" y="400" width="200" height="200" rx="0" fill="none" stroke="#FF48B0" stroke-width="0.5" opacity="0.12" transform="rotate(15 600 500)"/>
+  <line x1="0" y1="300" x2="800" y2="350" stroke="#F4F1EA" stroke-width="0.3" opacity="0.08"/>
+  <line x1="100" y1="0" x2="150" y2="800" stroke="#F4F1EA" stroke-width="0.3" opacity="0.06"/>
+  <line x1="650" y1="0" x2="700" y2="800" stroke="#F4F1EA" stroke-width="0.3" opacity="0.06"/>
+  <!-- Grid dots -->
+  <g fill="#F4F1EA" opacity="0.06">
+    <circle cx="100" cy="100" r="2"/><circle cx="200" cy="100" r="2"/><circle cx="300" cy="100" r="2"/>
+    <circle cx="400" cy="100" r="2"/><circle cx="500" cy="100" r="2"/><circle cx="600" cy="100" r="2"/>
+    <circle cx="700" cy="100" r="2"/><circle cx="100" cy="300" r="2"/><circle cx="200" cy="300" r="2"/>
+    <circle cx="300" cy="300" r="2"/><circle cx="400" cy="300" r="2"/><circle cx="500" cy="300" r="2"/>
+    <circle cx="600" cy="300" r="2"/><circle cx="700" cy="300" r="2"/><circle cx="100" cy="500" r="2"/>
+    <circle cx="200" cy="500" r="2"/><circle cx="300" cy="500" r="2"/><circle cx="400" cy="500" r="2"/>
+    <circle cx="500" cy="500" r="2"/><circle cx="600" cy="500" r="2"/><circle cx="700" cy="500" r="2"/>
+    <circle cx="100" cy="700" r="2"/><circle cx="200" cy="700" r="2"/><circle cx="300" cy="700" r="2"/>
+    <circle cx="400" cy="700" r="2"/><circle cx="500" cy="700" r="2"/><circle cx="600" cy="700" r="2"/>
+    <circle cx="700" cy="700" r="2"/>
+  </g>
+</svg>

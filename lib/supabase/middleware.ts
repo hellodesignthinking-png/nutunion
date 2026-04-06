@@ -29,10 +29,6 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   const protectedPaths = ["/dashboard", "/groups", "/admin"];
   const isProtected = protectedPaths.some(
     (path) =>
@@ -40,7 +36,15 @@ export async function updateSession(request: NextRequest) {
       request.nextUrl.pathname.startsWith(path + "/")
   );
 
-  if (isProtected && !user) {
+  if (!isProtected) {
+    return supabaseResponse;
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirectTo", request.nextUrl.pathname);

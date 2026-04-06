@@ -1,28 +1,13 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRevealOnScroll } from "@/lib/hooks/use-reveal-on-scroll";
 
 interface AboutBentoProps {
   content?: Record<string, string>;
 }
 
 export function AboutBento({ content }: AboutBentoProps) {
-  const ref = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    const els = ref.current?.querySelectorAll(".reveal-item");
-    if (!els) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) e.target.classList.add("visible");
-        });
-      },
-      { threshold: 0.08 }
-    );
-    els.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
+  const ref = useRevealOnScroll(0.08);
 
   const c = (key: string, fallback: string) => content?.[key] || fallback;
 

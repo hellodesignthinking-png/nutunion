@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import { Calendar, MapPin, Clock, Users, Repeat } from "lucide-react";
 import { EventActions } from "@/components/schedule/event-actions";
+import { GoogleCalendarButton } from "@/components/integrations/google-calendar-button";
+import { KakaoShareButton } from "@/components/integrations/kakao-share-button";
 
 export default async function EventDetailPage({
   params,
@@ -112,6 +114,22 @@ export default async function EventDetailPage({
             maxAttendees={event.max_attendees}
             registeredCount={registered.length}
           />
+
+          {/* Integration buttons */}
+          <div className="bg-nu-white border border-nu-ink/[0.08] p-6 mt-4 flex flex-wrap gap-3">
+            <GoogleCalendarButton
+              title={event.title}
+              description={event.description || ""}
+              location={event.location || ""}
+              startAt={event.start_at}
+              endAt={event.end_at}
+            />
+            <KakaoShareButton
+              title={event.title}
+              description={`${startDate.toLocaleDateString("ko")} - ${event.location || "nutunion"}`}
+              url={`https://nutunion.co.kr/groups/${groupId}/events/${eventId}`}
+            />
+          </div>
         </div>
 
         {/* Attendees sidebar */}

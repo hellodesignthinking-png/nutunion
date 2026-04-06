@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
+  <rect width="800" height="500" fill="#0055FF"/>
+  <!-- Abstract calendar/schedule grid -->
+  <g stroke="#F4F1EA" stroke-width="0.5" opacity="0.2">
+    <line x1="100" y1="50" x2="100" y2="450"/><line x1="200" y1="50" x2="200" y2="450"/>
+    <line x1="300" y1="50" x2="300" y2="450"/><line x1="400" y1="50" x2="400" y2="450"/>
+    <line x1="500" y1="50" x2="500" y2="450"/><line x1="600" y1="50" x2="600" y2="450"/>
+    <line x1="700" y1="50" x2="700" y2="450"/>
+    <line x1="100" y1="100" x2="700" y2="100"/><line x1="100" y1="180" x2="700" y2="180"/>
+    <line x1="100" y1="260" x2="700" y2="260"/><line x1="100" y1="340" x2="700" y2="340"/>
+    <line x1="100" y1="420" x2="700" y2="420"/>
+  </g>
+  <!-- Schedule blocks -->
+  <rect x="110" y="110" width="180" height="60" rx="4" fill="#FFD200" opacity="0.4"/>
+  <rect x="310" y="190" width="80" height="140" rx="4" fill="#FF48B0" opacity="0.4"/>
+  <rect x="410" y="110" width="180" height="60" rx="4" fill="#F4F1EA" opacity="0.15"/>
+  <rect x="510" y="270" width="80" height="60" rx="4" fill="#FFD200" opacity="0.3"/>
+  <rect x="210" y="350" width="180" height="60" rx="4" fill="#FF48B0" opacity="0.3"/>
+  <rect x="610" y="190" width="80" height="60" rx="4" fill="#F4F1EA" opacity="0.15"/>
+  <!-- Time labels -->
+  <text x="60" y="108" text-anchor="middle" font-family="monospace" font-size="8" fill="#F4F1EA" opacity="0.4">09:00</text>
+  <text x="60" y="188" text-anchor="middle" font-family="monospace" font-size="8" fill="#F4F1EA" opacity="0.4">12:00</text>
+  <text x="60" y="268" text-anchor="middle" font-family="monospace" font-size="8" fill="#F4F1EA" opacity="0.4">15:00</text>
+  <text x="60" y="348" text-anchor="middle" font-family="monospace" font-size="8" fill="#F4F1EA" opacity="0.4">18:00</text>
+  <!-- Day labels -->
+  <text x="150" y="80" text-anchor="middle" font-family="monospace" font-size="9" fill="#F4F1EA" opacity="0.5">MON</text>
+  <text x="250" y="80" text-anchor="middle" font-family="monospace" font-size="9" fill="#F4F1EA" opacity="0.5">TUE</text>
+  <text x="350" y="80" text-anchor="middle" font-family="monospace" font-size="9" fill="#F4F1EA" opacity="0.5">WED</text>
+  <text x="450" y="80" text-anchor="middle" font-family="monospace" font-size="9" fill="#F4F1EA" opacity="0.5">THU</text>
+  <text x="550" y="80" text-anchor="middle" font-family="monospace" font-size="9" fill="#F4F1EA" opacity="0.5">FRI</text>
+  <text x="650" y="80" text-anchor="middle" font-family="monospace" font-size="9" fill="#F4F1EA" opacity="0.5">SAT</text>
+</svg>

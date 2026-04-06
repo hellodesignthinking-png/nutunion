@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
 import {
@@ -12,18 +12,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, LogOut, User, Shield, Menu } from "lucide-react";
+import { Bell, LogOut, User, Shield, Menu, Settings } from "lucide-react";
+import { GlobalSearch } from "@/components/shared/global-search";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 const navLinks = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "소모임", href: "/groups" },
+  { label: "프로젝트", href: "/projects" },
+  { label: "멤버", href: "/members" },
   { label: "알림", href: "/notifications" },
 ];
 
 export function AuthNav({ profile }: { profile: Profile }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const isAdmin = profile.role === "admin";
 
   async function handleLogout() {
     const supabase = createClient();
@@ -43,22 +48,38 @@ export function AuthNav({ profile }: { profile: Profile }) {
       </Link>
 
       {/* Desktop links */}
-      <div className="hidden md:flex gap-8 items-center">
+      <div className="hidden md:flex gap-6 items-center">
         {navLinks.map((l) => (
           <Link
             key={l.href}
             href={l.href}
-            className="font-mono-nu text-[11px] text-nu-graphite no-underline tracking-[0.08em] uppercase opacity-70 hover:opacity-100 transition-opacity"
+            className={`font-mono-nu text-[11px] text-nu-graphite no-underline tracking-[0.08em] uppercase transition-opacity ${
+              pathname === l.href ? "opacity-100 font-bold" : "opacity-70 hover:opacity-100"
+            }`}
           >
             {l.label}
           </Link>
         ))}
+        {/* Admin link - always visible for admin users */}
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className={`font-mono-nu text-[11px] no-underline tracking-[0.08em] uppercase transition-colors inline-flex items-center gap-1.5 px-3 py-1.5 ${
+              pathname.startsWith("/admin")
+                ? "bg-nu-pink text-white"
+                : "text-nu-pink hover:bg-nu-pink/10"
+            }`}
+          >
+            <Shield size={12} /> 관리자
+          </Link>
+        )}
       </div>
 
       {/* Right side */}
-      <div className="hidden md:flex gap-4 items-center">
+      <div className="hidden md:flex gap-2 items-center">
+        <GlobalSearch />
         <Link
-          href="/dashboard"
+          href="/notifications"
           className="relative p-2 text-nu-graphite hover:text-nu-ink transition-colors"
         >
           <Bell size={18} />
@@ -68,19 +89,37 @@ export function AuthNav({ profile }: { profile: Profile }) {
           <DropdownMenuTrigger className="w-8 h-8 rounded-full bg-nu-pink text-white flex items-center justify-center font-head text-sm font-bold cursor-pointer">
             {initial}
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuContent align="end" className="w-52">
             <div className="px-3 py-2">
               <p className="font-head text-sm font-bold">{profile.nickname}</p>
               <p className="text-xs text-nu-muted truncate">{profile.email}</p>
+              {isAdmin && (
+                <span className="inline-block font-mono-nu text-[8px] uppercase tracking-widest bg-nu-pink text-white px-1.5 py-0.5 mt-1">Admin</span>
+              )}
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="flex items-center gap-2" onClick={() => router.push("/profile")}>
               <User size={14} /> 프로필
             </DropdownMenuItem>
-            {profile.role === "admin" && (
-              <DropdownMenuItem className="flex items-center gap-2" onClick={() => router.push("/admin")}>
-                <Shield size={14} /> 관리자
-              </DropdownMenuItem>
+            <DropdownMenuItem className="flex items-center gap-2" onClick={() => router.push("/dashboard")}>
+              <Settings size={14} /> 대시보드
+            </DropdownMenuItem>
+            {isAdmin && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="flex items-center gap-2 text-nu-pink" onClick={() => router.push("/admin")}>
+                  <Shield size={14} /> 관리자 페이지
+                </DropdownMenuItem>
+                <DropdownMenuItem className="flex items-center gap-2" onClick={() => router.push("/admin/content")}>
+                  콘텐츠 관리
+                </DropdownMenuItem>
+                <DropdownMenuItem className="flex items-center gap-2" onClick={() => router.push("/admin/media")}>
+                  미디어 관리
+                </DropdownMenuItem>
+                <DropdownMenuItem className="flex items-center gap-2" onClick={() => router.push("/admin/users")}>
+                  회원 관리
+                </DropdownMenuItem>
+              </>
             )}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 text-nu-red">
@@ -118,26 +157,36 @@ export function AuthNav({ profile }: { profile: Profile }) {
                     {l.label}
                   </Link>
                 ))}
-                <Link
-                  href="/profile"
-                  onClick={() => setOpen(false)}
-                  className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-graphite no-underline"
-                >
+                <Link href="/profile" onClick={() => setOpen(false)} className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-graphite no-underline">
                   프로필
                 </Link>
-                {profile.role === "admin" && (
-                  <Link
-                    href="/admin"
-                    onClick={() => setOpen(false)}
-                    className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-graphite no-underline"
-                  >
-                    관리자
-                  </Link>
-                )}
               </div>
+              {isAdmin && (
+                <div className="border-t border-nu-pink/20 pt-4 flex flex-col gap-3">
+                  <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-pink font-bold">관리자</span>
+                  <Link href="/admin" onClick={() => setOpen(false)} className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-pink no-underline">
+                    관리자 대시보드
+                  </Link>
+                  <Link href="/admin/content" onClick={() => setOpen(false)} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
+                    콘텐츠 관리
+                  </Link>
+                  <Link href="/admin/media" onClick={() => setOpen(false)} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
+                    미디어 관리
+                  </Link>
+                  <Link href="/admin/users" onClick={() => setOpen(false)} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
+                    회원 관리
+                  </Link>
+                  <Link href="/admin/groups" onClick={() => setOpen(false)} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
+                    소모임 관리
+                  </Link>
+                  <Link href="/admin/projects" onClick={() => setOpen(false)} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
+                    프로젝트 관리
+                  </Link>
+                </div>
+              )}
               <button
                 onClick={handleLogout}
-                className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-red text-left mt-4"
+                className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-red text-left mt-2"
               >
                 로그아웃
               </button>
