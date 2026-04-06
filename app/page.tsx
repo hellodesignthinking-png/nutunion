@@ -13,7 +13,7 @@ const ShowcaseSection = dynamic(() => import("@/components/landing/showcase-sect
 const StatsBanner = dynamic(() => import("@/components/landing/stats-banner").then(m => ({ default: m.StatsBanner })));
 const VideoSection = dynamic(() => import("@/components/landing/video-section").then(m => ({ default: m.VideoSection })));
 const GroupsPreview = dynamic(() => import("@/components/landing/groups-preview").then(m => ({ default: m.GroupsPreview })));
-const IdentityGeneratorSection = dynamic(() => import("@/components/landing/identity-generator-section").then(m => ({ default: m.IdentityGeneratorSection })));
+const LiquidIdentitySection = dynamic(() => import("@/components/landing/liquid-identity-section").then(m => ({ default: m.LiquidIdentitySection })));
 const ProjectsPreview = dynamic(() => import("@/components/landing/projects-preview").then(m => ({ default: m.ProjectsPreview })));
 const TestimonialsSection = dynamic(() => import("@/components/landing/testimonials-section").then(m => ({ default: m.TestimonialsSection })));
 const JoinSection = dynamic(() => import("@/components/landing/join-section").then(m => ({ default: m.JoinSection })));
@@ -106,8 +106,8 @@ export default async function LandingPage() {
         <StatsBanner stats={stats} />
         <VideoSection content={content.video} />
         <GroupsPreview groups={liveGroups} />
-        <div id="identity-generator">
-          <IdentityGeneratorSection />
+        <div id="liquid-identity">
+          <LiquidIdentitySection />
         </div>
         <ProjectsPreview projects={liveProjects} />
         <TestimonialsSection />
