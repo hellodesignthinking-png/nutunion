@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 interface AgendaItem {
@@ -66,7 +67,11 @@ export default function CreateMeetingPage() {
       return;
     }
 
-    const scheduledAt = new Date(`${date}T${time}`).toISOString();
+    // 로컬 시간 기준으로 ISO 문자열 생성 (한국 시간 유지)
+    const [year, month, day] = date.split("-").map(Number);
+    const [hour, minute] = time.split(":").map(Number);
+    const localDate = new Date(year, month - 1, day, hour, minute, 0);
+    const scheduledAt = localDate.toISOString();
 
     const supabase = createClient();
     const {
@@ -127,6 +132,20 @@ export default function CreateMeetingPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-8 py-12">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 mb-6">
+        <Link href={`/groups/${groupId}`}
+          className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted hover:text-nu-ink no-underline flex items-center gap-1.5 transition-colors">
+          <ArrowLeft size={13} /> 소모임으로
+        </Link>
+        <span className="text-nu-muted/40">/</span>
+        <Link href={`/groups/${groupId}/meetings`}
+          className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted hover:text-nu-ink no-underline transition-colors">
+          미팅
+        </Link>
+        <span className="text-nu-muted/40">/</span>
+        <span className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-ink">새 미팅</span>
+      </div>
       <h1 className="font-head text-3xl font-extrabold text-nu-ink mb-2">
         새 미팅 만들기
       </h1>

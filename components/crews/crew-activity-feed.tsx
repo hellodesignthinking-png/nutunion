@@ -146,7 +146,7 @@ export function CrewActivityFeed({
             </div>
             <button
               onClick={handlePost}
-              disabled={posting || !content.trim()}
+              disabled={posting || (!content.trim() && !driveLink.trim())}
               className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors disabled:opacity-50 flex items-center gap-1.5"
             >
               {posting ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}

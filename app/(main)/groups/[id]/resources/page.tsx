@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { FileAttachment } from "@/lib/types";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,8 @@ import {
   FolderOpen,
   HardDrive,
   Plus,
+  ArrowLeft,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { DrivePicker } from "@/components/integrations/drive-picker";
@@ -56,12 +59,17 @@ export default function ResourcesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"files" | "drive" | "meetings">("files");
+  const [groupName, setGroupName] = useState("");
 
   const loadData = useCallback(async () => {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     setUserId(user.id);
+
+    // Load group name
+    const { data: grp } = await supabase.from("groups").select("name").eq("id", groupId).single();
+    if (grp) setGroupName(grp.name || "소모임");
 
     const { data: filesData } = await supabase
       .from("file_attachments")
@@ -196,6 +204,15 @@ export default function ResourcesPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-8 py-12">
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-1.5 mb-6 font-mono-nu text-[11px] uppercase tracking-widest">
+        <Link href={`/groups/${groupId}`}
+          className="text-nu-muted hover:text-nu-ink no-underline flex items-center gap-1 transition-colors">
+          <ArrowLeft size={12} /> {groupName || "소모임"}
+        </Link>
+        <ChevronRight size={12} className="text-nu-muted/40" />
+        <span className="text-nu-ink">자료실</span>
+      </nav>
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div>
