@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Outfit, Space_Grotesk, Space_Mono, Playfair_Display } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { GenreThemeProvider } from "@/components/brand/genre-theme-context";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -41,7 +42,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ko" className={`${outfit.variable} ${spaceGrotesk.variable} ${spaceMono.variable} ${playfair.variable}`}>
       <body className="min-h-screen antialiased">
-        {children}
+        <GenreThemeProvider>
+          {children}
+        </GenreThemeProvider>
         <Toaster position="bottom-right" />
       </body>
     </html>
