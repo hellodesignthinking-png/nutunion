@@ -120,33 +120,59 @@ export function AdminUserList({ users }: { users: UserWithCrews[] }) {
     setSavingId(userId);
     const supabase = createClient();
 
-    // Grade에서 권한 자동 반영 (override 가능)
-    const gradeConfig = GRADE_MAP[editGrade];
-    const finalCrewPerm   = editCrewPerm  || gradeConfig?.canCreateCrew    || editRole === "admin";
-    const finalProjectPerm= editProjectPerm || gradeConfig?.canCreateProject || editRole === "admin";
+    const gradeConfig      = GRADE_MAP[editGrade];
+    const finalCrewPerm    = editCrewPerm    || gradeConfig?.canCreateCrew    || editRole === "admin";
+    const finalProjectPerm = editProjectPerm || gradeConfig?.canCreateProject || editRole === "admin";
 
-    const { error } = await supabase.from("profiles").update({
-      grade: editGrade,
+    // ① 항상 존재하는 컬럼만 먼저 업데이트
+    const { error: baseError } = await supabase.from("profiles").update({
       role: editRole,
       can_create_crew: finalCrewPerm,
+    }).eq("id", userId);
+
+    if (baseError) {
+      toast.error("저장에 실패했습니다: " + baseError.message);
+      setSavingId(null);
+      return;
+    }
+
+    // ② grade / can_create_project — SQL 마이그레이션 실행 후에만 존재
+    //    컬럼 없으면 400 에러 발생 → 무시하고 경고만 표시
+    let gradeWarning = false;
+    const { error: gradeError } = await supabase.from("profiles").update({
+      grade: editGrade,
       can_create_project: finalProjectPerm,
     }).eq("id", userId);
 
-    if (error) {
-      toast.error("저장에 실패했습니다: " + error.message);
-    } else {
-      setLocalUsers(prev => prev.map(u => u.id === userId ? {
-        ...u,
-        grade: editGrade,
-        role: editRole as any,
-        can_create_crew: finalCrewPerm,
-        can_create_project: finalProjectPerm,
-      } as UserWithCrews : u));
-      toast.success("회원 정보가 업데이트되었습니다");
-      setEditingId(null);
+    if (gradeError) {
+      // 컬럼 미존재 (400) 또는 다른 에러
+      gradeWarning = true;
     }
+
+    // 로컬 상태 업데이트
+    setLocalUsers(prev => prev.map(u => u.id === userId ? {
+      ...u,
+      role: editRole as any,
+      can_create_crew: finalCrewPerm,
+      ...(gradeWarning ? {} : {
+        grade: editGrade,
+        can_create_project: finalProjectPerm,
+      }),
+    } as UserWithCrews : u));
+
+    if (gradeWarning) {
+      toast.success("역할/소모임 권한이 저장되었습니다");
+      toast("등급 저장을 위해 Supabase SQL 마이그레이션이 필요합니다", {
+        description: "migration_member_grades.sql 을 실행하면 등급/프로젝트 권한도 저장됩니다",
+        duration: 6000,
+      });
+    } else {
+      toast.success("회원 정보가 업데이트되었습니다");
+    }
+    setEditingId(null);
     setSavingId(null);
   }
+
 
   function formatDate(d: string) {
     return new Date(d).toLocaleDateString("ko", { year: "numeric", month: "short", day: "numeric" });
