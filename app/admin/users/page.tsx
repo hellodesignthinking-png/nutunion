@@ -6,7 +6,7 @@ export default async function AdminUsersPage() {
 
   const { data: users } = await supabase
     .from("profiles")
-    .select("*")
+    .select("*, grade, can_create_project")
     .order("created_at", { ascending: false });
 
   // Fetch crew memberships for all users

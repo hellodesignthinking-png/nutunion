@@ -4,336 +4,377 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useState, useMemo } from "react";
-import { Search, ChevronDown, ChevronUp, Filter } from "lucide-react";
+import {
+  Search, Filter, ChevronDown, ChevronUp,
+  Shield, Crown, Star, Award, UserX, Check,
+  Layers, Briefcase, Edit3, X
+} from "lucide-react";
 import type { Profile } from "@/lib/types";
 
 interface UserWithCrews extends Profile {
+  grade?: string;
+  can_create_project?: boolean;
   crews?: { group_id: string; group_name: string; role: string }[];
+}
+
+// ── 등급 정의 ──────────────────────────────────────────────────────────
+const GRADES = [
+  {
+    value: "bronze",
+    label: "브론즈",
+    labelEn: "Bronze",
+    color: "bg-amber-100 text-amber-700 border-amber-200",
+    dot: "bg-amber-400",
+    icon: Award,
+    desc: "기본 회원",
+    canCreateCrew: false,
+    canCreateProject: false,
+  },
+  {
+    value: "silver",
+    label: "실버",
+    labelEn: "Silver",
+    color: "bg-slate-100 text-slate-600 border-slate-200",
+    dot: "bg-slate-400",
+    icon: Star,
+    desc: "소모임 개설 가능",
+    canCreateCrew: true,
+    canCreateProject: false,
+  },
+  {
+    value: "gold",
+    label: "골드",
+    labelEn: "Gold",
+    color: "bg-yellow-100 text-yellow-700 border-yellow-200",
+    dot: "bg-yellow-400",
+    icon: Star,
+    desc: "소모임 + 프로젝트 개설",
+    canCreateCrew: true,
+    canCreateProject: true,
+  },
+  {
+    value: "vip",
+    label: "VIP",
+    labelEn: "VIP",
+    color: "bg-nu-pink/10 text-nu-pink border-nu-pink/20",
+    dot: "bg-nu-pink",
+    icon: Crown,
+    desc: "VIP 멤버",
+    canCreateCrew: true,
+    canCreateProject: true,
+  },
+];
+
+const GRADE_MAP = Object.fromEntries(GRADES.map(g => [g.value, g]));
+
+function GradeBadge({ grade, role }: { grade?: string; role?: string }) {
+  if (role === "admin") {
+    return (
+      <span className="inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest bg-nu-pink text-white px-2 py-0.5 border border-nu-pink">
+        <Shield size={9} /> 최고관리자
+      </span>
+    );
+  }
+  const g = GRADE_MAP[grade || "bronze"] || GRADE_MAP.bronze;
+  return (
+    <span className={`inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 border ${g.color}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${g.dot}`} />
+      {g.label}
+    </span>
+  );
 }
 
 export function AdminUserList({ users }: { users: UserWithCrews[] }) {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [specialtyFilter, setSpecialtyFilter] = useState<string>("all");
-  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery]     = useState("");
+  const [gradeFilter, setGradeFilter]     = useState("all");
+  const [expandedId, setExpandedId]       = useState<string | null>(null);
+  const [editingId, setEditingId]         = useState<string | null>(null);
+  const [savingId, setSavingId]           = useState<string | null>(null);
+  const [editGrade, setEditGrade]         = useState("bronze");
+  const [editCrewPerm, setEditCrewPerm]   = useState(false);
+  const [editProjectPerm, setEditProjectPerm] = useState(false);
+  const [editRole, setEditRole]           = useState("member");
+  const [localUsers, setLocalUsers]       = useState(users);
 
-  const catLabels: Record<string, string> = {
-    space: "공간",
-    culture: "문화",
-    platform: "플랫폼",
-    vibe: "바이브",
-  };
+  const filtered = useMemo(() => localUsers.filter(u => {
+    const q = searchQuery.toLowerCase();
+    const matchQ = !q
+      || (u.nickname || "").toLowerCase().includes(q)
+      || u.email.toLowerCase().includes(q);
+    const matchGrade = gradeFilter === "all"
+      || (gradeFilter === "admin" ? u.role === "admin" : u.grade === gradeFilter);
+    return matchQ && matchGrade;
+  }), [localUsers, searchQuery, gradeFilter]);
 
-  const specialties = ["all", "space", "culture", "platform", "vibe"];
+  function openEdit(u: UserWithCrews) {
+    setEditingId(u.id);
+    setEditGrade(u.grade || "bronze");
+    setEditCrewPerm(u.can_create_crew ?? false);
+    setEditProjectPerm(u.can_create_project ?? false);
+    setEditRole(u.role || "member");
+    setExpandedId(u.id);
+  }
 
-  const filteredUsers = useMemo(() => {
-    return users.filter((u) => {
-      const matchesSearch =
-        !searchQuery ||
-        (u.nickname || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (u.name || "").toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesSpecialty =
-        specialtyFilter === "all" || u.specialty === specialtyFilter;
-      return matchesSearch && matchesSpecialty;
-    });
-  }, [users, searchQuery, specialtyFilter]);
-
-  async function toggleCrewPermission(userId: string, currentValue: boolean) {
+  async function saveUser(userId: string) {
+    setSavingId(userId);
     const supabase = createClient();
-    const { error } = await supabase
-      .from("profiles")
-      .update({ can_create_crew: !currentValue })
-      .eq("id", userId);
+
+    // Grade에서 권한 자동 반영 (override 가능)
+    const gradeConfig = GRADE_MAP[editGrade];
+    const finalCrewPerm   = editCrewPerm  || gradeConfig?.canCreateCrew    || editRole === "admin";
+    const finalProjectPerm= editProjectPerm || gradeConfig?.canCreateProject || editRole === "admin";
+
+    const { error } = await supabase.from("profiles").update({
+      grade: editGrade,
+      role: editRole,
+      can_create_crew: finalCrewPerm,
+      can_create_project: finalProjectPerm,
+    }).eq("id", userId);
 
     if (error) {
-      toast.error(error.message);
-      return;
+      toast.error("저장에 실패했습니다: " + error.message);
+    } else {
+      setLocalUsers(prev => prev.map(u => u.id === userId ? {
+        ...u,
+        grade: editGrade,
+        role: editRole as any,
+        can_create_crew: finalCrewPerm,
+        can_create_project: finalProjectPerm,
+      } as UserWithCrews : u));
+      toast.success("회원 정보가 업데이트되었습니다");
+      setEditingId(null);
     }
-    toast.success(`크루 생성 권한이 ${!currentValue ? "부여" : "해제"}되었습니다`);
-    router.refresh();
+    setSavingId(null);
   }
 
-  async function toggleRole(userId: string, currentRole: string) {
-    const newRole = currentRole === "admin" ? "member" : "admin";
-    if (!confirm(`이 사용자의 역할을 ${newRole}로 변경하시겠습니까?`)) return;
-
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("profiles")
-      .update({ role: newRole })
-      .eq("id", userId);
-
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success(`역할이 ${newRole}로 변경되었습니다`);
-    router.refresh();
+  function formatDate(d: string) {
+    return new Date(d).toLocaleDateString("ko", { year: "numeric", month: "short", day: "numeric" });
   }
 
-  function getGradeBadge(user: Profile) {
-    if (user.role === "admin") {
-      return (
-        <span className="font-mono-nu text-[9px] uppercase tracking-widest bg-nu-pink text-white px-2 py-0.5 inline-block">
-          관리자
-        </span>
-      );
-    }
-    if (user.can_create_crew) {
-      return (
-        <span className="font-mono-nu text-[9px] uppercase tracking-widest bg-nu-blue/10 text-nu-blue px-2 py-0.5 inline-block">
-          크루생성가능
-        </span>
-      );
-    }
-    return (
-      <span className="font-mono-nu text-[9px] uppercase tracking-widest bg-nu-ink/5 text-nu-muted px-2 py-0.5 inline-block">
-        일반
-      </span>
-    );
-  }
-
-  function formatDate(dateStr: string) {
-    return new Date(dateStr).toLocaleDateString("ko", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
+  // Grade 분포 통계
+  const gradeCounts = useMemo(() => {
+    const counts: Record<string, number> = { bronze: 0, silver: 0, gold: 0, vip: 0, admin: 0 };
+    localUsers.forEach(u => {
+      if (u.role === "admin") counts.admin++;
+      else counts[u.grade || "bronze"] = (counts[u.grade || "bronze"] || 0) + 1;
     });
-  }
+    return counts;
+  }, [localUsers]);
 
   return (
     <div>
+      {/* Grade Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+        {[...GRADES, { value: "admin", label: "관리자", color: "bg-nu-pink/10 text-nu-pink border-nu-pink/20", dot: "bg-nu-pink", icon: Shield }].map(g => (
+          <button key={g.value}
+            onClick={() => setGradeFilter(gradeFilter === g.value ? "all" : g.value)}
+            className={`p-3 border-[2px] text-left transition-all ${gradeFilter === g.value ? "border-nu-ink" : "border-nu-ink/[0.08] hover:border-nu-ink/20"} bg-nu-white`}>
+            <div className={`inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-1.5 py-0.5 border mb-2 ${g.color}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${g.dot}`} />
+              {g.label}
+            </div>
+            <p className="font-head text-2xl font-extrabold text-nu-ink">{gradeCounts[g.value] || 0}</p>
+          </button>
+        ))}
+      </div>
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="relative flex-1">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-nu-muted" />
-          <input
-            type="text"
+          <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
             placeholder="닉네임 또는 이메일로 검색..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm border border-nu-ink/[0.08] bg-nu-white focus:outline-none focus:border-nu-blue/40 transition-colors"
-          />
+            className="w-full pl-9 pr-4 py-2.5 text-sm border border-nu-ink/[0.08] bg-nu-white focus:outline-none focus:border-nu-blue/40 transition-colors" />
         </div>
-        <div className="relative">
-          <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-nu-muted" />
-          <select
-            value={specialtyFilter}
-            onChange={(e) => setSpecialtyFilter(e.target.value)}
-            className="pl-9 pr-8 py-2 text-sm border border-nu-ink/[0.08] bg-nu-white focus:outline-none focus:border-nu-blue/40 appearance-none cursor-pointer"
-          >
-            <option value="all">전체 분야</option>
-            {specialties.filter((s) => s !== "all").map((s) => (
-              <option key={s} value={s}>{catLabels[s] || s}</option>
-            ))}
-          </select>
-        </div>
+        <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted self-center">
+          {filtered.length}/{localUsers.length}명
+        </p>
       </div>
 
-      {/* Count */}
-      <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-3">
-        {filteredUsers.length}명 표시 / 전체 {users.length}명
-      </p>
-
-      <div className="bg-nu-white border border-nu-ink/[0.08] overflow-x-auto">
-        {/* Desktop table */}
-        <table className="w-full hidden md:table" role="table">
-          <thead>
-            <tr className="border-b border-nu-ink/[0.08]">
-              <th className="text-left px-5 py-3 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted font-normal">회원</th>
-              <th className="text-left px-5 py-3 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted font-normal">이메일</th>
-              <th className="text-left px-5 py-3 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted font-normal">분야</th>
-              <th className="text-left px-5 py-3 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted font-normal">등급</th>
-              <th className="text-left px-5 py-3 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted font-normal">가입일</th>
-              <th className="text-left px-5 py-3 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted font-normal">크루 생성</th>
-              <th className="text-left px-5 py-3 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted font-normal">관리</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredUsers.map((u) => (
-              <>
-                <tr
-                  key={u.id}
-                  className="border-b border-nu-ink/[0.04] last:border-0 text-sm cursor-pointer hover:bg-nu-ink/[0.02] transition-colors"
-                  onClick={() => setExpandedUserId(expandedUserId === u.id ? null : u.id)}
-                >
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-nu-ink/5 flex items-center justify-center shrink-0 overflow-hidden">
-                        {u.avatar_url ? (
-                          <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="font-mono-nu text-[10px] text-nu-muted uppercase">
-                            {(u.nickname || u.email || "?").charAt(0)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-medium truncate">{u.nickname || "unnamed"}</p>
-                        <p className="text-[11px] text-nu-muted truncate">{u.name}</p>
-                      </div>
-                      {expandedUserId === u.id ? (
-                        <ChevronUp size={14} className="text-nu-muted shrink-0" />
-                      ) : (
-                        <ChevronDown size={14} className="text-nu-muted shrink-0" />
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-5 py-3 text-nu-muted truncate max-w-[180px]">{u.email}</td>
-                  <td className="px-5 py-3 text-nu-muted capitalize">
-                    {u.specialty ? catLabels[u.specialty] || u.specialty : "-"}
-                  </td>
-                  <td className="px-5 py-3">{getGradeBadge(u)}</td>
-                  <td className="px-5 py-3 font-mono-nu text-[11px] text-nu-muted">
-                    {formatDate(u.created_at)}
-                  </td>
-                  <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => toggleCrewPermission(u.id, u.can_create_crew)}
-                      className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 ${u.can_create_crew ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-nu-ink/5 text-nu-muted hover:bg-nu-ink/10"} transition-colors`}
-                    >
-                      {u.can_create_crew ? "허용" : "불가"}
-                    </button>
-                  </td>
-                  <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => toggleRole(u.id, u.role)}
-                      className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-blue hover:underline"
-                    >
-                      변경
-                    </button>
-                  </td>
-                </tr>
-                {expandedUserId === u.id && (
-                  <tr key={`${u.id}-detail`} className="border-b border-nu-ink/[0.04]">
-                    <td colSpan={7} className="px-5 py-4 bg-nu-cream/30">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-1">닉네임</p>
-                          <p>{u.nickname || "-"}</p>
-                        </div>
-                        <div>
-                          <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-1">이메일</p>
-                          <p>{u.email}</p>
-                        </div>
-                        <div>
-                          <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-1">분야</p>
-                          <p>{u.specialty ? catLabels[u.specialty] || u.specialty : "-"}</p>
-                        </div>
-                        <div>
-                          <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-1">자기소개</p>
-                          <p className="text-nu-graphite">{u.bio || "-"}</p>
-                        </div>
-                        <div>
-                          <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-1">가입일시</p>
-                          <p>{new Date(u.created_at).toLocaleString("ko")}</p>
-                        </div>
-                        <div>
-                          <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-1">소속 크루</p>
-                          {u.crews && u.crews.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {u.crews.map((c) => (
-                                <span key={c.group_id} className="font-mono-nu text-[9px] uppercase tracking-widest bg-nu-pink/10 text-nu-pink px-2 py-0.5">
-                                  {c.group_name}
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-nu-muted">없음</p>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </>
-            ))}
-          </tbody>
-        </table>
-
-        {/* Mobile cards */}
-        <div className="md:hidden divide-y divide-nu-ink/[0.06]">
-          {filteredUsers.map((u) => (
-            <div key={u.id}>
-              <div
-                className="p-4 flex items-center justify-between gap-3 cursor-pointer"
-                onClick={() => setExpandedUserId(expandedUserId === u.id ? null : u.id)}
-              >
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="w-8 h-8 bg-nu-ink/5 flex items-center justify-center shrink-0 overflow-hidden">
-                    {u.avatar_url ? (
-                      <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="font-mono-nu text-[10px] text-nu-muted uppercase">
-                        {(u.nickname || u.email || "?").charAt(0)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-sm truncate">{u.nickname || "unnamed"}</p>
-                      {getGradeBadge(u)}
-                    </div>
-                    <p className="text-xs text-nu-muted truncate">{u.email}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="font-mono-nu text-[10px] text-nu-muted">{formatDate(u.created_at)}</span>
-                  {expandedUserId === u.id ? (
-                    <ChevronUp size={14} className="text-nu-muted" />
-                  ) : (
-                    <ChevronDown size={14} className="text-nu-muted" />
-                  )}
-                </div>
-              </div>
-              {expandedUserId === u.id && (
-                <div className="px-4 pb-4 bg-nu-cream/30">
-                  <div className="grid grid-cols-2 gap-3 text-xs mb-3">
-                    <div>
-                      <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-0.5">분야</p>
-                      <p>{u.specialty ? catLabels[u.specialty] || u.specialty : "-"}</p>
-                    </div>
-                    <div>
-                      <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-0.5">자기소개</p>
-                      <p className="truncate">{u.bio || "-"}</p>
-                    </div>
-                    <div>
-                      <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-0.5">소속 크루</p>
-                      {u.crews && u.crews.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {u.crews.map((c) => (
-                            <span key={c.group_id} className="font-mono-nu text-[8px] bg-nu-pink/10 text-nu-pink px-1.5 py-0.5">
-                              {c.group_name}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-nu-muted">없음</p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); toggleCrewPermission(u.id, u.can_create_crew); }}
-                      className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 ${u.can_create_crew ? "bg-green-100 text-green-700" : "bg-nu-ink/5 text-nu-muted"} transition-colors`}
-                    >
-                      {u.can_create_crew ? "크루생성 허용" : "크루생성 불가"}
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); toggleRole(u.id, u.role); }}
-                      className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-blue hover:underline"
-                    >
-                      역할 변경
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+      {/* Table */}
+      <div className="bg-nu-white border border-nu-ink/[0.08]">
+        {/* Header */}
+        <div className="hidden md:grid grid-cols-[2fr_2fr_1fr_1fr_1fr_auto] gap-0 border-b border-nu-ink/[0.08]">
+          {["회원", "이메일", "등급", "소모임", "프로젝트", "관리"].map(h => (
+            <div key={h} className="px-4 py-3 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">{h}</div>
           ))}
         </div>
 
-        {filteredUsers.length === 0 && (
+        {/* Rows */}
+        {filtered.map(u => (
+          <div key={u.id} className="border-b border-nu-ink/[0.04] last:border-0">
+            {/* Main row */}
+            <div
+              className="hidden md:grid grid-cols-[2fr_2fr_1fr_1fr_1fr_auto] gap-0 items-center hover:bg-nu-ink/[0.02] transition-colors cursor-pointer"
+              onClick={() => setExpandedId(expandedId === u.id ? null : u.id)}>
+
+              {/* 회원 */}
+              <div className="px-4 py-3 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-nu-cream flex items-center justify-center font-head text-xs font-bold shrink-0">
+                  {(u.nickname || u.email || "?").charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{u.nickname || "unnamed"}</p>
+                  <p className="text-[11px] text-nu-muted truncate">{u.name}</p>
+                </div>
+                {expandedId === u.id ? <ChevronUp size={12} className="text-nu-muted ml-auto" /> : <ChevronDown size={12} className="text-nu-muted ml-auto" />}
+              </div>
+
+              {/* 이메일 */}
+              <div className="px-4 py-3 text-sm text-nu-muted truncate">{u.email}</div>
+
+              {/* 등급 */}
+              <div className="px-4 py-3"><GradeBadge grade={u.grade} role={u.role} /></div>
+
+              {/* 소모임 */}
+              <div className="px-4 py-3">
+                {u.can_create_crew
+                  ? <span className="text-green-600"><Check size={14} /></span>
+                  : <span className="text-nu-muted/40 text-xs">—</span>}
+              </div>
+
+              {/* 프로젝트 */}
+              <div className="px-4 py-3">
+                {u.can_create_project
+                  ? <span className="text-green-600"><Check size={14} /></span>
+                  : <span className="text-nu-muted/40 text-xs">—</span>}
+              </div>
+
+              {/* 관리 */}
+              <div className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                <button onClick={() => editingId === u.id ? setEditingId(null) : openEdit(u)}
+                  className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 bg-nu-ink/5 hover:bg-nu-pink hover:text-white transition-colors flex items-center gap-1">
+                  <Edit3 size={11} /> 편집
+                </button>
+              </div>
+            </div>
+
+            {/* Mobile card */}
+            <div className="md:hidden p-4 flex items-center justify-between gap-3 cursor-pointer"
+              onClick={() => setExpandedId(expandedId === u.id ? null : u.id)}>
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-nu-cream flex items-center justify-center font-head text-xs font-bold shrink-0">
+                  {(u.nickname || "?").charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium truncate">{u.nickname || "unnamed"}</p>
+                    <GradeBadge grade={u.grade} role={u.role} />
+                  </div>
+                  <p className="text-xs text-nu-muted truncate">{u.email}</p>
+                </div>
+              </div>
+              {expandedId === u.id ? <ChevronUp size={14} className="shrink-0 text-nu-muted" /> : <ChevronDown size={14} className="shrink-0 text-nu-muted" />}
+            </div>
+
+            {/* Expanded edit panel */}
+            {expandedId === u.id && (
+              <div className="border-t border-nu-ink/[0.06] bg-nu-cream/20 px-5 py-5">
+                <div className="max-w-2xl grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {/* 기본 정보 */}
+                  <div className="space-y-2 text-sm">
+                    <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-3">기본 정보</p>
+                    <div className="flex gap-2"><span className="text-nu-muted w-16 shrink-0">가입일</span><span>{formatDate(u.created_at)}</span></div>
+                    <div className="flex gap-2"><span className="text-nu-muted w-16 shrink-0">분야</span><span>{u.specialty || "-"}</span></div>
+                    <div className="flex gap-2 items-start"><span className="text-nu-muted w-16 shrink-0">소속</span>
+                      <div className="flex flex-wrap gap-1">
+                        {(u.crews || []).length === 0 ? <span className="text-nu-muted">없음</span> : (u.crews!).map(c => (
+                          <span key={c.group_id} className="font-mono-nu text-[9px] uppercase bg-nu-pink/10 text-nu-pink px-1.5 py-0.5">{c.group_name}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 등급 / 권한 편집 */}
+                  {editingId === u.id ? (
+                    <div className="space-y-3">
+                      <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink mb-3">권한 편집</p>
+
+                      {/* Grade select */}
+                      <div>
+                        <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-1.5">등급</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {GRADES.map(g => (
+                            <button key={g.value} type="button"
+                              onClick={() => {
+                                setEditGrade(g.value);
+                                setEditCrewPerm(g.canCreateCrew);
+                                setEditProjectPerm(g.canCreateProject);
+                              }}
+                              className={`px-3 py-2 border-[2px] text-left transition-all ${editGrade === g.value ? "border-nu-ink" : "border-nu-ink/10 hover:border-nu-ink/30"}`}>
+                              <div className={`inline-flex items-center gap-1 font-mono-nu text-[8px] uppercase tracking-widest px-1.5 py-0.5 border mb-1 ${g.color}`}>
+                                <span className={`w-1 h-1 rounded-full ${g.dot}`} />{g.label}
+                              </div>
+                              <p className="text-[10px] text-nu-muted">{g.desc}</p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Custom permission toggles */}
+                      <div className="flex flex-col gap-2">
+                        <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-1">개별 권한 (등급 override)</label>
+                        <button type="button" onClick={() => setEditCrewPerm(!editCrewPerm)}
+                          className={`flex items-center gap-2 px-3 py-2 border-[2px] transition-all text-sm ${editCrewPerm ? "border-nu-blue bg-nu-blue/5 text-nu-blue" : "border-nu-ink/10 text-nu-muted"}`}>
+                          <Layers size={13} />
+                          소모임 개설 {editCrewPerm ? "허용" : "불가"}
+                        </button>
+                        <button type="button" onClick={() => setEditProjectPerm(!editProjectPerm)}
+                          className={`flex items-center gap-2 px-3 py-2 border-[2px] transition-all text-sm ${editProjectPerm ? "border-green-500 bg-green-50 text-green-700" : "border-nu-ink/10 text-nu-muted"}`}>
+                          <Briefcase size={13} />
+                          프로젝트 개설 {editProjectPerm ? "허용" : "불가"}
+                        </button>
+                      </div>
+
+                      {/* Role */}
+                      <div>
+                        <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-1.5">역할</label>
+                        <select value={editRole} onChange={e => setEditRole(e.target.value)}
+                          className="w-full px-3 py-2 border border-nu-ink/15 bg-nu-white text-sm focus:outline-none focus:border-nu-pink">
+                          <option value="member">일반 회원</option>
+                          <option value="admin">최고관리자</option>
+                        </select>
+                      </div>
+
+                      {/* Save / Cancel */}
+                      <div className="flex gap-2 pt-1">
+                        <button onClick={() => saveUser(u.id)} disabled={!!savingId}
+                          className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors disabled:opacity-50 flex-1">
+                          {savingId === u.id ? "저장 중..." : "저장"}
+                        </button>
+                        <button onClick={() => setEditingId(null)}
+                          className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-2 border border-nu-ink/15 hover:bg-nu-cream transition-colors flex items-center gap-1">
+                          <X size={11} /> 취소
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-3">현재 권한</p>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Layers size={13} className={u.can_create_crew ? "text-nu-blue" : "text-nu-muted/40"} />
+                          <span className={u.can_create_crew ? "text-nu-blue" : "text-nu-muted"}>소모임 개설 {u.can_create_crew ? "가능" : "불가"}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Briefcase size={13} className={u.can_create_project ? "text-green-600" : "text-nu-muted/40"} />
+                          <span className={u.can_create_project ? "text-green-600" : "text-nu-muted"}>프로젝트 개설 {u.can_create_project ? "가능" : "불가"}</span>
+                        </div>
+                      </div>
+                      <button onClick={() => openEdit(u)}
+                        className="mt-4 font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors flex items-center gap-1.5">
+                        <Edit3 size={11} /> 권한 편집
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+
+        {filtered.length === 0 && (
           <div className="p-12 text-center">
             <p className="text-nu-gray text-sm">검색 결과가 없습니다</p>
           </div>

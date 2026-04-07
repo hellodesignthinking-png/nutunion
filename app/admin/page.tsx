@@ -134,9 +134,11 @@ export default async function AdminDashboard() {
           <h2 className="font-head text-sm font-bold text-nu-ink mb-4">빠른 작업</h2>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: "콘텐츠 수정", href: "/admin/content", icon: Pencil, color: "text-nu-blue" },
-              { label: "미디어 업로드", href: "/admin/media", icon: Upload, color: "text-nu-amber" },
-              { label: "회원 관리", href: "/admin/users", icon: UserCog, color: "text-nu-pink" },
+              { label: "회원 등급 관리", href: "/admin/users", icon: UserCog, color: "text-nu-pink" },
+              { label: "소모임 관리", href: "/admin/groups", icon: Layers, color: "text-nu-blue" },
+              { label: "프로젝트 관리", href: "/admin/projects", icon: Briefcase, color: "text-green-600" },
+              { label: "콘텐츠 수정", href: "/admin/content", icon: Pencil, color: "text-nu-amber" },
+              { label: "미디어 업로드", href: "/admin/media", icon: Upload, color: "text-nu-graphite" },
               { label: "사이트 보기", href: "/", icon: ExternalLink, color: "text-nu-graphite" },
             ].map((action) => (
               <Link
