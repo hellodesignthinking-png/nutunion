@@ -172,15 +172,28 @@ export default function ProfilePage() {
     setSavingLinks(true);
     const supabase = createClient();
     const { error } = await supabase.from("profiles").update({
-      link_notion: links.notion || null,
-      link_github: links.github || null,
-      link_drive:  links.drive  || null,
+      link_notion:  links.notion  || null,
+      link_github:  links.github  || null,
+      link_drive:   links.drive   || null,
       link_website: links.website || null,
     }).eq("id", profile.id);
-    if (error) toast.error(error.message);
-    else { setEditLinks(false); toast.success("외부 링크가 저장되었습니다"); }
+
+    if (error) {
+      // DB 컬럼이 없는 경우 (SQL 마이그레이션 미실행)
+      const isColumnMissing = error.message?.includes("link_") || error.code === "42703" || error.code === "PGRST204";
+      if (isColumnMissing) {
+        toast.error("포트폴리오 링크 저장을 위해 Supabase SQL 마이그레이션이 필요합니다");
+      } else {
+        toast.error(error.message);
+      }
+    } else {
+      setProfile({ ...profile, link_notion: links.notion, link_github: links.github, link_drive: links.drive, link_website: links.website });
+      setEditLinks(false);
+      toast.success("외부 링크가 저장되었습니다");
+    }
     setSavingLinks(false);
   }
+
 
   async function handleAvatarUpload(file: File) {
     if (!profile) return;

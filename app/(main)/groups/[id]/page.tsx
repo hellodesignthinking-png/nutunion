@@ -60,7 +60,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
 
   const { data: members } = await supabase
     .from("group_members")
-    .select("*, profile:profiles(*)")
+    .select("id, user_id, role, joined_at, status, profile:profiles(id, nickname, avatar_url, specialty, grade, can_create_crew)")
     .eq("group_id", id)
     .eq("status", "active")
     .order("joined_at");

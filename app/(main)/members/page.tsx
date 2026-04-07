@@ -2,80 +2,87 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Search, Users, Filter } from "lucide-react";
-import Link from "next/link";
+import { Search, Users, Filter, Star, Crown, Award, Shield } from "lucide-react";
 
 interface MemberItem {
   id: string;
-  name: string;
+  name: string | null;
   nickname: string;
   email: string;
   specialty: string | null;
   avatar_url: string | null;
   bio: string | null;
   role: string;
+  grade: string | null;
   can_create_crew: boolean;
   created_at: string;
 }
 
-const catColors: Record<string, string> = {
-  space: "bg-nu-blue",
-  culture: "bg-nu-amber",
-  platform: "bg-nu-ink",
-  vibe: "bg-nu-pink",
+const CAT_COLORS: Record<string, string> = {
+  space: "bg-nu-blue", culture: "bg-nu-amber", platform: "bg-nu-ink", vibe: "bg-nu-pink",
+};
+const CAT_LABELS: Record<string, string> = {
+  space: "공간", culture: "문화", platform: "플랫폼", vibe: "바이브",
 };
 
-const catLabels: Record<string, string> = {
-  space: "공간",
-  culture: "문화",
-  platform: "플랫폼",
-  vibe: "바이브",
+const GRADE_INFO: Record<string, { label: string; color: string; icon: any }> = {
+  admin:  { label: "최고관리자", color: "bg-nu-pink text-white",             icon: Shield },
+  vip:    { label: "VIP",        color: "bg-nu-pink/10 text-nu-pink border border-nu-pink/20", icon: Crown },
+  gold:   { label: "골드",       color: "bg-yellow-50 text-yellow-700 border border-yellow-200", icon: Star },
+  silver: { label: "실버",       color: "bg-slate-50 text-slate-500 border border-slate-200",   icon: Star },
+  bronze: { label: "브론즈",     color: "bg-amber-50 text-amber-600 border border-amber-200",   icon: Award },
 };
+
+function getGradeInfo(m: MemberItem) {
+  if (m.role === "admin") return GRADE_INFO.admin;
+  if (m.grade && GRADE_INFO[m.grade]) return GRADE_INFO[m.grade];
+  if (m.can_create_crew) return GRADE_INFO.silver;
+  return GRADE_INFO.bronze;
+}
 
 export default function MembersPage() {
-  const [members, setMembers] = useState<MemberItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [specialtyFilter, setSpecialtyFilter] = useState("all");
+  const [members, setMembers]   = useState<MemberItem[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [search, setSearch]     = useState("");
+  const [specialty, setSpecialty] = useState("all");
+  const [gradeFilter, setGradeFilter] = useState("all");
 
   useEffect(() => {
     async function load() {
       const supabase = createClient();
       const { data } = await supabase
         .from("profiles")
-        .select("id, name, nickname, email, specialty, avatar_url, bio, role, can_create_crew, created_at")
+        .select("id, name, nickname, email, specialty, avatar_url, bio, role, grade, can_create_crew, created_at")
         .order("created_at", { ascending: false });
-      setMembers(data || []);
+
+      // grade 없으면 can_create_crew로 추론
+      setMembers((data || []).map((m: any) => ({
+        ...m,
+        grade: m.grade || (m.role === "admin" ? "vip" : m.can_create_crew ? "silver" : "bronze"),
+      })));
       setLoading(false);
     }
     load();
   }, []);
 
-  const filtered = useMemo(() => {
-    return members.filter((m) => {
-      const matchSearch = !search ||
-        m.nickname?.toLowerCase().includes(search.toLowerCase()) ||
-        m.name?.toLowerCase().includes(search.toLowerCase());
-      const matchSpecialty = specialtyFilter === "all" || m.specialty === specialtyFilter;
-      return matchSearch && matchSpecialty;
-    });
-  }, [members, search, specialtyFilter]);
-
-  function getGrade(m: MemberItem) {
-    if (m.role === "admin") return { label: "관리자", color: "bg-nu-pink text-white" };
-    if (m.can_create_crew) return { label: "크루생성자", color: "bg-green-100 text-green-700" };
-    return { label: "멤버", color: "bg-nu-cream text-nu-muted" };
-  }
+  const filtered = useMemo(() => members.filter((m) => {
+    const q = search.toLowerCase();
+    const matchSearch = !q || m.nickname?.toLowerCase().includes(q) || (m.name || "").toLowerCase().includes(q);
+    const matchSpecialty = specialty === "all" || m.specialty === specialty;
+    const effectiveGrade = m.role === "admin" ? "admin" : (m.grade || "bronze");
+    const matchGrade = gradeFilter === "all" || effectiveGrade === gradeFilter;
+    return matchSearch && matchSpecialty && matchGrade;
+  }), [members, search, specialty, gradeFilter]);
 
   return (
-    <div className="max-w-6xl mx-auto px-8 py-12">
-      <div className="mb-8">
+    <div className="max-w-6xl mx-auto px-6 py-10">
+      <div className="mb-6">
         <h1 className="font-head text-3xl font-extrabold text-nu-ink">멤버 디렉토리</h1>
         <p className="text-nu-gray text-sm mt-1">nutunion 커뮤니티 멤버들을 찾아보세요</p>
       </div>
 
       {/* Search & Filter */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row gap-3 mb-5">
         <div className="relative flex-1">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-nu-muted" />
           <input
@@ -88,16 +95,24 @@ export default function MembersPage() {
         </div>
         <div className="relative">
           <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-nu-muted" />
-          <select
-            value={specialtyFilter}
-            onChange={(e) => setSpecialtyFilter(e.target.value)}
-            className="pl-9 pr-8 py-2.5 text-sm border border-nu-ink/[0.08] bg-nu-white focus:outline-none appearance-none cursor-pointer"
-          >
+          <select value={specialty} onChange={(e) => setSpecialty(e.target.value)}
+            className="pl-9 pr-8 py-2.5 text-sm border border-nu-ink/[0.08] bg-nu-white focus:outline-none appearance-none cursor-pointer">
             <option value="all">전체 분야</option>
             <option value="space">공간</option>
             <option value="culture">문화</option>
             <option value="platform">플랫폼</option>
             <option value="vibe">바이브</option>
+          </select>
+        </div>
+        <div className="relative">
+          <select value={gradeFilter} onChange={(e) => setGradeFilter(e.target.value)}
+            className="px-3 pr-8 py-2.5 text-sm border border-nu-ink/[0.08] bg-nu-white focus:outline-none appearance-none cursor-pointer">
+            <option value="all">전체 등급</option>
+            <option value="admin">최고관리자</option>
+            <option value="vip">VIP</option>
+            <option value="gold">골드</option>
+            <option value="silver">실버</option>
+            <option value="bronze">브론즈</option>
           </select>
         </div>
       </div>
@@ -108,18 +123,22 @@ export default function MembersPage() {
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
+          {[1,2,3,4,5,6].map((i) => (
             <div key={i} className="bg-nu-white border border-nu-ink/[0.06] p-5 animate-pulse">
-              <div className="flex items-center gap-3"><div className="w-12 h-12 rounded-full bg-nu-cream" /><div className="flex-1"><div className="h-4 w-24 bg-nu-cream mb-2" /><div className="h-3 w-32 bg-nu-cream" /></div></div>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-nu-cream shrink-0" />
+                <div className="flex-1"><div className="h-4 w-24 bg-nu-cream mb-2" /><div className="h-3 w-32 bg-nu-cream" /></div>
+              </div>
             </div>
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((m) => {
-            const grade = getGrade(m);
+            const g = getGradeInfo(m);
+            const GIcon = g.icon;
             return (
-              <div key={m.id} className="bg-nu-white border border-nu-ink/[0.06] p-5 hover:border-nu-pink/20 transition-colors">
+              <div key={m.id} className="bg-nu-white border border-nu-ink/[0.06] p-5 hover:border-nu-pink/30 hover:shadow-sm transition-all">
                 <div className="flex items-start gap-4">
                   {m.avatar_url ? (
                     <img src={m.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
@@ -129,21 +148,19 @@ export default function MembersPage() {
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 mb-1">
                       <p className="font-head text-sm font-bold text-nu-ink truncate">{m.nickname}</p>
-                      <span className={`font-mono-nu text-[7px] uppercase tracking-widest px-1.5 py-0.5 shrink-0 ${grade.color}`}>
-                        {grade.label}
+                      <span className={`inline-flex items-center gap-0.5 font-mono-nu text-[7px] uppercase tracking-widest px-1.5 py-0.5 shrink-0 ${g.color}`}>
+                        <GIcon size={7} /> {g.label}
                       </span>
                     </div>
-                    <p className="text-xs text-nu-muted truncate">{m.name}</p>
+                    {m.name && <p className="text-xs text-nu-muted truncate">{m.name}</p>}
                     {m.specialty && (
-                      <span className={`inline-block font-mono-nu text-[8px] uppercase tracking-widest px-2 py-0.5 text-white mt-2 ${catColors[m.specialty] || "bg-nu-gray"}`}>
-                        {catLabels[m.specialty] || m.specialty}
+                      <span className={`inline-block font-mono-nu text-[8px] uppercase tracking-widest px-2 py-0.5 text-white mt-2 ${CAT_COLORS[m.specialty] || "bg-nu-gray"}`}>
+                        {CAT_LABELS[m.specialty] || m.specialty}
                       </span>
                     )}
-                    {m.bio && (
-                      <p className="text-xs text-nu-gray mt-2 line-clamp-2">{m.bio}</p>
-                    )}
+                    {m.bio && <p className="text-xs text-nu-gray mt-2 line-clamp-2">{m.bio}</p>}
                   </div>
                 </div>
               </div>

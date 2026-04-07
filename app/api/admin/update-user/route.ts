@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
-    // ── 1. 현재 로그인 유저 확인 (쿠키 기반 세션) ──────────────────
+    // ── 1. 세션 인증 ────────────────────────────────────────────────
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // ── 2. 호출자가 admin인지 확인 ──────────────────────────────────
+    // ── 2. 호출자 admin 확인 ─────────────────────────────────────────
     const { data: caller } = await supabase
       .from("profiles")
       .select("role")
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden: admin only" }, { status: 403 });
     }
 
-    // ── 3. 업데이트 데이터 파싱 ─────────────────────────────────────
+    // ── 3. 요청 파싱 ─────────────────────────────────────────────────
     const body = await req.json();
     const { userId, grade, role, can_create_crew, can_create_project } = body;
 
@@ -31,42 +31,75 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "userId required" }, { status: 400 });
     }
 
-    // ── 4. Service Role Key가 있으면 우선 사용 (RLS 완전 무시) ─────
+    // ── 4. 업데이트 클라이언트 선택 (Service Role Key 우선) ──────────
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 
-    let updateClient: any = supabase;
-    if (serviceKey) {
-      updateClient = createAdminClient(supabaseUrl, serviceKey, {
-        auth: { autoRefreshToken: false, persistSession: false },
-      });
-    }
+    const updateClient: any = serviceKey
+      ? createAdminClient(supabaseUrl, serviceKey, {
+          auth: { autoRefreshToken: false, persistSession: false },
+        })
+      : supabase;
 
-    // ── 5. role + can_create_crew 업데이트 (항상 존재) ─────────────
-    const { error: baseError } = await updateClient
+    // ── 5. 단일 쿼리로 모든 필드 업데이트 ───────────────────────────
+    const updatePayload: Record<string, any> = {
+      role: role || "member",
+      can_create_crew: !!can_create_crew,
+    };
+
+    // grade 컬럼은 DB에 없을 수 있으므로 시도 후 안전하게 처리
+    const { error: updateError } = await updateClient
       .from("profiles")
-      .update({ role, can_create_crew })
+      .update({
+        ...updatePayload,
+        grade: grade || null,
+        can_create_project: !!can_create_project,
+      })
       .eq("id", userId);
 
-    if (baseError) {
+    // grade 컬럼 없는 경우 fallback (column not found 에러 처리)
+    if (updateError) {
+      const isColumnError =
+        updateError.message?.includes("grade") ||
+        updateError.message?.includes("can_create_project") ||
+        updateError.code === "PGRST204" ||
+        updateError.code === "42703";
+
+      if (isColumnError) {
+        // grade 없는 구버전 스키마 — role + can_create_crew만 업데이트
+        const { error: fallbackError } = await updateClient
+          .from("profiles")
+          .update(updatePayload)
+          .eq("id", userId);
+
+        if (fallbackError) {
+          return NextResponse.json(
+            { error: "update failed: " + fallbackError.message },
+            { status: 500 }
+          );
+        }
+
+        return NextResponse.json({
+          success: true,
+          gradeSaved: false,
+          gradeError: "grade 컬럼이 없습니다. SQL 마이그레이션을 먼저 실행하세요.",
+          usedServiceKey: !!serviceKey,
+        });
+      }
+
       return NextResponse.json(
-        { error: "base update failed: " + baseError.message },
+        { error: "update failed: " + updateError.message },
         { status: 500 }
       );
     }
 
-    // ── 6. grade + can_create_project 업데이트 ─────────────────────
-    const { error: gradeError } = await updateClient
-      .from("profiles")
-      .update({ grade, can_create_project })
-      .eq("id", userId);
-
     return NextResponse.json({
       success: true,
-      gradeSaved: !gradeError,
-      gradeError: gradeError?.message || null,
+      gradeSaved: true,
+      gradeError: null,
       usedServiceKey: !!serviceKey,
     });
+
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

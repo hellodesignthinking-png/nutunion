@@ -1,18 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, LogOut, User, Shield, Menu, Settings } from "lucide-react";
+import { Bell, LogOut, User, Shield, Menu, Settings, Star, Crown, Award } from "lucide-react";
 import { GlobalSearch } from "@/components/shared/global-search";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
@@ -25,10 +22,48 @@ const navLinks = [
 ];
 
 export function AuthNav({ profile }: { profile: Profile }) {
-  const router = useRouter();
+  const router   = useRouter();
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen]       = useState(false);
+  const [notifCount, setNotifCount] = useState(0);
   const isAdmin = profile.role === "admin";
+
+  // 실시간 알림 카운트
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", profile.id)
+      .eq("is_read", false)
+      .then(({ count }) => setNotifCount(count || 0));
+
+    const channel = supabase
+      .channel("notif-nav")
+      .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${profile.id}` },
+        () => {
+          supabase.from("notifications")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", profile.id)
+            .eq("is_read", false)
+            .then(({ count }) => setNotifCount(count || 0));
+        })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [profile.id]);
+
+  // 등급 정보
+  const p = profile as any;
+  const gradeRaw = p.grade || (isAdmin ? "vip" : p.can_create_crew ? "silver" : "bronze");
+  const GRADE_BADGE: Record<string, { label: string; cls: string; Icon: any }> = {
+    admin:  { label: "관리자", cls: "bg-nu-pink text-white",             Icon: Shield },
+    vip:    { label: "VIP",   cls: "bg-nu-pink/10 text-nu-pink",        Icon: Crown  },
+    gold:   { label: "골드",  cls: "bg-yellow-50 text-yellow-600",      Icon: Star   },
+    silver: { label: "실버",  cls: "bg-slate-100 text-slate-500",       Icon: Star   },
+    bronze: { label: "브론즈",cls: "bg-amber-50 text-amber-600",        Icon: Award  },
+  };
+  const grade = GRADE_BADGE[isAdmin ? "admin" : gradeRaw] || GRADE_BADGE.bronze;
+  const GIcon = grade.Icon;
 
   async function handleLogout() {
     const supabase = createClient();
@@ -78,24 +113,28 @@ export function AuthNav({ profile }: { profile: Profile }) {
       {/* Right side */}
       <div className="hidden md:flex gap-2 items-center">
         <GlobalSearch />
-        <Link
-          href="/notifications"
-          className="relative p-2 text-nu-graphite hover:text-nu-ink transition-colors"
-        >
+        <Link href="/notifications" className="relative p-2 text-nu-graphite hover:text-nu-ink transition-colors">
           <Bell size={18} />
+          {notifCount > 0 && (
+            <span className="absolute top-1 right-1 w-4 h-4 bg-nu-pink text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+              {notifCount > 9 ? "9+" : notifCount}
+            </span>
+          )}
         </Link>
 
         <DropdownMenu>
           <DropdownMenuTrigger className="w-8 h-8 rounded-full bg-nu-pink text-white flex items-center justify-center font-head text-sm font-bold cursor-pointer">
             {initial}
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuContent align="end" className="w-56">
             <div className="px-3 py-2">
               <p className="font-head text-sm font-bold">{profile.nickname}</p>
               <p className="text-xs text-nu-muted truncate">{profile.email}</p>
-              {isAdmin && (
-                <span className="inline-block font-mono-nu text-[8px] uppercase tracking-widest bg-nu-pink text-white px-1.5 py-0.5 mt-1">Admin</span>
-              )}
+              <div className="mt-1.5">
+                <span className={`inline-flex items-center gap-1 font-mono-nu text-[8px] uppercase tracking-widest px-1.5 py-0.5 ${grade.cls}`}>
+                  <GIcon size={8} /> {grade.label}
+                </span>
+              </div>
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="flex items-center gap-2" onClick={() => router.push("/profile")}>
