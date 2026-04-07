@@ -54,7 +54,8 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
   const now = new Date().toISOString();
   const [
     { data: group },
-    { data: members },
+    { data: members },        // active 멤버 (UI 표시용)
+    { data: allMembers },     // active+pending+waitlist (스탯 즡용)
     { data: events },
     { data: meetings },
     { data: pastMeetings },
@@ -63,7 +64,10 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
     { count: totalFiles },
   ] = await Promise.all([
     supabase.from("groups").select("*, host:profiles!groups_host_id_fkey(id, nickname, avatar_url)").eq("id", id).single(),
+    // active 멤버만 표시
     supabase.from("group_members").select("id, user_id, role, joined_at, status, profile:profiles(id, nickname, avatar_url, specialty, grade, can_create_crew)").eq("group_id", id).eq("status", "active").order("joined_at"),
+    // 스탯: 거절이 아닌 모든 멤버
+    supabase.from("group_members").select("id, user_id, status", { count: "exact" }).eq("group_id", id).in("status", ["active", "pending", "waitlist"]),
     supabase.from("events").select("*").eq("group_id", id).gte("start_at", now).order("start_at").limit(5),
     supabase.from("meetings").select("id, title, scheduled_at, duration_min, location, status").eq("group_id", id).in("status", ["upcoming", "in_progress"]).gte("scheduled_at", now).order("scheduled_at").limit(5),
     supabase.from("meetings").select("id, title, scheduled_at, summary, next_topic, status").eq("group_id", id).eq("status", "completed").order("scheduled_at", { ascending: false }).limit(3),
@@ -74,10 +78,18 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
 
   if (!group) notFound();
 
-  const isMember = members?.some((m) => m.user_id === user.id);
-  const isHost   = group.host_id === user.id;
-  const isManager = userMembership?.role === "manager" || isHost;
+  // ── 권한 판별 ───────────────────────────────────────
+  const isHost        = group.host_id === user.id;
+  // userMembership으로 판단 (에비에 active 멤버 조회기준에 의존하지 않음)
+  const isMember      = isHost || userMembership?.status === "active";
+  const isManager     = isHost || userMembership?.role === "manager";
   const membershipStatus = userMembership?.status as "active" | "pending" | "waitlist" | null;
+
+  // 스탯 표시용
+  const activeMemberCount  = members?.length || 0;
+  const totalMemberCount   = allMembers?.length || 0;  // pending 포함
+  const upcomingCount      = (meetings?.length || 0) + (events?.length || 0);
+
   const colors = catColors[group.category] || catColors.vibe;
 
   const allUpcoming = [
@@ -135,7 +147,8 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
 
             {/* Actions */}
             <div className="flex flex-wrap gap-2 shrink-0">
-              {(isMember || isHost) && (
+              {/* 매니저도 상단 버튼에 접근 가능 */}
+              {(isMember || isHost || isManager) && (
                 <>
                   <Link
                     href={`/groups/${id}/meetings`}
@@ -163,7 +176,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
                   </Link>
                 </>
               )}
-              {isHost && (
+              {(isHost || isManager) && (
                 <>
                   <Link
                     href={`/groups/${id}/events/create`}
@@ -179,7 +192,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
                   </Link>
                 </>
               )}
-              {!isHost && (
+              {!isHost && !isManager && (
                 <GroupActions
                   groupId={id}
                   groupName={group.name}
@@ -196,16 +209,18 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
           {/* Quick Stats Bar */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-0 mt-8 border-t-[2px] border-nu-ink/10 pt-6">
             {[
-              { icon: <Users size={16} />, label: "멤버", value: members?.length || 0 },
-              { icon: <BookOpen size={16} />, label: "총 미팅", value: totalMeetings || 0 },
-              { icon: <FileText size={16} />, label: "파일", value: totalFiles || 0 },
-              { icon: <Activity size={16} />, label: "진행중", value: (meetings?.length || 0) + (events?.length || 0) },
+              { icon: <Users size={16} />, label: "멤버", value: activeMemberCount, sub: totalMemberCount > activeMemberCount ? `+${totalMemberCount - activeMemberCount} 대기` : null },
+              { icon: <BookOpen size={16} />, label: "총 미팅", value: totalMeetings || 0, sub: null },
+              { icon: <FileText size={16} />, label: "파일", value: totalFiles || 0, sub: null },
+              { icon: <Activity size={16} />, label: "진행중", value: upcomingCount, sub: null },
             ].map((stat) => (
               <div key={stat.label} className={`flex items-center gap-3 px-4 py-3 border-r border-nu-ink/10 last:border-r-0 ${colors.light}`}>
                 <span className={colors.text}>{stat.icon}</span>
                 <div>
                   <p className="font-head text-xl font-extrabold text-nu-ink">{stat.value}</p>
-                  <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">{stat.label}</p>
+                  <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
+                    {stat.label}{(stat as any).sub ? ` (${(stat as any).sub})` : ""}
+                  </p>
                 </div>
               </div>
             ))}
@@ -418,9 +433,13 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
                       {(m.profile?.nickname || "U").charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-nu-ink truncate">{m.profile?.nickname}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-medium text-nu-ink truncate">{m.profile?.nickname}</p>
+                        {m.role === "host" && <span className="font-mono-nu text-[7px] uppercase tracking-widest bg-nu-pink text-white px-1 py-0.5 shrink-0">호스트</span>}
+                        {m.role === "manager" && <span className="font-mono-nu text-[7px] uppercase tracking-widest bg-nu-blue/10 text-nu-blue px-1 py-0.5 shrink-0">매니저</span>}
+                      </div>
                       <p className="font-mono-nu text-[10px] text-nu-muted">
-                        {m.role === "host" ? "🏠 호스트" : m.role === "moderator" ? "⚡ 운영진" : "멤버"}
+                        {m.role === "host" ? "🏠 호스트" : m.role === "manager" ? "⚡ 매니저" : "멤버"}
                       </p>
                     </div>
                   </div>
