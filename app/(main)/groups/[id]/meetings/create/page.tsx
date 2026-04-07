@@ -31,6 +31,8 @@ export default function CreateMeetingPage() {
   const [loading, setLoading] = useState(false);
   const [duration, setDuration] = useState("60");
   const [agendas, setAgendas] = useState<AgendaItem[]>([]);
+  const [tagInput, setTagInput] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
   const [newAgenda, setNewAgenda] = useState<AgendaItem>({
     topic: "",
     description: "",
@@ -96,6 +98,7 @@ export default function CreateMeetingPage() {
         location: location || null,
         status: "upcoming",
         organizer_id: user.id,
+        tags: tags.length > 0 ? tags : null,
       })
       .select("id")
       .single();
@@ -229,11 +232,42 @@ export default function CreateMeetingPage() {
             />
           </div>
 
+          {/* Tags */}
+          <div>
+            <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
+              태그 (검색용)
+            </Label>
+            <div className="mt-1.5 flex flex-wrap gap-1.5 p-2 border border-nu-ink/15 min-h-[44px] bg-transparent focus-within:border-nu-pink transition-colors">
+              {tags.map(t => (
+                <span key={t} className="inline-flex items-center gap-1 font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 bg-nu-ink/10 text-nu-ink">
+                  # {t}
+                  <button type="button" onClick={() => setTags(prev => prev.filter(x => x !== t))} className="text-nu-muted hover:text-nu-red">×</button>
+                </span>
+              ))}
+              <input
+                value={tagInput}
+                onChange={e => setTagInput(e.target.value)}
+                onKeyDown={e => {
+                  if ((e.key === "Enter" || e.key === ",") && tagInput.trim()) {
+                    e.preventDefault();
+                    const t = tagInput.trim().toLowerCase().replace(/[^a-z0-9가-힣]/g, "");
+                    if (t && !tags.includes(t)) setTags(prev => [...prev, t]);
+                    setTagInput("");
+                  }
+                }}
+                placeholder="태그 입력 후 Enter"
+                className="flex-1 min-w-[100px] bg-transparent text-xs focus:outline-none"
+              />
+            </div>
+            <p className="font-mono-nu text-[9px] text-nu-muted mt-1">Enter 또는 콤마(,)로 태그 추가</p>
+          </div>
+
           {/* Agendas section */}
           <div className="border-t border-nu-ink/[0.08] pt-5 mt-2">
             <h2 className="font-head text-lg font-extrabold text-nu-ink mb-4">
               안건 추가
             </h2>
+
 
             {/* Existing agendas */}
             {agendas.length > 0 && (

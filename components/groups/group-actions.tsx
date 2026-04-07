@@ -3,10 +3,13 @@
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { CheckCircle2, Clock, Users } from "lucide-react";
+import { CheckCircle2, Clock, Users, XCircle, Loader2 } from "lucide-react";
+import { useState } from "react";
 
 interface GroupActionsProps {
   groupId: string;
+  groupName: string;
+  hostId: string;
   userId: string;
   maxMembers: number;
   memberCount: number;
@@ -15,42 +18,65 @@ interface GroupActionsProps {
 
 export function GroupActions({
   groupId,
+  groupName,
+  hostId,
   userId,
   maxMembers,
   memberCount,
   membershipStatus,
 }: GroupActionsProps) {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
   async function handleJoin() {
+    setLoading(true);
     const supabase = createClient();
-    const status = memberCount >= maxMembers ? "waitlist" : "active";
 
+    // 항상 pending으로 신청 — 호스트 승인 필요
     const { error } = await supabase.from("group_members").insert({
       group_id: groupId,
       user_id: userId,
       role: "member",
-      status,
+      status: "pending",
     });
 
     if (error) {
       if (error.code === "23505") {
-        toast.error("이미 가입한 소모임입니다");
+        toast.error("이미 가입 신청한 소모임입니다");
       } else {
         toast.error(error.message);
       }
+      setLoading(false);
       return;
     }
 
-    toast.success(
-      status === "waitlist"
-        ? "대기자 명단에 등록되었습니다"
-        : "소모임에 참여했습니다!"
-    );
+    // 호스트에게 알림 전송
+    await supabase.from("notifications").insert({
+      user_id: hostId,
+      type: "join_request",
+      title: "가입 신청이 도착했습니다",
+      body: `${groupName} 소모임에 새 가입 신청이 있습니다. 설정에서 승인해주세요.`,
+      metadata: { group_id: groupId },
+      is_read: false,
+    });
+
+    toast.success("가입 신청이 완료되었습니다. 관리자 승인을 기다려주세요.");
     router.refresh();
+    setLoading(false);
   }
 
-  // Status badges for existing members
+  async function handleCancelJoin() {
+    if (!confirm("가입 신청을 취소하시겠습니까?")) return;
+    setLoading(true);
+    const supabase = createClient();
+    await supabase.from("group_members").delete()
+      .eq("group_id", groupId).eq("user_id", userId);
+    toast.success("가입 신청이 취소되었습니다");
+    router.refresh();
+    setLoading(false);
+  }
+
+  // ── 상태별 렌더 ──────────────────────────────────────────────────────
   if (membershipStatus === "active") {
     return (
       <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-3 bg-green-600 text-white inline-flex items-center gap-2">
@@ -61,9 +87,18 @@ export function GroupActions({
 
   if (membershipStatus === "pending") {
     return (
-      <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-3 bg-nu-amber text-white inline-flex items-center gap-2">
-        <Clock size={14} /> 승인중
-      </span>
+      <div className="flex items-center gap-2">
+        <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-3 bg-nu-amber text-white inline-flex items-center gap-2">
+          <Clock size={14} /> 승인 대기중
+        </span>
+        <button
+          onClick={handleCancelJoin}
+          disabled={loading}
+          className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-2.5 border border-nu-muted text-nu-muted hover:border-nu-red hover:text-nu-red transition-colors flex items-center gap-1"
+        >
+          <XCircle size={12} /> 취소
+        </button>
+      </div>
     );
   }
 
@@ -75,15 +110,18 @@ export function GroupActions({
     );
   }
 
-  // Join button for non-members
+  // 비회원 — 가입신청 버튼
   const isFull = memberCount >= maxMembers;
 
   return (
     <button
       onClick={handleJoin}
-      className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors"
+      disabled={loading || isFull}
+      id="group-join-btn"
+      className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors disabled:opacity-50 flex items-center gap-2"
     >
-      {isFull ? "대기자 등록" : "참여하기"}
+      {loading ? <Loader2 size={14} className="animate-spin" /> : null}
+      {isFull ? "인원 마감" : "가입 신청"}
     </button>
   );
 }

@@ -124,7 +124,7 @@ export default function GroupSettingsPage() {
     toast.success("멤버가 제거되었습니다");
   }
 
-  async function handlePromoteWaitlist(targetUserId: string) {
+  async function handleApproveMember(targetUserId: string, targetNickname: string) {
     const supabase = createClient();
     const { error } = await supabase
       .from("group_members")
@@ -132,13 +132,8 @@ export default function GroupSettingsPage() {
       .eq("group_id", groupId)
       .eq("user_id", targetUserId);
 
-    if (error) {
-      toast.error("승격에 실패했습니다");
-      return;
-    }
-    setMembers(members.map((m) =>
-      m.user_id === targetUserId ? { ...m, status: "active" } : m
-    ));
+    if (error) { toast.error("승인에 실패했습니다"); return; }
+    setMembers(prev => prev.map(m => m.user_id === targetUserId ? { ...m, status: "active" } : m));
 
     await supabase.from("notifications").insert({
       user_id: targetUserId,
@@ -146,8 +141,26 @@ export default function GroupSettingsPage() {
       title: "소모임 가입 승인",
       body: `${group?.name} 소모임에 가입이 승인되었습니다.`,
       metadata: { group_id: groupId },
+      is_read: false,
     });
-    toast.success("멤버로 승격되었습니다");
+    toast.success(`${targetNickname}님이 승인되었습니다`);
+  }
+
+  async function handleRejectMember(targetUserId: string, targetNickname: string) {
+    if (!confirm(`${targetNickname}님의 가입 신청을 거절하시겠습니까?`)) return;
+    const supabase = createClient();
+    await supabase.from("group_members").delete().eq("group_id", groupId).eq("user_id", targetUserId);
+    setMembers(prev => prev.filter(m => m.user_id !== targetUserId));
+
+    await supabase.from("notifications").insert({
+      user_id: targetUserId,
+      type: "group_rejected",
+      title: "소모임 가입 거절",
+      body: `${group?.name} 소모임 가입 신청이 거절되었습니다.`,
+      metadata: { group_id: groupId },
+      is_read: false,
+    });
+    toast.success("거절되었습니다");
   }
 
   async function handleDelete() {
@@ -174,8 +187,8 @@ export default function GroupSettingsPage() {
 
   if (!group) return null;
 
-  const activeMembers = members.filter((m) => m.status === "active");
-  const waitlistMembers = members.filter((m) => m.status === "waitlist");
+  const activeMembers  = members.filter(m => m.status === "active");
+  const pendingMembers = members.filter(m => m.status === "pending" || m.status === "waitlist");
 
   return (
     <div className="max-w-2xl mx-auto px-8 py-12">
@@ -269,36 +282,38 @@ export default function GroupSettingsPage() {
         </div>
       </div>
 
-      {/* Waitlist */}
-      {waitlistMembers.length > 0 && (
-        <div className="bg-nu-white border border-nu-ink/[0.08] p-8 mb-8">
-          <h2 className="font-head text-lg font-extrabold mb-4">
-            대기자 ({waitlistMembers.length})
-          </h2>
+      {/* Pending / join requests */}
+      {pendingMembers.length > 0 && (
+        <div className="bg-nu-white border-[2px] border-nu-amber/30 p-8 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="w-2.5 h-2.5 rounded-full bg-nu-amber animate-pulse" />
+            <h2 className="font-head text-lg font-extrabold">
+              가입 신청 대기 ({pendingMembers.length})
+            </h2>
+          </div>
           <div className="flex flex-col divide-y divide-nu-ink/5">
-            {waitlistMembers.map((m) => (
+            {pendingMembers.map(m => (
               <div key={m.user_id} className="flex items-center justify-between py-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-nu-yellow/20 flex items-center justify-center font-head text-xs font-bold" aria-hidden="true">
+                  <div className="w-8 h-8 rounded-full bg-nu-amber/20 flex items-center justify-center font-head text-xs font-bold text-nu-amber">
                     {(m.profile?.nickname || "U").charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <p className="text-sm font-medium">{m.profile?.nickname}</p>
-                    <p className="text-[10px] text-nu-amber">대기 중</p>
+                    <p className="text-sm font-medium">{m.profile?.nickname || "Unknown"}</p>
+                    <p className="text-[10px] text-nu-amber">가입 신청 대기중</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => handlePromoteWaitlist(m.user_id)}
-                    className="p-2 text-nu-blue hover:text-nu-blue/80 transition-colors"
-                    aria-label={`${m.profile?.nickname} 승인`}
+                    onClick={() => handleApproveMember(m.user_id, m.profile?.nickname || "멤버")}
+                    className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 bg-nu-blue text-white hover:bg-nu-blue/90 transition-colors flex items-center gap-1"
+                    id={`approve-${m.user_id}`}
                   >
-                    <UserPlus size={14} />
+                    <UserPlus size={12} /> 승인
                   </button>
                   <button
-                    onClick={() => handleRemoveMember(m.user_id)}
-                    className="p-2 text-nu-muted hover:text-nu-red transition-colors"
-                    aria-label={`${m.profile?.nickname} 거절`}
+                    onClick={() => handleRejectMember(m.user_id, m.profile?.nickname || "멤버")}
+                    className="p-1.5 text-nu-muted hover:text-nu-red transition-colors"
                   >
                     <Trash2 size={14} />
                   </button>

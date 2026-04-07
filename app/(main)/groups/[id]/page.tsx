@@ -24,6 +24,8 @@ import { CrewProjects } from "@/components/crews/crew-projects";
 import { WorkspaceLinks } from "@/components/integrations/workspace-links";
 import { GoogleCalendarButton } from "@/components/integrations/google-calendar-button";
 import { EventRsvpButton } from "@/components/groups/event-rsvp-button";
+import { GroupSearch } from "@/components/groups/group-search";
+import { GroupRoadmap } from "@/components/groups/group-roadmap";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -215,6 +217,8 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
               {!isHost && (
                 <GroupActions
                   groupId={id}
+                  groupName={group.name}
+                  hostId={group.host_id}
                   userId={user.id}
                   maxMembers={group.max_members}
                   memberCount={members?.length || 0}
@@ -246,6 +250,14 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
 
       {/* ── Main Content ────────────────────────────── */}
       <div className="max-w-6xl mx-auto px-8 py-10">
+
+        {/* Search bar (members only) */}
+        {(isMember || isHost) && (
+          <div className="mb-8">
+            <GroupSearch groupId={id} />
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
           {/* Left: Upcoming + Past + Activity */}
@@ -398,6 +410,15 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
 
           {/* Sidebar */}
           <div className="space-y-6">
+
+            {/* Roadmap */}
+            {(isMember || isHost) && (
+              <GroupRoadmap
+                groupId={id}
+                groupTopic={(group as any).topic}
+                canEdit={isHost}
+              />
+            )}
 
             {/* Workspace links */}
             <WorkspaceLinks
