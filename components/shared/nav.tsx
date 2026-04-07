@@ -3,34 +3,91 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Menu, LogOut } from "lucide-react";
+import { Menu, LogOut, Bell, Shield, Star, Crown, Award } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { createClient } from "@/lib/supabase/client";
 
-const links = [
-  { label: "About", href: "/#about" },
-  { label: "Crews", href: "/crews" },
+// ── 랜딩 전용 링크 (비로그인) ──────────────────────────────────────
+const landingLinks = [
+  { label: "About",    href: "/#about"  },
+  { label: "Crews",    href: "/crews"   },
   { label: "Projects", href: "/projects" },
-  { label: "Scenes", href: "/#scenes" },
+  { label: "Scenes",   href: "/#scenes"  },
 ];
 
+// ── 앱 링크 (로그인) — AuthNav와 완전 통일 ────────────────────────
+const appLinks = [
+  { label: "Dashboard", href: "/dashboard"    },
+  { label: "소모임",    href: "/groups"       },
+  { label: "프로젝트",  href: "/projects"     },
+  { label: "멤버",      href: "/members"      },
+  { label: "알림",      href: "/notifications" },
+];
+
+const GRADE_BADGE: Record<string, { label: string; cls: string; Icon: any }> = {
+  admin:  { label: "관리자", cls: "bg-nu-pink text-white",        Icon: Shield },
+  vip:    { label: "VIP",   cls: "bg-nu-pink/10 text-nu-pink",   Icon: Crown  },
+  gold:   { label: "골드",  cls: "bg-yellow-50 text-yellow-600", Icon: Star   },
+  silver: { label: "실버",  cls: "bg-slate-100 text-slate-500",  Icon: Star   },
+  bronze: { label: "브론즈",cls: "bg-amber-50 text-amber-600",   Icon: Award  },
+};
+
 export function Nav() {
-  const [scrolled, setScrolled] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user,       setUser]       = useState<any>(null);
+  const [profile,    setProfile]    = useState<any>(null);
+  const [notifCount, setNotifCount] = useState(0);
+  const [open,       setOpen]       = useState(false);
+  const [scrolled,   setScrolled]   = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
-  const isHome = pathname === "/";
-  const supabase = createClient();
+  const router   = useRouter();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", onScroll, { passive: true });
 
-    // Auth check
-    supabase.auth.getUser().then(({ data: { user } }) => setUser(user));
+    const supabase = createClient();
+
+    // auth 상태 + 프로필 로드
+    supabase.auth.getUser().then(async ({ data: { user: u } }) => {
+      setUser(u);
+      if (u) {
+        const { data: p } = await supabase
+          .from("profiles")
+          .select("id, nickname, email, role, grade, can_create_crew")
+          .eq("id", u.id)
+          .single();
+        setProfile(p);
+
+        // 미읽은 알림 수
+        const { count } = await supabase
+          .from("notifications")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", u.id)
+          .eq("is_read", false);
+        setNotifCount(count || 0);
+
+        // 실시간 알림
+        const ch = supabase
+          .channel("nav-notif")
+          .on("postgres_changes", {
+            event: "*", schema: "public", table: "notifications",
+            filter: `user_id=eq.${u.id}`,
+          }, async () => {
+            const { count: c } = await supabase
+              .from("notifications")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", u.id).eq("is_read", false);
+            setNotifCount(c || 0);
+          })
+          .subscribe();
+
+        return () => { supabase.removeChannel(ch); };
+      }
+    });
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user || null);
+      if (!session?.user) { setProfile(null); setNotifCount(0); }
     });
 
     return () => {
@@ -40,60 +97,86 @@ export function Nav() {
   }, []);
 
   const handleLogout = async () => {
+    const supabase = createClient();
     await supabase.auth.signOut();
+    router.push("/");
     router.refresh();
   };
 
+  const links      = user ? appLinks : landingLinks;
+  const isAdmin    = profile?.role === "admin";
+  const gradeKey   = isAdmin ? "admin" : (profile?.grade || (profile?.can_create_crew ? "silver" : "bronze"));
+  const grade      = GRADE_BADGE[gradeKey] || GRADE_BADGE.bronze;
+  const GIcon      = grade.Icon;
+  const initial    = (profile?.nickname || "U").charAt(0).toUpperCase();
+
   function getHref(href: string) {
-    if (isHome && href.startsWith("/#")) return href.replace("/", "");
+    if (pathname === "/" && href.startsWith("/#")) return href.replace("/", "");
     return href;
   }
 
   return (
-    <nav
-      className={`fixed top-0 left-0 right-0 z-[500] h-[60px] flex items-center justify-between px-8 bg-nu-paper/95 backdrop-blur-sm border-b-[3px] border-nu-ink transition-shadow ${
-        scrolled ? "" : ""
-      }`}
-    >
-      {/* Brand — bold brutalist */}
-      <Link href="/" className="flex items-center gap-2 no-underline relative group">
+    <nav className={`fixed top-0 left-0 right-0 z-[500] h-[60px] flex items-center justify-between px-8 bg-nu-paper/95 backdrop-blur-sm border-b-[3px] border-nu-ink transition-shadow`}>
+      {/* Brand */}
+      <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2 no-underline relative group">
         <span className="font-head text-[17px] font-extrabold text-nu-ink tracking-tight uppercase">
           nutunion
         </span>
-        {/* Overprint ghost on hover */}
-        <span className="absolute inset-0 font-head text-[17px] font-extrabold text-nu-pink tracking-tight uppercase opacity-0 group-hover:opacity-30 translate-x-[2px] -translate-y-[1px] transition-opacity pointer-events-none select-none mix-blend-multiply" aria-hidden="true">
+        <span className="absolute inset-0 font-head text-[17px] font-extrabold text-nu-pink tracking-tight uppercase opacity-0 group-hover:opacity-30 translate-x-[2px] -translate-y-[1px] transition-opacity pointer-events-none select-none mix-blend-multiply" aria-hidden>
           nutunion
         </span>
       </Link>
 
-      {/* Desktop center links */}
+      {/* Desktop links */}
       <div className="hidden md:flex gap-6 items-center">
         {links.map((l) => (
           <Link
             key={l.label}
             href={getHref(l.href)}
-            className={`font-mono-nu text-[11px] text-nu-graphite no-underline tracking-[0.1em] uppercase transition-all relative ${
-              pathname === l.href ? "font-bold" : "opacity-70 hover:opacity-100"
+            className={`font-mono-nu text-[11px] no-underline tracking-[0.1em] uppercase transition-all relative ${
+              pathname === l.href || (l.href !== "/" && pathname.startsWith(l.href) && l.href.length > 1)
+                ? "text-nu-ink font-bold"
+                : "text-nu-graphite opacity-70 hover:opacity-100"
             }`}
           >
             {l.label}
-            {/* Active indicator — thick bottom bar */}
-            {pathname === l.href && (
+            {(pathname === l.href || (l.href !== "/" && pathname.startsWith(l.href) && l.href.length > 1)) && (
               <span className="absolute -bottom-[20px] left-0 right-0 h-[3px] bg-nu-pink" />
             )}
           </Link>
         ))}
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className={`font-mono-nu text-[11px] no-underline tracking-[0.08em] uppercase transition-colors inline-flex items-center gap-1.5 px-3 py-1.5 ${
+              pathname.startsWith("/admin") ? "bg-nu-pink text-white" : "text-nu-pink hover:bg-nu-pink/10"
+            }`}
+          >
+            <Shield size={12} /> 관리자
+          </Link>
+        )}
       </div>
 
-      {/* Desktop right pills — brutalist buttons */}
+      {/* Desktop right */}
       <div className="hidden md:flex gap-2 items-center">
         {user ? (
           <>
+            {/* 알림 벨 */}
+            <Link href="/notifications" className="relative p-2 text-nu-graphite hover:text-nu-ink transition-colors">
+              <Bell size={18} />
+              {notifCount > 0 && (
+                <span className="absolute top-1 right-1 w-4 h-4 bg-nu-pink text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+                  {notifCount > 9 ? "9+" : notifCount}
+                </span>
+              )}
+            </Link>
+            {/* 아바타 드롭다운 대신 간단 버튼 */}
             <Link
-              href="/dashboard"
-              className="font-mono-nu text-[11px] font-bold tracking-[0.08em] uppercase px-5 py-2.5 border-[2px] border-nu-pink bg-nu-pink text-nu-paper hover:bg-nu-ink hover:border-nu-ink transition-all no-underline hover:translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[-2px_2px_0_#FF48B0]"
+              href="/profile"
+              className="w-8 h-8 rounded-full bg-nu-pink text-white flex items-center justify-center font-head text-sm font-bold cursor-pointer hover:bg-nu-pink/80 transition-colors no-underline"
+              title={profile?.nickname}
             >
-              Dashboard
+              {initial}
             </Link>
             <button
               onClick={handleLogout}
@@ -113,7 +196,7 @@ export function Nav() {
             </Link>
             <Link
               href="/signup"
-              className="font-mono-nu text-[11px] font-bold tracking-[0.08em] uppercase px-5 py-2.5 border-[2px] border-nu-pink bg-nu-pink text-nu-paper hover:bg-nu-ink hover:border-nu-ink transition-all no-underline hover:translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[-2px_2px_0_#FF48B0]"
+              className="font-mono-nu text-[11px] font-bold tracking-[0.08em] uppercase px-5 py-2.5 border-[2px] border-nu-pink bg-nu-pink text-nu-paper hover:bg-nu-ink hover:border-nu-ink transition-all no-underline"
             >
               Join
             </Link>
@@ -129,27 +212,64 @@ export function Nav() {
           </SheetTrigger>
           <SheetContent side="right" className="bg-nu-paper w-[280px] border-l-[3px] border-nu-ink">
             <div className="flex flex-col gap-6 pt-8">
-              <span className="font-head text-xl font-extrabold uppercase tracking-tight">nutunion</span>
-              {links.map((l) => (
-                <Link
-                  key={l.label}
-                  href={getHref(l.href)}
-                  onClick={() => setOpen(false)}
-                  className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-graphite no-underline border-b-[2px] border-nu-ink/10 pb-2"
-                >
-                  {l.label}
-                </Link>
-              ))}
-              <div className="border-t-[3px] border-nu-ink pt-4 flex flex-col gap-3">
-                {user ? (
-                  <>
-                    <Link href="/dashboard" onClick={() => setOpen(false)} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-center py-3 bg-nu-pink text-nu-paper border-[2px] border-nu-pink no-underline">
-                      Dashboard
+              {user && profile ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-nu-pink text-white flex items-center justify-center font-head font-bold">
+                    {initial}
+                  </div>
+                  <div>
+                    <p className="font-head text-sm font-bold">{profile.nickname}</p>
+                    <span className={`inline-flex items-center gap-1 font-mono-nu text-[8px] uppercase tracking-widest px-1.5 py-0.5 ${grade.cls}`}>
+                      <GIcon size={8} /> {grade.label}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <span className="font-head text-xl font-extrabold uppercase tracking-tight">nutunion</span>
+              )}
+
+              <div className="border-t border-nu-ink/10 pt-4 flex flex-col gap-4">
+                {links.map((l) => (
+                  <Link
+                    key={l.href}
+                    href={getHref(l.href)}
+                    onClick={() => setOpen(false)}
+                    className={`font-mono-nu text-[12px] uppercase tracking-widest no-underline border-b border-nu-ink/10 pb-2 ${
+                      pathname === l.href ? "text-nu-ink font-bold" : "text-nu-graphite"
+                    }`}
+                  >
+                    {l.label}
+                  </Link>
+                ))}
+                {user && (
+                  <Link href="/profile" onClick={() => setOpen(false)} className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-graphite no-underline border-b border-nu-ink/10 pb-2">
+                    프로필
+                  </Link>
+                )}
+              </div>
+
+              {isAdmin && (
+                <div className="border-t border-nu-pink/20 pt-4 flex flex-col gap-3">
+                  <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-pink font-bold">관리자</span>
+                  {[
+                    { href: "/admin", label: "관리자 대시보드" },
+                    { href: "/admin/users", label: "회원 관리" },
+                    { href: "/admin/groups", label: "소모임 관리" },
+                    { href: "/admin/projects", label: "프로젝트 관리" },
+                    { href: "/admin/content", label: "콘텐츠 관리" },
+                  ].map(a => (
+                    <Link key={a.href} href={a.href} onClick={() => setOpen(false)} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
+                      {a.label}
                     </Link>
-                    <button onClick={() => { handleLogout(); setOpen(false); }} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-center py-3 border-[2px] border-nu-graphite text-nu-graphite no-underline">
-                      Logout
-                    </button>
-                  </>
+                  ))}
+                </div>
+              )}
+
+              <div className="border-t border-nu-ink/10 pt-4 flex flex-col gap-3">
+                {user ? (
+                  <button onClick={() => { handleLogout(); setOpen(false); }} className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-red text-left">
+                    로그아웃
+                  </button>
                 ) : (
                   <>
                     <Link href="/login" onClick={() => setOpen(false)} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-center py-3 border-[2px] border-nu-graphite text-nu-graphite no-underline">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -46,10 +46,42 @@ export function CrewActivityFeed({
 }) {
   const router = useRouter();
   const [posts, setPosts] = useState<CrewPost[]>(initialPosts);
+  const [loading, setLoading] = useState(true);
   const [content, setContent] = useState("");
   const [posting, setPosting] = useState(false);
   const [driveLink, setDriveLink] = useState("");
   const [showDriveInput, setShowDriveInput] = useState(false);
+
+  // ── 마운트 시 DB에서 게시글 로드 (새로고침 후에도 유지) ─────────
+  const loadPosts = useCallback(async () => {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("crew_posts")
+      .select("*, author:profiles!crew_posts_author_id_fkey(id, nickname, avatar_url)")
+      .eq("group_id", groupId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (!error && data) setPosts(data as any);
+    setLoading(false);
+  }, [groupId]);
+
+  useEffect(() => {
+    loadPosts();
+    // ── 실시간 구독 ────────────────────────────────
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`crew-posts-${groupId}`)
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "crew_posts",
+        filter: `group_id=eq.${groupId}`,
+      }, () => { loadPosts(); })
+      .on("postgres_changes", {
+        event: "DELETE", schema: "public", table: "crew_posts",
+        filter: `group_id=eq.${groupId}`,
+      }, () => { loadPosts(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [groupId, loadPosts]);
 
   async function handlePost() {
     if (!content.trim() && !driveLink.trim()) return;
@@ -111,6 +143,19 @@ export function CrewActivityFeed({
 
   return (
     <div className="max-w-2xl">
+      {/* 로드 중 */}
+      {loading && (
+        <div className="space-y-3 mb-6">
+          {[1,2,3].map(i => (
+            <div key={i} className="bg-nu-white border border-nu-ink/[0.08] p-5 animate-pulse">
+              <div className="flex gap-3">
+                <div className="w-9 h-9 rounded-full bg-nu-ink/8" />
+                <div className="flex-1"><div className="h-4 bg-nu-ink/8 w-24 mb-2" /><div className="h-12 bg-nu-ink/5" /></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       {/* Post form */}
       {canPost && (
         <div className="bg-nu-white border border-nu-ink/[0.08] p-5 mb-6">

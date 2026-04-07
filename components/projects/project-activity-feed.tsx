@@ -1,20 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { Send, Loader2, MessageSquare, Milestone, RefreshCw, UserPlus, Paperclip } from "lucide-react";
+import { Send, Loader2, MessageSquare, Milestone, RefreshCw, UserPlus } from "lucide-react";
 import type { ProjectUpdate } from "@/lib/types";
 import { ReactionsBar } from "@/components/community/reactions-bar";
 import { CommentThread } from "@/components/community/comment-thread";
 import { FileUploadButton, AttachedFiles } from "@/components/community/file-upload-button";
 
 const typeIcons: Record<string, { icon: typeof MessageSquare; color: string; label: string }> = {
-  post: { icon: MessageSquare, color: "bg-nu-blue/10 text-nu-blue", label: "포스트" },
-  milestone_update: { icon: Milestone, color: "bg-nu-yellow/10 text-nu-amber", label: "마일스톤" },
-  status_change: { icon: RefreshCw, color: "bg-nu-pink/10 text-nu-pink", label: "상태 변경" },
-  member_joined: { icon: UserPlus, color: "bg-green-50 text-green-600", label: "멤버 참여" },
+  post:             { icon: MessageSquare, color: "bg-nu-blue/10 text-nu-blue",    label: "포스트"    },
+  milestone_update: { icon: Milestone,     color: "bg-nu-yellow/10 text-nu-amber", label: "마일스톤"  },
+  status_change:    { icon: RefreshCw,     color: "bg-nu-pink/10 text-nu-pink",    label: "상태 변경" },
+  member_joined:    { icon: UserPlus,      color: "bg-green-50 text-green-600",    label: "멤버 참여" },
 };
 
 function timeAgo(dateStr: string) {
@@ -42,8 +42,40 @@ export function ProjectActivityFeed({
 }) {
   const router = useRouter();
   const [updates, setUpdates] = useState<ProjectUpdate[]>(initialUpdates);
-  const [content, setContent] = useState("");
-  const [posting, setPosting] = useState(false);
+  const [loading, setLoading]   = useState(true);
+  const [content, setContent]   = useState("");
+  const [posting, setPosting]   = useState(false);
+
+  // ── 마운트 시 DB에서 업데이트 로드 ─────────────────────────────────
+  const loadUpdates = useCallback(async () => {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("project_updates")
+      .select("*, author:profiles!project_updates_author_id_fkey(id, nickname, avatar_url)")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (!error && data) setUpdates(data as any);
+    setLoading(false);
+  }, [projectId]);
+
+  useEffect(() => {
+    loadUpdates();
+    // ── 실시간 구독 ─────────────────────────────────────────────────
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`project-updates-${projectId}`)
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "project_updates",
+        filter: `project_id=eq.${projectId}`,
+      }, () => { loadUpdates(); })
+      .on("postgres_changes", {
+        event: "DELETE", schema: "public", table: "project_updates",
+        filter: `project_id=eq.${projectId}`,
+      }, () => { loadUpdates(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [projectId, loadUpdates]);
 
   async function handlePost() {
     if (!content.trim()) return;
@@ -68,6 +100,20 @@ export function ProjectActivityFeed({
 
   return (
     <div className="max-w-2xl">
+      {/* 로드 중 스켈레톤 */}
+      {loading && (
+        <div className="space-y-3 mb-6">
+          {[1,2].map(i => (
+            <div key={i} className="bg-nu-white border border-nu-ink/[0.08] p-5 animate-pulse">
+              <div className="flex gap-3">
+                <div className="w-9 h-9 rounded-full bg-nu-ink/8" />
+                <div className="flex-1"><div className="h-4 bg-nu-ink/8 w-24 mb-2" /><div className="h-12 bg-nu-ink/5" /></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Post form */}
       {canPost && (
         <div className="bg-nu-white border border-nu-ink/[0.08] p-5 mb-6">
@@ -97,7 +143,6 @@ export function ProjectActivityFeed({
         {updates.map((update) => {
           const typeInfo = typeIcons[update.type] || typeIcons.post;
           const Icon = typeInfo.icon;
-
           return (
             <div key={update.id} className="bg-nu-white border border-nu-ink/[0.08] p-5">
               <div className="flex items-start gap-3">
@@ -113,14 +158,8 @@ export function ProjectActivityFeed({
                     <span className="font-mono-nu text-[10px] text-nu-muted">{timeAgo(update.created_at)}</span>
                   </div>
                   <p className="text-sm text-nu-graphite leading-relaxed whitespace-pre-wrap">{update.content}</p>
-
-                  {/* Attached files */}
                   <AttachedFiles targetType="project_update" targetId={update.id} />
-
-                  {/* Reactions */}
                   <ReactionsBar targetType="project_update" targetId={update.id} userId={userId} />
-
-                  {/* Comments */}
                   <CommentThread targetType="project_update" targetId={update.id} userId={userId} />
                 </div>
               </div>
@@ -129,7 +168,7 @@ export function ProjectActivityFeed({
         })}
       </div>
 
-      {updates.length === 0 && (
+      {!loading && updates.length === 0 && (
         <div className="text-center py-12 bg-nu-white border border-nu-ink/[0.08]">
           <p className="text-nu-gray text-sm">아직 활동이 없습니다</p>
         </div>
