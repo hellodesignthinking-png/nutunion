@@ -1,351 +1,436 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Users, Calendar, Bell, ChevronRight, MapPin, Clock, Briefcase, Activity } from "lucide-react";
+import {
+  Users, Calendar, Bell, ChevronRight, MapPin, Clock,
+  Briefcase, Activity, Plus, Layers, ArrowUpRight,
+  Star, Crown, Award, Shield, TrendingUp, Zap,
+  FileText, MessageSquare, CheckCircle2,
+} from "lucide-react";
+
+// ─── Grade helper ────────────────────────────────────────────────
+const GRADE = {
+  bronze: { label: "브론즈", color: "text-amber-500 bg-amber-50 border-amber-200", icon: Award },
+  silver: { label: "실버",  color: "text-slate-500 bg-slate-50 border-slate-200", icon: Star   },
+  gold:   { label: "골드",  color: "text-yellow-500 bg-yellow-50 border-yellow-200", icon: Star },
+  vip:    { label: "VIP",   color: "text-nu-pink bg-nu-pink/5 border-nu-pink/20", icon: Crown  },
+  admin:  { label: "관리자", color: "text-nu-pink bg-nu-pink text-white border-nu-pink", icon: Shield },
+};
+const CAT = {
+  space:    { color: "bg-nu-blue",   dot: "bg-nu-blue",   label: "공간"   },
+  culture:  { color: "bg-nu-amber",  dot: "bg-nu-amber",  label: "문화"   },
+  platform: { color: "bg-nu-ink",    dot: "bg-nu-ink",    label: "플랫폼" },
+  vibe:     { color: "bg-nu-pink",   dot: "bg-nu-pink",   label: "바이브" },
+};
+
+function timeAgo(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "방금";
+  if (m < 60) return `${m}분 전`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}시간 전`;
+  return `${Math.floor(h / 24)}일 전`;
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
+  // ── Fetch all data in parallel ──────────────────────────────────
+  const [
+    { data: profile },
+    { data: memberships },
+    { data: projectMemberships },
+    { count: notifCount },
+    { data: recentActivity },
+  ] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id", user.id).single(),
+    supabase.from("group_members")
+      .select("group_id, role, groups(id, name, category, description, max_members)")
+      .eq("user_id", user.id).eq("status", "active"),
+    supabase.from("project_members")
+      .select("project_id, role, reward_ratio, projects(id, title, description, status, category)")
+      .eq("user_id", user.id),
+    supabase.from("notifications")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id).eq("is_read", false),
+    supabase.from("crew_posts")
+      .select("id, content, type, created_at, author:profiles!crew_posts_author_id_fkey(nickname, avatar_url), group:groups!crew_posts_group_id_fkey(id, name)")
+      .order("created_at", { ascending: false })
+      .limit(6),
+  ]);
 
-  // Fetch user's groups
-  const { data: memberships } = await supabase
-    .from("group_members")
-    .select("group_id, role, groups(id, name, category, description, max_members)")
-    .eq("user_id", user.id)
-    .eq("status", "active");
-
-  // Fetch upcoming events from user's groups
   const groupIds = memberships?.map((m) => m.group_id) || [];
+
   const { data: events } = groupIds.length
-    ? await supabase
-        .from("events")
+    ? await supabase.from("events")
         .select("*")
         .in("group_id", groupIds)
         .gte("start_at", new Date().toISOString())
         .order("start_at", { ascending: true })
-        .limit(5)
+        .limit(3)
     : { data: [] };
 
-  // Fetch user's projects
-  const { data: projectMemberships } = await supabase
-    .from("project_members")
-    .select("project_id, role, projects(id, title, description, status, category)")
-    .eq("user_id", user.id);
+  // ── Pending group join requests (host only) ─────────────────────
+  const hostGroups = (memberships || []).filter((m: any) => m.role === "host").map((m: any) => m.group_id);
+  const { data: pendingRequests, count: pendingCount } = hostGroups.length
+    ? await supabase.from("group_members")
+        .select("id, group_id, user_id, groups(name), profile:profiles!group_members_user_id_fkey(nickname)", { count: "exact" })
+        .in("group_id", hostGroups)
+        .eq("status", "pending")
+        .limit(3)
+    : { data: [], count: 0 };
 
-  // Notification count
-  const { count: notifCount } = await supabase
-    .from("notifications")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .eq("is_read", false);
-
-  const nickname = profile?.nickname || "멤버";
-  const groupCount = memberships?.length || 0;
-  const eventCount = events?.length || 0;
+  const nickname    = profile?.nickname || "멤버";
+  const grade       = profile?.role === "admin" ? "admin" : (profile?.grade || "bronze");
+  const gradeInfo   = GRADE[grade as keyof typeof GRADE] || GRADE.bronze;
+  const GradeIcon   = gradeInfo.icon;
+  const groupCount  = memberships?.length || 0;
   const projectCount = projectMemberships?.length || 0;
-
-  const catColors: Record<string, string> = {
-    space: "bg-nu-blue",
-    culture: "bg-nu-amber",
-    platform: "bg-nu-ink",
-    vibe: "bg-nu-pink",
-  };
+  const eventCount  = events?.length || 0;
 
   return (
-    <div className="max-w-6xl mx-auto px-8 py-12">
-      <h1 className="font-head text-3xl font-extrabold text-nu-ink mb-8">
-        안녕하세요, {nickname}님
-      </h1>
+    <div className="max-w-6xl mx-auto px-6 py-10">
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-12">
-        <div className="bg-nu-white border border-nu-ink/[0.08] p-6 flex items-center gap-4">
-          <div className="w-12 h-12 bg-nu-blue/10 flex items-center justify-center">
-            <Users size={20} className="text-nu-blue" />
-          </div>
-          <div>
-            <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">
-              내 소모임
-            </p>
-            <p className="font-head text-2xl font-extrabold">{groupCount}</p>
-          </div>
-        </div>
-        <div className="bg-nu-white border border-nu-ink/[0.08] p-6 flex items-center gap-4">
-          <div className="w-12 h-12 bg-green-50 flex items-center justify-center">
-            <Briefcase size={20} className="text-green-600" />
-          </div>
-          <div>
-            <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">
-              내 프로젝트
-            </p>
-            <p className="font-head text-2xl font-extrabold">{projectCount}</p>
-          </div>
-        </div>
-        <div className="bg-nu-white border border-nu-ink/[0.08] p-6 flex items-center gap-4">
-          <div className="w-12 h-12 bg-nu-pink/10 flex items-center justify-center">
-            <Calendar size={20} className="text-nu-pink" />
-          </div>
-          <div>
-            <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">
-              다가오는 일정
-            </p>
-            <p className="font-head text-2xl font-extrabold">{eventCount}</p>
-          </div>
-        </div>
-        <div className="bg-nu-white border border-nu-ink/[0.08] p-6 flex items-center gap-4">
-          <div className="w-12 h-12 bg-nu-yellow/10 flex items-center justify-center">
-            <Bell size={20} className="text-nu-amber" />
-          </div>
-          <div>
-            <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">
-              알림
-            </p>
-            <p className="font-head text-2xl font-extrabold">{notifCount || 0}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* My Groups */}
-      <div className="mb-12">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="font-head text-xl font-extrabold">내 소모임</h2>
-          <Link
-            href="/groups"
-            className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-pink no-underline flex items-center gap-1 hover:underline"
-          >
-            전체보기 <ChevronRight size={14} />
-          </Link>
-        </div>
-        {groupCount === 0 ? (
-          <div className="bg-nu-white border border-nu-ink/[0.08] p-8 text-center">
-            <p className="text-nu-gray mb-4">아직 소모임이 없습니다</p>
-            <Link
-              href="/groups"
-              className="font-mono-nu text-[11px] uppercase tracking-widest bg-nu-ink text-nu-paper px-6 py-3 no-underline hover:bg-nu-pink transition-colors inline-block"
-            >
-              소모임 탐색하기
-            </Link>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {memberships?.map((m: any) => {
-              const g = m.groups;
-              if (!g) return null;
-              return (
-                <Link
-                  key={g.id}
-                  href={`/groups/${g.id}`}
-                  className="group-card bg-nu-white border border-nu-ink/[0.08] p-5 no-underline block"
-                >
-                  <span
-                    className={`inline-block font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 mb-3 text-white ${catColors[g.category] || "bg-nu-gray"}`}
-                  >
-                    {g.category}
-                  </span>
-                  <h3 className="font-head text-lg font-extrabold text-nu-ink mb-1">
-                    {g.name}
-                  </h3>
-                  <p className="text-xs text-nu-gray line-clamp-2">
-                    {g.description}
-                  </p>
-                  <span className="font-mono-nu text-[10px] text-nu-muted mt-3 block">
-                    {m.role === "host" ? "호스트" : "멤버"}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* My Projects */}
-      <div className="mb-12">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="font-head text-xl font-extrabold">내 프로젝트</h2>
-          <Link
-            href="/projects"
-            className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-pink no-underline flex items-center gap-1 hover:underline"
-          >
-            전체보기 <ChevronRight size={14} />
-          </Link>
-        </div>
-        {projectCount === 0 ? (
-          <div className="bg-nu-white border border-nu-ink/[0.08] p-8 text-center">
-            <p className="text-nu-gray mb-4">아직 참여 중인 프로젝트가 없습니다</p>
-            <Link
-              href="/projects"
-              className="font-mono-nu text-[11px] uppercase tracking-widest bg-nu-ink text-nu-paper px-6 py-3 no-underline hover:bg-nu-pink transition-colors inline-block"
-            >
-              프로젝트 탐색하기
-            </Link>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projectMemberships?.map((pm: any) => {
-              const p = pm.projects;
-              if (!p) return null;
-              return (
-                <Link
-                  key={p.id}
-                  href={`/projects/${p.id}`}
-                  className="bg-nu-white border border-nu-ink/[0.08] p-5 no-underline block hover:border-nu-pink/30 transition-colors"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Briefcase size={14} className="text-green-600" />
-                    <span className={`font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 ${p.status === "active" ? "bg-green-50 text-green-700" : "bg-nu-ink/5 text-nu-muted"}`}>
-                      {p.status}
-                    </span>
-                  </div>
-                  <h3 className="font-head text-lg font-extrabold text-nu-ink mb-1">
-                    {p.title}
-                  </h3>
-                  <p className="text-xs text-nu-gray line-clamp-2">
-                    {p.description}
-                  </p>
-                  <span className="font-mono-nu text-[10px] text-nu-muted mt-3 block">
-                    {pm.role}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Recent Activity */}
-      <div className="mb-12">
-        <h2 className="font-head text-xl font-extrabold mb-6 flex items-center gap-2">
-          <Activity size={18} /> 최근 활동
-        </h2>
-        <RecentActivity userId={user.id} groupIds={groupIds} />
-      </div>
-
-      {/* Upcoming Events */}
-      <div>
-        <h2 className="font-head text-xl font-extrabold mb-6">다가오는 일정</h2>
-        {eventCount === 0 ? (
-          <div className="bg-nu-white border border-nu-ink/[0.08] p-8 text-center">
-            <p className="text-nu-gray">예정된 일정이 없습니다</p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {events?.map((evt: any) => (
-              <Link
-                key={evt.id}
-                href={`/groups/${evt.group_id}/events/${evt.id}`}
-                className="bg-nu-white border border-nu-ink/[0.08] p-5 flex items-center gap-5 no-underline hover:border-nu-pink/30 transition-colors"
-              >
-                <div className="w-14 h-14 bg-nu-pink/10 flex flex-col items-center justify-center shrink-0">
-                  <span className="font-head text-lg font-extrabold text-nu-pink leading-none">
-                    {new Date(evt.start_at).getDate()}
-                  </span>
-                  <span className="font-mono-nu text-[9px] uppercase text-nu-pink/70">
-                    {new Date(evt.start_at).toLocaleDateString("ko", { month: "short" })}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-head text-sm font-bold text-nu-ink truncate">
-                    {evt.title}
-                  </h3>
-                  <div className="flex items-center gap-4 mt-1">
-                    <span className="flex items-center gap-1 text-xs text-nu-muted">
-                      <Clock size={12} />
-                      {new Date(evt.start_at).toLocaleTimeString("ko", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                    {evt.location && (
-                      <span className="flex items-center gap-1 text-xs text-nu-muted">
-                        <MapPin size={12} />
-                        {evt.location}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <ChevronRight size={16} className="text-nu-muted shrink-0" />
+      {/* ── Hero greeting ──────────────────────────────────────────── */}
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className={`inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 border ${gradeInfo.color}`}>
+              <GradeIcon size={9} /> {gradeInfo.label}
+            </span>
+            {notifCount ? (
+              <Link href="/notifications" className="inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 bg-nu-pink text-white no-underline">
+                <Bell size={9} /> 알림 {notifCount}
               </Link>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-async function RecentActivity({ userId, groupIds }: { userId: string; groupIds: string[] }) {
-  const supabase = await (await import("@/lib/supabase/server")).createClient();
-
-  // Fetch recent project updates from user's projects
-  const { data: projUpdates } = await supabase
-    .from("project_updates")
-    .select("id, content, type, created_at, author:profiles!project_updates_author_id_fkey(nickname), project:projects!project_updates_project_id_fkey(title)")
-    .order("created_at", { ascending: false })
-    .limit(5);
-
-  // Fetch recent crew posts from user's groups
-  const { data: crewPosts } = groupIds.length > 0
-    ? await supabase
-        .from("crew_posts")
-        .select("id, content, type, created_at, author:profiles!crew_posts_author_id_fkey(nickname), group:groups!crew_posts_group_id_fkey(name)")
-        .in("group_id", groupIds)
-        .order("created_at", { ascending: false })
-        .limit(5)
-    : { data: [] };
-
-  // Merge and sort
-  const activities = [
-    ...(projUpdates || []).map((u: any) => ({ ...u, source: "project", sourceName: u.project?.title })),
-    ...(crewPosts || []).map((p: any) => ({ ...p, source: "crew", sourceName: p.group?.name })),
-  ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 8);
-
-  if (activities.length === 0) {
-    return (
-      <div className="bg-nu-white border border-nu-ink/[0.08] p-8 text-center">
-        <p className="text-nu-gray text-sm">최근 활동이 없습니다</p>
-      </div>
-    );
-  }
-
-  function timeAgo(dateStr: string) {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return "방금";
-    if (mins < 60) return `${mins}분 전`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}시간 전`;
-    return `${Math.floor(hours / 24)}일 전`;
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      {activities.map((a: any) => (
-        <div key={a.id} className="bg-nu-white border border-nu-ink/[0.06] p-4 flex items-start gap-3">
-          <div className="w-8 h-8 rounded-full bg-nu-cream flex items-center justify-center font-head text-[10px] font-bold text-nu-ink shrink-0">
-            {(a.author?.nickname || "U").charAt(0).toUpperCase()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-medium">{a.author?.nickname}</span>
-              <span className={`font-mono-nu text-[8px] uppercase tracking-widest px-1.5 py-0.5 ${a.source === "project" ? "bg-green-50 text-green-600" : "bg-nu-blue/10 text-nu-blue"}`}>
-                {a.source === "project" ? "프로젝트" : "크루"}
+            ) : null}
+            {(pendingCount || 0) > 0 && (
+              <span className="inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 bg-nu-amber text-white">
+                <Users size={9} /> 가입 승인 대기 {pendingCount}
               </span>
-              <span className="font-mono-nu text-[9px] text-nu-muted">{a.sourceName}</span>
-              <span className="font-mono-nu text-[9px] text-nu-muted/60">{timeAgo(a.created_at)}</span>
+            )}
+          </div>
+          <h1 className="font-head text-3xl font-extrabold text-nu-ink">
+            안녕하세요, {nickname}님 👋
+          </h1>
+          <p className="text-nu-gray text-sm mt-1">오늘도 너트유니온과 함께 성장하세요</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link href="/groups/create"
+            className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 border border-nu-ink/20 hover:bg-nu-ink hover:text-nu-paper transition-colors no-underline flex items-center gap-1.5">
+            <Plus size={12} /> 소모임
+          </Link>
+          <Link href="/projects/create"
+            className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 bg-nu-pink text-nu-paper hover:bg-nu-pink/90 transition-colors no-underline flex items-center gap-1.5">
+            <Plus size={12} /> 프로젝트
+          </Link>
+        </div>
+      </div>
+
+      {/* ── KPI stats ──────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+        {[
+          { label: "내 소모임",   val: groupCount,   href: "/groups",       icon: Layers,    accent: "text-nu-blue",   bg: "bg-nu-blue/8" },
+          { label: "내 프로젝트", val: projectCount,  href: "/projects",     icon: Briefcase, accent: "text-green-600", bg: "bg-green-50" },
+          { label: "다가오는 일정", val: eventCount, href: "/dashboard",     icon: Calendar,  accent: "text-nu-pink",   bg: "bg-nu-pink/8" },
+          { label: "읽지 않은 알림", val: notifCount||0, href: "/notifications", icon: Bell, accent: "text-nu-amber",  bg: "bg-nu-amber/10" },
+        ].map((s) => (
+          <Link key={s.label} href={s.href}
+            className="bg-nu-white border border-nu-ink/[0.08] p-5 flex items-center gap-3 no-underline hover:border-nu-pink/30 hover:shadow-sm transition-all group">
+            <div className={`w-10 h-10 flex items-center justify-center shrink-0 ${s.bg}`}>
+              <s.icon size={18} className={s.accent} />
             </div>
-            <p className="text-xs text-nu-gray mt-1 line-clamp-2">{a.content}</p>
+            <div>
+              <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">{s.label}</p>
+              <p className="font-head text-2xl font-extrabold text-nu-ink group-hover:text-nu-pink transition-colors">{s.val}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {/* ── LEFT: 소모임 + 프로젝트 ─────────────────────────────── */}
+        <div className="lg:col-span-2 space-y-6">
+
+          {/* 가입 승인 대기 */}
+          {(pendingCount || 0) > 0 && (
+            <div className="bg-nu-amber/5 border-[2px] border-nu-amber/40 p-5">
+              <h2 className="font-head text-sm font-extrabold text-nu-ink flex items-center gap-2 mb-3">
+                <Users size={14} className="text-nu-amber" /> 가입 승인 대기 ({pendingCount})
+              </h2>
+              <div className="space-y-2">
+                {(pendingRequests || []).map((r: any) => (
+                  <div key={r.id} className="flex items-center justify-between bg-nu-white px-4 py-2.5 border border-nu-ink/[0.06]">
+                    <div>
+                      <span className="text-sm font-medium">{r.profile?.nickname}</span>
+                      <span className="font-mono-nu text-[10px] text-nu-muted ml-2">→ {r.groups?.name}</span>
+                    </div>
+                    <Link href={`/groups/${r.group_id}/settings`}
+                      className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink hover:underline no-underline">
+                      승인하기
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 내 소모임 */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-head text-lg font-extrabold text-nu-ink flex items-center gap-2">
+                <Layers size={16} /> 내 소모임
+              </h2>
+              <Link href="/groups" className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink no-underline hover:underline flex items-center gap-1">
+                전체보기 <ChevronRight size={12} />
+              </Link>
+            </div>
+            {groupCount === 0 ? (
+              <div className="bg-nu-white border border-nu-ink/[0.08] p-8 text-center">
+                <Layers size={28} className="text-nu-muted/30 mx-auto mb-3" />
+                <p className="text-nu-gray text-sm mb-3">아직 소모임이 없습니다</p>
+                <Link href="/groups"
+                  className="font-mono-nu text-[11px] uppercase tracking-widest bg-nu-ink text-nu-paper px-5 py-2.5 no-underline hover:bg-nu-pink transition-colors inline-block">
+                  소모임 탐색하기
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {memberships?.slice(0, 4).map((m: any) => {
+                  const g = m.groups;
+                  if (!g) return null;
+                  const cat = CAT[g.category as keyof typeof CAT];
+                  return (
+                    <Link key={g.id} href={`/groups/${g.id}`}
+                      className="bg-nu-white border border-nu-ink/[0.08] p-4 no-underline hover:border-nu-pink/40 hover:shadow-sm transition-all group">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`font-mono-nu text-[8px] uppercase tracking-widest px-2 py-0.5 text-white font-bold ${cat?.color || "bg-nu-gray"}`}>
+                          {cat?.label || g.category}
+                        </span>
+                        {m.role === "host" && (
+                          <span className="font-mono-nu text-[8px] uppercase tracking-widest bg-nu-pink/10 text-nu-pink px-1.5 py-0.5">Host</span>
+                        )}
+                      </div>
+                      <h3 className="font-head text-sm font-bold text-nu-ink group-hover:text-nu-pink transition-colors truncate">{g.name}</h3>
+                      <p className="text-[11px] text-nu-muted mt-1 line-clamp-1">{g.description || "-"}</p>
+                      <div className="flex items-center justify-end mt-2">
+                        <ArrowUpRight size={13} className="text-nu-muted/40 group-hover:text-nu-pink transition-colors" />
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* 내 프로젝트 */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-head text-lg font-extrabold text-nu-ink flex items-center gap-2">
+                <Briefcase size={16} /> 내 프로젝트
+              </h2>
+              <Link href="/projects" className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink no-underline hover:underline flex items-center gap-1">
+                전체보기 <ChevronRight size={12} />
+              </Link>
+            </div>
+            {projectCount === 0 ? (
+              <div className="bg-nu-white border border-nu-ink/[0.08] p-8 text-center">
+                <Briefcase size={28} className="text-nu-muted/30 mx-auto mb-3" />
+                <p className="text-nu-gray text-sm mb-3">참여 중인 프로젝트가 없습니다</p>
+                <Link href="/projects"
+                  className="font-mono-nu text-[11px] uppercase tracking-widest bg-nu-ink text-nu-paper px-5 py-2.5 no-underline hover:bg-nu-pink transition-colors inline-block">
+                  프로젝트 탐색하기
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {projectMemberships?.slice(0, 4).map((pm: any) => {
+                  const p = pm.projects;
+                  if (!p) return null;
+                  const cat = CAT[p.category as keyof typeof CAT];
+                  return (
+                    <Link key={p.id} href={`/projects/${p.id}`}
+                      className="bg-nu-white border border-nu-ink/[0.08] p-4 flex items-center gap-4 no-underline hover:border-nu-pink/40 hover:shadow-sm transition-all group">
+                      <div className={`w-1.5 h-10 shrink-0 ${p.status === "active" ? "bg-green-500" : "bg-nu-muted/20"}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <h3 className="font-head text-sm font-bold text-nu-ink group-hover:text-nu-pink transition-colors truncate">{p.title}</h3>
+                          {pm.role === "lead" && (
+                            <span className="font-mono-nu text-[8px] uppercase tracking-widest bg-green-50 text-green-600 px-1.5 py-0.5 shrink-0">PM</span>
+                          )}
+                          {cat && (
+                            <span className={`font-mono-nu text-[8px] uppercase tracking-widest px-1.5 py-0.5 text-white shrink-0 ${cat.color}`}>{cat.label}</span>
+                          )}
+                        </div>
+                        <span className={`font-mono-nu text-[10px] uppercase tracking-widest ${p.status === "active" ? "text-green-600" : "text-nu-muted"}`}>
+                          {p.status === "active" ? "● 진행중" : p.status === "completed" ? "완료" : p.status}
+                        </span>
+                      </div>
+                      {pm.reward_ratio && (
+                        <div className="shrink-0 text-right">
+                          <p className="font-head text-sm font-bold text-green-600">{pm.reward_ratio}%</p>
+                          <p className="font-mono-nu text-[9px] text-nu-muted">배분율</p>
+                        </div>
+                      )}
+                      <ArrowUpRight size={13} className="text-nu-muted/40 group-hover:text-nu-pink transition-colors shrink-0" />
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* 최근 커뮤니티 활동 */}
+          <div>
+            <h2 className="font-head text-lg font-extrabold text-nu-ink flex items-center gap-2 mb-3">
+              <Activity size={16} /> 최근 활동
+            </h2>
+            {(!recentActivity || recentActivity.length === 0) ? (
+              <div className="bg-nu-white border border-nu-ink/[0.08] p-6 text-center">
+                <p className="text-nu-gray text-sm">최근 활동이 없습니다</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {recentActivity.map((a: any) => {
+                  const group = Array.isArray(a.group) ? a.group[0] : a.group;
+                  return (
+                    <div key={a.id} className="bg-nu-white border border-nu-ink/[0.06] px-4 py-3 flex items-start gap-3">
+                      <div className="w-7 h-7 rounded-full bg-nu-ink/5 flex items-center justify-center font-head text-[10px] font-bold text-nu-ink shrink-0">
+                        {(a.author?.nickname || "U").charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-medium text-nu-ink">{a.author?.nickname}</span>
+                          {group && (
+                            <Link href={`/groups/${group.id}`}
+                              className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-blue hover:underline no-underline">
+                              #{group.name}
+                            </Link>
+                          )}
+                          <span className="font-mono-nu text-[9px] text-nu-muted/60 ml-auto">{timeAgo(a.created_at)}</span>
+                        </div>
+                        <p className="text-xs text-nu-gray mt-0.5 line-clamp-2">{a.content}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
-      ))}
+
+        {/* ── RIGHT sidebar ─────────────────────────────────────── */}
+        <div className="space-y-5">
+
+          {/* 빠른 이동 */}
+          <div className="bg-nu-white border border-nu-ink/[0.08] p-5">
+            <h3 className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-3">빠른 이동</h3>
+            <div className="space-y-1">
+              {[
+                { href: "/groups",       label: "소모임 탐색",   icon: Layers,    color: "text-nu-blue" },
+                { href: "/projects",     label: "프로젝트 탐색", icon: Briefcase, color: "text-green-600" },
+                { href: "/members",      label: "멤버 탐색",     icon: Users,     color: "text-nu-pink" },
+                { href: "/profile",      label: "내 아카이브",   icon: Star,      color: "text-nu-amber" },
+                { href: "/notifications",label: "알림",          icon: Bell,      color: "text-nu-muted" },
+              ].map((item) => (
+                <Link key={item.href} href={item.href}
+                  className="flex items-center gap-2.5 px-3 py-2 hover:bg-nu-cream/30 transition-colors no-underline group">
+                  <item.icon size={13} className={item.color} />
+                  <span className="text-sm text-nu-graphite group-hover:text-nu-ink">{item.label}</span>
+                  <ChevronRight size={11} className="ml-auto text-nu-muted/30 group-hover:text-nu-pink transition-colors" />
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* 다가오는 일정 */}
+          <div className="bg-nu-white border border-nu-ink/[0.08] p-5">
+            <h3 className="font-head text-sm font-extrabold text-nu-ink flex items-center gap-2 mb-3">
+              <Calendar size={14} /> 다가오는 일정
+            </h3>
+            {eventCount === 0 ? (
+              <p className="text-xs text-nu-muted text-center py-4">예정된 일정이 없습니다</p>
+            ) : (
+              <div className="space-y-3">
+                {events?.map((evt: any) => (
+                  <Link key={evt.id} href={`/groups/${evt.group_id}/events/${evt.id}`}
+                    className="flex items-center gap-3 py-1 no-underline hover:bg-nu-cream/20 transition-colors -mx-2 px-2 group">
+                    <div className="w-10 h-10 bg-nu-pink/10 flex flex-col items-center justify-center shrink-0">
+                      <span className="font-head text-sm font-extrabold text-nu-pink leading-none">
+                        {new Date(evt.start_at).getDate()}
+                      </span>
+                      <span className="font-mono-nu text-[8px] uppercase text-nu-pink/70">
+                        {new Date(evt.start_at).toLocaleDateString("ko", { month: "short" })}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-nu-ink truncate group-hover:text-nu-pink transition-colors">{evt.title}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="flex items-center gap-1 text-[10px] text-nu-muted">
+                          <Clock size={10} />
+                          {new Date(evt.start_at).toLocaleTimeString("ko", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        {evt.location && (
+                          <span className="flex items-center gap-1 text-[10px] text-nu-muted truncate">
+                            <MapPin size={10} /> {evt.location}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 성장 현황 */}
+          <div className="bg-nu-white border border-nu-ink/[0.08] p-5">
+            <h3 className="font-head text-sm font-extrabold text-nu-ink flex items-center gap-2 mb-3">
+              <TrendingUp size={14} /> 성장 현황
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">소모임 활동</span>
+                  <span className="font-head text-sm font-bold text-nu-ink">{groupCount}개</span>
+                </div>
+                <div className="h-1.5 bg-nu-ink/5 overflow-hidden">
+                  <div className="h-full bg-nu-blue" style={{ width: `${Math.min((groupCount / 5) * 100, 100)}%` }} />
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">프로젝트 참여</span>
+                  <span className="font-head text-sm font-bold text-nu-ink">{projectCount}개</span>
+                </div>
+                <div className="h-1.5 bg-nu-ink/5 overflow-hidden">
+                  <div className="h-full bg-green-500" style={{ width: `${Math.min((projectCount / 3) * 100, 100)}%` }} />
+                </div>
+              </div>
+              <div className="pt-2 border-t border-nu-ink/[0.06]">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">현재 등급</span>
+                  <span className={`inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 border ${gradeInfo.color}`}>
+                    <GradeIcon size={9} /> {gradeInfo.label}
+                  </span>
+                </div>
+                {grade === "bronze" && (
+                  <p className="text-[10px] text-nu-muted mt-1.5">소모임에 더 참여하면 실버로 승급됩니다</p>
+                )}
+                {grade === "silver" && (
+                  <p className="text-[10px] text-nu-muted mt-1.5">프로젝트에 참여하면 골드로 승급 가능합니다</p>
+                )}
+                {(grade === "gold" || grade === "vip") && (
+                  <p className="text-[10px] text-green-600 mt-1.5">✓ 소모임과 프로젝트를 개설할 수 있습니다</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -67,8 +67,12 @@ export default function ProjectSettingsPage() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [kakaoUrl, setKakaoUrl] = useState("");
-  const [driveUrl, setDriveUrl] = useState("");
+  const [kakaoUrl, setKakaoUrl]   = useState("");
+  const [driveUrl, setDriveUrl]   = useState("");
+  const [slackUrl, setSlackUrl]   = useState("");
+  const [notionUrl, setNotionUrl] = useState("");
+  const [totalBudget, setTotalBudget] = useState("");
+  const [budgetCurrency, setBudgetCurrency] = useState("KRW");
 
   const [members, setMembers] = useState<MemberItem[]>([]);
   const [crews, setCrews] = useState<{ id: string; name: string; category: string }[]>([]);
@@ -133,8 +137,12 @@ export default function ProjectSettingsPage() {
     setEndDate(project.end_date || "");
     setImageUrl(project.image_url);
     setImagePreview(project.image_url);
-    setKakaoUrl(project.kakao_chat_url || "");
-    setDriveUrl(project.google_drive_url || "");
+    setKakaoUrl(project.kakao_chat_url || project.tool_kakao || "");
+    setDriveUrl(project.google_drive_url || project.tool_drive || "");
+    setSlackUrl(project.tool_slack || "");
+    setNotionUrl(project.tool_notion || "");
+    setTotalBudget(project.total_budget ? String(project.total_budget) : "");
+    setBudgetCurrency(project.budget_currency || "KRW");
 
     // Load members
     const { data: membersData } = await supabase
@@ -203,6 +211,12 @@ export default function ProjectSettingsPage() {
           image_url: finalImageUrl,
           kakao_chat_url: kakaoUrl.trim() || null,
           google_drive_url: driveUrl.trim() || null,
+          tool_slack: slackUrl.trim() || null,
+          tool_notion: notionUrl.trim() || null,
+          tool_drive: driveUrl.trim() || null,
+          tool_kakao: kakaoUrl.trim() || null,
+          total_budget: totalBudget ? parseInt(totalBudget) : null,
+          budget_currency: budgetCurrency || "KRW",
         })
         .eq("id", projectId);
 
@@ -507,19 +521,46 @@ export default function ProjectSettingsPage() {
           </div>
         </div>
 
-        {/* External integrations */}
+        {/* External integrations - Tool Hub */}
         <div className="border-t border-nu-ink/[0.06] pt-5 mt-2">
-          <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink block mb-4">외부 연동</span>
-          <div className="flex flex-col gap-4">
+          <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink block mb-4">️ 툴 허브 (외부 연동)</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray block mb-1.5">카카오톡 오픈채팅 URL</label>
-              <input value={kakaoUrl} onChange={(e) => setKakaoUrl(e.target.value)} placeholder="https://open.kakao.com/o/..." className="w-full border border-nu-ink/15 bg-transparent px-3 py-2 text-sm" />
+              <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray block mb-1.5">Slack 채널 URL</label>
+              <input value={slackUrl} onChange={(e) => setSlackUrl(e.target.value)} placeholder="https://app.slack.com/..." className="w-full border border-nu-ink/15 bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-nu-pink" />
+            </div>
+            <div>
+              <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray block mb-1.5">Notion 보드 URL</label>
+              <input value={notionUrl} onChange={(e) => setNotionUrl(e.target.value)} placeholder="https://notion.so/..." className="w-full border border-nu-ink/15 bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-nu-pink" />
             </div>
             <div>
               <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray block mb-1.5">Google Drive URL</label>
-              <input value={driveUrl} onChange={(e) => setDriveUrl(e.target.value)} placeholder="https://drive.google.com/drive/folders/..." className="w-full border border-nu-ink/15 bg-transparent px-3 py-2 text-sm" />
+              <input value={driveUrl} onChange={(e) => setDriveUrl(e.target.value)} placeholder="https://drive.google.com/..." className="w-full border border-nu-ink/15 bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-nu-pink" />
+            </div>
+            <div>
+              <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray block mb-1.5">카카오톡 오픈채팅 URL</label>
+              <input value={kakaoUrl} onChange={(e) => setKakaoUrl(e.target.value)} placeholder="https://open.kakao.com/o/..." className="w-full border border-nu-ink/15 bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-nu-pink" />
             </div>
           </div>
+        </div>
+
+        {/* Budget */}
+        <div className="border-t border-nu-ink/[0.06] pt-5">
+          <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink block mb-4"> 예산 & 보상 투명성</span>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="col-span-2">
+              <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray block mb-1.5">총 사업비</label>
+              <input type="number" value={totalBudget} onChange={(e) => setTotalBudget(e.target.value)} placeholder="10000000" className="w-full border border-nu-ink/15 bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-nu-pink" />
+            </div>
+            <div>
+              <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray block mb-1.5">통화</label>
+              <select value={budgetCurrency} onChange={(e) => setBudgetCurrency(e.target.value)} className="w-full border border-nu-ink/15 bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-nu-pink">
+                <option value="KRW">KRW</option>
+                <option value="USD">USD</option>
+              </select>
+            </div>
+          </div>
+          <p className="font-mono-nu text-[10px] text-nu-muted mt-2">설정하면 프로젝트 상세 페이지의 [예산 & 보상] 패널에 공개됩니다</p>
         </div>
 
         <button
