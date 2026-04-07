@@ -57,80 +57,39 @@ export default async function ProjectDetailPage({
   } = await supabase.auth.getUser();
   if (!user) return notFound();
 
-  // Fetch project
-  const { data: project } = await supabase
-    .from("projects")
-    .select(
-      "*, creator:profiles!projects_created_by_fkey(id, nickname, avatar_url)"
-    )
-    .eq("id", id)
-    .single();
+  // ── 병렬 쿼리로 성능 대폭 개선 (7개 순잘 → 1배치) ─────────────────
+  const [
+    { data: project },
+    { data: profile },
+    { data: milestones },
+    { data: members },
+    { data: updates },
+    { data: events },
+    { data: application },
+  ] = await Promise.all([
+    supabase.from("projects").select("*, creator:profiles!projects_created_by_fkey(id, nickname, avatar_url)").eq("id", id).single(),
+    supabase.from("profiles").select("role").eq("id", user.id).single(),
+    supabase.from("project_milestones").select("*, tasks:project_tasks(*, assignee:profiles!project_tasks_assigned_to_fkey(id, nickname, avatar_url))").eq("project_id", id).order("sort_order"),
+    supabase.from("project_members").select("*, profile:profiles!project_members_user_id_fkey(id, nickname, avatar_url, email), crew:groups!project_members_crew_id_fkey(id, name, category, image_url)").eq("project_id", id).order("joined_at"),
+    supabase.from("project_updates").select("*, author:profiles!project_updates_author_id_fkey(id, nickname, avatar_url)").eq("project_id", id).order("created_at", { ascending: false }).limit(50),
+    supabase.from("events").select("*, group:groups(name)").eq("project_id", id).order("start_at").limit(10),
+    supabase.from("project_applications").select("status").eq("project_id", id).eq("applicant_id", user.id).maybeSingle(),
+  ]);
 
   if (!project) notFound();
 
-  // Fetch profile for admin check
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
   const isAdmin = profile?.role === "admin";
-
-  // Fetch milestones with tasks
-  const { data: milestones } = await supabase
-    .from("project_milestones")
-    .select(
-      "*, tasks:project_tasks(*, assignee:profiles!project_tasks_assigned_to_fkey(id, nickname, avatar_url))"
-    )
-    .eq("project_id", id)
-    .order("sort_order");
-
-  // Fetch members
-  const { data: members } = await supabase
-    .from("project_members")
-    .select(
-      "*, profile:profiles!project_members_user_id_fkey(id, nickname, avatar_url, email), crew:groups!project_members_crew_id_fkey(id, name, category, image_url)"
-    )
-    .eq("project_id", id)
-    .order("joined_at");
-
-  // Fetch updates
-  const { data: updates } = await supabase
-    .from("project_updates")
-    .select(
-      "*, author:profiles!project_updates_author_id_fkey(id, nickname, avatar_url)"
-    )
-    .eq("project_id", id)
-    .order("created_at", { ascending: false })
-    .limit(50);
-
-  // Fetch linked events
-  const { data: events } = await supabase
-    .from("events")
-    .select("*, group:groups(name)")
-    .eq("project_id", id)
-    .order("start_at")
-    .limit(10);
-
-  // Fetch application status
-  const { data: application } = await supabase
-    .from("project_applications")
-    .select("status")
-    .eq("project_id", id)
-    .eq("applicant_id", user.id)
-    .maybeSingle();
 
   const applicationStatus = application?.status as "pending" | "approved" | "rejected" | "withdrawn" | null;
 
   const membersList = members || [];
   const userMembers = membersList.filter((m: any) => m.user_id && m.profile);
   const crewMembers = membersList.filter((m: any) => m.crew_id && m.crew);
-  const isMember = membersList.some((m: any) => m.user_id === user.id);
-  const isLead = membersList.some(
-    (m: any) => m.user_id === user.id && m.role === "lead"
-  );
-  const canEdit = isLead || isAdmin;
+  const isMember  = membersList.some((m: any) => m.user_id === user.id);
+  const isLead    = membersList.some((m: any) => m.user_id === user.id && m.role === "lead");
+  const isManager = membersList.some((m: any) => m.user_id === user.id && (m.role === "manager" || m.role === "lead"));
+  const canEdit   = isLead || isAdmin;
+  const canManage = isManager || isAdmin;  // 매니저도 설정 접근 가능
 
   // Calculate task stats
   const allTasks = (milestones || []).flatMap((m: any) => m.tasks || []);

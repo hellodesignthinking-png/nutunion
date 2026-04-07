@@ -50,68 +50,33 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: group } = await supabase
-    .from("groups")
-    .select("*, host:profiles!groups_host_id_fkey(id, nickname, avatar_url)")
-    .eq("id", id)
-    .single();
+  // ── 병렬 쿼리로 성능 대폭 개선 ──────────────────────────────────
+  const now = new Date().toISOString();
+  const [
+    { data: group },
+    { data: members },
+    { data: events },
+    { data: meetings },
+    { data: pastMeetings },
+    { data: userMembership },
+    { count: totalMeetings },
+    { count: totalFiles },
+  ] = await Promise.all([
+    supabase.from("groups").select("*, host:profiles!groups_host_id_fkey(id, nickname, avatar_url)").eq("id", id).single(),
+    supabase.from("group_members").select("id, user_id, role, joined_at, status, profile:profiles(id, nickname, avatar_url, specialty, grade, can_create_crew)").eq("group_id", id).eq("status", "active").order("joined_at"),
+    supabase.from("events").select("*").eq("group_id", id).gte("start_at", now).order("start_at").limit(5),
+    supabase.from("meetings").select("id, title, scheduled_at, duration_min, location, status").eq("group_id", id).in("status", ["upcoming", "in_progress"]).gte("scheduled_at", now).order("scheduled_at").limit(5),
+    supabase.from("meetings").select("id, title, scheduled_at, summary, next_topic, status").eq("group_id", id).eq("status", "completed").order("scheduled_at", { ascending: false }).limit(3),
+    supabase.from("group_members").select("status, role").eq("group_id", id).eq("user_id", user.id).maybeSingle(),
+    supabase.from("meetings").select("id", { count: "exact", head: true }).eq("group_id", id),
+    supabase.from("file_attachments").select("id", { count: "exact", head: true }).eq("target_type", "group").eq("target_id", id),
+  ]);
 
   if (!group) notFound();
 
-  const { data: members } = await supabase
-    .from("group_members")
-    .select("id, user_id, role, joined_at, status, profile:profiles(id, nickname, avatar_url, specialty, grade, can_create_crew)")
-    .eq("group_id", id)
-    .eq("status", "active")
-    .order("joined_at");
-
-  const { data: events } = await supabase
-    .from("events")
-    .select("*")
-    .eq("group_id", id)
-    .gte("start_at", new Date().toISOString())
-    .order("start_at")
-    .limit(5);
-
-  const { data: meetings } = await supabase
-    .from("meetings")
-    .select("id, title, scheduled_at, duration_min, location, status")
-    .eq("group_id", id)
-    .in("status", ["upcoming", "in_progress"])
-    .gte("scheduled_at", new Date().toISOString())
-    .order("scheduled_at")
-    .limit(5);
-
-  // Past meetings for activity
-  const { data: pastMeetings } = await supabase
-    .from("meetings")
-    .select("id, title, scheduled_at, summary, next_topic, status")
-    .eq("group_id", id)
-    .eq("status", "completed")
-    .order("scheduled_at", { ascending: false })
-    .limit(3);
-
-  const { data: userMembership } = await supabase
-    .from("group_members")
-    .select("status")
-    .eq("group_id", id)
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  // Stats
-  const { count: totalMeetings } = await supabase
-    .from("meetings")
-    .select("id", { count: "exact", head: true })
-    .eq("group_id", id);
-
-  const { count: totalFiles } = await supabase
-    .from("file_attachments")
-    .select("id", { count: "exact", head: true })
-    .eq("target_type", "group")
-    .eq("target_id", id);
-
   const isMember = members?.some((m) => m.user_id === user.id);
-  const isHost = group.host_id === user.id;
+  const isHost   = group.host_id === user.id;
+  const isManager = userMembership?.role === "manager" || isHost;
   const membershipStatus = userMembership?.status as "active" | "pending" | "waitlist" | null;
   const colors = catColors[group.category] || catColors.vibe;
 

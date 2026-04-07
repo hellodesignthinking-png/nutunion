@@ -146,6 +146,36 @@ export default function GroupSettingsPage() {
     toast.success(`${targetNickname}님이 승인되었습니다`);
   }
 
+  async function handlePromoteManager(targetUserId: string, isCurrentlyManager: boolean) {
+    const newRole = isCurrentlyManager ? "member" : "manager";
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("group_members")
+      .update({ role: newRole })
+      .eq("group_id", groupId)
+      .eq("user_id", targetUserId);
+
+    if (error) { toast.error("역할 변경에 실패했습니다"); return; }
+
+    setMembers(prev => prev.map(m =>
+      m.user_id === targetUserId ? { ...m, role: newRole } : m
+    ));
+
+    // 알림 발송
+    await supabase.from("notifications").insert({
+      user_id: targetUserId,
+      type: "role_changed",
+      title: isCurrentlyManager ? "매니저 권한 해제" : "매니저로 임명되었습니다",
+      body: isCurrentlyManager
+        ? `${group?.name} 소모임의 매니저 권한이 해제되었습니다.`
+        : `${group?.name} 소모임의 매니저로 임명되었습니다. 소모임의 일정, 파일, 멤버 관리를 할 수 있습니다.`,
+      metadata: { group_id: groupId },
+      is_read: false,
+    });
+
+    toast.success(isCurrentlyManager ? "일반 멤버로 변경되었습니다" : "매니저로 임명되었습니다");
+  }
+
   async function handleRejectMember(targetUserId: string, targetNickname: string) {
     if (!confirm(`${targetNickname}님의 가입 신청을 거절하시겠습니까?`)) return;
     const supabase = createClient();
@@ -250,35 +280,60 @@ export default function GroupSettingsPage() {
 
       {/* Active members */}
       <div className="bg-nu-white border border-nu-ink/[0.08] p-8 mb-6">
-        <h2 className="font-head text-lg font-extrabold mb-4">
-          멤버 ({activeMembers.length})
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-head text-lg font-extrabold">멤버 ({activeMembers.length})</h2>
+          <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">매니저는 일정·파일·멤버 관리 가능</p>
+        </div>
         <div className="flex flex-col divide-y divide-nu-ink/5">
-          {activeMembers.map((m) => (
-            <div key={m.user_id} className="flex items-center justify-between py-3">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-nu-cream flex items-center justify-center font-head text-xs font-bold" aria-hidden="true">
-                  {(m.profile?.nickname || "U").charAt(0).toUpperCase()}
+          {activeMembers.map((m) => {
+            const isManager = m.role === "manager";
+            const isCurrentHost = m.role === "host";
+            return (
+              <div key={m.user_id} className="flex items-center justify-between py-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-nu-cream flex items-center justify-center font-head text-xs font-bold">
+                    {(m.profile?.nickname || "U").charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">{m.profile?.nickname}</p>
+                      {isCurrentHost && (
+                        <span className="font-mono-nu text-[8px] uppercase tracking-widest bg-nu-pink text-white px-1.5 py-0.5">호스트</span>
+                      )}
+                      {isManager && (
+                        <span className="font-mono-nu text-[8px] uppercase tracking-widest bg-nu-blue/10 text-nu-blue px-1.5 py-0.5">매니저</span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-nu-muted">
+                      {isCurrentHost ? "소모임 호스트" : isManager ? "소모임 매니저 · 일정/파일/멤버 관리 가능" : "일반 멤버"}
+                      {m.profile?.email && ` · ${m.profile.email}`}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium">{m.profile?.nickname}</p>
-                  <p className="text-[10px] text-nu-muted">
-                    {m.role === "host" ? "호스트" : "멤버"}
-                    {m.profile?.email && ` · ${m.profile.email}`}
-                  </p>
-                </div>
+                {!isCurrentHost && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handlePromoteManager(m.user_id, isManager)}
+                      className={`font-mono-nu text-[9px] uppercase tracking-widest px-2.5 py-1.5 border transition-colors ${
+                        isManager
+                          ? "border-nu-muted/30 text-nu-muted hover:border-nu-red/40 hover:text-nu-red"
+                          : "border-nu-blue/30 text-nu-blue hover:bg-nu-blue hover:text-white"
+                      }`}
+                    >
+                      {isManager ? "매니저 해제" : "매니저 임명"}
+                    </button>
+                    <button
+                      onClick={() => handleRemoveMember(m.user_id)}
+                      className="p-2 text-nu-muted hover:text-nu-red transition-colors"
+                      aria-label={`${m.profile?.nickname} 제거`}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                )}
               </div>
-              {m.role !== "host" && (
-                <button
-                  onClick={() => handleRemoveMember(m.user_id)}
-                  className="p-2 text-nu-muted hover:text-nu-red transition-colors"
-                  aria-label={`${m.profile?.nickname} 제거`}
-                >
-                  <Trash2 size={14} />
-                </button>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

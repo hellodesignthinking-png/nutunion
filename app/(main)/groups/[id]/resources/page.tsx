@@ -58,6 +58,7 @@ export default function ResourcesPage() {
   const [uploading, setUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
+  const [isManager, setIsManager] = useState(false);
   const [activeTab, setActiveTab] = useState<"files" | "drive" | "meetings">("files");
   const [groupName, setGroupName] = useState("");
 
@@ -67,9 +68,15 @@ export default function ResourcesPage() {
     if (!user) return;
     setUserId(user.id);
 
-    // Load group name
-    const { data: grp } = await supabase.from("groups").select("name").eq("id", groupId).single();
-    if (grp) setGroupName(grp.name || "소모임");
+    // 매니저/호스트 여부 확인
+    const [{ data: grp }, { data: membership }] = await Promise.all([
+      supabase.from("groups").select("name, host_id").eq("id", groupId).single(),
+      supabase.from("group_members").select("role").eq("group_id", groupId).eq("user_id", user.id).maybeSingle(),
+    ]);
+    if (grp) {
+      setGroupName(grp.name || "소모임");
+      setIsManager(grp.host_id === user.id || membership?.role === "manager" || membership?.role === "host");
+    }
 
     const { data: filesData } = await supabase
       .from("file_attachments")

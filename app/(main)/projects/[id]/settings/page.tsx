@@ -123,7 +123,7 @@ export default function ProjectSettingsPage() {
       .eq("user_id", user.id)
       .single();
 
-    if (!isAdmin && membership?.role !== "lead") {
+    if (!isAdmin && membership?.role !== "lead" && membership?.role !== "manager") {
       toast.error("설정 접근 권한이 없습니다");
       router.push(`/projects/${projectId}`);
       return;
@@ -228,6 +228,32 @@ export default function ProjectSettingsPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handlePromoteManager(memberId: string, userId: string, isCurrentlyManager: boolean) {
+    const supabase = createClient();
+    const newRole = isCurrentlyManager ? "member" : "manager";
+    const { error } = await supabase
+      .from("project_members")
+      .update({ role: newRole })
+      .eq("id", memberId);
+
+    if (error) { toast.error("역할 변경에 실패했습니다"); return; }
+
+    setMembers(prev => prev.map(m => m.id === memberId ? { ...m, role: newRole } : m));
+
+    await supabase.from("notifications").insert({
+      user_id: userId,
+      type: "role_changed",
+      title: isCurrentlyManager ? "매니저 권한 해제" : "프로젝트 매니저로 임명",
+      body: isCurrentlyManager
+        ? "프로젝트 매니저 권한이 해제되었습니다."
+        : "프로젝트 매니저로 임명되었습니다. 멤버 관리와 프로젝트 설정 일부를 제어할 수 있습니다.",
+      metadata: { project_id: projectId },
+      is_read: false,
+    });
+
+    toast.success(isCurrentlyManager ? "일반 멤버로 변경되었습니다" : "매니저로 임명되었습니다");
   }
 
   async function removeMember(memberId: string) {
@@ -597,38 +623,52 @@ export default function ProjectSettingsPage() {
                     {m.profile.nickname.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {m.profile.nickname}
-                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-medium truncate">{m.profile.nickname}</p>
+                      {m.role === "lead" && (
+                        <span className="font-mono-nu text-[7px] uppercase tracking-widest bg-nu-pink text-white px-1.5 py-0.5 shrink-0">PM</span>
+                      )}
+                      {m.role === "manager" && (
+                        <span className="font-mono-nu text-[7px] uppercase tracking-widest bg-nu-blue/10 text-nu-blue px-1.5 py-0.5 shrink-0">매니저</span>
+                      )}
+                    </div>
                     <p className="text-[10px] text-nu-muted">
-                      {roleLabels[m.role] || m.role}
+                      {m.role === "manager" ? "멤버 관리·파일업로드·일정관리 가능" : (roleLabels[m.role] || m.role)}
                     </p>
                   </div>
                 </>
               ) : m.crew_id && m.crew ? (
                 <>
-                  <div
-                    className={`w-8 h-8 flex items-center justify-center font-head text-xs font-bold text-white ${catColors[m.crew.category] || "bg-nu-gray"}`}
-                  >
+                  <div className={`w-8 h-8 flex items-center justify-center font-head text-xs font-bold text-white ${catColors[m.crew.category] || "bg-nu-gray"}`}>
                     {m.crew.name.charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {m.crew.name}
-                    </p>
-                    <p className="text-[10px] text-nu-muted capitalize">
-                      크루 · {m.crew.category}
-                    </p>
+                    <p className="text-sm font-medium truncate">{m.crew.name}</p>
+                    <p className="text-[10px] text-nu-muted capitalize">크루 · {m.crew.category}</p>
                   </div>
                 </>
               ) : null}
-              {m.role !== "lead" && (
-                <button
-                  onClick={() => removeMember(m.id)}
-                  className="text-nu-red hover:text-red-700 transition-colors p-1"
-                >
-                  <X size={14} />
-                </button>
+              {m.role !== "lead" && m.user_id && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handlePromoteManager(m.id, m.user_id!, m.role === "manager")}
+                    className={`font-mono-nu text-[8px] uppercase tracking-widest px-2 py-1 border transition-colors ${
+                      m.role === "manager"
+                        ? "border-nu-muted/30 text-nu-muted hover:border-nu-red/40 hover:text-nu-red"
+                        : "border-nu-blue/30 text-nu-blue hover:bg-nu-blue hover:text-white"
+                    }`}
+                  >
+                    {m.role === "manager" ? "해제" : "매니저"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeMember(m.id)}
+                    className="text-nu-red hover:text-red-700 transition-colors p-1"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
               )}
             </div>
           ))}
