@@ -38,12 +38,19 @@ export default function ProjectCreatePage() {
       }
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role, can_create_crew")
+        .select("role, can_create_crew, can_create_project, grade")
         .eq("id", user.id)
         .single();
 
-      if (!profile || (profile.role !== "admin" && !profile.can_create_crew)) {
-        toast.error("프로젝트를 만들 권한이 없습니다");
+      const canCreate =
+        profile?.role === "admin" ||
+        profile?.can_create_project === true ||
+        profile?.can_create_crew === true ||
+        profile?.grade === "gold" ||
+        profile?.grade === "vip";
+
+      if (!canCreate) {
+        toast.error("프로젝트를 개설하려면 골드 등급 이상이 필요합니다");
         router.push("/projects");
         return;
       }

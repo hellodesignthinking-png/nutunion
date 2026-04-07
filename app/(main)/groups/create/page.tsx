@@ -23,7 +23,7 @@ export default function CreateGroupPage() {
   const [category, setCategory] = useState("");
   const [permitted, setPermitted] = useState<boolean | null>(null);
 
-  // Permission check on mount
+  // Permission check on mount — DB에서 직접 최신값 조회
   useEffect(() => {
     (async () => {
       const supabase = createClient();
@@ -34,14 +34,18 @@ export default function CreateGroupPage() {
       }
       const { data: profile } = await supabase
         .from("profiles")
-        .select("can_create_crew, role")
+        .select("can_create_crew, role, grade")
         .eq("id", user.id)
         .single();
-      if (profile?.can_create_crew === true || profile?.role === "admin") {
-        setPermitted(true);
-      } else {
-        setPermitted(false);
-      }
+
+      const canCreate =
+        profile?.role === "admin" ||
+        profile?.can_create_crew === true ||
+        profile?.grade === "silver" ||
+        profile?.grade === "gold" ||
+        profile?.grade === "vip";
+
+      setPermitted(canCreate ? true : false);
     })();
   }, []);
 
@@ -57,16 +61,19 @@ export default function CreateGroupPage() {
     return (
       <div className="max-w-2xl mx-auto px-8 py-12 text-center">
         <h1 className="font-head text-2xl font-extrabold text-nu-ink mb-4">
-          권한이 없습니다
+          소모임 개설 권한이 없습니다
         </h1>
-        <p className="text-nu-gray mb-6">
-          크루를 생성할 권한이 없습니다. 관리자에게 문의해주세요.
+        <p className="text-nu-gray mb-2">
+          소모임을 개설하려면 <strong>실버 등급 이상</strong>이 필요합니다.
+        </p>
+        <p className="text-nu-muted text-sm mb-6">
+          현재 등급이 부족하다면 관리자에게 등급 상향을 요청하세요.
         </p>
         <Link
-          href="/crews"
+          href="/groups"
           className="font-mono-nu text-[11px] uppercase tracking-widest bg-nu-ink text-nu-paper px-6 py-3 no-underline hover:bg-nu-pink transition-colors inline-block"
         >
-          크루 목록으로 돌아가기
+          소모임 목록으로 돌아가기
         </Link>
       </div>
     );
