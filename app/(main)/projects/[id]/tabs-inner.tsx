@@ -11,6 +11,13 @@ import {
   Clock,
   MapPin,
   CheckCircle2,
+  ExternalLink,
+  MessageCircle,
+  BookOpen,
+  FileText,
+  DollarSign,
+  Wallet,
+  ChevronRight,
 } from "lucide-react";
 import { MilestoneList } from "@/components/projects/milestone-list";
 import { ProjectActivityFeed } from "@/components/projects/project-activity-feed";
@@ -53,6 +60,7 @@ export function TabsInner({
   taskStats,
   progressPct,
   totalTasks,
+  projectData,
 }: {
   projectId: string;
   milestonesData: string;
@@ -66,14 +74,16 @@ export function TabsInner({
   taskStats: { todo: number; in_progress: number; done: number };
   progressPct: number;
   totalTasks: number;
+  projectData?: string;
 }) {
   const [activeTab, setActiveTab] = useState("overview");
 
-  const milestones = JSON.parse(milestonesData);
-  const updates = JSON.parse(updatesData);
+  const milestones  = JSON.parse(milestonesData);
+  const updates     = JSON.parse(updatesData);
   const userMembers = JSON.parse(userMembersData);
   const crewMembers = JSON.parse(crewMembersData);
-  const events = JSON.parse(eventsData);
+  const events      = JSON.parse(eventsData);
+  const project     = projectData ? JSON.parse(projectData) : null;
 
   return (
     <>
@@ -265,6 +275,93 @@ export function TabsInner({
 
           {/* Sidebar */}
           <div className="space-y-6">
+
+            {/* ── Tool Hub ───────────────────────────────────── */}
+            {project && (project.tool_slack || project.tool_notion || project.tool_drive || project.tool_kakao) && (
+              <div className="bg-nu-white border border-nu-ink/[0.08] p-5">
+                <h3 className="font-head text-base font-extrabold flex items-center gap-2 mb-4">
+                  <ExternalLink size={15} /> 툴 허브
+                </h3>
+                <div className="space-y-2">
+                  {project.tool_slack && (
+                    <a href={project.tool_slack} target="_blank" rel="noreferrer"
+                      className="flex items-center gap-3 px-3 py-2.5 border border-nu-ink/[0.08] hover:border-[#4A154B]/40 hover:bg-[#4A154B]/5 transition-colors no-underline group">
+                      <div className="w-6 h-6 bg-[#4A154B] flex items-center justify-center shrink-0">
+                        <MessageCircle size={11} className="text-white" />
+                      </div>
+                      <span className="text-sm text-nu-ink group-hover:text-[#4A154B]">#Slack 채널</span>
+                      <ChevronRight size={12} className="ml-auto text-nu-muted" />
+                    </a>
+                  )}
+                  {project.tool_notion && (
+                    <a href={project.tool_notion} target="_blank" rel="noreferrer"
+                      className="flex items-center gap-3 px-3 py-2.5 border border-nu-ink/[0.08] hover:border-nu-ink/30 hover:bg-nu-ink/5 transition-colors no-underline group">
+                      <div className="w-6 h-6 bg-nu-ink flex items-center justify-center shrink-0">
+                        <BookOpen size={11} className="text-white" />
+                      </div>
+                      <span className="text-sm text-nu-ink">Notion 보드</span>
+                      <ChevronRight size={12} className="ml-auto text-nu-muted" />
+                    </a>
+                  )}
+                  {project.tool_drive && (
+                    <a href={project.tool_drive} target="_blank" rel="noreferrer"
+                      className="flex items-center gap-3 px-3 py-2.5 border border-nu-ink/[0.08] hover:border-[#1967D2]/30 hover:bg-[#1967D2]/5 transition-colors no-underline group">
+                      <div className="w-6 h-6 bg-[#1967D2] flex items-center justify-center shrink-0">
+                        <FileText size={11} className="text-white" />
+                      </div>
+                      <span className="text-sm text-nu-ink group-hover:text-[#1967D2]">Google Drive</span>
+                      <ChevronRight size={12} className="ml-auto text-nu-muted" />
+                    </a>
+                  )}
+                  {project.tool_kakao && (
+                    <a href={project.tool_kakao} target="_blank" rel="noreferrer"
+                      className="flex items-center gap-3 px-3 py-2.5 border border-nu-ink/[0.08] hover:border-[#FAE100]/50 hover:bg-[#FAE100]/10 transition-colors no-underline group">
+                      <div className="w-6 h-6 bg-[#FAE100] flex items-center justify-center shrink-0">
+                        <MessageCircle size={11} className="text-nu-ink" />
+                      </div>
+                      <span className="text-sm text-nu-ink">카카오 채널</span>
+                      <ChevronRight size={12} className="ml-auto text-nu-muted" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ── Budget Panel ────────────────────────────────── */}
+            {project?.total_budget && (
+              <div className="bg-nu-white border border-nu-ink/[0.08] p-5">
+                <h3 className="font-head text-base font-extrabold flex items-center gap-2 mb-4">
+                  <Wallet size={15} /> 예산 & 보상
+                </h3>
+                <div className="bg-nu-cream/40 px-4 py-3 mb-4">
+                  <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-1">총 사업비</p>
+                  <p className="font-head text-2xl font-extrabold text-nu-ink">
+                    {parseInt(project.total_budget).toLocaleString("ko-KR")}
+                    <span className="font-mono-nu text-base font-normal text-nu-muted ml-1">{project.budget_currency || "KRW"}</span>
+                  </p>
+                </div>
+                {userMembers.some((m: any) => m.reward_ratio) && (
+                  <div className="space-y-2">
+                    <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-2">팀원별 배분</p>
+                    {userMembers.map((m: any) => m.reward_ratio ? (
+                      <div key={m.id} className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-nu-cream flex items-center justify-center font-head text-[10px] font-bold shrink-0">
+                          {(m.profile?.nickname || "?").charAt(0).toUpperCase()}
+                        </div>
+                        <span className="text-sm flex-1 truncate">{m.profile?.nickname}</span>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-20 h-1.5 bg-nu-cream overflow-hidden">
+                            <div className="h-full bg-green-500" style={{ width: `${m.reward_ratio}%` }} />
+                          </div>
+                          <span className="font-mono-nu text-[10px] text-nu-muted shrink-0">{m.reward_ratio}%</span>
+                        </div>
+                      </div>
+                    ) : null)}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* User Members */}
             <div className="bg-nu-white border border-nu-ink/[0.08] p-5">
               <h3 className="font-head text-base font-extrabold flex items-center gap-2 mb-4">

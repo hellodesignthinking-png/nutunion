@@ -256,6 +256,7 @@ export default async function ProjectDetailPage({
         taskStats={taskStats}
         progressPct={progressPct}
         totalTasks={totalTasks}
+        projectData={JSON.stringify(project)}
       />
     </div>
   );
