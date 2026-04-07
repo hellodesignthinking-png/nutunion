@@ -84,7 +84,7 @@ function GradeBadge({ grade, role }: { grade?: string; role?: string }) {
   );
 }
 
-export function AdminUserList({ users }: { users: UserWithCrews[] }) {
+export function AdminUserList({ users, migrationDone = false }: { users: UserWithCrews[]; migrationDone?: boolean }) {
   const router = useRouter();
   const [searchQuery, setSearchQuery]     = useState("");
   const [gradeFilter, setGradeFilter]     = useState("all");
@@ -319,8 +319,15 @@ export function AdminUserList({ users }: { users: UserWithCrews[] }) {
 
                       {/* Grade select */}
                       <div>
-                        <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-1.5">등급</label>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">등급</label>
+                          {!migrationDone && (
+                            <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-amber bg-nu-amber/10 px-2 py-0.5">
+                              ⚠ SQL 실행 후 저장됨
+                            </span>
+                          )}
+                        </div>
+                        <div className={`grid grid-cols-2 gap-2 ${!migrationDone ? "opacity-60" : ""}`}>
                           {GRADES.map(g => (
                             <button key={g.value} type="button"
                               onClick={() => {
@@ -336,7 +343,13 @@ export function AdminUserList({ users }: { users: UserWithCrews[] }) {
                             </button>
                           ))}
                         </div>
+                        {!migrationDone && (
+                          <p className="text-[10px] text-nu-amber mt-1.5">
+                            소모임/프로젝트 권한 토글은 즉시 저장됩니다. 등급은 SQL 실행 후 영구 저장됩니다.
+                          </p>
+                        )}
                       </div>
+
 
                       {/* Custom permission toggles */}
                       <div className="flex flex-col gap-2">
