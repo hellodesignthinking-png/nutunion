@@ -105,22 +105,21 @@ export default function TalentSearchPage() {
       // Compute real activity counts for each profile
       const enriched: Talent[] = [];
       for (const p of profiles) {
-        const [
-          { count: meetingCount },
-          { count: postCount },
-          { count: projectCount },
-          { count: groupCount },
-        ] = await Promise.all([
-          supabase.from("meeting_notes").select("id", { count: "exact", head: true }).eq("author_id", p.id),
+        // Use correct column names: meeting_notes uses created_by, group_members has no id column
+        const results = await Promise.allSettled([
+          supabase.from("meeting_notes").select("meeting_id", { count: "exact", head: true }).eq("created_by", p.id),
           supabase.from("crew_posts").select("id", { count: "exact", head: true }).eq("author_id", p.id),
-          supabase.from("project_members").select("id", { count: "exact", head: true }).eq("user_id", p.id),
-          supabase.from("group_members").select("id", { count: "exact", head: true }).eq("user_id", p.id).eq("status", "active"),
+          supabase.from("project_members").select("user_id", { count: "exact", head: true }).eq("user_id", p.id),
+          supabase.from("group_members").select("user_id", { count: "exact", head: true }).eq("user_id", p.id).eq("status", "active"),
         ]);
 
-        const mc = meetingCount || 0;
-        const pc = postCount || 0;
-        const pj = projectCount || 0;
-        const gc = groupCount || 0;
+        const getCount = (r: PromiseSettledResult<any>) =>
+          r.status === "fulfilled" && !r.value.error ? (r.value.count || 0) : 0;
+
+        const mc = getCount(results[0]);
+        const pc = getCount(results[1]);
+        const pj = getCount(results[2]);
+        const gc = getCount(results[3]);
 
         const activityScore = Math.min(100, mc * 10 + pc * 8 + pj * 15 + gc * 5);
 
