@@ -73,11 +73,11 @@ export default function PublicPortfolioPage() {
         { count: resourceCount },
         { count: groupCount },
       ] = await Promise.all([
-        supabase.from("meeting_notes").select("id", { count: "exact", head: true }).eq("author_id", profileId),
+        supabase.from("meeting_notes").select("meeting_id", { count: "exact", head: true }).eq("created_by", profileId),
         supabase.from("crew_posts").select("id", { count: "exact", head: true }).eq("author_id", profileId),
-        supabase.from("project_members").select("id", { count: "exact", head: true }).eq("user_id", profileId),
+        supabase.from("project_members").select("user_id", { count: "exact", head: true }).eq("user_id", profileId),
         supabase.from("file_attachments").select("id", { count: "exact", head: true }).eq("uploaded_by", profileId),
-        supabase.from("group_members").select("id", { count: "exact", head: true }).eq("user_id", profileId).eq("status", "active"),
+        supabase.from("group_members").select("user_id", { count: "exact", head: true }).eq("user_id", profileId).eq("status", "active"),
       ]);
 
       const mc = meetingCount || 0;

@@ -23,7 +23,7 @@ export function GroupRadarChart({ groupId }: { groupId: string }) {
         { count: rc },
         { count: pc },
       ] = await Promise.all([
-        supabase.from("group_members").select("id", { count: "exact", head: true }).eq("group_id", groupId).eq("status", "active"),
+        supabase.from("group_members").select("user_id", { count: "exact", head: true }).eq("group_id", groupId).eq("status", "active"),
         supabase.from("meetings").select("id", { count: "exact", head: true }).eq("group_id", groupId),
         supabase.from("file_attachments").select("id", { count: "exact", head: true }).eq("target_type", "group").eq("target_id", groupId),
         supabase.from("crew_posts").select("id", { count: "exact", head: true }).eq("group_id", groupId),

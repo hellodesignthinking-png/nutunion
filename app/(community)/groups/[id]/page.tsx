@@ -208,7 +208,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
 
 async function GroupJoinAction({ id, groupName, hostId, userId, maxMembers, membershipStatus }: any) {
   const supabase = await createClient();
-  const { count } = await supabase.from("group_members").select("id", { count: "exact", head: true }).eq("group_id", id).eq("status", "active");
+  const { count } = await supabase.from("group_members").select("user_id", { count: "exact", head: true }).eq("group_id", id).eq("status", "active");
   return (
     <GroupActions 
       groupId={id} 
