@@ -26,12 +26,8 @@ export function GroupSearch({ groupId }: { groupId: string }) {
   useEffect(() => {
     async function loadTags() {
       const supabase = createClient();
-      const [{ data: meetings }, { data: resources }] = await Promise.all([
-        supabase.from("meetings").select("tags").eq("group_id", groupId).not("tags", "is", null),
-        supabase.from("meeting_resources").select("id").eq("meeting_id", groupId),
-      ]);
+      // meetings table doesn't have a tags column, so we skip tag loading for now
       const tags = new Set<string>();
-      (meetings || []).forEach((m: any) => (m.tags || []).forEach((t: string) => tags.add(t)));
       setAllTags(Array.from(tags).slice(0, 12));
     }
     loadTags();
@@ -44,10 +40,9 @@ export function GroupSearch({ groupId }: { groupId: string }) {
 
     // Search meetings
     let meetingQuery = supabase.from("meetings")
-      .select("id, title, summary, scheduled_at, tags")
+      .select("id, title, summary, scheduled_at")
       .eq("group_id", groupId);
     if (q) meetingQuery = meetingQuery.ilike("title", `%${q}%`);
-    if (tag) meetingQuery = meetingQuery.contains("tags", [tag]);
     const { data: meetings } = await meetingQuery.limit(5);
 
     // Search resources
@@ -71,7 +66,7 @@ export function GroupSearch({ groupId }: { groupId: string }) {
         title: m.title,
         excerpt: m.summary,
         date: m.scheduled_at,
-        tags: m.tags || [],
+        tags: [],
         url: `/groups/${groupId}/meetings/${m.id}`,
       })),
       ...(resources || []).map((r: any) => ({

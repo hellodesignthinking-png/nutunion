@@ -23,32 +23,16 @@ const SKILL_OPTIONS = [
   "SNS운영", "공간기획", "커뮤니티", "데이터분석", "UX리서치", "콘텐츠"
 ];
 
-const CASE_STUDIES = [
-  {
-    title: "로컬 카페 브랜딩 프로젝트",
-    client: "카페 소소",
-    squad: 3,
-    duration: "4주",
-    result: "매출 40% 증가",
-    synergy: 94,
-  },
-  {
-    title: "친환경 패키징 리서치",
-    client: "그린박스",
-    squad: 4,
-    duration: "6주",
-    result: "리포트 40p 발행",
-    synergy: 88,
-  },
-  {
-    title: "커뮤니티 런칭 전략",
-    client: "동네한바퀴",
-    squad: 5,
-    duration: "8주",
-    result: "초기 멤버 200명 확보",
-    synergy: 91,
-  },
-];
+// Case studies data would be fetched from database if available
+// For now, returning empty array as no challenges table exists yet
+const CASE_STUDIES: Array<{
+  title: string;
+  client: string;
+  squad: number;
+  duration: string;
+  result: string;
+  synergy: number;
+}> = [];
 
 export default function ChallengesPage() {
   const [form, setForm] = useState<ChallengeForm>({
@@ -246,38 +230,48 @@ export default function ChallengesPage() {
             <h3 className="font-head text-lg font-extrabold text-nu-ink flex items-center gap-2">
               <TrendingUp size={18} className="text-nu-pink" /> 성공 사례
             </h3>
-            {CASE_STUDIES.map(cs => (
-              <div key={cs.title} className="bg-nu-white border-[2px] border-nu-ink/[0.08] p-5 hover:border-nu-pink/30 transition-all">
-                <p className="font-head text-sm font-bold text-nu-ink mb-2">{cs.title}</p>
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between font-mono-nu text-[9px]">
-                    <span className="text-nu-muted uppercase tracking-widest">Client</span>
-                    <span className="text-nu-ink font-bold">{cs.client}</span>
-                  </div>
-                  <div className="flex items-center justify-between font-mono-nu text-[9px]">
-                    <span className="text-nu-muted uppercase tracking-widest">Squad</span>
-                    <span className="text-nu-ink font-bold">{cs.squad}명</span>
-                  </div>
-                  <div className="flex items-center justify-between font-mono-nu text-[9px]">
-                    <span className="text-nu-muted uppercase tracking-widest">Duration</span>
-                    <span className="text-nu-ink font-bold">{cs.duration}</span>
-                  </div>
-                  <div className="flex items-center justify-between font-mono-nu text-[9px]">
-                    <span className="text-nu-muted uppercase tracking-widest">Result</span>
-                    <span className="text-nu-pink font-bold">{cs.result}</span>
-                  </div>
-                </div>
-                <div className="mt-3 flex items-center justify-between pt-3 border-t border-nu-ink/5">
-                  <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">Team Synergy</span>
-                  <div className="flex items-center gap-1">
-                    <div className="w-16 h-1.5 bg-nu-ink/5 overflow-hidden">
-                      <div className="h-full bg-nu-pink" style={{ width: `${cs.synergy}%` }} />
+            {CASE_STUDIES.length > 0 ? (
+              CASE_STUDIES.map(cs => (
+                <div key={cs.title} className="bg-nu-white border-[2px] border-nu-ink/[0.08] p-5 hover:border-nu-pink/30 transition-all">
+                  <p className="font-head text-sm font-bold text-nu-ink mb-2">{cs.title}</p>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between font-mono-nu text-[9px]">
+                      <span className="text-nu-muted uppercase tracking-widest">Client</span>
+                      <span className="text-nu-ink font-bold">{cs.client}</span>
                     </div>
-                    <span className="font-mono-nu text-[9px] text-nu-pink font-bold">{cs.synergy}%</span>
+                    <div className="flex items-center justify-between font-mono-nu text-[9px]">
+                      <span className="text-nu-muted uppercase tracking-widest">Squad</span>
+                      <span className="text-nu-ink font-bold">{cs.squad}명</span>
+                    </div>
+                    <div className="flex items-center justify-between font-mono-nu text-[9px]">
+                      <span className="text-nu-muted uppercase tracking-widest">Duration</span>
+                      <span className="text-nu-ink font-bold">{cs.duration}</span>
+                    </div>
+                    <div className="flex items-center justify-between font-mono-nu text-[9px]">
+                      <span className="text-nu-muted uppercase tracking-widest">Result</span>
+                      <span className="text-nu-pink font-bold">{cs.result}</span>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between pt-3 border-t border-nu-ink/5">
+                    <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">Team Synergy</span>
+                    <div className="flex items-center gap-1">
+                      <div className="w-16 h-1.5 bg-nu-ink/5 overflow-hidden">
+                        <div className="h-full bg-nu-pink" style={{ width: `${cs.synergy}%` }} />
+                      </div>
+                      <span className="font-mono-nu text-[9px] text-nu-pink font-bold">{cs.synergy}%</span>
+                    </div>
                   </div>
                 </div>
+              ))
+            ) : (
+              <div className="bg-nu-white border-[2px] border-nu-ink/[0.08] p-5 text-center">
+                <div className="text-nu-muted mb-2">
+                  <TrendingUp size={24} className="mx-auto opacity-30" />
+                </div>
+                <p className="font-head text-sm font-bold text-nu-ink mb-1">아직 등록된 의뢰가 없습니다</p>
+                <p className="text-[11px] text-nu-muted">성공 사례는 첫 번째 프로젝트 완료 후 추가됩니다.</p>
               </div>
-            ))}
+            )}
 
             {/* CTA */}
             <div className="bg-nu-ink text-nu-paper p-5">

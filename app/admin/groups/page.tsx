@@ -5,17 +5,25 @@ import { Layers } from "lucide-react";
 export default async function AdminGroupsPage() {
   const supabase = await createClient();
 
+  // Get groups and separately count members and events
   const { data: groups } = await supabase
     .from("groups")
-    .select("*, host:profiles!groups_host_id_fkey(nickname, email), group_members(count), events(count)")
+    .select("*, host:profiles!groups_host_id_fkey(nickname, email)")
     .order("created_at", { ascending: false });
 
-  const formatted = (groups || []).map((g: any) => ({
-    ...g,
-    member_count: g.group_members?.[0]?.count || 0,
-    event_count: g.events?.[0]?.count || 0,
-    host_nickname: g.host?.nickname || "unknown",
-    host_email: g.host?.email || "",
+  // Count members and events separately
+  const formatted = await Promise.all((groups || []).map(async (g: any) => {
+    const [{ count: memberCount }, { count: eventCount }] = await Promise.all([
+      supabase.from("group_members").select("*", { count: "exact", head: true }).eq("group_id", g.id),
+      supabase.from("events").select("*", { count: "exact", head: true }).eq("group_id", g.id),
+    ]);
+    return {
+      ...g,
+      member_count: memberCount || 0,
+      event_count: eventCount || 0,
+      host_nickname: g.host?.nickname || "unknown",
+      host_email: g.host?.email || "",
+    };
   }));
 
   // Category breakdown

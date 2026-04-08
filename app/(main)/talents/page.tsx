@@ -77,8 +77,31 @@ export default function TalentSearchPage() {
       // Using the view 'talent_stats' we created in the migration
       const { data, error } = await supabase.from("talent_stats").select("*").order("activity_score", { ascending: false });
       if (error) {
-        // Fallback if view doesn't exist yet
-        console.error("View talent_stats not found, check migration.");
+        // Fallback if view doesn't exist: query profiles directly and calculate stats
+        console.warn("View talent_stats not available, using direct query.");
+        const { data: profiles, error: profileError } = await supabase.from("profiles").select("*").order("activity_score", { ascending: false });
+        if (profileError) {
+          console.error("Failed to load profiles:", profileError);
+          setLoading(false);
+          return;
+        }
+        // Map profiles to talent format with empty counts (will be calculated client-side if needed)
+        const talents = (profiles || []).map((p: any) => ({
+          profile_id: p.id,
+          nickname: p.nickname,
+          avatar_url: p.avatar_url,
+          skill_tags: p.skill_tags || [],
+          tier: p.tier || "bronze",
+          activity_score: p.activity_score || 0,
+          points: p.points || 0,
+          specialty: p.specialty || null,
+          total_attendances: 0,
+          leadership_count: 0,
+          project_count: 0,
+        }));
+        setTalents(talents as Talent[]);
+        setFiltered(talents as Talent[]);
+        setLoading(false);
         return;
       }
       setTalents(data as Talent[]);
