@@ -180,8 +180,8 @@ export default function GroupSettingsPage() {
     toast.success(`${targetNickname}님이 승인되었습니다`);
   }
 
-  async function handlePromoteManager(targetUserId: string, isCurrentlyManager: boolean) {
-    const newRole = isCurrentlyManager ? "member" : "manager";
+  async function handlePromoteManager(targetUserId: string, isCurrentlyModerator: boolean) {
+    const newRole = isCurrentlyModerator ? "member" : "moderator";
     const supabase = createClient();
     const { error } = await supabase
       .from("group_members")
@@ -189,7 +189,7 @@ export default function GroupSettingsPage() {
       .eq("group_id", groupId)
       .eq("user_id", targetUserId);
 
-    if (error) { toast.error("역할 변경에 실패했습니다"); return; }
+    if (error) { toast.error("역할 변경에 실패했습니다: " + error.message); return; }
 
     setMembers(prev => prev.map(m =>
       m.user_id === targetUserId ? { ...m, role: newRole } : m
@@ -199,15 +199,15 @@ export default function GroupSettingsPage() {
     await supabase.from("notifications").insert({
       user_id: targetUserId,
       type: "role_changed",
-      title: isCurrentlyManager ? "매니저 권한 해제" : "매니저로 임명되었습니다",
-      body: isCurrentlyManager
+      title: isCurrentlyModerator ? "매니저 권한 해제" : "매니저로 임명되었습니다",
+      body: isCurrentlyModerator
         ? `${group?.name} 소모임의 매니저 권한이 해제되었습니다.`
         : `${group?.name} 소모임의 매니저로 임명되었습니다. 소모임의 일정, 파일, 멤버 관리를 할 수 있습니다.`,
       metadata: { group_id: groupId },
       is_read: false,
     });
 
-    toast.success(isCurrentlyManager ? "일반 멤버로 변경되었습니다" : "매니저로 임명되었습니다");
+    toast.success(isCurrentlyModerator ? "일반 멤버로 변경되었습니다" : "매니저로 임명되었습니다");
   }
 
   async function handleRejectMember(targetUserId: string, targetNickname: string) {
@@ -372,7 +372,7 @@ export default function GroupSettingsPage() {
         </div>
         <div className="flex flex-col divide-y divide-nu-ink/5">
           {activeMembers.map((m) => {
-            const isManager = m.role === "manager";
+            const isModerator = m.role === "moderator";
             const isCurrentHost = m.role === "host";
             return (
               <div key={m.user_id} className="flex items-center justify-between py-3">
@@ -386,12 +386,12 @@ export default function GroupSettingsPage() {
                       {isCurrentHost && (
                         <span className="font-mono-nu text-[8px] uppercase tracking-widest bg-nu-pink text-white px-1.5 py-0.5">호스트</span>
                       )}
-                      {isManager && (
+                      {isModerator && (
                         <span className="font-mono-nu text-[8px] uppercase tracking-widest bg-nu-blue/10 text-nu-blue px-1.5 py-0.5">매니저</span>
                       )}
                     </div>
                     <p className="text-[10px] text-nu-muted">
-                      {isCurrentHost ? "소모임 호스트" : isManager ? "소모임 매니저 · 일정/파일/멤버 관리 가능" : "일반 멤버"}
+                      {isCurrentHost ? "소모임 호스트" : isModerator ? "소모임 매니저 · 일정/파일/멤버 관리 가능" : "일반 멤버"}
                       {m.profile?.email && ` · ${m.profile.email}`}
                     </p>
                   </div>
@@ -399,14 +399,14 @@ export default function GroupSettingsPage() {
                 {!isCurrentHost && (
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => handlePromoteManager(m.user_id, isManager)}
+                      onClick={() => handlePromoteManager(m.user_id, isModerator)}
                       className={`font-mono-nu text-[9px] uppercase tracking-widest px-2.5 py-1.5 border transition-colors ${
-                        isManager
+                        isModerator
                           ? "border-nu-muted/30 text-nu-muted hover:border-nu-red/40 hover:text-nu-red"
                           : "border-nu-blue/30 text-nu-blue hover:bg-nu-blue hover:text-white"
                       }`}
                     >
-                      {isManager ? "매니저 해제" : "매니저 임명"}
+                      {isModerator ? "매니저 해제" : "매니저 임명"}
                     </button>
                     <button
                       onClick={() => handleRemoveMember(m.user_id)}
