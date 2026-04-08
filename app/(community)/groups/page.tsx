@@ -3,6 +3,7 @@ import { Plus, Loader2 } from "lucide-react";
 import { GroupsList } from "@/components/groups/groups-list";
 import { PageHero } from "@/components/shared/page-hero";
 import { Suspense } from "react";
+import { GroupSkeleton } from "@/components/shared/skeletons";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -27,9 +28,8 @@ export default async function GroupsPage() {
 
       <div className="max-w-7xl mx-auto px-8 py-16">
         <Suspense fallback={
-          <div className="flex flex-col items-center justify-center py-32 text-nu-muted gap-4">
-            <Loader2 className="animate-spin" size={32} strokeWidth={1.5} />
-            <p className="font-mono-nu text-[11px] uppercase tracking-widest animate-pulse">Filtering Scenes...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => <GroupSkeleton key={i} />)}
           </div>
         }>
           <GroupsListWrapper userId={user?.id} />

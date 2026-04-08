@@ -5,6 +5,7 @@ import { Nav } from "@/components/shared/nav";
 import { PageHero } from "@/components/shared/page-hero";
 import { Footer } from "@/components/landing/footer";
 import { Suspense } from "react";
+import { ProjectSkeleton } from "@/components/shared/skeletons";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -29,9 +30,8 @@ export default async function ProjectsPage() {
 
       <div className="max-w-7xl mx-auto px-8 py-16">
         <Suspense fallback={
-          <div className="flex flex-col items-center justify-center py-32 text-nu-muted gap-4">
-            <Loader2 className="animate-spin" size={32} strokeWidth={1.5} />
-            <p className="font-mono-nu text-[11px] uppercase tracking-widest animate-pulse">Building Projects...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => <ProjectSkeleton key={i} />)}
           </div>
         }>
           <ProjectsListWrapper userId={user?.id} />

@@ -54,53 +54,59 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const dateRange = project.start_date ? `${new Date(project.start_date).toLocaleDateString("ko")} — ${project.end_date ? new Date(project.end_date).toLocaleDateString("ko") : ""}` : "";
 
   return (
-    <div className="max-w-6xl mx-auto px-8 py-12">
-      {/* Header (Renders instantly) */}
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-8">
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            {project.category && (
-              <span className={`font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-3 py-1 text-white ${catColors[project.category] || "bg-nu-gray"}`}>
-                {project.category}
+    <>
+      <PageHero 
+        category={project.category}
+        title={project.title}
+        description={project.description || ""}
+      />
+
+      <div className="max-w-6xl mx-auto px-8 py-12 pb-24">
+        {/* Detail Meta & Actions */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 border-b border-nu-ink/5 pb-8">
+          <div className="flex flex-wrap items-center gap-6 font-mono-nu text-[11px]">
+            <span className="flex items-center gap-1.5 text-nu-muted">
+              <Clock size={12} /> {project.status.toUpperCase()}
+            </span>
+            {dateRange && (
+              <span className="flex items-center gap-1.5 text-nu-muted">
+                <Calendar size={12} /> {dateRange}
               </span>
             )}
-            <span className={`font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-3 py-1 ${statusColors[project.status] || "bg-nu-gray text-white"}`}>
-              {project.status}
-            </span>
+            <span className="text-nu-muted">진행자: <span className="text-nu-ink font-bold">{project.creator?.nickname || "—"}</span></span>
           </div>
-          <h1 className="font-head text-3xl font-extrabold text-nu-ink">{project.title}</h1>
-          <p className="text-nu-gray mt-2 max-w-xl">{project.description}</p>
-          {dateRange && (
-            <p className="font-mono-nu text-[10px] text-nu-muted mt-3 flex items-center gap-1.5">
-              <Calendar size={12} /> {dateRange}
-            </p>
-          )}
+
+          <div className="flex flex-wrap gap-2">
+            {!isAdmin && applicationStatus === "pending" && (
+              <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-2.5 bg-nu-amber text-white inline-flex items-center gap-2">
+                <Clock size={14} /> 승인 대기 중
+              </span>
+            )}
+            {!isAdmin && !applicationStatus && project.status === "active" && (
+              <Link href={`/projects/${id}/apply`} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-8 py-3 bg-nu-pink text-nu-paper no-underline hover:bg-nu-pink/90 transition-all inline-flex items-center gap-2 shadow-lg shadow-nu-pink/20">
+                <UserPlus size={14} /> 프로젝트 참여하기
+              </Link>
+            )}
+            {isAdmin && (
+              <Link href={`/projects/${id}/settings`} className="font-mono-nu text-[11px] uppercase tracking-widest px-5 py-2.5 border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all inline-flex items-center gap-2">
+                <Settings size={14} /> 프로젝트 설정
+              </Link>
+            )}
+          </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {/* Action buttons simplified ... logic moved to a small async part if needed but mostly can stay here if data is light */}
-          {!isAdmin && applicationStatus === "pending" && (
-            <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-3 bg-nu-amber text-white inline-flex items-center gap-2">
-              <Clock size={14} /> 승인중
-            </span>
-          )}
-          {!isAdmin && !applicationStatus && project.status === "active" && (
-            <Link href={`/projects/${id}/apply`} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-3 bg-nu-pink text-nu-paper no-underline hover:bg-nu-pink/90 transition-colors inline-flex items-center gap-2">
-              <UserPlus size={14} /> 참여 지원
-            </Link>
-          )}
-          {isAdmin && (
-            <Link href={`/projects/${id}/settings`} className="font-mono-nu text-[11px] uppercase tracking-widest px-4 py-3 border border-nu-ink/20 text-nu-graphite no-underline hover:bg-nu-ink hover:text-nu-paper transition-colors inline-flex items-center gap-2">
-              <Settings size={14} /> 설정
-            </Link>
-          )}
-        </div>
+        <Suspense fallback={
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div className="lg:col-span-3 space-y-4">
+              <div className="h-64 bg-nu-ink/5 animate-pulse" />
+            </div>
+            <div className="h-64 bg-nu-ink/5 animate-pulse" />
+          </div>
+        }>
+          <ProjectTabsWrapper id={id} userId={user.id} isAdmin={isAdmin} project={project} />
+        </Suspense>
       </div>
-
-      <Suspense fallback={<div className="h-96 bg-black/5 animate-pulse" />}>
-        <ProjectTabsWrapper id={id} userId={user.id} isAdmin={isAdmin} project={project} />
-      </Suspense>
-    </div>
+    </>
   );
 }
 
