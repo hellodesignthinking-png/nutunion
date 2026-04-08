@@ -14,6 +14,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function GroupsPage() {
+  try {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -70,16 +71,23 @@ export default async function GroupsPage() {
            <h2 className="font-head text-2xl font-black text-nu-ink uppercase tracking-tight">Active Communities</h2>
         </div>
         
-        <Suspense fallback={
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => <GroupSkeleton key={i} />)}
-          </div>
-        }>
-          <GroupsListWrapper userId={user?.id} />
-        </Suspense>
+        <GroupsListWrapper userId={user?.id} />
       </div>
     </div>
   );
+  } catch (err: any) {
+    console.error("GroupsPage FATAL:", err);
+    return (
+      <div className="min-h-screen bg-nu-paper flex items-center justify-center px-8">
+        <div className="max-w-lg bg-white border-2 border-red-200 p-8 text-center">
+          <h2 className="text-xl font-bold text-red-600 mb-2">서버 렌더링 오류</h2>
+          <pre className="text-xs text-red-500 bg-red-50 p-4 text-left overflow-auto max-h-48 whitespace-pre-wrap break-all">
+            {err?.message || "Unknown error"}{"\n"}{err?.stack || ""}
+          </pre>
+        </div>
+      </div>
+    );
+  }
 }
 
 function TemplateCard({ title, description, icon, color, tag }: { title: string; description: string; icon: any; color: string; tag: string }) {
