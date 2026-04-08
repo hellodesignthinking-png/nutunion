@@ -21,9 +21,11 @@ import {
   Plus,
   ArrowLeft,
   ChevronRight,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { DrivePicker } from "@/components/integrations/drive-picker";
+import { ResourcePreviewModal } from "@/components/shared/resource-preview-modal";
 
 function getFileIcon(fileType: string | null) {
   if (!fileType) return <File size={20} />;
@@ -62,6 +64,7 @@ export default function ResourcesPage() {
   const [isManager, setIsManager] = useState(false);
   const [activeTab, setActiveTab] = useState<"files" | "drive" | "meetings">("files");
   const [groupName, setGroupName] = useState("");
+  const [previewData, setPreviewData] = useState<{ url: string; name: string } | null>(null);
 
   const loadData = useCallback(async () => {
     const supabase = createClient();
@@ -329,7 +332,7 @@ export default function ResourcesPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {filteredUploadedFiles.map((file) => (
-                <FileCard key={file.id} file={file} userId={userId} onDelete={handleDelete} />
+                <FileCard key={file.id} file={file} userId={userId} onDelete={handleDelete} onPreview={(url, name) => setPreviewData({ url, name })} />
               ))}
             </div>
           )}
@@ -348,7 +351,7 @@ export default function ResourcesPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {filteredDriveFiles.map((file) => (
-                <FileCard key={file.id} file={file} userId={userId} onDelete={handleDelete} isDrive />
+                <FileCard key={file.id} file={file} userId={userId} onDelete={handleDelete} isDrive onPreview={(url, name) => setPreviewData({ url, name })} />
               ))}
             </div>
           )}
@@ -367,7 +370,7 @@ export default function ResourcesPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {filteredExternalLinks.map((file) => (
-                <FileCard key={file.id} file={file} userId={userId} onDelete={handleDelete} isLink />
+                <FileCard key={file.id} file={file} userId={userId} onDelete={handleDelete} isLink onPreview={(url, name) => setPreviewData({ url, name })} />
               ))}
             </div>
           )}
@@ -385,41 +388,59 @@ export default function ResourcesPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {filteredMeetingResources.map((resource, i) => (
-                <a
+                <div
                   key={i}
-                  href={resource.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-nu-white border-[2px] border-nu-ink/[0.08] p-4 flex items-center gap-4 no-underline hover:border-nu-pink/40 transition-colors"
+                  className="bg-nu-white border-[2px] border-nu-ink/[0.08] p-4 flex items-center gap-4 hover:border-nu-pink/40 transition-colors group"
                 >
                   <div className="w-10 h-10 bg-nu-pink/10 flex items-center justify-center shrink-0">
-                    <ExternalLink size={18} className="text-nu-pink" />
+                    <FileText size={18} className="text-nu-pink" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-nu-ink truncate">{resource.name}</p>
+                    <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-nu-ink truncate block no-underline hover:text-nu-pink">
+                      {resource.name}
+                    </a>
                     <p className="font-mono-nu text-[10px] text-nu-muted mt-0.5 truncate">
                       {resource.meetingTitle} · {resource.agendaTopic}
                     </p>
                   </div>
-                  <ExternalLink size={13} className="text-nu-muted shrink-0" />
-                </a>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button 
+                      onClick={() => setPreviewData({ url: resource.url, name: resource.name })}
+                      className="p-1.5 text-nu-muted hover:text-nu-pink transition-colors"
+                      title="미리보기"
+                    >
+                      <Eye size={14} />
+                    </button>
+                    <a href={resource.url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-nu-muted hover:text-nu-ink transition-colors">
+                      <ExternalLink size={14} />
+                    </a>
+                  </div>
+                </div>
               ))}
             </div>
           )}
         </section>
       )}
+      {/* Resource Preview Modal */}
+      <ResourcePreviewModal 
+        isOpen={!!previewData}
+        onClose={() => setPreviewData(null)}
+        url={previewData?.url || ""}
+        name={previewData?.name || ""}
+      />
     </div>
   );
 }
 
 function FileCard({
-  file, userId, onDelete, isDrive, isLink,
+  file, userId, onDelete, isDrive, isLink, onPreview,
 }: {
   file: FileAttachment & { uploader?: { nickname: string | null } };
   userId: string | null;
   onDelete: (id: string, url: string, type: string | null) => void;
   isDrive?: boolean;
   isLink?: boolean;
+  onPreview: (url: string, name: string) => void;
 }) {
   return (
     <div className="bg-nu-white border-[2px] border-nu-ink/[0.08] p-4 flex items-center gap-4 hover:border-nu-blue/30 transition-colors group">
@@ -446,6 +467,13 @@ function FileCard({
         </div>
       </div>
       <div className="flex items-center gap-1.5 shrink-0">
+        <button 
+          onClick={() => onPreview(file.file_url, file.file_name)}
+          className="p-1.5 text-nu-muted hover:text-nu-pink transition-colors"
+          title="미리보기"
+        >
+          <Eye size={14} />
+        </button>
         <a href={file.file_url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-nu-muted hover:text-nu-blue transition-colors">
           <ExternalLink size={14} />
         </a>

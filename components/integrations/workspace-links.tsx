@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ExternalLink, FolderOpen, MessageCircle, FileText, Save, Plus, Loader2, Link2, Calendar, Sheet } from "lucide-react";
+import { ExternalLink, FolderOpen, MessageCircle, FileText, Save, Plus, Loader2, Link2, Calendar, Sheet, Eye } from "lucide-react";
+import { ResourcePreviewModal } from "@/components/shared/resource-preview-modal";
 
 interface WorkspaceLinksProps {
   workspaceType: "crew" | "project";
@@ -42,6 +43,7 @@ export function WorkspaceLinks({ workspaceType, workspaceId, canEdit, kakaoUrl, 
   const [newLabel, setNewLabel] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [previewData, setPreviewData] = useState<{ url: string; name: string } | null>(null);
 
   useEffect(() => {
     loadLinks();
@@ -144,8 +146,18 @@ export function WorkspaceLinks({ workspaceType, workspaceId, canEdit, kakaoUrl, 
               >
                 {getIcon(link.type)}
                 <span className="truncate">{link.label}</span>
-                <ExternalLink size={10} className="text-nu-muted shrink-0" />
-              </a>
+                <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button 
+                    onClick={() => setPreviewData({ url: link.url, name: link.label })}
+                    className="p-1 text-nu-muted hover:text-nu-pink transition-colors"
+                    title="미리보기"
+                  >
+                    <Eye size={12} />
+                  </button>
+                  <a href={link.url} target="_blank" rel="noopener noreferrer" className="p-1 text-nu-muted hover:text-nu-ink transition-colors">
+                    <ExternalLink size={10} />
+                  </a>
+                </div>
               {canEdit && link.id && (
                 <button onClick={() => handleRemove(link.id!)} className="text-nu-muted hover:text-nu-red transition-colors opacity-0 group-hover:opacity-100 text-xs">
                   ✕
@@ -194,6 +206,13 @@ export function WorkspaceLinks({ workspaceType, workspaceId, canEdit, kakaoUrl, 
           </div>
         </div>
       )}
+      {/* Resource Preview Modal */}
+      <ResourcePreviewModal 
+        isOpen={!!previewData}
+        onClose={() => setPreviewData(null)}
+        url={previewData?.url || ""}
+        name={previewData?.name || ""}
+      />
     </div>
   );
 }
