@@ -14,12 +14,13 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function GroupsPage() {
+  try {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   return (
     <div className="bg-nu-paper min-h-screen">
-      <PageHero 
+      <PageHero
         category="Collaborate"
         title="소모임 탐색"
         description="Scene을 만들어가는 크루들을 탐색하고 함께 성장하세요. 관심사나 프로젝트 성격에 맞는 팀을 찾아보세요."
@@ -80,6 +81,18 @@ export default async function GroupsPage() {
       </div>
     </div>
   );
+  } catch (err: any) {
+    console.error("GroupsPage CAUGHT ERROR:", err);
+    return (
+      <div style={{ padding: 40, fontFamily: "monospace", whiteSpace: "pre-wrap" }}>
+        <h1 style={{ color: "red" }}>DEBUG: Server Component Error</h1>
+        <p><strong>Name:</strong> {err?.name}</p>
+        <p><strong>Message:</strong> {err?.message}</p>
+        <p><strong>Stack:</strong> {err?.stack?.slice(0, 2000)}</p>
+        <p><strong>Cause:</strong> {JSON.stringify(err?.cause, null, 2)}</p>
+      </div>
+    );
+  }
 }
 
 function TemplateCard({ title, description, icon, color, tag }: { title: string; description: string; icon: any; color: string; tag: string }) {

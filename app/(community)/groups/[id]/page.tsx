@@ -49,6 +49,7 @@ const catColors: Record<string, { bg: string; text: string; border: string; ligh
 };
 
 export default async function GroupDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  try {
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -205,6 +206,17 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
       <RelatedGroups groupId={id} category={group.category} />
     </>
   );
+  } catch (err: any) {
+    console.error("GroupDetailPage CAUGHT ERROR:", err);
+    return (
+      <div style={{ padding: 40, fontFamily: "monospace", whiteSpace: "pre-wrap" }}>
+        <h1 style={{ color: "red" }}>DEBUG: GroupDetailPage Error</h1>
+        <p><strong>Name:</strong> {err?.name}</p>
+        <p><strong>Message:</strong> {err?.message}</p>
+        <p><strong>Stack:</strong> {err?.stack?.slice(0, 2000)}</p>
+      </div>
+    );
+  }
 }
 
 // ── Streaming용 하위 서버 컴포넌트들 ──────────────────────────────
