@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   description: "nutunion 소모임을 탐색하고 참여하세요",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function GroupsPage() {
   const supabase = await createClient();
 
