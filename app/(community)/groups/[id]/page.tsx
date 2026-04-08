@@ -7,7 +7,6 @@ import {
   Calendar,
   Users,
   Settings,
-  Plus,
   MapPin,
   Clock,
   MessageCircle,
@@ -17,22 +16,18 @@ import {
   FileText,
   Activity,
   Target,
-  TrendingUp,
   CreditCard,
 } from "lucide-react";
 import { GroupActions } from "@/components/groups/group-actions";
 import { CrewActivityFeed } from "@/components/crews/crew-activity-feed";
 import { CrewProjects } from "@/components/crews/crew-projects";
 import { WorkspaceLinks } from "@/components/integrations/workspace-links";
-import { GoogleCalendarButton } from "@/components/integrations/google-calendar-button";
 import { EventRsvpButton } from "@/components/groups/event-rsvp-button";
 import { GroupSearch } from "@/components/groups/group-search";
 import { GroupRoadmap } from "@/components/groups/group-roadmap";
 import { GroupRadarChart, ActivityHeatmap } from "@/components/groups/group-vitals";
 import { DailyDigest } from "@/components/groups/daily-digest";
 import { RelatedGroups } from "@/components/groups/related-groups";
-import { Nav } from "@/components/shared/nav";
-import { Footer } from "@/components/landing/footer";
 
 export const dynamic = "force-dynamic";
 

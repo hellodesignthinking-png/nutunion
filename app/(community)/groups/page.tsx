@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { Plus, Zap, BookOpen, Rocket, Star, ArrowRight } from "lucide-react";
+import { Zap, BookOpen, Rocket, Star, ArrowRight } from "lucide-react";
 import { GroupsList } from "@/components/groups/groups-list";
 import { PageHero } from "@/components/shared/page-hero";
 import { Suspense } from "react";
@@ -23,7 +23,7 @@ export default async function GroupsPage() {
         category="Collaborate"
         title="소모임 탐색"
         description="Scene을 만들어가는 크루들을 탐색하고 함께 성장하세요. 관심사나 프로젝트 성격에 맞는 팀을 찾아보세요."
-        action={user ? { label: "소모임 만들기", href: "/groups/create", icon: Plus } : undefined}
+        action={user ? { label: "소모임 만들기", href: "/groups/create" } : undefined}
       />
 
       {/* Featured Templates Section */}

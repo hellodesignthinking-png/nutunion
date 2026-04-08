@@ -1,9 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { Plus, Loader2 } from "lucide-react";
 import { ProjectsGrid } from "@/components/projects/projects-grid";
-import { Nav } from "@/components/shared/nav";
 import { PageHero } from "@/components/shared/page-hero";
-import { Footer } from "@/components/landing/footer";
 import { Suspense } from "react";
 import { ProjectSkeleton } from "@/components/shared/skeletons";
 import type { Metadata } from "next";
@@ -25,7 +22,7 @@ export default async function ProjectsPage() {
         category="Collaborate"
         title="Projects"
         description="크루와 멤버들이 함께 실전 서비스를 만들어가는 프로젝트 Scene입니다. 관심 있는 프로젝트에 참여하여 실질적인 비즈니스 경험을 쌓아보세요."
-        action={{ label: "프로젝트 만들기", href: "/projects/create", icon: Plus }} 
+        action={{ label: "프로젝트 만들기", href: "/projects/create" }}
       />
 
       <div className="max-w-7xl mx-auto px-8 py-16">

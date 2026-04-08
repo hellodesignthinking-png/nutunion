@@ -10,13 +10,12 @@ interface PageHeroProps {
   action?: {
     label: string;
     href: string;
-    icon?: any;
   };
   className?: string;
 }
 
 export function PageHero({ category, title, description, action, className = "" }: PageHeroProps) {
-  const Icon = action?.icon || Plus;
+  const Icon = Plus;
 
   return (
     <div className={`relative bg-nu-ink overflow-hidden border-b border-nu-paper/10 ${className}`}>
