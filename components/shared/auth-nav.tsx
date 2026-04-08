@@ -28,28 +28,21 @@ export function AuthNav({ profile }: { profile: Profile }) {
   const [notifCount, setNotifCount] = useState(0);
   const isAdmin = profile.role === "admin";
 
-  // 실시간 알림 카운트
+  // 알림 카운트 (안정적 폴링)
   useEffect(() => {
     const supabase = createClient();
-    supabase.from("notifications")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", profile.id)
-      .eq("is_read", false)
-      .then(({ count }) => setNotifCount(count || 0));
 
-    const channel = supabase
-      .channel("notif-nav")
-      .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${profile.id}` },
-        () => {
-          supabase.from("notifications")
-            .select("id", { count: "exact", head: true })
-            .eq("user_id", profile.id)
-            .eq("is_read", false)
-            .then(({ count }) => setNotifCount(count || 0));
-        })
-      .subscribe();
+    const fetchCount = () => {
+      supabase.from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", profile.id)
+        .eq("is_read", false)
+        .then(({ count }) => setNotifCount(count || 0));
+    };
+    fetchCount();
+    const timer = setInterval(fetchCount, 30_000);
 
-    return () => { supabase.removeChannel(channel); };
+    return () => clearInterval(timer);
   }, [profile.id]);
 
   // 등급 정보
