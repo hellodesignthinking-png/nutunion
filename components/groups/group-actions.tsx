@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle2, Clock, Users, XCircle, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface GroupActionsProps {
   groupId: string;
@@ -27,6 +27,17 @@ export function GroupActions({
 }: GroupActionsProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [currentMemberCount, setCurrentMemberCount] = useState(memberCount);
+
+  // 실시간 인원 확인 (클라이언트 측)
+  useEffect(() => {
+    async function fetchCount() {
+      const supabase = createClient();
+      const { count } = await supabase.from("group_members").select("*", { count: "exact", head: true }).eq("group_id", groupId).eq("status", "active");
+      if (count !== null) setCurrentMemberCount(count);
+    }
+    fetchCount();
+  }, [groupId]);
 
   async function handleJoin() {
     setLoading(true);
@@ -111,7 +122,7 @@ export function GroupActions({
   }
 
   // 비회원 — 가입신청 버튼
-  const isFull = memberCount >= maxMembers;
+  const isFull = currentMemberCount >= maxMembers;
 
   return (
     <button

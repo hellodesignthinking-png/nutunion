@@ -24,10 +24,10 @@ export default function NotFound() {
             홈으로
           </Link>
           <Link
-            href="/crews"
+            href="/groups"
             className="font-mono-nu text-[11px] uppercase tracking-widest px-6 py-3 border border-nu-ink/20 text-nu-graphite hover:bg-nu-ink hover:text-nu-paper transition-colors no-underline"
           >
-            크루 탐색
+            소모임 탐색
           </Link>
         </div>
       </div>

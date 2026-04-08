@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 // ── 랜딩 전용 링크 (비로그인) ──────────────────────────────────────
 const landingLinks = [
   { label: "About",    href: "/#about"  },
-  { label: "Crews",    href: "/crews"   },
+  { label: "Groups",   href: "/groups"  },
   { label: "Projects", href: "/projects" },
   { label: "Scenes",   href: "/#scenes"  },
 ];

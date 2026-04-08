@@ -51,23 +51,23 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // ── 필수 데이터만 우선 조회 (빠른 헤더 렌더링) ────────────────────────
+  // ── 데이터 조회 ──────────────────────────────────
   const [
     { data: group },
     { data: userMembership },
-    { data: activeMembersData },
-    { data: allMembersData },
   ] = await Promise.all([
-    supabase.from("groups").select("*, host:profiles!groups_host_id_fkey(id, nickname, avatar_url)").eq("id", id).single(),
-    supabase.from("group_members").select("status, role").eq("group_id", id).eq("user_id", user.id).maybeSingle(),
-    supabase.from("group_members").select("id").eq("group_id", id).eq("status", "active"),
-    supabase.from("group_members").select("id").eq("group_id", id).in("status", ["active", "pending", "waitlist"]),
+    supabase.from("groups")
+      .select("*, host:profiles!groups_host_id_fkey(id, nickname, avatar_url)")
+      .eq("id", id)
+      .single(),
+    supabase.from("group_members")
+      .select("status, role")
+      .eq("group_id", id)
+      .eq("user_id", user.id)
+      .maybeSingle(),
   ]);
 
   if (!group) notFound();
-
-  const activeCount = activeMembersData?.length || 0;
-  const totalMemberCount = allMembersData?.length || 0;
 
   const isHost        = group.host_id === user.id;
   const isManager     = isHost || userMembership?.role === "manager";
@@ -135,15 +135,15 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
                   hostId={group.host_id} 
                   userId={user.id} 
                   maxMembers={group.max_members} 
-                  memberCount={activeCount} 
+                  memberCount={0} 
                   membershipStatus={membershipStatus} 
                 />
               )}
             </div>
           </div>
           
-          <Suspense fallback={<div className="h-20 bg-black/5 animate-pulse mt-8" />}>
-            <GroupStatsSection id={id} colors={colors} activeCount={activeCount} totalCount={totalMemberCount} />
+          <Suspense fallback={<div className="h-20 bg-black/5 animate-pulse mt-8 border-t-[2px] border-nu-ink/10 pt-6" />}>
+            <GroupStatsSection id={id} colors={colors} />
           </Suspense>
         </div>
       </div>
@@ -180,34 +180,42 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
 
 // ── Streaming용 하위 서버 컴포넌트들 ──────────────────────────────
 
-async function GroupStatsSection({ id, colors, activeCount, totalCount }: { id: string; colors: any; activeCount: number; totalCount: number }) {
+async function GroupStatsSection({ id, colors }: { id: string; colors: any }) {
   const supabase = await createClient();
   
   const [
-    { count: totalMeetings }
+    { count: activeCount },
+    { count: totalCount },
+    { count: totalMeetings },
   ] = await Promise.all([
-    supabase.from("meetings").select("id", { count: "exact", head: true }).eq("group_id", id),
+    supabase.from("group_members").select("*", { count: "exact", head: true }).eq("group_id", id).eq("status", "active"),
+    supabase.from("group_members").select("*", { count: "exact", head: true }).eq("group_id", id).in("status", ["active", "pending", "waitlist"]),
+    supabase.from("meetings").select("*", { count: "exact", head: true }).eq("group_id", id),
   ]);
 
-  // Count files: group + files attached to posts in this group
+  // Count files: group + files attached to posts + agenda resources
   const { data: posts } = await supabase.from("crew_posts").select("id").eq("group_id", id);
   const postIds = (posts || []).map(p => p.id);
   
-  const { count: groupFiles } = await supabase.from("file_attachments").select("id", { count: "exact", head: true }).eq("target_type", "group").eq("target_id", id);
+  const { count: groupFiles } = await supabase.from("file_attachments").select("*", { count: "exact", head: true }).eq("target_type", "group").eq("target_id", id);
   
   let postFilesCount = 0;
   if (postIds.length > 0) {
     const { count: cpCount } = await supabase.from("file_attachments")
-      .select("id", { count: "exact", head: true })
+      .select("*", { count: "exact", head: true })
       .in("target_type", ["crew_post"])
       .in("target_id", postIds);
     postFilesCount = cpCount || 0;
   }
+
+  // Count meeting agenda resources
+  const { data: agendas } = await supabase.from("meeting_agendas").select("resources, meeting:meetings!meeting_agendas_meeting_id_fkey(group_id)");
+  const agendaResourcesCount = (agendas || []).filter(a => (a.meeting as any)?.group_id === id).reduce((acc, a) => acc + (Array.isArray(a.resources) ? a.resources.length : 0), 0);
   
-  const totalFiles = (groupFiles || 0) + postFilesCount;
+  const totalFiles = (groupFiles || 0) + postFilesCount + agendaResourcesCount;
 
   const stats = [
-    { icon: <Users size={16} />, label: "멤버", value: activeCount, sub: totalCount > activeCount ? `+${totalCount - activeCount} 대기` : null },
+    { icon: <Users size={16} />, label: "멤버", value: activeCount || 0, sub: (totalCount || 0) > (activeCount || 0) ? `+${(totalCount || 0) - (activeCount || 0)} 대기` : null },
     { icon: <BookOpen size={16} />, label: "총 미팅", value: totalMeetings || 0, sub: null },
     { icon: <FileText size={16} />, label: "파일", value: totalFiles || 0, sub: null },
   ];
@@ -218,7 +226,9 @@ async function GroupStatsSection({ id, colors, activeCount, totalCount }: { id: 
         <div key={stat.label} className={`flex items-center gap-3 px-4 py-3 border-r border-nu-ink/10 last:border-r-0 ${colors.light}`}>
           <span className={colors.text}>{stat.icon}</span>
           <div>
-            <p className="font-head text-xl font-extrabold text-nu-ink">{stat.value}</p>
+            <p className="font-head text-xl font-extrabold text-nu-ink">
+              {stat.value.toLocaleString()}
+            </p>
             <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
               {stat.label} {stat.sub && `(${stat.sub})`}
             </p>

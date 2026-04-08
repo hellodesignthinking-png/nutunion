@@ -62,7 +62,7 @@ export function GroupsPreview({ groups }: { groups?: GroupItem[] }) {
           </h2>
         </div>
         <Link
-          href="/crews"
+          href="/groups"
           className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-ink no-underline hover:text-nu-pink transition-colors hidden md:flex items-center gap-2 border-[2px] border-nu-ink px-4 py-2 hover:bg-nu-ink hover:text-nu-paper"
         >
           전체 보기 &rarr;
@@ -78,7 +78,7 @@ export function GroupsPreview({ groups }: { groups?: GroupItem[] }) {
           return (
             <Link
               key={g.id || i}
-              href={g.id ? `/groups/${g.id}` : "/crews"}
+              href={g.id ? `/groups/${g.id}` : "/groups"}
               className="group-card bg-nu-white p-0 flex flex-col no-underline relative overflow-hidden group"
             >
               {/* Image Header */}
@@ -123,7 +123,7 @@ export function GroupsPreview({ groups }: { groups?: GroupItem[] }) {
       </div>
 
       <div className="text-center mt-8 md:hidden">
-        <Link href="/crews" className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-pink no-underline hover:underline">
+        <Link href="/groups" className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-pink no-underline hover:underline">
           전체 보기 &rarr;
         </Link>
       </div>

@@ -47,6 +47,22 @@ const nextConfig: NextConfig = {
     ];
   },
 
+  // ── 리다이렉트 (Legacy 대응) ───────────────────────────────────
+  async redirects() {
+    return [
+      {
+        source: "/crews",
+        destination: "/groups",
+        permanent: true,
+      },
+      {
+        source: "/crews/:id",
+        destination: "/groups/:id",
+        permanent: true,
+      },
+    ];
+  },
+
   // ── 빌드 최적화 ──────────────────────────────────────────────
   compress: true,
   poweredByHeader: false,
