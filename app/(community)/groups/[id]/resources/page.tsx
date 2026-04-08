@@ -469,10 +469,32 @@ export default function ResourcesPage() {
                     </div>
                   </div>
                   <div className="flex-1 bg-nu-white overflow-hidden relative">
+                    {/* Permission Guard Overlay */}
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-nu-paper/95 opacity-0 pointer-events-none peer-[.iframe-error]:opacity-100 peer-[.iframe-error]:pointer-events-auto transition-opacity" id="permission-guard">
+                      <div className="text-center px-6 max-w-xs">
+                        <div className="w-14 h-14 bg-nu-amber/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <span className="text-2xl">🔒</span>
+                        </div>
+                        <p className="font-head text-sm font-bold text-nu-ink mb-2">공유 설정을 확인해주세요</p>
+                        <p className="text-[11px] text-nu-muted leading-relaxed mb-4">
+                          이 문서가 보이지 않는다면 원본 문서의 공유 설정에서 
+                          <span className="font-bold text-nu-ink"> &quot;링크가 있는 모든 사용자에게 공개&quot;</span>로 
+                          변경해 주세요.
+                        </p>
+                        <a href={previewData.url} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors no-underline">
+                          <ExternalLink size={12} /> 원본에서 열기
+                        </a>
+                      </div>
+                    </div>
                     <iframe 
                       src={getEmbedUrl(previewData.url)}
                       className="w-full h-full border-0"
                       allow="autoplay; encrypted-media; fullscreen"
+                      onError={() => {
+                        const guard = document.getElementById("permission-guard");
+                        if (guard) { guard.style.opacity = "1"; guard.style.pointerEvents = "auto"; }
+                      }}
                     />
                   </div>
                 </div>
@@ -514,6 +536,26 @@ function FileCard({
   showAiSummary?: boolean;
   aiSummary?: string[];
 }) {
+  const [status, setStatus] = useState<"draft" | "review" | "asset">("draft");
+  const isOwner = file.uploaded_by === userId;
+  
+  const statusConfig = {
+    draft: { label: "DRAFT", color: "bg-nu-muted/10 text-nu-muted border-nu-muted/20", icon: "✏️" },
+    review: { label: "REVIEW", color: "bg-nu-amber/10 text-nu-amber border-nu-amber/30", icon: "👀" },
+    asset: { label: "ASSET", color: "bg-nu-blue/10 text-nu-blue border-nu-blue/30", icon: "💎" },
+  };
+  const st = statusConfig[status];
+  
+  const cycleStatus = () => {
+    if (!isOwner) return;
+    const next = { draft: "review" as const, review: "asset" as const, asset: "draft" as const };
+    setStatus(next[status]);
+  };
+
+  // Detect resource age for "hot" badge
+  const ageHours = (Date.now() - new Date(file.created_at).getTime()) / 3600000;
+  const isNew = ageHours < 48;
+
   return (
     <div className="group bg-nu-white border-2 border-nu-ink transition-all hover:bg-nu-cream/10 overflow-hidden">
       <div className="p-4 flex items-center gap-4">
@@ -521,16 +563,31 @@ function FileCard({
           {isDrive ? <HardDrive size={20} className="text-green-600" /> : isLink ? <Link2 size={20} className="text-nu-blue" /> : getFileIcon(file.file_type)}
         </div>
         <div className="flex-1 min-w-0">
-          <a
-            href={file.file_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[13px] font-black text-nu-ink truncate block hover:text-nu-pink transition-colors no-underline uppercase tracking-tight"
-          >
-            {file.file_name}
-          </a>
-          <div className="flex items-center gap-3 mt-1">
-            <span className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">UPLOADED BY {(file as any).uploader?.nickname || "MEMBER"}</span>
+          <div className="flex items-center gap-2 mb-0.5">
+            <a
+              href={file.file_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[13px] font-black text-nu-ink truncate hover:text-nu-pink transition-colors no-underline uppercase tracking-tight"
+            >
+              {file.file_name}
+            </a>
+            {isNew && (
+              <span className="shrink-0 font-mono-nu text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 bg-nu-pink text-white animate-pulse">
+                🔥 NEW
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            {/* Status Badge */}
+            <button
+              onClick={cycleStatus}
+              className={`inline-flex items-center gap-1 font-mono-nu text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 border rounded-sm transition-all ${st.color} ${isOwner ? "cursor-pointer hover:scale-105" : "cursor-default"}`}
+              title={isOwner ? "클릭하여 상태 변경" : ""}
+            >
+              <span>{st.icon}</span> {st.label}
+            </button>
+            <span className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">{(file as any).uploader?.nickname || "MEMBER"}</span>
             <span className="w-1 h-1 bg-nu-ink/10 rounded-full" />
             <span className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">{new Date(file.created_at).toLocaleDateString("ko")}</span>
           </div>
