@@ -24,6 +24,9 @@ import {
   Eye,
   Columns,
   Maximize2,
+  Minimize2,
+  X,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { DrivePicker } from "@/components/integrations/drive-picker";
