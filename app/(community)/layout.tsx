@@ -1,3 +1,6 @@
+import { ClientNav } from "@/components/shared/client-nav";
+import { Footer } from "@/components/landing/footer";
+
 export default function CommunityLayout({
   children,
 }: {
@@ -5,14 +8,16 @@ export default function CommunityLayout({
 }) {
   return (
     <div className="min-h-screen bg-nu-paper flex flex-col">
-      {/* Nav 제거 — 진단 */}
-      <div className="h-[60px] bg-gray-900 text-white flex items-center px-8 text-sm font-mono">
-        DIAGNOSTIC MODE — Nav removed | <a href="/" className="text-pink-400 ml-2 underline">Home</a>
-      </div>
-      <div className="flex-1">
+      <ClientNav />
+      {/* 
+          Nav is 60px height. 
+          To make Group/Project list start at same position, 
+          we use a single wrapper with pt-[60px].
+      */}
+      <div className="flex-1 pt-[60px]">
         {children}
       </div>
-      {/* Footer 제거 — 진단 */}
+      <Footer />
     </div>
   );
 }
