@@ -21,6 +21,7 @@ import {
   TrendingUp,
   Receipt,
   Search,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ResourcePreviewModal } from "@/components/shared/resource-preview-modal";
@@ -33,7 +34,7 @@ interface Expenditure {
   amount: number;
   payer: string;
   receiptUrl: string | null;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "paid";
   approvedAt?: string;
 }
 

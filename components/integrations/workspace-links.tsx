@@ -146,9 +146,10 @@ export function WorkspaceLinks({ workspaceType, workspaceId, canEdit, kakaoUrl, 
               >
                 {getIcon(link.type)}
                 <span className="truncate">{link.label}</span>
+              </a>
                 <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button 
-                    onClick={() => setPreviewData({ url: link.url, name: link.label })}
+                    onClick={(e) => { e.stopPropagation(); setPreviewData({ url: link.url, name: link.label }); }}
                     className="p-1 text-nu-muted hover:text-nu-pink transition-colors"
                     title="미리보기"
                   >

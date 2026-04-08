@@ -195,7 +195,7 @@ export interface CrewPost {
   group_id: string;
   author_id: string;
   content: string;
-  type: "post" | "announcement" | "event_recap";
+  type: "post" | "announcement" | "event_recap" | "system";
   metadata: Record<string, any>;
   created_at: string;
   author?: Profile;

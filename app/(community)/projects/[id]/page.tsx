@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Settings, Calendar, MessageCircle, UserPlus, ClipboardList, CheckCircle2, Clock } from "lucide-react";
 import { TabsInner } from "./tabs-inner";
+import { PageHero } from "@/components/shared/page-hero";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;

@@ -67,7 +67,7 @@ export default function ResourcesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
   const [isManager, setIsManager] = useState(false);
-  const [activeTab, setActiveTab] = useState<"files" | "drive" | "meetings">("files");
+  const [activeTab, setActiveTab] = useState<"files" | "drive" | "links" | "meetings">("files");
   const [groupName, setGroupName] = useState("");
   const [previewData, setPreviewData] = useState<{ url: string; name: string } | null>(null);
   const [isSplitView, setIsSplitView] = useState(true);

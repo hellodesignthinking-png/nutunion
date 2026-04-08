@@ -50,7 +50,7 @@ async function ProjectsListWrapper({ userId }: { userId?: string }) {
   ] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, title, description, status, category, image_url, start_date, end_date, creator:profiles!projects_created_by_fkey(nickname, avatar_url), project_members(count), task_stats")
+      .select("id, title, description, status, category, image_url, start_date, end_date, created_at, creator:profiles!projects_created_by_fkey(nickname, avatar_url), project_members(count), task_stats")
       .neq("status", "draft")
       .order("created_at", { ascending: false }),
     userId ? 
@@ -75,6 +75,7 @@ async function ProjectsListWrapper({ userId }: { userId?: string }) {
     creator_avatar: p.creator?.avatar_url || null,
     member_count: p.project_members?.[0]?.count || 0,
     task_stats: p.task_stats || null,
+    created_at: p.created_at,
   }));
 
   return <ProjectsGrid projects={formatted} userId={userId} />;
