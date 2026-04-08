@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -72,6 +72,12 @@ export default function ResourcesPage() {
   const [previewData, setPreviewData] = useState<{ url: string; name: string } | null>(null);
   const [isSplitView, setIsSplitView] = useState(true);
   const [showAiSummary, setShowAiSummary] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [linkName, setLinkName] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [addingLink, setAddingLink] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Mock AI summary generator
   const getAiSummary = (fileName: string) => {
@@ -162,36 +168,7 @@ export default function ResourcesPage() {
     e.target.value = "";
   }
 
-  async function handleAddLink() {
-    const name = window.prompt("링크 이름을 입력하세요 (예: 노션 기획안, 피그마 디자인)");
-    if (!name) return;
-    const url = window.prompt("URL을 입력하세요 (https://...)");
-    if (!url || !url.startsWith("http")) {
-      if (url) toast.error("올바른 URL을 입력해주세요");
-      return;
-    }
 
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { error } = await supabase.from("file_attachments").insert({
-      target_type: "group",
-      target_id: groupId,
-      uploaded_by: user.id,
-      file_name: name,
-      file_url: url,
-      file_size: null,
-      file_type: "url-link",
-    });
-
-    if (error) {
-      toast.error("링크 등록에 실패했습니다");
-    } else {
-      toast.success("링크가 추가되었습니다");
-      await loadData();
-    }
-  }
 
   async function handleDriveFilePicked(driveFile: { name: string; url: string; mimeType: string }) {
     const supabase = createClient();
@@ -312,6 +289,117 @@ export default function ResourcesPage() {
               placeholder="파일 이름, 태그, 또는 문서 본문의 내용을 지능적으로 검색합니다..."
               className="w-full pl-12 pr-4 py-4 bg-nu-white border-2 border-nu-ink shadow-[4px_4px_0px_0px_#0d0d0d] focus:translate-x-1 focus:translate-y-1 focus:shadow-none transition-all outline-none font-medium text-nu-ink"
             />
+          </div>
+
+          {/* ── Quick Upload Hub ── */}
+          <div
+            className={`mb-6 border-[2px] transition-all ${isDragging ? "border-nu-pink bg-nu-pink/5 scale-[1.01]" : "border-dashed border-nu-ink/15 bg-nu-white"}`}
+            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={async (e) => {
+              e.preventDefault();
+              setIsDragging(false);
+              const droppedFiles = e.dataTransfer.files;
+              if (droppedFiles.length === 0) return;
+              setUploading(true);
+              const supabase = createClient();
+              const { data: { user } } = await supabase.auth.getUser();
+              if (!user) { toast.error("로그인이 필요합니다"); setUploading(false); return; }
+              for (let i = 0; i < droppedFiles.length; i++) {
+                const file = droppedFiles[i];
+                const filePath = `groups/${groupId}/${Date.now()}_${file.name}`;
+                const { error: uploadErr } = await supabase.storage.from("media").upload(filePath, file);
+                if (uploadErr) { toast.error(`${file.name} 업로드 실패`); continue; }
+                const { data: { publicUrl } } = supabase.storage.from("media").getPublicUrl(filePath);
+                await supabase.from("file_attachments").insert({
+                  target_type: "group", target_id: groupId, uploaded_by: user.id,
+                  file_name: file.name, file_url: publicUrl, file_size: file.size, file_type: file.type,
+                });
+              }
+              toast.success(`${droppedFiles.length}개 파일이 업로드되었습니다! 🎉`);
+              setUploading(false);
+              await loadData();
+            }}
+          >
+            <div className="px-5 py-4 flex flex-col sm:flex-row items-center gap-3">
+              {isDragging ? (
+                <div className="flex-1 text-center py-4">
+                  <Upload size={28} className="mx-auto text-nu-pink animate-bounce mb-2" />
+                  <p className="font-head text-sm font-bold text-nu-pink">여기에 파일을 놓으세요!</p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2 text-nu-muted flex-shrink-0">
+                    <Upload size={16} />
+                    <span className="font-mono-nu text-[10px] uppercase tracking-widest font-bold">Quick Add</span>
+                  </div>
+                  <div className="flex-1 flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                    {/* File Upload */}
+                    <input ref={fileInputRef} type="file" className="hidden" onChange={handleUpload} multiple />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="flex items-center gap-2 font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-all disabled:opacity-50"
+                    >
+                      <Plus size={14} /> {uploading ? "업로드 중..." : "파일 선택"}
+                    </button>
+
+                    {/* Link Add */}
+                    <button
+                      onClick={() => setShowLinkInput(!showLinkInput)}
+                      className={`flex items-center gap-2 font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 border-[2px] transition-all ${
+                        showLinkInput ? "bg-nu-blue text-white border-nu-blue" : "border-nu-ink/10 text-nu-muted hover:border-nu-ink"
+                      }`}
+                    >
+                      <Link2 size={14} /> 링크 연결
+                    </button>
+
+                    {/* Drive */}
+                    <DrivePicker onFilePicked={handleDriveFilePicked} />
+
+                    <span className="hidden sm:block font-mono-nu text-[9px] text-nu-muted/40 ml-auto">또는 파일을 이 영역에 드래그하세요</span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Inline Link Input */}
+            {showLinkInput && (
+              <div className="px-5 pb-4 animate-in slide-in-from-top-2 duration-200">
+                <div className="flex gap-2">
+                  <input
+                    value={linkName} onChange={e => setLinkName(e.target.value)}
+                    placeholder="링크 이름 (예: 노션 기획안)"
+                    className="flex-1 h-9 border border-nu-ink/10 bg-nu-cream/10 px-3 text-sm focus:outline-none focus:border-nu-blue"
+                  />
+                  <input
+                    value={linkUrl} onChange={e => setLinkUrl(e.target.value)}
+                    placeholder="https://..."
+                    className="flex-[2] h-9 border border-nu-ink/10 bg-nu-cream/10 px-3 text-sm focus:outline-none focus:border-nu-blue"
+                  />
+                  <button
+                    disabled={addingLink || !linkName.trim() || !linkUrl.trim()}
+                    onClick={async () => {
+                      if (!linkUrl.startsWith("http")) { toast.error("올바른 URL을 입력해주세요"); return; }
+                      setAddingLink(true);
+                      const supabase = createClient();
+                      const { data: { user } } = await supabase.auth.getUser();
+                      if (!user) { setAddingLink(false); return; }
+                      const { error } = await supabase.from("file_attachments").insert({
+                        target_type: "group", target_id: groupId, uploaded_by: user.id,
+                        file_name: linkName, file_url: linkUrl, file_size: null, file_type: "url-link",
+                      });
+                      if (error) toast.error("링크 등록 실패");
+                      else { toast.success("✅ 링크가 추가되었습니다!"); setLinkName(""); setLinkUrl(""); setShowLinkInput(false); await loadData(); }
+                      setAddingLink(false);
+                    }}
+                    className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-2 bg-nu-blue text-white hover:bg-nu-blue/80 transition-all disabled:opacity-30"
+                  >
+                    {addingLink ? "저장 중..." : "등록"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Tabs */}
