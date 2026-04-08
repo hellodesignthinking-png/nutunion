@@ -29,6 +29,8 @@ import { EventRsvpButton } from "@/components/groups/event-rsvp-button";
 import { GroupSearch } from "@/components/groups/group-search";
 import { GroupRoadmap } from "@/components/groups/group-roadmap";
 import { GroupRadarChart, ActivityHeatmap } from "@/components/groups/group-vitals";
+import { DailyDigest } from "@/components/groups/daily-digest";
+import { RelatedGroups } from "@/components/groups/related-groups";
 import { Nav } from "@/components/shared/nav";
 import { Footer } from "@/components/landing/footer";
 
@@ -177,6 +179,9 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
+            {/* Daily Digest */}
+            <DailyDigest groupId={id} />
+
             <Suspense fallback={<div className="p-12 bg-black/5 animate-pulse" />}>
               <GroupUpcomingSection id={id} colors={colors} isHost={isHost} isMember={isMember} userId={user.id} />
             </Suspense>
@@ -193,6 +198,9 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
           </div>
         </div>
       </div>
+
+      {/* Related Groups Recommendation */}
+      <RelatedGroups groupId={id} category={group.category} />
     </>
   );
 }
