@@ -14,7 +14,6 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function GroupsPage() {
-  try {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -81,18 +80,6 @@ export default async function GroupsPage() {
       </div>
     </div>
   );
-  } catch (err: any) {
-    console.error("GroupsPage CAUGHT ERROR:", err);
-    return (
-      <div style={{ padding: 40, fontFamily: "monospace", whiteSpace: "pre-wrap" }}>
-        <h1 style={{ color: "red" }}>DEBUG: Server Component Error</h1>
-        <p><strong>Name:</strong> {err?.name}</p>
-        <p><strong>Message:</strong> {err?.message}</p>
-        <p><strong>Stack:</strong> {err?.stack?.slice(0, 2000)}</p>
-        <p><strong>Cause:</strong> {JSON.stringify(err?.cause, null, 2)}</p>
-      </div>
-    );
-  }
 }
 
 function TemplateCard({ title, description, icon, color, tag }: { title: string; description: string; icon: any; color: string; tag: string }) {
@@ -125,7 +112,7 @@ async function GroupsListWrapper({ userId }: { userId?: string }) {
     ] = await Promise.all([
       supabase
         .from("groups")
-        .select("id, name, category, description, max_members, host_id, image_url, topic, host:profiles!groups_host_id_fkey(nickname), group_members(count)")
+        .select("id, name, category, description, max_members, host_id, image_url, host:profiles!groups_host_id_fkey(nickname), group_members(count)")
         .eq("is_active", true)
         .order("created_at", { ascending: false }),
       userId 
@@ -145,7 +132,6 @@ async function GroupsListWrapper({ userId }: { userId?: string }) {
         max_members: g.max_members,
         host_id: g.host_id,
         image_url: g.image_url,
-        topic: g.topic,
         member_count: g.group_members?.[0]?.count || 0,
         host_nickname: hostData?.nickname || "unknown",
         user_status: statusMap.get(g.id) || null,

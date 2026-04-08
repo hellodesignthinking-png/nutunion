@@ -49,7 +49,6 @@ const catColors: Record<string, { bg: string; text: string; border: string; ligh
 };
 
 export default async function GroupDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  try {
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -57,7 +56,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
 
   // ── 데이터 조회 ──────────────────────────────────
   const { data: group, error: groupError } = await supabase.from("groups")
-    .select("id, name, description, category, image_url, host_id, max_members, topic, is_active, kakao_chat_url, google_drive_url, created_at, host:profiles!groups_host_id_fkey(id, nickname, avatar_url)")
+    .select("id, name, description, category, image_url, host_id, max_members, is_active, kakao_chat_url, google_drive_url, created_at, host:profiles!groups_host_id_fkey(id, nickname, avatar_url)")
     .eq("id", id)
     .single();
 
@@ -128,11 +127,6 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
                    <span className="w-1.5 h-1.5 rounded-full bg-nu-pink animate-pulse" />
                    호스트: <span className="text-nu-ink font-bold">{groupData.host?.nickname || "—"}</span>
                  </span>
-                 {group.topic && (
-                   <span className="flex items-center gap-2 text-nu-blue font-bold">
-                     <Target size={12} className="opacity-40" /> TOPIC: {group.topic}
-                   </span>
-                 )}
               </div>
             </div>
 
@@ -206,17 +200,6 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
       <RelatedGroups groupId={id} category={group.category} />
     </>
   );
-  } catch (err: any) {
-    console.error("GroupDetailPage CAUGHT ERROR:", err);
-    return (
-      <div style={{ padding: 40, fontFamily: "monospace", whiteSpace: "pre-wrap" }}>
-        <h1 style={{ color: "red" }}>DEBUG: GroupDetailPage Error</h1>
-        <p><strong>Name:</strong> {err?.name}</p>
-        <p><strong>Message:</strong> {err?.message}</p>
-        <p><strong>Stack:</strong> {err?.stack?.slice(0, 2000)}</p>
-      </div>
-    );
-  }
 }
 
 // ── Streaming용 하위 서버 컴포넌트들 ──────────────────────────────
@@ -449,7 +432,7 @@ async function GroupSidebarSections({ id, colors, isHost, isMember, group }: any
   return (
     <div className="space-y-6">
       {(isMember || isHost) && (
-        <GroupRoadmap groupId={id} groupTopic={(group as any).topic} canEdit={isHost} />
+        <GroupRoadmap groupId={id} canEdit={isHost} />
       )}
 
       {/* Team Vitals: Radar + Heatmap */}
