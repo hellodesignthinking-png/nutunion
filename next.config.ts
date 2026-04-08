@@ -67,6 +67,13 @@ const nextConfig: NextConfig = {
       "@supabase/supabase-js",
     ],
   },
+
+  // ── 서버 에러 로깅 ────────────────────────────────────────────
+  logging: {
+    fetches: {
+      fullUrl: true,
+    },
+  },
 };
 
 export default nextConfig;

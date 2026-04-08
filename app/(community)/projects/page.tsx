@@ -42,6 +42,7 @@ export default async function ProjectsPage() {
 }
 
 async function ProjectsListWrapper({ userId }: { userId?: string }) {
+  try {
   const supabase = await createClient();
 
   const [
@@ -62,21 +63,28 @@ async function ProjectsListWrapper({ userId }: { userId?: string }) {
       Promise.resolve({ data: null })
   ]);
 
-  const formatted = (projects || []).map((p: any) => ({
-    id: p.id,
-    title: p.title,
-    description: p.description,
-    status: p.status,
-    category: p.category,
-    image_url: p.image_url,
-    start_date: p.start_date,
-    end_date: p.end_date,
-    creator_nickname: p.creator?.nickname || "unknown",
-    creator_avatar: p.creator?.avatar_url || null,
-    member_count: p.project_members?.[0]?.count || 0,
-    task_stats: p.task_stats || null,
-    created_at: p.created_at,
-  }));
+  const formatted = (projects || []).map((p: any) => {
+    const creatorData = Array.isArray(p.creator) ? p.creator[0] : p.creator;
+    return {
+      id: p.id,
+      title: p.title,
+      description: p.description,
+      status: p.status,
+      category: p.category,
+      image_url: p.image_url,
+      start_date: p.start_date,
+      end_date: p.end_date,
+      creator_nickname: creatorData?.nickname || "unknown",
+      creator_avatar: creatorData?.avatar_url || null,
+      member_count: p.project_members?.[0]?.count || 0,
+      task_stats: p.task_stats || null,
+      created_at: p.created_at,
+    };
+  });
 
   return <ProjectsGrid projects={formatted} userId={userId} />;
+  } catch (err) {
+    console.error("ProjectsListWrapper error:", err);
+    return <div className="p-8 text-center text-nu-muted">프로젝트 목록을 불러오는 중 오류가 발생했습니다.</div>;
+  }
 }

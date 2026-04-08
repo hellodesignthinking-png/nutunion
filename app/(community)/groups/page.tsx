@@ -103,6 +103,7 @@ function TemplateCard({ title, description, icon, color, tag }: { title: string;
 }
 
 async function GroupsListWrapper({ userId }: { userId?: string }) {
+  try {
   const supabase = await createClient();
 
   // 최적화된 컬럼만 조회
@@ -122,12 +123,26 @@ async function GroupsListWrapper({ userId }: { userId?: string }) {
 
   const statusMap = new Map((userMemberships || []).map((m: any) => [m.group_id, m.status]));
 
-  const formattedGroups = (groups || []).map((g: any) => ({
-    ...g,
-    member_count: g.group_members?.[0]?.count || 0,
-    host_nickname: g.host?.nickname || "unknown",
-    user_status: statusMap.get(g.id) || null,
-  }));
+  const formattedGroups = (groups || []).map((g: any) => {
+    const hostData = Array.isArray(g.host) ? g.host[0] : g.host;
+    return {
+      id: g.id,
+      name: g.name,
+      category: g.category,
+      description: g.description,
+      max_members: g.max_members,
+      host_id: g.host_id,
+      image_url: g.image_url,
+      topic: g.topic,
+      member_count: g.group_members?.[0]?.count || 0,
+      host_nickname: hostData?.nickname || "unknown",
+      user_status: statusMap.get(g.id) || null,
+    };
+  });
 
   return <GroupsList groups={formattedGroups} userId={userId} />;
+  } catch (err) {
+    console.error("GroupsListWrapper error:", err);
+    return <div className="p-8 text-center text-nu-muted">소모임 목록을 불러오는 중 오류가 발생했습니다.</div>;
+  }
 }
