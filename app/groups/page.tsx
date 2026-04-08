@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
-import Link from "next/link";
 import { Plus } from "lucide-react";
 import { GroupsList } from "@/components/groups/groups-list";
 import { PageHero } from "@/components/shared/page-hero";
+import { Nav } from "@/components/shared/nav";
+import { Footer } from "@/components/landing/footer";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -15,22 +16,19 @@ export const dynamic = "force-dynamic";
 export default async function GroupsPage() {
   const supabase = await createClient();
 
-  // auth + groups + user_memberships 조회
-  const { data: { user } } = await supabase.auth.getUser();
-
-  const [
-    { data: groups },
-    { data: userMemberships },
-  ] = await Promise.all([
+  // auth + groups + user_memberships 조회 (병렬)
+  const [{ data: { user } }, { data: groups }] = await Promise.all([
+    supabase.auth.getUser(),
     supabase
       .from("groups")
       .select("*, host:profiles!groups_host_id_fkey(id, nickname), group_members(count)")
       .eq("is_active", true)
       .order("created_at", { ascending: false }),
-    user 
-      ? supabase.from("group_members").select("group_id, status").eq("user_id", user.id)
-      : Promise.resolve({ data: [] }),
   ]);
+
+  const { data: userMemberships } = user 
+    ? await supabase.from("group_members").select("group_id, status").eq("user_id", user.id)
+    : { data: [] };
 
   // membership Map 생성
   const statusMap = new Map((userMemberships || []).map((m: any) => [m.group_id, m.status]));
@@ -43,7 +41,7 @@ export default async function GroupsPage() {
   }));
 
   return (
-    <div className="bg-nu-paper min-h-screen pb-20">
+    <>
       <PageHero 
         category="Collaborate"
         title="Groups"
@@ -54,6 +52,6 @@ export default async function GroupsPage() {
       <div className="max-w-7xl mx-auto px-8 py-16">
         <GroupsList groups={formattedGroups} userId={user?.id} />
       </div>
-    </div>
+    </>
   );
 }

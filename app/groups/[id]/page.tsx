@@ -27,6 +27,8 @@ import { GoogleCalendarButton } from "@/components/integrations/google-calendar-
 import { EventRsvpButton } from "@/components/groups/event-rsvp-button";
 import { GroupSearch } from "@/components/groups/group-search";
 import { GroupRoadmap } from "@/components/groups/group-roadmap";
+import { Nav } from "@/components/shared/nav";
+import { Footer } from "@/components/landing/footer";
 
 export const dynamic = "force-dynamic";
 
@@ -74,7 +76,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
   const colors        = catColors[group.category] || catColors.vibe;
 
   return (
-    <div>
+    <>
       {/* ── Hero Banner ──────────────────────────────── */}
       <div className={`relative border-b-[3px] border-nu-ink ${colors.light} overflow-hidden`}>
         <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: "radial-gradient(circle, #0d0d0d 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
@@ -128,7 +130,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
               )}
               {!isHost && !isManager && (
                 <Suspense fallback={<div className="w-32 h-10 bg-black/5" />}>
-                  <ActionWrapper id={id} groupName={group.name} hostId={group.host_id} userId={user.id} maxMembers={group.max_members} membershipStatus={membershipStatus} />
+                   <GroupJoinAction id={id} groupName={group.name} hostId={group.host_id} userId={user.id} maxMembers={group.max_members} membershipStatus={membershipStatus} />
                 </Suspense>
               )}
             </div>
@@ -141,7 +143,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
       </div>
 
       {/* ── Main Content ────────────────────────────── */}
-      <div className="max-w-6xl mx-auto px-8 py-10">
+      <div className="max-w-6xl mx-auto px-8 py-10 pb-24">
         {(isMember || isHost) && (
           <div className="mb-8">
             <GroupSearch groupId={id} />
@@ -166,15 +168,15 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
 // ── Streaming용 하위 서버 컴포넌트들 ──────────────────────────────
 
-async function ActionWrapper({ id, groupName, hostId, userId, maxMembers, membershipStatus }: any) {
+async function GroupJoinAction({ id, groupName, hostId, userId, maxMembers, membershipStatus }: any) {
   const supabase = await createClient();
-  const { count } = await supabase.from("group_members").select("*", { count: "exact", head: true }).eq("group_id", id).eq("status", "active");
+  const { count } = await supabase.from("group_members").select("id", { count: "exact", head: true }).eq("group_id", id).eq("status", "active");
   return (
     <GroupActions 
       groupId={id} 
@@ -191,7 +193,7 @@ async function ActionWrapper({ id, groupName, hostId, userId, maxMembers, member
 async function GroupStatsSection({ id, colors }: { id: string; colors: any }) {
   const supabase = await createClient();
   
-  // Fetch counts explicitly without head: true to avoid issues in some SSR environments
+  // 가입된 멤버 수와 전체 신청/대기 멤버 수를 정확하게 분리하여 조회
   const [
     { count: activeCount },
     { count: totalCount },
@@ -232,7 +234,7 @@ async function GroupStatsSection({ id, colors }: { id: string; colors: any }) {
     });
   }
   
-  const totalFiles = (groupFiles || 0) + postFilesCount + agendaFilesCount;
+  const totalFiles = (groupFiles ?? 0) + postFilesCount + agendaFilesCount;
 
   const stats = [
     { icon: <Users size={16} />, label: "멤버", value: activeCount ?? 0, sub: (totalCount || 0) > (activeCount || 0) ? `+${(totalCount || 0) - (activeCount || 0)} 대기` : null },
@@ -247,7 +249,7 @@ async function GroupStatsSection({ id, colors }: { id: string; colors: any }) {
           <span className={colors.text}>{stat.icon}</span>
           <div>
             <p className="font-head text-xl font-extrabold text-nu-ink">
-              {stat.value.toLocaleString()}
+              {(stat.value || 0).toLocaleString()}
             </p>
             <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
               {stat.label} {stat.sub && `(${stat.sub})`}
