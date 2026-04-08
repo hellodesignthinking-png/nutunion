@@ -60,12 +60,15 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
   if (!user) redirect("/login");
 
   // ── 데이터 조회 ──────────────────────────────────
-  const { data: group } = await supabase.from("groups")
-    .select("*, host:profiles!groups_host_id_fkey(id, nickname, avatar_url)")
+  const { data: group, error: groupError } = await supabase.from("groups")
+    .select("id, name, description, category, image_url, host_id, max_members, topic, is_active, kakao_chat_url, google_drive_url, created_at, host:profiles!groups_host_id_fkey(id, nickname, avatar_url)")
     .eq("id", id)
     .single();
 
-  if (!group) notFound();
+  if (!group) {
+    console.error("Group not found:", id, groupError);
+    notFound();
+  }
 
   const { data: userMembership } = await supabase.from("group_members")
     .select("status, role")
@@ -78,6 +81,10 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
   const isMember      = isHost || userMembership?.status === "active";
   const membershipStatus = userMembership?.status as "active" | "pending" | "waitlist" | null;
   const colors        = catColors[group.category] || catColors.vibe;
+
+  // Supabase join returns array or single object depending on FK constraint
+  const hostProfile = Array.isArray(group.host) ? group.host[0] : group.host;
+  const groupData = { ...group, host: hostProfile } as any;
 
   return (
     <>
@@ -123,7 +130,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
               <div className="flex flex-wrap items-center gap-6 font-mono-nu text-[11px]">
                  <span className="flex items-center gap-2 text-nu-muted">
                    <span className="w-1.5 h-1.5 rounded-full bg-nu-pink animate-pulse" />
-                   호스트: <span className="text-nu-ink font-bold">{group.host?.nickname || "—"}</span>
+                   호스트: <span className="text-nu-ink font-bold">{groupData.host?.nickname || "—"}</span>
                  </span>
                  {group.topic && (
                    <span className="flex items-center gap-2 text-nu-blue font-bold">
@@ -193,7 +200,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
           
           <div className="space-y-6">
             <Suspense fallback={<div className="h-64 bg-black/5 animate-pulse" />}>
-              <GroupSidebarSections id={id} colors={colors} isHost={isHost} isMember={isMember} group={group} />
+              <GroupSidebarSections id={id} colors={colors} isHost={isHost} isMember={isMember} group={groupData} />
             </Suspense>
           </div>
         </div>
