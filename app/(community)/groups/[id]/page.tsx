@@ -255,7 +255,7 @@ async function GroupStatsSection({ id, colors }: { id: string; colors: any }) {
           <span className={colors.text}>{stat.icon}</span>
           <div>
             <p className="font-head text-xl font-extrabold text-nu-ink">
-              777
+              {(stat.value || 0).toLocaleString()}
             </p>
             <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
               {stat.label} {stat.sub && `(${stat.sub})`}
