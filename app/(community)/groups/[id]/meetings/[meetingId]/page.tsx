@@ -16,9 +16,23 @@ import { GoogleCalendarButton } from "@/components/integrations/google-calendar-
 import {
   Calendar, Clock, MapPin, User, Play, CheckCircle2, Lightbulb,
   Users, Edit3, Save, FileText, ArrowLeft, ChevronRight,
-  Link2, ExternalLink, Plus, Trash2, AlertCircle, Zap,
+  Link2, ExternalLink, Plus, Trash2, AlertCircle, Zap, Eye, Columns, Maximize2, X
 } from "lucide-react";
 import { toast } from "sonner";
+import { ResourcePreviewModal } from "@/components/shared/resource-preview-modal";
+
+function getEmbedUrl(url: string) {
+  if (!url) return "";
+  if (url.includes("docs.google.com/document") || url.includes("docs.google.com/presentation")) {
+    return url.replace(/\/edit.*$/, "/preview");
+  } else if (url.includes("docs.google.com/spreadsheets")) {
+    const base = url.replace(/\/edit.*$/, "/preview");
+    return `${base}?widget=true&headers=false&rm=minimal`;
+  } else if (url.includes("drive.google.com/file/d/")) {
+    return url.replace(/\/view.*$/, "/preview");
+  }
+  return url;
+}
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   upcoming:    { label: "예정",    className: "bg-nu-blue/10 text-nu-blue border-nu-blue/20" },
@@ -90,6 +104,8 @@ export default function MeetingDetailPage() {
   const [addingRes, setAddingRes]         = useState(false);
   const [replyTexts, setReplyTexts]       = useState<Record<string, string>>({});
   const [submittingReply, setSubmittingReply] = useState<string | null>(null);
+  const [previewData, setPreviewData] = useState<{ url: string; name: string } | null>(null);
+  const [isSplitView, setIsSplitView] = useState(false);
 
   const loadMeeting = useCallback(async () => {
     const supabase = createClient();
@@ -268,7 +284,11 @@ export default function MeetingDetailPage() {
   const typeIcon = { drive: "📁", article: "📰", paper: "📄", link: "🔗" };
 
   return (
-    <div className="max-w-4xl mx-auto px-8 py-12">
+    <div className={`mx-auto px-4 md:px-8 py-10 transition-all duration-500 ${isSplitView ? "max-w-full" : "max-w-4xl"}`}>
+      <div className="flex flex-col lg:flex-row gap-8">
+        
+        {/* Main Content (Notes/Agendas) Area */}
+        <div className={`transition-all duration-500 ${isSplitView ? "lg:w-[55%] xl:w-[50%] shrink-0" : "w-full"}`}>
 
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 mb-6 font-mono-nu text-[11px] uppercase tracking-widest flex-wrap">
@@ -286,18 +306,31 @@ export default function MeetingDetailPage() {
       </nav>
 
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-3 flex-wrap">
-          <Badge className={`text-[10px] ${cfg.className}`}>{cfg.label}</Badge>
-          {meeting.organizer && (
-            <span className="font-mono-nu text-[10px] text-nu-muted flex items-center gap-1">
-              <User size={12} />{meeting.organizer.nickname} (주최)
-            </span>
-          )}
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-3 flex-wrap">
+              <Badge className={`text-[10px] ${cfg.className}`}>{cfg.label}</Badge>
+              {meeting.organizer && (
+                <span className="font-mono-nu text-[10px] text-nu-muted flex items-center gap-1">
+                  <User size={12} />{meeting.organizer.nickname} (주최)
+                </span>
+              )}
+            </div>
+            <h1 className="font-head text-4xl font-extrabold text-nu-ink tracking-tight">{meeting.title}</h1>
+            {meeting.description && <p className="text-nu-gray mt-2 max-w-2xl leading-relaxed">{meeting.description}</p>}
+          </div>
+
+          <button
+            onClick={() => setIsSplitView(!isSplitView)}
+            className={`font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-2.5 border-[2px] transition-all flex items-center gap-2 shrink-0 ${
+              isSplitView ? "bg-nu-ink text-nu-paper border-nu-ink" : "bg-nu-white border-nu-ink/10 text-nu-muted hover:border-nu-ink"
+            }`}
+            title="스플릿 뷰 토글"
+          >
+            {isSplitView ? <Maximize2 size={13} /> : <Columns size={13} />}
+            <span className="hidden md:inline">{isSplitView ? "단일 뷰" : "스플릿 뷰"}</span>
+          </button>
         </div>
-        <h1 className="font-head text-4xl font-extrabold text-nu-ink tracking-tight">{meeting.title}</h1>
-        {meeting.description && <p className="text-nu-gray mt-2 max-w-2xl leading-relaxed">{meeting.description}</p>}
-      </div>
 
       {/* Roles & Quick Assets Panel */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -569,11 +602,20 @@ export default function MeetingDetailPage() {
                       {r.description && <p className="text-xs text-nu-muted mb-1">{r.description}</p>}
                       <p className="font-mono-nu text-[9px] text-nu-muted">{r.author?.nickname} · {new Date(r.created_at).toLocaleDateString("ko")}</p>
                     </div>
-                    {(userId === r.created_by || canEdit) && (
-                      <button onClick={() => handleDeleteResource(r.id)} className="text-nu-muted hover:text-nu-red transition-colors shrink-0">
-                        <Trash2 size={14} />
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button 
+                        onClick={() => setPreviewData({ url: r.url, name: r.title })}
+                        className="p-1.5 text-nu-muted hover:text-nu-pink transition-colors"
+                        title="미리보기"
+                      >
+                        <Eye size={14} />
                       </button>
-                    )}
+                      {(userId === r.created_by || canEdit) && (
+                        <button onClick={() => handleDeleteResource(r.id)} className="text-nu-muted hover:text-nu-red transition-colors">
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Replies */}
@@ -693,6 +735,61 @@ export default function MeetingDetailPage() {
           </div>
         </TabsContent>
       </Tabs>
+      </div>
+
+        {/* Side Panel Area (Split View Document Viewer) */}
+        {isSplitView && (
+          <div className="lg:flex-1 lg:sticky lg:top-8 w-full animate-in fade-in slide-in-from-right-4 duration-500 overflow-hidden">
+            <div className="bg-nu-paper border-2 border-nu-ink shadow-2xl flex flex-col h-[85vh] lg:h-[calc(100vh-80px)]">
+              {previewData ? (
+                <div className="flex-1 flex flex-col h-full">
+                  <div className="flex items-center justify-between px-5 py-4 border-b-2 border-nu-ink bg-nu-ink text-nu-paper">
+                    <div className="min-w-0 pr-4">
+                      <p className="font-head text-[13px] font-black truncate uppercase tracking-tight">{previewData.name}</p>
+                      <p className="font-mono-nu text-[9px] text-nu-paper/60 truncate uppercase tracking-widest mt-0.5">Live Document Review</p>
+                    </div>
+                    <button onClick={() => setPreviewData(null)} className="p-1.5 text-nu-paper/60 hover:text-nu-paper">
+                      <X size={18} />
+                    </button>
+                  </div>
+                  
+                  {/* Iframe */}
+                  <div className="flex-1 bg-nu-white overflow-hidden relative">
+                    <iframe 
+                      src={getEmbedUrl(previewData.url)}
+                      className="w-full h-full border-0"
+                      allow="autoplay; encrypted-media; fullscreen"
+                    />
+                  </div>
+                  
+                  <div className="p-4 bg-nu-cream/30 border-t border-nu-ink/5">
+                    <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-[0.2em]">Contextual Workspace</p>
+                    <p className="text-[10px] text-nu-graphite mt-1">자료를 보면서 동시에 회의록을 작성하세요.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-nu-muted">
+                  <div className="w-20 h-20 bg-nu-ink/[0.03] rounded-full flex items-center justify-center mb-4">
+                    <Eye size={32} className="opacity-20 text-nu-pink" />
+                  </div>
+                  <p className="font-head text-sm font-bold text-nu-ink/40 uppercase tracking-widest">Select a resource to pin</p>
+                  <p className="text-[11px] mt-2 max-w-[200px] leading-relaxed">자료 공유 탭에서 '눈' 아이콘을 클릭하면 이 패널에 문서가 고정되어 미팅 중에 함께 볼 수 있습니다.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Resource Preview Modal (Desktop/Standard mode) */}
+      {!isSplitView && (
+        <ResourcePreviewModal 
+          isOpen={!!previewData}
+          onClose={() => setPreviewData(null)}
+          url={previewData?.url || ""}
+          name={previewData?.name || ""}
+        />
+      )}
     </div>
   );
 }
