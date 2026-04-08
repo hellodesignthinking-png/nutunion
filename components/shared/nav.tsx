@@ -45,7 +45,7 @@ export function Nav() {
     window.addEventListener("scroll", onScroll, { passive: true });
 
     const supabase = createClient();
-    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
 
     // auth 상태 + 프로필 로드
     supabase.auth.getUser().then(async ({ data: { user: u } }) => {
@@ -58,28 +58,19 @@ export function Nav() {
           .single();
         setProfile(p);
 
-        // 미읽은 알림 수
-        const { count } = await supabase
-          .from("notifications")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", u.id)
-          .eq("is_read", false);
-        setNotifCount(count || 0);
+        // 미읽은 알림 수 (초기 로드)
+        const fetchNotifCount = async () => {
+          const { count } = await supabase
+            .from("notifications")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", u.id)
+            .eq("is_read", false);
+          setNotifCount(count || 0);
+        };
+        await fetchNotifCount();
 
-        // 실시간 알림 — 고유 채널명 + 외부 변수에 저장
-        channel = supabase
-          .channel(`nav-notif-${u.id}`)
-          .on("postgres_changes", {
-            event: "*", schema: "public", table: "notifications",
-            filter: `user_id=eq.${u.id}`,
-          }, async () => {
-            const { count: c } = await supabase
-              .from("notifications")
-              .select("id", { count: "exact", head: true })
-              .eq("user_id", u.id).eq("is_read", false);
-            setNotifCount(c || 0);
-          })
-          .subscribe();
+        // 30초마다 알림 수 갱신 (realtime 대신 안정적 폴링)
+        pollTimer = setInterval(fetchNotifCount, 30_000);
       }
     });
 
@@ -91,7 +82,7 @@ export function Nav() {
     return () => {
       window.removeEventListener("scroll", onScroll);
       subscription.unsubscribe();
-      if (channel) supabase.removeChannel(channel);
+      if (pollTimer) clearInterval(pollTimer);
     };
   }, []);
 
