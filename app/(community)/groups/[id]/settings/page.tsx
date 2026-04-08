@@ -110,9 +110,12 @@ export default function GroupSettingsPage() {
       const path = `crews/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const { error: uploadError } = await supabase.storage
         .from("media")
-        .upload(path, imageFile);
+        .upload(path, imageFile, {
+          contentType: imageFile.type,
+          upsert: true
+        });
       if (uploadError) {
-        toast.error("이미지 업로드 실패: " + uploadError.message);
+        toast.error("업로드 실패: " + uploadError.message);
         setLoading(false);
         return;
       }
