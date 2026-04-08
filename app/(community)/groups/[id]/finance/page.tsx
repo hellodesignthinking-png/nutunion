@@ -52,12 +52,33 @@ export default function GroupFinancePage() {
   const [groupName, setGroupName] = useState("");
   const [isManager, setIsManager] = useState(false);
   const [previewData, setPreviewData] = useState<{ url: string; name: string; id: string } | null>(null);
-  const [isSplitView, setIsSplitView] = useState(true); // Default to split view for efficiency
+  const [isSplitView, setIsSplitView] = useState(true);
+  const [activeTab, setActiveTab] = useState<"all" | "my">("all");
+
+  const [contributionData, setContributionData] = useState<Record<string, { meetings: number; resources: number; tasks: number }>>({
+    "홍길동": { meetings: 12, resources: 5, tasks: 8 },
+    "김철수": { meetings: 8, resources: 2, tasks: 3 },
+    "이영희": { meetings: 15, resources: 10, tasks: 12 },
+  });
+
+  const workflowSteps = [
+    { key: "pending", label: "청구됨", icon: <FileText size={12} />, color: "text-nu-muted" },
+    { key: "in_review", label: "검토중", icon: <Search size={12} />, color: "text-nu-amber" },
+    { key: "approved", label: "승인됨", icon: <CheckCircle2 size={12} />, color: "text-nu-blue" },
+    { key: "paid", label: "지급완료", icon: <TrendingUp size={12} />, color: "text-nu-pink" },
+  ];
+
+  const totals = {
+    total: expenditures.reduce((acc, curr) => acc + curr.amount, 0),
+    pending: expenditures.filter(e => e.status !== "paid").reduce((acc, curr) => acc + curr.amount, 0),
+    count: expenditures.filter(e => e.status !== "paid").length
+  };
+
+  const filteredExpenditures = activeTab === "all" ? expenditures : expenditures.filter(e => e.payer === "홍길동");
 
   useEffect(() => {
-    // In a real app, load from Supabase
     setGroupName("넛유니온 소모임");
-    setIsManager(true); // Assuming manager for demo
+    setIsManager(true);
   }, [groupId]);
 
   const handleStatusUpdate = (id: string, status: "approved" | "rejected") => {
@@ -71,23 +92,16 @@ export default function GroupFinancePage() {
       toast.error("정산이 반려되었습니다.");
     }
     
-    // Clear preview if current
     if (previewData?.id === id) {
       setPreviewData(null);
     }
-  };
-
-  const totals = {
-    total: expenditures.reduce((acc, curr) => acc + curr.amount, 0),
-    pending: expenditures.filter(e => e.status === "pending").reduce((acc, curr) => acc + curr.amount, 0),
-    count: expenditures.filter(e => e.status === "pending").length
   };
 
   return (
     <div className={`mx-auto px-4 md:px-8 py-10 transition-all duration-500 ${isSplitView ? "max-w-full" : "max-w-5xl"}`}>
       
       {/* Split View Wrapper */}
-      <div className={`flex flex-col lg:flex-row gap-8`}>
+      <div className="flex flex-col lg:flex-row gap-8">
         
         {/* Main Content Area */}
         <div className={`transition-all duration-500 ${isSplitView ? "lg:w-[50%] xl:w-[45%] shrink-0" : "w-full"}`}>
@@ -102,148 +116,242 @@ export default function GroupFinancePage() {
 
           <div className="flex items-start justify-between mb-8">
             <div>
-              <h1 className="font-head text-3xl font-extrabold text-nu-ink">자금 관리 & 정산</h1>
-              <p className="text-nu-gray text-sm mt-1">프로젝트 비용 집행 및 영수증 검토 시스템</p>
+              <h1 className="font-head text-3xl font-extrabold text-nu-ink tracking-tight lowercase">financial_hub</h1>
+              <p className="text-nu-gray text-sm mt-1">기여에 기반한 공정한 정산과 투명한 자금 관리</p>
             </div>
-            <button
-              onClick={() => setIsSplitView(!isSplitView)}
-              className={`font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-2.5 border-[2px] transition-all flex items-center gap-2 ${
-                isSplitView ? "bg-nu-ink text-nu-paper border-nu-ink" : "bg-nu-white border-nu-ink/10 text-nu-muted hover:border-nu-ink"
-              }`}
-            >
-              {isSplitView ? <Maximize2 size={13} /> : <Columns size={13} />}
-              <span className="hidden sm:inline">{isSplitView ? "단일 뷰" : "스플릿 뷰"}</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsSplitView(!isSplitView)}
+                className={`p-2.5 border-[2px] transition-all ${
+                  isSplitView ? "bg-nu-ink text-nu-paper border-nu-ink" : "bg-nu-white border-nu-ink/10 text-nu-muted hover:border-nu-ink"
+                }`}
+              >
+                {isSplitView ? <Maximize2 size={16} /> : <Columns size={16} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Combined Stats & Tabs */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+             <div className="bg-nu-ink text-nu-paper p-5 shadow-2xl relative overflow-hidden">
+                <div className="relative z-10">
+                  <p className="font-mono-nu text-[9px] uppercase tracking-[0.3em] opacity-40 mb-2">Total Project Liquidity</p>
+                  <p className="font-head text-3xl font-black">₩{totals.total.toLocaleString()}</p>
+                  <div className="flex gap-4 mt-4">
+                    <div className="flex flex-col">
+                      <span className="font-mono-nu text-[8px] text-nu-paper/40">미정산</span>
+                      <span className="text-sm font-bold text-nu-amber">₩{totals.pending.toLocaleString()}</span>
+                    </div>
+                    <div className="flex flex-col border-l border-nu-paper/10 pl-4">
+                      <span className="font-mono-nu text-[8px] text-nu-paper/40">기여 포인트</span>
+                      <span className="text-sm font-bold text-nu-blue">{(totals.total / 100).toLocaleString()}P</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <TrendingUp size={64} />
+                </div>
+             </div>
+
+             <div className="bg-nu-white border-2 border-nu-ink p-1 flex flex-col justify-between">
+                <div className="flex border-b border-nu-ink/5">
+                  <button 
+                    onClick={() => setActiveTab("all")}
+                    className={`flex-1 py-3 font-mono-nu text-[10px] uppercase tracking-widest transition-all ${activeTab === 'all' ? 'bg-nu-ink text-nu-paper' : 'text-nu-muted hover:bg-nu-cream/30'}`}
+                  >
+                    All Transactions
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab("my")}
+                    className={`flex-1 py-3 font-mono-nu text-[10px] uppercase tracking-widest transition-all ${activeTab === 'my' ? 'bg-nu-ink text-nu-paper' : 'text-nu-muted hover:bg-nu-cream/30'}`}
+                  >
+                    My Waiting Room
+                  </button>
+                </div>
+                <div className="p-4">
+                  <p className="text-[11px] text-nu-muted leading-relaxed italic">
+                    {activeTab === 'all' 
+                      ? "프로젝트 전체 자금의 흐름과 멤버들의 기여 증빙을 검토합니다." 
+                      : "본인의 정산 요청 상태를 실시간으로 추적할 수 있는 대기실입니다."}
+                  </p>
+                </div>
+             </div>
+          </div>
+
+          {/* Search & Actions */}
+          <div className="flex gap-2 mb-6">
+            <div className="relative flex-1">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-nu-muted" />
+              <input 
+                placeholder="항목 또는 결제자 검색" 
+                className="w-full pl-10 pr-4 py-2.5 bg-nu-white border-2 border-nu-ink/10 focus:border-nu-ink transition-all text-sm outline-none"
+              />
+            </div>
+            <button className="bg-nu-pink text-nu-paper font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 hover:bg-nu-ink transition-all inline-flex items-center gap-2">
+              <Plus size={14} /> NEW CLAIM
             </button>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            <div className="bg-nu-white border-[2px] border-nu-ink p-4 shadow-[4px_4px_0px_0px_#0d0d0d]">
-              <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest mb-1">총 지출</p>
-              <p className="font-head text-xl font-black text-nu-ink">₩{totals.total.toLocaleString()}</p>
-            </div>
-            <div className="bg-nu-pink/5 border-[2px] border-nu-pink/30 p-4 shadow-[4px_4px_0px_0px_#FF2E97]">
-              <p className="font-mono-nu text-[10px] text-nu-pink uppercase tracking-widest mb-1">미정산 (대기)</p>
-              <p className="font-head text-xl font-black text-nu-pink">{totals.count}건 / ₩{totals.pending.toLocaleString()}</p>
-            </div>
-            <div className="bg-nu-blue/5 border-[2px] border-nu-blue/30 p-4">
-              <p className="font-mono-nu text-[10px] text-nu-blue uppercase tracking-widest mb-1">지급 예정 포인트</p>
-              <p className="font-head text-xl font-black text-nu-blue">{(totals.total / 100).toLocaleString()} NUT</p>
-            </div>
-          </div>
+          {/* Transactions List */}
+          <div className="space-y-3">
+            {filteredExpenditures.map((exp) => (
+              <div 
+                key={exp.id} 
+                onClick={() => exp.receiptUrl && setPreviewData({ url: exp.receiptUrl, name: exp.item, id: exp.id })}
+                className={`group bg-nu-paper border-2 transition-all cursor-pointer p-4 ${
+                  previewData?.id === exp.id ? "border-nu-pink shadow-[4px_4px_0px_0px_#FF2E97]" : "border-nu-ink/10 hover:border-nu-ink active:translate-y-0.5"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 flex items-center justify-center border-2 ${previewData?.id === exp.id ? 'border-nu-pink bg-nu-pink/5' : 'border-nu-ink/10'}`}>
+                      <CreditCard size={14} className={previewData?.id === exp.id ? 'text-nu-pink' : 'text-nu-muted'} />
+                    </div>
+                    <div>
+                      <p className="font-head text-[13px] font-bold text-nu-ink leading-tight">{exp.item}</p>
+                      <p className="font-mono-nu text-[9px] text-nu-muted uppercase mt-0.5">{exp.payer} · {exp.date}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-head text-sm font-black text-nu-ink">₩{exp.amount.toLocaleString()}</p>
+                    <p className="font-mono-nu text-[8px] text-nu-blue uppercase mt-0.5">{(exp.amount / 100).toLocaleString()} POINT</p>
+                  </div>
+                </div>
 
-          {/* Table Container */}
-          <div className="bg-nu-white border-[2px] border-nu-ink overflow-hidden">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-nu-ink text-nu-paper font-mono-nu text-[10px] uppercase tracking-widest">
-                  <th className="px-4 py-3 border-r border-nu-paper/10">일자</th>
-                  <th className="px-4 py-3 border-r border-nu-paper/10">항목</th>
-                  <th className="px-4 py-3 border-r border-nu-paper/10 text-right">금액</th>
-                  <th className="px-4 py-3">상태</th>
-                </tr>
-              </thead>
-              <tbody>
-                {expenditures.map((exp) => (
-                  <tr 
-                    key={exp.id} 
-                    onClick={() => exp.receiptUrl && setPreviewData({ url: exp.receiptUrl, name: exp.item, id: exp.id })}
-                    className={`border-b border-nu-ink/5 hover:bg-nu-cream/30 cursor-pointer transition-colors ${previewData?.id === exp.id ? "bg-nu-pink/5" : ""}`}
-                  >
-                    <td className="px-4 py-4">
-                      <p className="text-xs font-mono-nu text-nu-muted">{exp.date}</p>
-                      <p className="text-[10px] font-bold text-nu-ink">{exp.category}</p>
-                    </td>
-                    <td className="px-4 py-4">
-                      <p className="text-sm font-bold text-nu-ink truncate max-w-[150px]">{exp.item}</p>
-                      <p className="text-[10px] text-nu-muted">결제자: {exp.payer}</p>
-                    </td>
-                    <td className="px-4 py-4 text-right">
-                      <p className="text-sm font-head font-black text-nu-ink">₩{exp.amount.toLocaleString()}</p>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2 py-1 text-[9px] font-bold uppercase tracking-widest rounded ${
-                        exp.status === "approved" ? "bg-green-100 text-green-700" : 
-                        exp.status === "rejected" ? "bg-red-100 text-red-700" : "bg-nu-amber/10 text-nu-amber"
-                      }`}>
-                        {exp.status === "approved" ? <CheckCircle2 size={10} /> : 
-                         exp.status === "rejected" ? <XCircle size={10} /> : <Clock size={10} />}
-                        {exp.status === "approved" ? "승인됨" : exp.status === "rejected" ? "반려됨" : "검토중"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                {/* Workflow Status Tracker */}
+                <div className="flex items-center justify-between gap-1 pt-3 border-t border-nu-ink/5 overflow-hidden">
+                  {workflowSteps.map((step, idx) => {
+                    const isPassed = ["pending", "in_review", "approved", "paid"].indexOf(exp.status) >= idx;
+                    const isCurrent = exp.status === step.key;
+                    
+                    return (
+                      <div key={step.key} className="flex-1 flex items-center">
+                        <div className="flex flex-col items-center gap-1.5 relative z-10">
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                            isPassed ? 'bg-nu-ink border-nu-ink text-nu-paper' : 'bg-nu-white border-nu-ink/10 text-nu-muted/30'
+                          }`}>
+                            {isPassed ? <CheckCircle2 size={10} /> : <div className="w-1.5 h-1.5 rounded-full bg-nu-ink/20" />}
+                          </div>
+                          <span className={`font-mono-nu text-[7px] uppercase tracking-tighter ${isPassed ? 'text-nu-ink font-bold font-black' : 'text-nu-muted/40'}`}>
+                            {step.label}
+                          </span>
+                        </div>
+                        {idx < workflowSteps.length - 1 && (
+                          <div className={`flex-1 h-[2px] mb-4 -mx-1 transition-all ${
+                            ["pending", "in_review", "approved", "paid"].indexOf(exp.status) > idx ? 'bg-nu-ink' : 'bg-nu-ink/5'
+                          }`} />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Side Panel Area (Split View Document Viewer) */}
+        {/* Side Panel Area (Advanced Review Console) */}
         {isSplitView && (
           <div className="lg:flex-1 lg:sticky lg:top-8 w-full animate-in fade-in slide-in-from-right-4 duration-500 overflow-hidden">
-            <div className="bg-nu-paper border-2 border-nu-ink shadow-2xl flex flex-col h-[85vh] lg:h-[calc(100vh-80px)]">
+            <div className="bg-nu-white border-2 border-nu-ink shadow-2xl flex flex-col h-[85vh] lg:h-[calc(100vh-80px)]">
               {previewData ? (
-                <div className="flex-1 flex flex-col h-full">
-                  <div className="flex items-center justify-between px-5 py-4 border-b-2 border-nu-ink bg-nu-ink text-nu-paper">
+                <div className="flex-1 flex flex-col h-full overflow-y-auto scrollbar-hide">
+                  <div className="flex items-center justify-between px-5 py-4 border-b-2 border-nu-ink bg-nu-pink text-nu-paper">
                     <div className="min-w-0 pr-4">
                       <p className="font-head text-[13px] font-black truncate uppercase tracking-tight">{previewData.name}</p>
-                      <p className="font-mono-nu text-[9px] text-nu-paper/60 truncate uppercase tracking-widest mt-0.5">영수증 & 증빙 자료 검토</p>
+                      <p className="font-mono-nu text-[9px] text-nu-paper/70 truncate uppercase tracking-widest mt-0.5">Advanced Settlement Review</p>
                     </div>
-                    <button onClick={() => setPreviewData(null)} className="p-1.5 text-nu-paper/60 hover:text-nu-paper">
+                    <button onClick={() => setPreviewData(null)} className="p-1.5 text-nu-paper/70 hover:text-nu-paper">
                       <X size={18} />
                     </button>
                   </div>
                   
-                  {/* Iframe */}
-                  <div className="flex-1 bg-nu-white overflow-hidden relative border-b-2 border-nu-ink">
+                  {/* Contribution Identity Dashboard */}
+                  <div className="p-5 bg-nu-ink text-nu-paper">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-12 h-12 bg-nu-paper/10 rounded-full flex items-center justify-center border border-nu-paper/20 shrink-0">
+                        <Users size={20} className="text-nu-paper" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-head text-lg font-black tracking-tight">{expenditures.find(e => e.id === previewData.id)?.payer}</p>
+                        <p className="font-mono-nu text-[9px] text-nu-paper/40 uppercase tracking-widest">Core Project Contributor</p>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-2">
+                       <div className="bg-nu-paper/5 p-2 text-center border border-nu-paper/10">
+                          <p className="text-xl font-black font-head">{contributionData[expenditures.find(e => e.id === previewData.id)?.payer || ""]?.meetings}</p>
+                          <p className="font-mono-nu text-[7px] text-nu-paper/30 uppercase mt-0.5">Sessions</p>
+                       </div>
+                       <div className="bg-nu-paper/5 p-2 text-center border border-nu-paper/10">
+                          <p className="text-xl font-black font-head">{contributionData[expenditures.find(e => e.id === previewData.id)?.payer || ""]?.resources}</p>
+                          <p className="font-mono-nu text-[7px] text-nu-paper/30 uppercase mt-0.5">Knowledge</p>
+                       </div>
+                       <div className="bg-nu-paper/5 p-2 text-center border border-nu-paper/10">
+                          <p className="text-xl font-black font-head text-nu-blue">{contributionData[expenditures.find(e => e.id === previewData.id)?.payer || ""]?.tasks}</p>
+                          <p className="font-mono-nu text-[7px] text-nu-paper/30 uppercase mt-0.5">Execution</p>
+                       </div>
+                    </div>
+                  </div>
+
+                  {/* Document Iframe */}
+                  <div className="flex-1 min-h-[400px] bg-nu-paper relative border-b-2 border-nu-ink overflow-hidden">
                     <iframe 
                       src={previewData.url}
                       className="w-full h-full border-0"
                       allow="autoplay; encrypted-media; fullscreen"
                     />
+                    <div className="absolute top-4 right-4 group">
+                      <a href={previewData.url} target="_blank" className="p-2 bg-nu-paper/80 backdrop-blur-md border border-nu-ink/10 text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-all">
+                        <Maximize2 size={16} />
+                      </a>
+                    </div>
                   </div>
 
                   {/* Actions Drawer */}
                   <div className="p-6 bg-nu-cream/30 space-y-4">
-                    <div className="flex items-start gap-4 p-4 bg-nu-white border-2 border-nu-ink/10 rounded">
-                      <div className="w-10 h-10 bg-nu-blue/10 flex items-center justify-center shrink-0">
-                         <Receipt size={18} className="text-nu-blue" />
+                    <div className="bg-nu-white p-4 border border-nu-ink/10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <TrendingUp size={14} className="text-nu-pink" />
+                        <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest">Reward Simulation</span>
                       </div>
-                      <div>
-                        <p className="text-sm font-bold text-nu-ink">정산 승인 안내</p>
-                        <p className="text-[11px] text-nu-muted leading-relaxed mt-1">
-                          영수증의 금액과 항목이 일치하는지 확인해 주세요. 승인 시 프로젝트 자금에서 즉시 해당 금액이 차감되며 지출 내역이 확정됩니다.
-                        </p>
-                      </div>
+                      <p className="text-[11px] text-nu-muted leading-relaxed">
+                        해당 멤버의 높은 기여 지수(미팅 참여 {contributionData[expenditures.find(e => e.id === previewData.id)?.payer || ""]?.meetings}회 등)를 고려할 때, 본 정산 승인 시 **가중 인센티브 5%**가 추가 적용될 예정입니다.
+                      </p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
                       <button 
                         onClick={() => handleStatusUpdate(previewData.id, "approved")}
-                        className="flex items-center justify-center gap-2 py-4 bg-nu-blue text-nu-paper font-mono-nu text-xs font-bold uppercase tracking-widest hover:bg-nu-blue/90 transition-all"
+                        className="flex flex-col items-center justify-center gap-1 py-4 bg-nu-blue text-nu-paper hover:bg-nu-ink transition-all shadow-xl shadow-nu-blue/10"
                       >
-                        <CheckCircle2 size={16} /> 정산 승인
+                        <CheckCircle2 size={18} />
+                        <span className="font-mono-nu text-[9px] font-black uppercase tracking-widest">Final Approval</span>
                       </button>
                       <button 
                         onClick={() => handleStatusUpdate(previewData.id, "rejected")}
-                        className="flex items-center justify-center gap-2 py-4 bg-nu-paper border-2 border-nu-ink text-nu-ink font-mono-nu text-xs font-bold uppercase tracking-widest hover:bg-red-50 hover:text-red-500 hover:border-red-500 transition-all"
+                        className="flex flex-col items-center justify-center gap-1 py-4 bg-nu-white border-2 border-nu-ink text-nu-ink hover:bg-red-50 hover:text-red-500 hover:border-red-500 transition-all"
                       >
-                        <XCircle size={16} /> 반려 하기
+                        <XCircle size={18} />
+                        <span className="font-mono-nu text-[9px] font-black uppercase tracking-widest">Request Revision</span>
                       </button>
                     </div>
-                    
-                    <button className="w-full flex items-center justify-center gap-2 py-3 border border-nu-ink/10 text-nu-muted hover:text-nu-ink transition-colors font-mono-nu text-[10px] uppercase tracking-widest">
-                      <FileText size={12} /> 반려 사유 입력 (선택)
-                    </button>
                   </div>
                 </div>
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-nu-muted">
-                  <div className="w-20 h-20 bg-nu-ink/[0.03] rounded-full flex items-center justify-center mb-4">
-                    <CreditCard size={32} className="opacity-20 text-nu-blue" />
+                  <div className="w-24 h-24 bg-nu-ink/[0.03] rounded-full flex items-center justify-center mb-6 animate-pulse">
+                    <Receipt size={40} className="opacity-10 text-nu-ink" />
                   </div>
-                  <p className="font-head text-sm font-bold text-nu-ink/40 uppercase tracking-widest">Select an entry to review</p>
-                  <p className="text-[11px] mt-2 max-w-[200px]">지출 내역을 선택하면 우측에서 영수증을 확인하고 정산을 승인할 수 있습니다.</p>
+                  <h3 className="font-head text-lg font-black text-nu-ink/30 uppercase tracking-widest">Verification Console</h3>
+                  <p className="text-[11px] mt-4 max-w-[240px] leading-relaxed mx-auto text-nu-muted">
+                    지출 내역을 선택하면 AI가 분석한 **멤버의 기여 데이터**와 **증빙 영수증**을 한 화면에서 대조할 수 있습니다.
+                  </p>
+                  <div className="mt-8 flex gap-2">
+                    <div className="w-2 h-2 rounded-full bg-nu-ink/10" />
+                    <div className="w-2 h-2 rounded-full bg-nu-ink/5" />
+                    <div className="w-2 h-2 rounded-full bg-nu-ink/5" />
+                  </div>
                 </div>
               )}
             </div>
@@ -251,7 +359,6 @@ export default function GroupFinancePage() {
         )}
       </div>
 
-      {/* Resource Preview Modal (Desktop/Standard mode) */}
       {!isSplitView && (
         <ResourcePreviewModal 
           isOpen={!!previewData}
