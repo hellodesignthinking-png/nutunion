@@ -1,173 +1,232 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Search, X, Users, Briefcase, Layers, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  Search, Command, Users, Briefcase, FileText, Calendar,
+  ArrowRight, X, Zap, BookOpen, MessageSquare, Hash
+} from "lucide-react";
+
+type ResultType = "member" | "group" | "project" | "resource";
 
 interface SearchResult {
-  type: "crew" | "project" | "member";
   id: string;
+  type: ResultType;
   title: string;
   subtitle: string;
   href: string;
 }
+
+const typeConfig: Record<ResultType, { icon: any; color: string; label: string }> = {
+  member: { icon: Users, color: "text-nu-pink", label: "멤버" },
+  group: { icon: Hash, color: "text-nu-blue", label: "소모임" },
+  project: { icon: Briefcase, color: "text-nu-amber", label: "프로젝트" },
+  resource: { icon: FileText, color: "text-green-600", label: "자료" },
+};
 
 export function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedIdx, setSelectedIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
+  // Cmd+K shortcut
   useEffect(() => {
-    if (open) inputRef.current?.focus();
-  }, [open]);
-
-  // Keyboard shortcut
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
+    const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        setOpen(true);
+        setOpen(prev => !prev);
       }
       if (e.key === "Escape") setOpen(false);
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   }, []);
 
   useEffect(() => {
-    if (!query.trim()) { setResults([]); return; }
-    const timer = setTimeout(() => searchAll(query.trim()), 300);
-    return () => clearTimeout(timer);
-  }, [query]);
+    if (open) {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    } else {
+      setQuery("");
+      setResults([]);
+      setSelectedIdx(0);
+    }
+  }, [open]);
 
-  async function searchAll(q: string) {
+  // Search logic
+  const doSearch = useCallback(async (q: string) => {
+    if (q.length < 2) { setResults([]); return; }
     setLoading(true);
-    const supabase = createClient();
-    const searchQ = `%${q}%`;
 
-    const [groupsRes, projectsRes, membersRes] = await Promise.all([
-      supabase.from("groups").select("id, name, category, description").ilike("name", searchQ).eq("is_active", true).limit(5),
-      supabase.from("projects").select("id, title, description, status").ilike("title", searchQ).neq("status", "draft").limit(5),
-      supabase.from("profiles").select("id, nickname, name, specialty").or(`nickname.ilike.${searchQ},name.ilike.${searchQ}`).limit(5),
+    const supabase = createClient();
+    const all: SearchResult[] = [];
+
+    const [
+      { data: profiles },
+      { data: groups },
+      { data: projects },
+    ] = await Promise.all([
+      supabase.from("profiles").select("id, nickname, bio").ilike("nickname", `%${q}%`).limit(5),
+      supabase.from("groups").select("id, name, category, description").ilike("name", `%${q}%`).eq("is_active", true).limit(5),
+      supabase.from("projects").select("id, title, description, category").ilike("title", `%${q}%`).neq("status", "draft").limit(5),
     ]);
 
-    const items: SearchResult[] = [
-      ...(groupsRes.data || []).map((g) => ({
-        type: "crew" as const,
-        id: g.id,
-        title: g.name,
-        subtitle: g.category || "",
-        href: `/groups/${g.id}`,
-      })),
-      ...(projectsRes.data || []).map((p) => ({
-        type: "project" as const,
-        id: p.id,
-        title: p.title,
-        subtitle: p.status,
-        href: `/projects/${p.id}`,
-      })),
-      ...(membersRes.data || []).map((m) => ({
-        type: "member" as const,
-        id: m.id,
-        title: m.nickname || m.name,
-        subtitle: m.specialty || "",
-        href: `/members`,
-      })),
-    ];
+    (profiles || []).forEach((p: any) => all.push({
+      id: p.id, type: "member", title: p.nickname || "멤버",
+      subtitle: p.bio || "넛유니온 멤버", href: `/portfolio/${p.id}`
+    }));
+    (groups || []).forEach((g: any) => all.push({
+      id: g.id, type: "group", title: g.name,
+      subtitle: g.description?.slice(0, 60) || g.category, href: `/groups/${g.id}`
+    }));
+    (projects || []).forEach((p: any) => all.push({
+      id: p.id, type: "project", title: p.title,
+      subtitle: p.description?.slice(0, 60) || p.category, href: `/projects/${p.id}`
+    }));
 
-    setResults(items);
+    setResults(all);
+    setSelectedIdx(0);
     setLoading(false);
-  }
+  }, []);
 
-  function navigate(href: string) {
+  useEffect(() => {
+    const timer = setTimeout(() => doSearch(query), 300);
+    return () => clearTimeout(timer);
+  }, [query, doSearch]);
+
+  const handleSelect = (result: SearchResult) => {
     setOpen(false);
-    setQuery("");
-    router.push(href);
-  }
-
-  const typeIcons = {
-    crew: { icon: Layers, color: "text-nu-blue", label: "크루" },
-    project: { icon: Briefcase, color: "text-green-600", label: "프로젝트" },
-    member: { icon: Users, color: "text-nu-pink", label: "멤버" },
+    router.push(result.href);
   };
 
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-2 px-3 py-1.5 text-nu-muted hover:text-nu-ink transition-colors"
-        title="검색 (⌘K)"
-      >
-        <Search size={16} />
-        <span className="hidden lg:inline font-mono-nu text-[10px] bg-nu-cream px-1.5 py-0.5">⌘K</span>
-      </button>
-    );
-  }
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIdx(i => Math.min(i + 1, results.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIdx(i => Math.max(i - 1, 0));
+    } else if (e.key === "Enter" && results[selectedIdx]) {
+      handleSelect(results[selectedIdx]);
+    }
+  };
+
+  if (!open) return null;
 
   return (
-    <>
+    <div className="fixed inset-0 z-[9999]">
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-nu-ink/40 z-[600]" onClick={() => setOpen(false)} />
+      <div className="absolute inset-0 bg-nu-ink/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
 
-      {/* Search modal */}
-      <div className="fixed top-[15%] left-1/2 -translate-x-1/2 w-full max-w-lg z-[601] px-4">
-        <div className="bg-nu-white border border-nu-ink/10 shadow-2xl overflow-hidden">
-          {/* Input */}
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-nu-ink/[0.06]">
-            <Search size={18} className="text-nu-muted shrink-0" />
+      {/* Modal */}
+      <div className="relative max-w-xl mx-auto mt-[15vh] animate-in fade-in slide-in-from-top-4 duration-200">
+        <div className="bg-nu-white border-[2px] border-nu-ink shadow-2xl shadow-nu-ink/20 overflow-hidden">
+          {/* Search Input */}
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-nu-ink/5">
+            <Search size={20} className="text-nu-muted shrink-0" />
             <input
               ref={inputRef}
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="크루, 프로젝트, 멤버 검색..."
-              className="flex-1 text-sm bg-transparent focus:outline-none"
+              onChange={e => setQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="멤버, 소모임, 프로젝트 검색..."
+              className="flex-1 bg-transparent text-nu-ink text-sm font-medium placeholder:text-nu-muted/50 focus:outline-none"
             />
-            {loading && <Loader2 size={16} className="animate-spin text-nu-muted" />}
-            <button onClick={() => setOpen(false)} className="p-1 text-nu-muted hover:text-nu-ink">
-              <X size={16} />
-            </button>
+            <kbd className="font-mono-nu text-[9px] text-nu-muted bg-nu-cream/50 border border-nu-ink/10 px-2 py-1">
+              ESC
+            </kbd>
           </div>
 
           {/* Results */}
-          {results.length > 0 && (
-            <div className="max-h-[400px] overflow-y-auto py-2">
-              {results.map((r) => {
-                const t = typeIcons[r.type];
-                return (
-                  <button
-                    key={`${r.type}-${r.id}`}
-                    onClick={() => navigate(r.href)}
-                    className="w-full flex items-center gap-3 px-5 py-3 hover:bg-nu-cream/50 transition-colors text-left"
-                  >
-                    <t.icon size={16} className={t.color} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-nu-ink truncate">{r.title}</p>
-                      <p className="text-[10px] text-nu-muted capitalize">{r.subtitle}</p>
-                    </div>
-                    <span className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted shrink-0">{t.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          <div className="max-h-[400px] overflow-y-auto">
+            {loading && (
+              <div className="px-5 py-8 text-center">
+                <div className="w-5 h-5 border-2 border-nu-pink border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">Searching...</p>
+              </div>
+            )}
 
-          {query && !loading && results.length === 0 && (
-            <div className="py-8 text-center">
-              <p className="text-sm text-nu-muted">검색 결과가 없습니다</p>
-            </div>
-          )}
+            {!loading && query.length >= 2 && results.length === 0 && (
+              <div className="px-5 py-8 text-center">
+                <Search size={24} className="text-nu-muted/30 mx-auto mb-2" />
+                <p className="text-sm text-nu-muted">"{query}"에 대한 검색 결과가 없습니다</p>
+              </div>
+            )}
 
-          {!query && (
-            <div className="py-6 px-5 text-center">
-              <p className="text-xs text-nu-muted">크루, 프로젝트, 멤버를 검색하세요</p>
+            {!loading && results.length > 0 && (
+              <div className="py-2">
+                {results.map((r, idx) => {
+                  const cfg = typeConfig[r.type];
+                  const Icon = cfg.icon;
+                  return (
+                    <button
+                      key={`${r.type}-${r.id}`}
+                      onClick={() => handleSelect(r)}
+                      onMouseEnter={() => setSelectedIdx(idx)}
+                      className={`w-full text-left px-5 py-3 flex items-center gap-3 transition-colors ${
+                        idx === selectedIdx ? "bg-nu-cream/40" : "hover:bg-nu-cream/20"
+                      }`}
+                    >
+                      <div className={`w-8 h-8 flex items-center justify-center bg-nu-ink/[0.03] border border-nu-ink/5 ${cfg.color}`}>
+                        <Icon size={16} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-nu-ink truncate">{r.title}</p>
+                        <p className="text-[10px] text-nu-muted truncate">{r.subtitle}</p>
+                      </div>
+                      <span className={`font-mono-nu text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 border ${cfg.color} bg-current/5`}>
+                        {cfg.label}
+                      </span>
+                      <ArrowRight size={12} className="text-nu-muted/30" />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {!loading && query.length < 2 && (
+              <div className="px-5 py-6">
+                <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest mb-3">Quick Actions</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: "소모임 탐색", href: "/groups", icon: Hash },
+                    { label: "프로젝트 찾기", href: "/projects", icon: Briefcase },
+                    { label: "인재 검색", href: "/talents", icon: Users },
+                    { label: "내 프로필", href: "/profile", icon: Zap },
+                  ].map(a => (
+                    <button
+                      key={a.href}
+                      onClick={() => { setOpen(false); router.push(a.href); }}
+                      className="flex items-center gap-2 px-3 py-2.5 text-[11px] font-medium text-nu-muted hover:text-nu-ink bg-nu-cream/20 hover:bg-nu-cream/40 transition-colors"
+                    >
+                      <a.icon size={14} /> {a.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="px-5 py-2.5 border-t border-nu-ink/5 flex items-center justify-between bg-nu-cream/10">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1 font-mono-nu text-[8px] text-nu-muted">
+                <kbd className="px-1 py-0.5 bg-nu-ink/5 border border-nu-ink/10 text-[7px]">↑↓</kbd> 이동
+              </span>
+              <span className="flex items-center gap-1 font-mono-nu text-[8px] text-nu-muted">
+                <kbd className="px-1 py-0.5 bg-nu-ink/5 border border-nu-ink/10 text-[7px]">↵</kbd> 선택
+              </span>
             </div>
-          )}
+            <span className="font-mono-nu text-[7px] text-nu-muted uppercase tracking-widest">
+              Powered by nutunion
+            </span>
+          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

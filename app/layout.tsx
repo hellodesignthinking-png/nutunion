@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Outfit, Space_Grotesk, Space_Mono, Playfair_Display } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { GenreThemeProvider } from "@/components/brand/genre-theme-context";
+import { GlobalSearch } from "@/components/shared/global-search";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -45,6 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <GenreThemeProvider>
           {children}
         </GenreThemeProvider>
+        <GlobalSearch />
         <Toaster position="bottom-right" />
       </body>
     </html>
