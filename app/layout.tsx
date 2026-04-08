@@ -37,6 +37,20 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: "nutunion — protocol collective",
   description: "공간, 문화, 플랫폼, 바이브를 잇는 protocol collective. Scene을 설계하는 커뮤니티.",
+  manifest: "/manifest.json",
+  themeColor: "#0D0D0D",
+  viewport: { width: "device-width", initialScale: 1, maximumScale: 1 },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "nutunion",
+  },
+  openGraph: {
+    title: "nutunion — protocol collective",
+    description: "AI가 보증하고 공동체가 운영하는 자율형 커리어 생태계",
+    siteName: "nutunion",
+    type: "website",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

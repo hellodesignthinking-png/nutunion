@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Menu, LogOut, Bell, Shield, Star, Crown, Award } from "lucide-react";
+import { Menu, LogOut, Bell, Shield, Star, Crown, Award, Search, Command } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { createClient } from "@/lib/supabase/client";
 
@@ -15,13 +15,12 @@ const landingLinks = [
   { label: "Scenes",   href: "/#scenes"  },
 ];
 
-// ── 앱 링크 (로그인) — AuthNav와 완전 통일 ────────────────────────
 const appLinks = [
   { label: "Dashboard", href: "/dashboard"    },
   { label: "소모임",    href: "/groups"       },
   { label: "프로젝트",  href: "/projects"     },
-  { label: "멤버",      href: "/members"      },
-  { label: "알림",      href: "/notifications" },
+  { label: "인재",      href: "/talents"      },
+  { label: "의뢰",      href: "/challenges"   },
 ];
 
 const GRADE_BADGE: Record<string, { label: string; cls: string; Icon: any }> = {
@@ -161,6 +160,15 @@ export function Nav() {
       <div className="hidden md:flex gap-2 items-center">
         {user ? (
           <>
+            {/* ⌘K 검색 */}
+            <button
+              onClick={() => { const e = new KeyboardEvent('keydown', { key: 'k', metaKey: true }); window.dispatchEvent(e); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-nu-muted hover:text-nu-ink bg-nu-cream/30 border border-nu-ink/10 transition-colors"
+              title="검색 (⌘K)"
+            >
+              <Search size={13} />
+              <kbd className="font-mono-nu text-[8px] text-nu-muted">⌘K</kbd>
+            </button>
             {/* 알림 벨 */}
             <Link href="/notifications" className="relative p-2 text-nu-graphite hover:text-nu-ink transition-colors">
               <Bell size={18} />
