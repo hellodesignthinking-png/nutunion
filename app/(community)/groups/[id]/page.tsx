@@ -120,7 +120,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
               <div className="flex flex-wrap items-center gap-6 font-mono-nu text-[11px]">
                  <span className="flex items-center gap-2 text-nu-muted">
                    <span className="w-1.5 h-1.5 rounded-full bg-nu-pink animate-pulse" />
-                   호스트: <span className="text-nu-ink font-bold">{group.host?.nickname || "—"}</span>
+                   CREW_HEAD: <span className="text-nu-ink font-bold">{group.host?.nickname || "—"}</span>
                  </span>
                  {group.topic && (
                    <span className="flex items-center gap-2 text-nu-blue font-bold">
