@@ -28,6 +28,8 @@ import { EventRsvpButton } from "@/components/groups/event-rsvp-button";
 import { GroupSearch } from "@/components/groups/group-search";
 import { GroupRoadmap } from "@/components/groups/group-roadmap";
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const supabase = await createClient();
@@ -52,22 +54,18 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
   if (!user) redirect("/login");
 
   // ── 데이터 조회 ──────────────────────────────────
-  const [
-    { data: group },
-    { data: userMembership },
-  ] = await Promise.all([
-    supabase.from("groups")
-      .select("*, host:profiles!groups_host_id_fkey(id, nickname, avatar_url)")
-      .eq("id", id)
-      .single(),
-    supabase.from("group_members")
-      .select("status, role")
-      .eq("group_id", id)
-      .eq("user_id", user.id)
-      .maybeSingle(),
-  ]);
+  const { data: group } = await supabase.from("groups")
+    .select("*, host:profiles!groups_host_id_fkey(id, nickname, avatar_url)")
+    .eq("id", id)
+    .single();
 
   if (!group) notFound();
+
+  const { data: userMembership } = await supabase.from("group_members")
+    .select("status, role")
+    .eq("group_id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
 
   const isHost        = group.host_id === user.id;
   const isManager     = isHost || userMembership?.role === "manager";
@@ -129,15 +127,9 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
                 </Link>
               )}
               {!isHost && !isManager && (
-                <GroupActions 
-                  groupId={id} 
-                  groupName={group.name} 
-                  hostId={group.host_id} 
-                  userId={user.id} 
-                  maxMembers={group.max_members} 
-                  memberCount={0} 
-                  membershipStatus={membershipStatus} 
-                />
+                <Suspense fallback={<div className="w-32 h-10 bg-black/5" />}>
+                  <ActionWrapper id={id} groupName={group.name} hostId={group.host_id} userId={user.id} maxMembers={group.max_members} membershipStatus={membershipStatus} />
+                </Suspense>
               )}
             </div>
           </div>
@@ -180,44 +172,72 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
 
 // ── Streaming용 하위 서버 컴포넌트들 ──────────────────────────────
 
+async function ActionWrapper({ id, groupName, hostId, userId, maxMembers, membershipStatus }: any) {
+  const supabase = await createClient();
+  const { count } = await supabase.from("group_members").select("*", { count: "exact", head: true }).eq("group_id", id).eq("status", "active");
+  return (
+    <GroupActions 
+      groupId={id} 
+      groupName={groupName} 
+      hostId={hostId} 
+      userId={userId} 
+      maxMembers={maxMembers} 
+      memberCount={count || 0} 
+      membershipStatus={membershipStatus} 
+    />
+  );
+}
+
 async function GroupStatsSection({ id, colors }: { id: string; colors: any }) {
   const supabase = await createClient();
   
+  // Fetch counts explicitly without head: true to avoid issues in some SSR environments
   const [
     { count: activeCount },
     { count: totalCount },
     { count: totalMeetings },
   ] = await Promise.all([
-    supabase.from("group_members").select("*", { count: "exact", head: true }).eq("group_id", id).eq("status", "active"),
-    supabase.from("group_members").select("*", { count: "exact", head: true }).eq("group_id", id).in("status", ["active", "pending", "waitlist"]),
-    supabase.from("meetings").select("*", { count: "exact", head: true }).eq("group_id", id),
+    supabase.from("group_members").select("id", { count: "exact" }).eq("group_id", id).eq("status", "active"),
+    supabase.from("group_members").select("id", { count: "exact" }).eq("group_id", id).in("status", ["active", "pending", "waitlist"]),
+    supabase.from("meetings").select("id", { count: "exact" }).eq("group_id", id),
   ]);
 
   // Count files: group + files attached to posts + agenda resources
-  const { data: posts } = await supabase.from("crew_posts").select("id").eq("group_id", id);
+  const [{ data: posts }, { count: groupFiles }] = await Promise.all([
+    supabase.from("crew_posts").select("id").eq("group_id", id),
+    supabase.from("file_attachments").select("id", { count: "exact" }).eq("target_type", "group").eq("target_id", id),
+  ]);
+  
   const postIds = (posts || []).map(p => p.id);
-  
-  const { count: groupFiles } = await supabase.from("file_attachments").select("*", { count: "exact", head: true }).eq("target_type", "group").eq("target_id", id);
-  
   let postFilesCount = 0;
   if (postIds.length > 0) {
     const { count: cpCount } = await supabase.from("file_attachments")
-      .select("*", { count: "exact", head: true })
+      .select("id", { count: "exact" })
       .in("target_type", ["crew_post"])
       .in("target_id", postIds);
     postFilesCount = cpCount || 0;
   }
 
-  // Count meeting agenda resources
-  const { data: agendas } = await supabase.from("meeting_agendas").select("resources, meeting:meetings!meeting_agendas_meeting_id_fkey(group_id)");
-  const agendaResourcesCount = (agendas || []).filter(a => (a.meeting as any)?.group_id === id).reduce((acc, a) => acc + (Array.isArray(a.resources) ? a.resources.length : 0), 0);
+  // Count meeting agenda resources more efficiently
+  const { data: agendaResources } = await supabase.from("meetings")
+    .select("agendas:meeting_agendas(resources)")
+    .eq("group_id", id);
   
-  const totalFiles = (groupFiles || 0) + postFilesCount + agendaResourcesCount;
+  let agendaFilesCount = 0;
+  if (agendaResources) {
+    agendaResources.forEach((m: any) => {
+      m.agendas?.forEach((a: any) => {
+        if (Array.isArray(a.resources)) agendaFilesCount += a.resources.length;
+      });
+    });
+  }
+  
+  const totalFiles = (groupFiles || 0) + postFilesCount + agendaFilesCount;
 
   const stats = [
-    { icon: <Users size={16} />, label: "멤버", value: activeCount || 0, sub: (totalCount || 0) > (activeCount || 0) ? `+${(totalCount || 0) - (activeCount || 0)} 대기` : null },
-    { icon: <BookOpen size={16} />, label: "총 미팅", value: totalMeetings || 0, sub: null },
-    { icon: <FileText size={16} />, label: "파일", value: totalFiles || 0, sub: null },
+    { icon: <Users size={16} />, label: "멤버", value: activeCount ?? 0, sub: (totalCount || 0) > (activeCount || 0) ? `+${(totalCount || 0) - (activeCount || 0)} 대기` : null },
+    { icon: <BookOpen size={16} />, label: "총 미팅", value: totalMeetings ?? 0, sub: null },
+    { icon: <FileText size={16} />, label: "파일", value: totalFiles ?? 0, sub: null },
   ];
 
   return (
