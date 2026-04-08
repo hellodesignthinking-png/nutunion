@@ -9,18 +9,21 @@ export async function GET(req: NextRequest) {
   const sheetId = req.nextUrl.searchParams.get("sheetId");
   if (!sheetId) return NextResponse.json({ error: "sheetId 파라미터가 필요합니다." }, { status: 400 });
 
-  const range = req.nextUrl.searchParams.get("range") || "Sheet1!A1:Z100";
+  const rangeParam = req.nextUrl.searchParams.get("range"); // optional
 
   try {
     const auth = await getGoogleClient(userId);
     const sheets = google.sheets({ version: "v4", auth });
 
-    // Get spreadsheet metadata (sheet names)
+    // 1. Get spreadsheet metadata (sheet names)
     const meta = await sheets.spreadsheets.get({ spreadsheetId: sheetId });
     const sheetNames =
       meta.data.sheets?.map((s) => s.properties?.title || "Sheet") || [];
 
-    // Get data
+    // 2. Determine range: use param, or auto-detect first sheet name
+    const range = rangeParam || `'${sheetNames[0]}'!A1:Z100`;
+
+    // 3. Get data
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
       range,
@@ -45,7 +48,9 @@ export async function GET(req: NextRequest) {
     if (err.message === "GOOGLE_NOT_CONNECTED") {
       return NextResponse.json({ error: "Google 계정이 연결되지 않았습니다.", code: "NOT_CONNECTED" }, { status: 403 });
     }
-    console.error("Sheets API error:", err);
-    return NextResponse.json({ error: "Sheets API 오류" }, { status: 500 });
+    // Return detailed error for debugging
+    const detail = err?.errors?.[0]?.message || err?.message || "Unknown error";
+    console.error("Sheets API error:", detail);
+    return NextResponse.json({ error: "Sheets API 오류", detail }, { status: 500 });
   }
 }
