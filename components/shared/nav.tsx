@@ -45,6 +45,7 @@ export function Nav() {
     window.addEventListener("scroll", onScroll, { passive: true });
 
     const supabase = createClient();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
 
     // auth 상태 + 프로필 로드
     supabase.auth.getUser().then(async ({ data: { user: u } }) => {
@@ -65,9 +66,9 @@ export function Nav() {
           .eq("is_read", false);
         setNotifCount(count || 0);
 
-        // 실시간 알림
-        const ch = supabase
-          .channel("nav-notif")
+        // 실시간 알림 — 고유 채널명 + 외부 변수에 저장
+        channel = supabase
+          .channel(`nav-notif-${u.id}`)
           .on("postgres_changes", {
             event: "*", schema: "public", table: "notifications",
             filter: `user_id=eq.${u.id}`,
@@ -79,8 +80,6 @@ export function Nav() {
             setNotifCount(c || 0);
           })
           .subscribe();
-
-        return () => { supabase.removeChannel(ch); };
       }
     });
 
@@ -92,6 +91,7 @@ export function Nav() {
     return () => {
       window.removeEventListener("scroll", onScroll);
       subscription.unsubscribe();
+      if (channel) supabase.removeChannel(channel);
     };
   }, []);
 

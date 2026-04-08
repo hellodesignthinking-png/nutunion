@@ -265,9 +265,19 @@ export function generateVariablePath(seed: number, activityLevel: number): strin
     return base + Math.sin(seed * 13.37 + offset) * variance * a;
   }
 
-  const cp = (b: number, v: number, o: number) => jitter(b, v, o).toFixed(1);
+  const p = (b: number, v: number, o: number) => jitter(b, v, o).toFixed(1);
 
-  return `M50 ${cp(8,1.5,0)} C${cp(62,1,1)} ${cp(8,1,2)} ${cp(78,1,3)} ${cp(18,1,4)} C${cp(88,1,5)} ${cp(46,1,6)} ${cp(84,1,7)} ${cp(62,1,8)} C${cp(76,1,9)} ${cp(72,1,10)} ${cp(56,1,11)} ${cp(92,1,12)} C${cp(44,1,13)} ${cp(92,1,14)} ${cp(32,1,15)} ${cp(82,1,16)} C${cp(24,1,17)} ${cp(72,1,18)} ${cp(16,1,19)} ${cp(62,1,20)} C${cp(12,1,21)} ${cp(46,1,22)} ${cp(18,1,23)} ${cp(30,1,24)} C${cp(22,1,25)} ${cp(18,1,26)} ${cp(38,1,27)} ${cp(8,1,28)} ${cp(50,1,29)}Z`;
+  // Each C command needs exactly 3 coordinate pairs: (cp1x,cp1y cp2x,cp2y endx,endy)
+  return [
+    `M${p(50,1,29)},${p(8,1.5,0)}`,
+    `C${p(62,1,1)},${p(8,1,2)} ${p(78,1,3)},${p(18,1,4)} ${p(84,1,7)},${p(38,1,5)}`,
+    `C${p(88,1,6)},${p(46,1,8)} ${p(86,1,9)},${p(62,1,10)} ${p(76,1,11)},${p(72,1,12)}`,
+    `C${p(66,1,13)},${p(82,1,14)} ${p(56,1,15)},${p(92,1,16)} ${p(50,1,29)},${p(92,1,17)}`,
+    `C${p(44,1,18)},${p(92,1,19)} ${p(34,1,20)},${p(82,1,21)} ${p(24,1,22)},${p(72,1,23)}`,
+    `C${p(14,1,24)},${p(62,1,25)} ${p(12,1,26)},${p(46,1,27)} ${p(16,1,28)},${p(38,1,1)}`,
+    `C${p(22,1,2)},${p(18,1,3)} ${p(38,1,4)},${p(8,1,5)} ${p(50,1,29)},${p(8,1.5,0)}`,
+    `Z`
+  ].join(" ");
 }
 
 // ─── Dominant genre calculator with hybrid support ─────────────────────────
