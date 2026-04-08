@@ -4,16 +4,23 @@ import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { Send, Loader2, MessageSquare, Megaphone, Calendar, Trash2, FolderOpen } from "lucide-react";
+import { Send, Loader2, MessageSquare, Megaphone, Calendar, Trash2, FolderOpen, Sparkles, CheckCircle2, User, Award, Zap, Lightbulb, Users } from "lucide-react";
 import type { CrewPost } from "@/lib/types";
 import { ReactionsBar } from "@/components/community/reactions-bar";
 import { CommentThread } from "@/components/community/comment-thread";
 import { FileUploadButton, AttachedFiles } from "@/components/community/file-upload-button";
 
-const typeIcons: Record<string, { icon: typeof MessageSquare; color: string; label: string }> = {
-  post: { icon: MessageSquare, color: "bg-nu-blue/10 text-nu-blue", label: "포스트" },
-  announcement: { icon: Megaphone, color: "bg-nu-pink/10 text-nu-pink", label: "공지" },
-  event_recap: { icon: Calendar, color: "bg-nu-yellow/10 text-nu-amber", label: "이벤트 리캡" },
+const typeIcons: Record<string, { icon: any; color: string; label: string; bgColor: string }> = {
+  post: { icon: MessageSquare, color: "text-nu-blue", bgColor: "bg-nu-blue/5", label: "POST" },
+  announcement: { icon: Megaphone, color: "text-nu-pink", bgColor: "bg-nu-pink/5", label: "NOTICE" },
+  event_recap: { icon: Calendar, color: "text-nu-amber", bgColor: "bg-nu-amber/5", label: "RECAP" },
+  system: { icon: Zap, color: "text-nu-ink", bgColor: "bg-nu-cream/50", label: "ACTIVITY" },
+};
+
+const userBadges: Record<string, { label: string; icon: any; color: string }[]> = {
+  "홍길동": [{ label: "정리의 달인", icon: <Award size={10} />, color: "bg-blue-100 text-blue-600" }],
+  "김철수": [{ label: "아이디어 뱅크", icon: <Lightbulb size={10} />, color: "bg-amber-100 text-amber-600" }],
+  "이영희": [{ label: "최고의 서기", icon: <Award size={10} />, color: "bg-pink-100 text-pink-600" }],
 };
 
 function timeAgo(dateStr: string) {
@@ -204,65 +211,100 @@ export function CrewActivityFeed({
       {/* Feed items */}
       <div className="space-y-4">
         {posts.map((post) => {
-          const typeInfo = typeIcons[post.type] || typeIcons.post;
+          const isSystem = post.type === "system" || post.content.startsWith("SYSTEM:");
+          const typeInfo = isSystem ? typeIcons.system : (typeIcons[post.type] || typeIcons.post);
           const Icon = typeInfo.icon;
+          const badges = userBadges[post.author?.nickname || ""] || [];
 
           return (
             <div
               key={post.id}
-              className="bg-nu-white border border-nu-ink/[0.08] p-5"
+              className={`group transition-all duration-500 border-2 active:scale-[0.99] ${
+                isSystem 
+                ? "bg-nu-paper/30 border-dashed border-nu-ink/10 p-4" 
+                : "bg-nu-white border-nu-ink/[0.08] p-6 shadow-sm hover:shadow-md"
+              }`}
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-4">
                 {/* Author avatar */}
-                <div className="w-9 h-9 rounded-full bg-nu-cream flex items-center justify-center font-head text-xs font-bold text-nu-ink shrink-0">
-                  {(post.author?.nickname || "U").charAt(0).toUpperCase()}
+                <div className={`relative shrink-0`}>
+                   <div className={`w-10 h-10 rounded-full flex items-center justify-center font-head text-sm font-black border-2 transition-transform group-hover:rotate-6 ${
+                     isSystem ? "bg-nu-white border-nu-ink/5 text-nu-muted" : "bg-nu-cream border-nu-ink/10 text-nu-ink"
+                   }`}>
+                      {(post.author?.nickname || "U").charAt(0).toUpperCase()}
+                   </div>
+                   {!isSystem && <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-nu-pink rounded-full border-2 border-nu-white flex items-center justify-center text-[8px] text-white">
+                      <Sparkles size={8} />
+                   </div>}
                 </div>
+
                 <div className="flex-1 min-w-0">
                   {/* Header */}
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="text-sm font-medium">
-                      {post.author?.nickname || "Unknown"}
+                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                    <span className="text-sm font-bold text-nu-ink">
+                      {isSystem ? "Community Discovery" : (post.author?.nickname || "Manager")}
                     </span>
-                    <span
-                      className={`inline-flex items-center gap-1 font-mono-nu text-[8px] uppercase tracking-widest px-2 py-0.5 ${typeInfo.color}`}
-                    >
+                    
+                    {/* Badges */}
+                    {!isSystem && badges.map((b, i) => (
+                      <span key={i} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${b.color}`}>
+                        {b.icon} {b.label}
+                      </span>
+                    ))}
+
+                    <span className={`inline-flex items-center gap-1 font-mono-nu text-[8px] font-black uppercase tracking-[0.2em] px-2 py-1 rounded ${typeInfo.bgColor} ${typeInfo.color}`}>
                       <Icon size={9} />
                       {typeInfo.label}
                     </span>
-                    <span className="font-mono-nu text-[10px] text-nu-muted">
+                    <span className="font-mono-nu text-[9px] text-nu-muted/60">
                       {timeAgo(post.created_at)}
                     </span>
                   </div>
+
                   {/* Content */}
-                  <div className="text-sm text-nu-graphite leading-relaxed whitespace-pre-wrap">
-                    {post.content.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
+                  <div className={`text-sm leading-relaxed ${isSystem ? "text-nu-muted italic font-medium" : "text-nu-graphite font-medium"} whitespace-pre-wrap`}>
+                    {post.content.replace("SYSTEM:", "").split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
                       /^https?:\/\//.test(part) ? (
-                        <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-nu-blue hover:text-nu-pink no-underline hover:underline inline-flex items-center gap-1 break-all">
-                          {part.includes("drive.google.com") && <FolderOpen size={12} className="shrink-0" />}
+                        <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-nu-blue hover:text-nu-pink no-underline font-bold inline-flex items-center gap-1 border-b-[2px] border-nu-blue/10 hover:border-nu-pink/30 pb-0.5 transition-all">
+                          {part.includes("drive.google.com") && <FolderOpen size={13} className="shrink-0" />}
                           {part.includes("notion.so") && <span className="shrink-0">📄</span>}
-                          {part}
+                          {part.includes("github.com") && <span className="shrink-0">🐙</span>}
+                          LINK REFERENCE
                         </a>
                       ) : part
                     )}
                   </div>
 
-                  {/* Attached files */}
-                  <AttachedFiles targetType="crew_post" targetId={post.id} />
+                  {/* System Context Footer */}
+                  {isSystem && (
+                    <div className="mt-3 py-1.5 px-3 bg-nu-ink/5 border-l-2 border-nu-ink/20 inline-flex items-center gap-2">
+                       <Zap size={10} className="text-nu-ink/40" />
+                       <span className="font-mono-nu text-[8px] text-nu-ink/40 uppercase tracking-widest">Autonomous Activity Log</span>
+                    </div>
+                  )}
 
-                  {/* Reactions */}
-                  <ReactionsBar targetType="crew_post" targetId={post.id} userId={userId} />
+                  {!isSystem && (
+                    <>
+                      {/* Attached files */}
+                      <AttachedFiles targetType="crew_post" targetId={post.id} />
 
-                  {/* Comments */}
-                  <CommentThread targetType="crew_post" targetId={post.id} userId={userId} />
+                      {/* Reactions & Interaction Bar */}
+                      <div className="mt-4 pt-4 border-t border-nu-ink/5">
+                        <ReactionsBar targetType="crew_post" targetId={post.id} userId={userId} />
+                        <CommentThread targetType="crew_post" targetId={post.id} userId={userId} />
+                      </div>
+                    </>
+                  )}
                 </div>
+
                 {/* Delete button */}
-                {canDelete(post) && (
+                {canDelete(post) && !isSystem && (
                   <button
                     onClick={() => handleDelete(post.id)}
-                    className="text-nu-muted hover:text-nu-red transition-colors p-1 shrink-0"
+                    className="text-nu-muted/40 hover:text-nu-red transition-all p-1.5 opacity-0 group-hover:opacity-100"
                     title="삭제"
                   >
-                    <Trash2 size={14} />
+                    <Trash2 size={15} />
                   </button>
                 )}
               </div>

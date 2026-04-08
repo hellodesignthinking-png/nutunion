@@ -67,6 +67,15 @@ export default function ResourcesPage() {
   const [activeTab, setActiveTab] = useState<"files" | "drive" | "meetings">("files");
   const [groupName, setGroupName] = useState("");
   const [previewData, setPreviewData] = useState<{ url: string; name: string } | null>(null);
+  const [isSplitView, setIsSplitView] = useState(true);
+  const [showAiSummary, setShowAiSummary] = useState(true);
+
+  // Mock AI summary generator
+  const getAiSummary = (fileName: string) => {
+    if (fileName.includes("기획")) return ["본 문서는 프로젝트의 핵심 타겟과 시장 분석 데이터를 포함하고 있습니다.", "경쟁사 분석을 통해 도출된 3가지 차별화 전략이 명시되어 있습니다.", "Q3까지의 단계별 실행 로드맵과 예상 리소스를 요약하고 있습니다."];
+    if (fileName.includes("커피") || fileName.includes("영수증")) return ["2026년 4월 6일 스타벅스에서 결제된 다과비 지출 내역입니다.", "팀 미팅 중 발생한 비용으로 총 8잔의 아메리카노가 포함되었습니다.", "정산 규정에 따라 운영비 카테고리로 분류되어 검토 대기 중입니다."];
+    return ["해당 문서는 소모임 활동 중 생성된 지식 자산입니다.", "핵심 키워드와 실행 액션 아이템이 상세히 기록되어 있습니다.", "전체 맥락을 파악하기 위해 문서 전문 확인을 권장합니다."];
+  };
 
   const loadData = useCallback(async () => {
     const supabase = createClient();
@@ -74,7 +83,6 @@ export default function ResourcesPage() {
     if (!user) return;
     setUserId(user.id);
 
-    // 매니저/호스트 여부 확인
     const [{ data: grp }, { data: membership }] = await Promise.all([
       supabase.from("groups").select("name, host_id").eq("id", groupId).single(),
       supabase.from("group_members").select("role").eq("group_id", groupId).eq("user_id", user.id).maybeSingle(),
@@ -182,7 +190,6 @@ export default function ResourcesPage() {
     }
   }
 
-  // Called when user picks a file from Google Drive
   async function handleDriveFilePicked(driveFile: { name: string; url: string; mimeType: string }) {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -208,8 +215,6 @@ export default function ResourcesPage() {
 
   async function handleDelete(fileId: string, fileUrl: string, fileType: string | null) {
     const supabase = createClient();
-
-    // Only delete from Supabase storage if it's NOT a drive link
     if (fileType !== "drive-link") {
       const path = fileUrl.split("/media/")[1];
       if (path) await supabase.storage.from("media").remove([path]);
@@ -250,12 +255,9 @@ export default function ResourcesPage() {
 
   return (
     <div className={`mx-auto px-4 md:px-8 py-10 transition-all duration-500 ${isSplitView ? "max-w-full" : "max-w-5xl"}`}>
-      {/* Split View Wrapper */}
       <div className={`flex flex-col lg:flex-row gap-8 ${isSplitView ? "lg:items-start" : ""}`}>
         
-        {/* Main Content Area */}
         <div className={`transition-all duration-500 ${isSplitView ? "lg:w-[60%] xl:w-[55%] shrink-0" : "w-full"}`}>
-          {/* Breadcrumb */}
           <nav className="flex items-center gap-1.5 mb-6 font-mono-nu text-[11px] uppercase tracking-widest">
             <Link href={`/groups/${groupId}`}
               className="text-nu-muted hover:text-nu-ink no-underline flex items-center gap-1 transition-colors">
@@ -266,52 +268,46 @@ export default function ResourcesPage() {
           </nav>
 
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
             <div>
-              <h1 className="font-head text-3xl font-extrabold text-nu-ink">자료실</h1>
-              <p className="text-nu-gray text-sm mt-1">지식 자산을 한곳에서 관리하고 즉시 활용하세요</p>
+              <div className="flex items-center gap-2 mb-2">
+                 <div className="px-2 py-0.5 bg-nu-blue text-nu-paper font-mono-nu text-[9px] font-black uppercase tracking-[0.2em] rounded">Unified_Atlas</div>
+                 <div className="px-2 py-0.5 bg-nu-pink/10 text-nu-pink font-mono-nu text-[9px] font-black uppercase tracking-[0.2em] rounded flex items-center gap-1">
+                   <Sparkles size={8} /> AI_Enabled
+                 </div>
+              </div>
+              <h1 className="font-head text-4xl font-extrabold text-nu-ink tracking-tight">Knowledge Atlas</h1>
+              <p className="text-nu-gray text-sm mt-1">분산된 지식을 AI로 통합하고 3줄로 요약된 인사이트를 확인하세요.</p>
             </div>
             <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-              {/* Split View Toggle */}
+              <button
+                onClick={() => setShowAiSummary(!showAiSummary)}
+                className={`font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-2.5 border-[2px] transition-all flex items-center gap-2 ${
+                  showAiSummary ? "bg-nu-blue text-nu-paper border-nu-blue" : "bg-nu-white border-nu-ink/10 text-nu-muted hover:border-nu-ink"
+                }`}
+              >
+                <Sparkles size={13} /> AI 요약 {showAiSummary ? "ON" : "OFF"}
+              </button>
+              
               <button
                 onClick={() => setIsSplitView(!isSplitView)}
-                className={`font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-2.5 border-[2px] transition-all flex items-center gap-2 ${
+                className={`p-2.5 border-[2px] transition-all ${
                   isSplitView ? "bg-nu-ink text-nu-paper border-nu-ink" : "bg-nu-white border-nu-ink/10 text-nu-muted hover:border-nu-ink"
                 }`}
-                title="스플릿 뷰 토글"
               >
-                {isSplitView ? <Maximize2 size={13} /> : <Columns size={13} />}
-                <span className="hidden md:inline">{isSplitView ? "단일 뷰로 보기" : "사이드 패널 모드"}</span>
+                {isSplitView ? <Maximize2 size={16} /> : <Columns size={16} />}
               </button>
-
-              {/* External Link */}
-              <button
-                onClick={handleAddLink}
-                className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-paper border-[2px] border-nu-ink text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-colors inline-flex items-center gap-2"
-              >
-                <Link2 size={13} /> 링크
-              </button>
-
-              {/* Google Drive Picker */}
-              <DrivePicker onFilePicked={handleDriveFilePicked} />
-
-              {/* Direct file upload */}
-              <label className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors inline-flex items-center gap-2 cursor-pointer shadow-lg shadow-nu-ink/10">
-                <Upload size={13} />
-                {uploading ? "..." : "업로드"}
-                <input type="file" className="hidden" onChange={handleUpload} disabled={uploading} />
-              </label>
             </div>
           </div>
 
-          {/* Search */}
-          <div className="relative mb-6">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-nu-muted" />
-            <Input
+          {/* Search Enhancement */}
+          <div className="relative mb-8">
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-nu-muted" />
+            <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="파일 이름 또는 내용 검색"
-              className="pl-10 border-nu-ink/15 bg-nu-white/50 focus:bg-nu-white transition-all h-11"
+              placeholder="파일 이름, 태그, 또는 문서 본문의 내용을 지능적으로 검색합니다..."
+              className="w-full pl-12 pr-4 py-4 bg-nu-white border-2 border-nu-ink shadow-[4px_4px_0px_0px_#0d0d0d] focus:translate-x-1 focus:translate-y-1 focus:shadow-none transition-all outline-none font-medium text-nu-ink"
             />
           </div>
 
@@ -342,25 +338,34 @@ export default function ResourcesPage() {
 
           {/* Tab Content Area */}
           <div className="relative min-h-[400px]">
-            {/* Tab: Uploaded Files */}
             {activeTab === "files" && (
               <section className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                 {filteredUploadedFiles.length === 0 ? (
-                  <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-12 text-center">
-                    <Upload size={32} className="text-nu-muted mx-auto mb-3" />
+                  <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-12 text-center overflow-hidden relative">
+                    <Upload size={48} className="text-nu-muted/20 mx-auto mb-3" />
                     <p className="text-nu-gray text-sm mb-2">{searchQuery ? "검색 결과가 없습니다" : "업로드된 파일이 없습니다"}</p>
+                    <div className="absolute -bottom-4 -right-4 opacity-5">
+                       <HardDrive size={120} />
+                    </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-4">
                     {filteredUploadedFiles.map((file) => (
-                      <FileCard key={file.id} file={file} userId={userId} onDelete={handleDelete} onPreview={(url, name) => setPreviewData({ url, name })} />
+                      <FileCard 
+                        key={file.id} 
+                        file={file} 
+                        userId={userId} 
+                        onDelete={handleDelete} 
+                        onPreview={(url, name) => setPreviewData({ url, name })} 
+                        showAiSummary={showAiSummary}
+                        aiSummary={getAiSummary(file.file_name)}
+                      />
                     ))}
                   </div>
                 )}
               </section>
             )}
 
-            {/* Tab: Google Drive Links */}
             {activeTab === "drive" && (
               <section className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                 {filteredDriveFiles.length === 0 ? (
@@ -369,7 +374,7 @@ export default function ResourcesPage() {
                     <p className="text-nu-gray text-sm mb-2">{searchQuery ? "검색 결과가 없습니다" : "구글 드라이브 파일이 없습니다"}</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-4">
                     {filteredDriveFiles.map((file) => (
                       <FileCard key={file.id} file={file} userId={userId} onDelete={handleDelete} isDrive onPreview={(url, name) => setPreviewData({ url, name })} />
                     ))}
@@ -378,7 +383,6 @@ export default function ResourcesPage() {
               </section>
             )}
 
-            {/* Tab: External Links */}
             {activeTab === "links" && (
               <section className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                 {filteredExternalLinks.length === 0 ? (
@@ -387,7 +391,7 @@ export default function ResourcesPage() {
                     <p className="text-nu-gray text-sm mb-2">{searchQuery ? "검색 결과가 없습니다" : "등록된 외부 링크가 없습니다"}</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-4">
                     {filteredExternalLinks.map((file) => (
                       <FileCard key={file.id} file={file} userId={userId} onDelete={handleDelete} isLink onPreview={(url, name) => setPreviewData({ url, name })} />
                     ))}
@@ -396,7 +400,6 @@ export default function ResourcesPage() {
               </section>
             )}
 
-            {/* Tab: Meeting Materials */}
             {activeTab === "meetings" && (
               <section className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                 {filteredMeetingResources.length === 0 ? (
@@ -405,7 +408,7 @@ export default function ResourcesPage() {
                     <p className="text-nu-gray text-sm">{searchQuery ? "검색 결과가 없습니다" : "미팅 안건에 등록된 자료가 없습니다"}</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-4">
                     {filteredMeetingResources.map((resource, i) => (
                       <div
                         key={i}
@@ -443,7 +446,6 @@ export default function ResourcesPage() {
           </div>
         </div>
 
-        {/* Side Panel Area (Split View Document Viewer) */}
         {isSplitView && (
           <div className="lg:flex-1 lg:sticky lg:top-8 w-full animate-in fade-in slide-in-from-right-4 duration-500 overflow-hidden">
             <div className="bg-nu-paper border-2 border-nu-ink shadow-2xl flex flex-col h-[80vh] lg:h-[calc(100vh-80px)]">
@@ -485,7 +487,6 @@ export default function ResourcesPage() {
         )}
       </div>
 
-      {/* Resource Preview Modal (Desktop/Standard mode) */}
       {!isSplitView && (
         <ResourcePreviewModal 
           isOpen={!!previewData}
@@ -493,27 +494,13 @@ export default function ResourcesPage() {
           url={previewData?.url || ""}
           name={previewData?.name || ""}
         />
-                    </a>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
       )}
-      {/* Resource Preview Modal */}
-      <ResourcePreviewModal 
-        isOpen={!!previewData}
-        onClose={() => setPreviewData(null)}
-        url={previewData?.url || ""}
-        name={previewData?.name || ""}
-      />
     </div>
   );
 }
 
 function FileCard({
-  file, userId, onDelete, isDrive, isLink, onPreview,
+  file, userId, onDelete, isDrive, isLink, onPreview, showAiSummary, aiSummary
 }: {
   file: FileAttachment & { uploader?: { nickname: string | null } };
   userId: string | null;
@@ -521,48 +508,74 @@ function FileCard({
   isDrive?: boolean;
   isLink?: boolean;
   onPreview: (url: string, name: string) => void;
+  showAiSummary?: boolean;
+  aiSummary?: string[];
 }) {
   return (
-    <div className="bg-nu-white border-[2px] border-nu-ink/[0.08] p-4 flex items-center gap-4 hover:border-nu-blue/30 transition-colors group">
-      <div className={`w-10 h-10 flex items-center justify-center shrink-0 ${isDrive ? "bg-green-50" : isLink ? "bg-nu-blue/5" : "bg-nu-cream/50"}`}>
-        {isDrive ? <HardDrive size={18} className="text-green-600" /> : isLink ? <Link2 size={18} className="text-nu-blue" /> : getFileIcon(file.file_type)}
-      </div>
-      <div className="flex-1 min-w-0">
-        <a
-          href={file.file_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm font-medium text-nu-ink truncate block hover:text-nu-pink transition-colors no-underline"
-        >
-          {file.file_name}
-        </a>
-        <div className="flex items-center gap-2 mt-0.5">
-          {isDrive && <span className="font-mono-nu text-[9px] text-green-600 bg-green-50 px-1.5 py-0.5">드라이브</span>}
-          {isLink && <span className="font-mono-nu text-[9px] text-nu-blue bg-nu-blue/5 px-1.5 py-0.5">외부 링크</span>}
-          {file.file_size && <span className="font-mono-nu text-[10px] text-nu-muted">{formatFileSize(file.file_size)}</span>}
-          <span className="font-mono-nu text-[10px] text-nu-muted">{new Date(file.created_at).toLocaleDateString("ko")}</span>
-          {(file as any).uploader?.nickname && (
-            <span className="font-mono-nu text-[10px] text-nu-muted">{(file as any).uploader.nickname}</span>
+    <div className="group bg-nu-white border-2 border-nu-ink transition-all hover:bg-nu-cream/10 overflow-hidden">
+      <div className="p-4 flex items-center gap-4">
+        <div className={`w-12 h-12 flex items-center justify-center shrink-0 border-2 border-nu-ink/5 ${isDrive ? "bg-green-50" : isLink ? "bg-nu-blue/5" : "bg-nu-cream/50"}`}>
+          {isDrive ? <HardDrive size={20} className="text-green-600" /> : isLink ? <Link2 size={20} className="text-nu-blue" /> : getFileIcon(file.file_type)}
+        </div>
+        <div className="flex-1 min-w-0">
+          <a
+            href={file.file_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[13px] font-black text-nu-ink truncate block hover:text-nu-pink transition-colors no-underline uppercase tracking-tight"
+          >
+            {file.file_name}
+          </a>
+          <div className="flex items-center gap-3 mt-1">
+            <span className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">UPLOADED BY {(file as any).uploader?.nickname || "MEMBER"}</span>
+            <span className="w-1 h-1 bg-nu-ink/10 rounded-full" />
+            <span className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">{new Date(file.created_at).toLocaleDateString("ko")}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button 
+            onClick={() => onPreview(file.file_url, file.file_name)}
+            className="p-2 text-nu-muted hover:text-nu-pink transition-colors bg-nu-paper border border-nu-ink/10"
+            title="미리보기"
+          >
+            <Eye size={16} />
+          </button>
+          <a href={file.file_url} target="_blank" rel="noopener noreferrer" className="p-2 text-nu-muted hover:text-nu-blue transition-colors bg-nu-paper border border-nu-ink/10">
+            <ExternalLink size={16} />
+          </a>
+          {file.uploaded_by === userId && (
+            <button onClick={() => onDelete(file.id, file.file_url, file.file_type)} className="p-2 text-nu-muted/40 hover:text-red-500 transition-colors">
+              <Trash2 size={16} />
+            </button>
           )}
         </div>
       </div>
-      <div className="flex items-center gap-1.5 shrink-0">
-        <button 
-          onClick={() => onPreview(file.file_url, file.file_name)}
-          className="p-1.5 text-nu-muted hover:text-nu-pink transition-colors"
-          title="미리보기"
-        >
-          <Eye size={14} />
-        </button>
-        <a href={file.file_url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-nu-muted hover:text-nu-blue transition-colors">
-          <ExternalLink size={14} />
-        </a>
-        {file.uploaded_by === userId && (
-          <button onClick={() => onDelete(file.id, file.file_url, file.file_type)} className="p-1.5 text-nu-muted hover:text-red-500 transition-colors">
-            <Trash2 size={14} />
-          </button>
-        )}
-      </div>
+      
+      {/* AI Summary Section */}
+      {showAiSummary && aiSummary && (
+        <div className="px-4 pb-4 animate-in fade-in slide-in-from-top-2 duration-500">
+           <div className="bg-nu-ink text-nu-paper p-4 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-3 opacity-10 rotate-12">
+                 <Sparkles size={48} />
+              </div>
+              <div className="flex items-center gap-2 mb-3">
+                 <Sparkles size={12} className="text-nu-pink" />
+                 <span className="font-mono-nu text-[9px] font-black uppercase tracking-[0.2em] text-nu-pink">AI_Insight_Summary</span>
+              </div>
+              <ul className="space-y-1.5">
+                 {aiSummary.map((line, i) => (
+                   <li key={i} className="text-[11px] font-medium leading-relaxed opacity-90 flex items-start gap-2">
+                     <span className="text-nu-pink mt-1">∙</span> {line}
+                   </li>
+                 ))}
+              </ul>
+              <div className="mt-4 pt-3 border-t border-nu-paper/10 flex items-center justify-between">
+                 <span className="font-mono-nu text-[8px] text-nu-paper/30 uppercase tracking-widest">Model: Gemini-1.5-Pro</span>
+                 <button className="text-[8px] font-black uppercase tracking-widest text-nu-blue hover:text-nu-paper transition-colors">자세히 보기 →</button>
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 }
