@@ -195,29 +195,35 @@ async function GroupStatsSection({ id, colors }: { id: string; colors: any }) {
   
   // 가입된 멤버 수와 전체 신청/대기 멤버 수를 정확하게 분리하여 조회
   const [
-    { count: activeCount },
-    { count: totalCount },
-    { count: totalMeetings },
+    { data: activeMembers },
+    { data: allApplicants },
+    { data: meetingList },
   ] = await Promise.all([
-    supabase.from("group_members").select("id", { count: "exact" }).eq("group_id", id).eq("status", "active"),
-    supabase.from("group_members").select("id", { count: "exact" }).eq("group_id", id).in("status", ["active", "pending", "waitlist"]),
-    supabase.from("meetings").select("id", { count: "exact" }).eq("group_id", id),
+    supabase.from("group_members").select("user_id").eq("group_id", id).eq("status", "active"),
+    supabase.from("group_members").select("user_id").eq("group_id", id).in("status", ["active", "pending", "waitlist"]),
+    supabase.from("meetings").select("id").eq("group_id", id),
   ]);
 
+  const activeCount = activeMembers?.length || 0;
+  const totalCount = allApplicants?.length || 0;
+  const totalMeetings = meetingList?.length || 0;
+
   // Count files: group + files attached to posts + agenda resources
-  const [{ data: posts }, { count: groupFiles }] = await Promise.all([
+  const [{ data: posts }, { data: groupFilesList }] = await Promise.all([
     supabase.from("crew_posts").select("id").eq("group_id", id),
-    supabase.from("file_attachments").select("id", { count: "exact" }).eq("target_type", "group").eq("target_id", id),
+    supabase.from("file_attachments").select("id").eq("target_type", "group").eq("target_id", id),
   ]);
+  
+  const groupFiles = groupFilesList?.length || 0;
   
   const postIds = (posts || []).map(p => p.id);
   let postFilesCount = 0;
   if (postIds.length > 0) {
-    const { count: cpCount } = await supabase.from("file_attachments")
-      .select("id", { count: "exact" })
+    const { data: cpFilesList } = await supabase.from("file_attachments")
+      .select("id")
       .in("target_type", ["crew_post"])
       .in("target_id", postIds);
-    postFilesCount = cpCount || 0;
+    postFilesCount = cpFilesList?.length || 0;
   }
 
   // Count meeting agenda resources more efficiently
