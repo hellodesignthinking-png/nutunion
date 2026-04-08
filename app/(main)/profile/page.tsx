@@ -57,35 +57,115 @@ function GradeBadge({ profile }: { profile: any }) {
   );
 }
 
-// ─── 스킬 히트맵 (활동 카테고리 비중) ─────────────────────────────────
-function SkillHeatmap({ crews }: { crews: any[] }) {
-  const counts: Record<string, number> = {};
-  crews.forEach((c: any) => {
-    const cat = (Array.isArray(c.groups) ? c.groups[0] : c.groups)?.category;
-    if (cat) counts[cat] = (counts[cat] || 0) + 1;
-  });
-  const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
+// ─── 역량 레이더 차트 (육각형 인재 모델) ─────────────────────────────────
+function CompetencyRadar({ crews, projects, activity, points, stats }: { crews: any[], projects: any[], activity: any[], points: number, stats: any }) {
+  // 6개 영역 차원 정의
+  const dimensions = [
+    { label: "Planning",   key: "planning",    icon: <Crown size={10} />,  color: "stroke-nu-pink",     fill: "fill-nu-pink" },
+    { label: "Sincerity",  key: "sincerity",   icon: <Calendar size={10} />, color: "stroke-nu-blue",     fill: "fill-nu-blue" },
+    { label: "Documentation", key: "documentation", icon: <FileText size={10} />, color: "stroke-nu-amber",   fill: "fill-nu-amber" },
+    { label: "Execution",  key: "execution",   icon: <Zap size={10} />,      color: "stroke-nu-ink",       fill: "fill-nu-ink" },
+    { label: "Expertise",  key: "expertise",   icon: <BookOpen size={10} />, color: "stroke-nu-blue",     fill: "fill-nu-blue" },
+    { label: "Collaboration", key: "collaboration", icon: <Users size={10} />,   color: "stroke-nu-pink",     fill: "fill-nu-pink" },
+  ];
 
-  if (Object.keys(counts).length === 0) return (
-    <p className="text-sm text-nu-muted">아직 소모임 활동 데이터가 없습니다</p>
-  );
+  // 역량 점수 계산 시뮬레이션 (0~100)
+  const calculateScores = () => {
+    const pCount  = projects.length * 20;
+    const cCount  = crews.length * 15;
+    const aCount  = activity.length * 8;
+    const leads   = projects.filter(p => p.role === "lead").length * 25;
+    const hosts   = crews.filter(c => c.role === "host").length * 20;
+
+    return {
+      planning:      Math.min(95, (leads + hosts + (stats.activity_score || 0) * 0.2)),
+      sincerity:     Math.min(100, (stats.activity_score || 0)),
+      documentation: Math.min(98, (activity.filter(a => a._type === "post").length * 15 + cCount * 0.3)),
+      execution:     Math.min(95, (projects.length * 30 + points * 0.05)),
+      expertise:     Math.min(90, (activity.filter(a => a._type === "resource").length * 20 + (stats.points||0) * 0.02)),
+      collaboration: Math.min(100, (crews.length * 20 + (stats.activity_score || 0) * 0.3)),
+    };
+  };
+
+  const scores = calculateScores();
+  const radius = 60;
+  const centerX = 90;
+  const centerY = 90;
+
+  // Radar SVG Points
+  const getPoint = (index: number, value: number) => {
+    const angle = (Math.PI * 2 * index) / 6 - Math.PI / 2;
+    const x = centerX + (radius * value) / 100 * Math.cos(angle);
+    const y = centerY + (radius * value) / 100 * Math.sin(angle);
+    return `${x},${y}`;
+  };
+
+  const polygonPoints = Array.from({ length: 6 }).map((_, i) => {
+    const key = dimensions[i].key as keyof typeof scores;
+    return getPoint(i, scores[key]);
+  }).join(" ");
 
   return (
-    <div className="space-y-2">
-      {Object.entries(counts).map(([cat, cnt]) => (
-        <div key={cat} className="flex items-center gap-3">
-          <span className={`font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 shrink-0 ${CAT_COLORS[cat] || "bg-nu-gray text-white"}`}>
-            {CAT_LABELS[cat] || cat}
-          </span>
-          <div className="flex-1 h-2 bg-nu-ink/5 overflow-hidden">
-            <div
-              className={`h-full transition-all duration-700 ${CAT_DOTS[cat] || "bg-nu-muted"}`}
-              style={{ width: `${(cnt / total) * 100}%` }}
-            />
-          </div>
-          <span className="font-mono-nu text-[10px] text-nu-muted shrink-0">{cnt}개</span>
-        </div>
-      ))}
+    <div className="relative flex flex-col items-center">
+      <svg width="180" height="180" className="drop-shadow-sm overflow-visible">
+        {/* Background hex rings */}
+        {[20, 40, 60, 80, 100].map((v) => (
+          <polygon
+            key={v}
+            points={Array.from({ length: 6 }).map((_, i) => getPoint(i, v)).join(" ")}
+            className="fill-none stroke-nu-ink/5 stroke-[0.5]"
+          />
+        ))}
+
+        {/* Axis lines */}
+        {Array.from({ length: 6 }).map((_, i) => (
+          <line
+            key={i}
+            x1={centerX} y1={centerY}
+            x2={centerX + radius * Math.cos((Math.PI * 2 * i) / 6 - Math.PI / 2)}
+            y2={centerY + radius * Math.sin((Math.PI * 2 * i) / 6 - Math.PI / 2)}
+            className="stroke-nu-ink/5 stroke-[0.5]"
+          />
+        ))}
+
+        {/* The Skill Polygon */}
+        <polygon
+          points={polygonPoints}
+          className="fill-nu-pink/20 stroke-nu-pink stroke-2 transition-all duration-1000"
+        />
+
+        {/* Labels */}
+        {dimensions.map((d, i) => {
+          const angle = (Math.PI * 2 * i) / 6 - Math.PI / 2;
+          const x = centerX + (radius + 18) * Math.cos(angle);
+          const y = centerY + (radius + 18) * Math.sin(angle);
+          return (
+            <g key={d.key}>
+               <text x={x} y={y} textAnchor="middle" className="font-mono-nu text-[7.5px] font-black uppercase tracking-tight fill-nu-muted">
+                 {d.label}
+               </text>
+            </g>
+          );
+        })}
+      </svg>
+
+      {/* Metric Details */}
+      <div className="w-full mt-4 space-y-1.5 px-2">
+         {dimensions.map((d) => {
+            const val = scores[d.key as keyof typeof scores];
+            return (
+              <div key={d.key} className="flex items-center justify-between">
+                 <div className="flex items-center gap-1.5">
+                    <span className={`p-1 rounded-sm bg-nu-paper border border-nu-ink/5 ${d.color}`}>
+                      {d.icon}
+                    </span>
+                    <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">{d.label}</span>
+                 </div>
+                 <span className={`font-mono-nu text-[10px] font-black ${val > 80 ? "text-nu-pink" : "text-nu-ink"}`}>{Math.round(val)}%</span>
+              </div>
+            );
+         })}
+      </div>
     </div>
   );
 }
@@ -400,10 +480,16 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Skill Heatmap */}
+          {/* Competency Radar Chart */}
           <div className="bg-nu-white border border-nu-ink/[0.08] p-5">
-            <h3 className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-4">역량 분포</h3>
-            <SkillHeatmap crews={crews} />
+            <h3 className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-6">프로페셔널 역량 지표</h3>
+            <CompetencyRadar 
+              crews={crews} 
+              projects={projects} 
+              activity={recentActivity} 
+              points={profile?.points || 0} 
+              stats={profile} 
+            />
           </div>
 
           {/* 외부 링크 */}
