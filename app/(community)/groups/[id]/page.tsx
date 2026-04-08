@@ -224,6 +224,7 @@ async function GroupJoinAction({ id, groupName, hostId, userId, maxMembers, memb
 }
 
 async function GroupStatsSection({ id, colors }: { id: string; colors: any }) {
+  try {
   const supabase = await createClient();
   
   // 가입된 멤버 수와 전체 신청/대기 멤버 수를 정확하게 분리하여 조회
@@ -298,9 +299,14 @@ async function GroupStatsSection({ id, colors }: { id: string; colors: any }) {
       ))}
     </div>
   );
+  } catch (err) {
+    console.error("GroupStatsSection error:", err);
+    return null;
+  }
 }
 
 async function GroupUpcomingSection({ id, colors, isHost, isMember, userId }: any) {
+  try {
   const supabase = await createClient();
   const now = new Date().toISOString();
   
@@ -309,7 +315,7 @@ async function GroupUpcomingSection({ id, colors, isHost, isMember, userId }: an
     { data: meetings },
     { data: pastMeetings },
   ] = await Promise.all([
-    supabase.from("events").select("*").eq("group_id", id).gte("start_at", now).order("start_at").limit(5),
+    supabase.from("events").select("id, title, start_at, end_at, location, max_attendees").eq("group_id", id).gte("start_at", now).order("start_at").limit(5),
     supabase.from("meetings").select("id, title, scheduled_at, duration_min, location, status").eq("group_id", id).in("status", ["upcoming", "in_progress"]).gte("scheduled_at", now).order("scheduled_at").limit(5),
     supabase.from("meetings").select("id, title, scheduled_at, summary, next_topic, status").eq("group_id", id).eq("status", "completed").order("scheduled_at", { ascending: false }).limit(3),
   ]);
@@ -404,6 +410,10 @@ async function GroupUpcomingSection({ id, colors, isHost, isMember, userId }: an
       )}
     </div>
   );
+  } catch (err) {
+    console.error("GroupUpcomingSection error:", err);
+    return <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-8 text-center"><p className="text-nu-gray text-sm">일정을 불러오는 중 오류가 발생했습니다.</p></div>;
+  }
 }
 
 async function ActivitySection({ id, userId, isMember, isHost }: any) {
@@ -418,6 +428,7 @@ async function ActivitySection({ id, userId, isMember, isHost }: any) {
 }
 
 async function GroupSidebarSections({ id, colors, isHost, isMember, group }: any) {
+  try {
   const supabase = await createClient();
   const { data: members } = await supabase.from("group_members").select("user_id, role, profile:profiles(id, nickname, avatar_url)").eq("group_id", id).eq("status", "active").order("joined_at");
 
@@ -460,4 +471,8 @@ async function GroupSidebarSections({ id, colors, isHost, isMember, group }: any
       <CrewProjects groupId={id} />
     </div>
   );
+  } catch (err) {
+    console.error("GroupSidebarSections error:", err);
+    return <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-8 text-center"><p className="text-nu-gray text-sm">사이드바를 불러오는 중 오류가 발생했습니다.</p></div>;
+  }
 }
