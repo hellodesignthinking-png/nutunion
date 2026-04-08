@@ -17,10 +17,9 @@ export const dynamic = "force-dynamic";
 export default async function ProjectsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  
+
   return (
-    <div className="min-h-screen bg-nu-paper">
-      <Nav />
+    <>
       <PageHero 
         category="Collaborate"
         title="Projects"
@@ -38,8 +37,7 @@ export default async function ProjectsPage() {
           <ProjectsListWrapper userId={user?.id} />
         </Suspense>
       </div>
-      <Footer />
-    </div>
+    </>
   );
 }
 
