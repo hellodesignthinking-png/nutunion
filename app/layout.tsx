@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Outfit, Space_Grotesk, Space_Mono, Playfair_Display } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { GenreThemeProvider } from "@/components/brand/genre-theme-context";
@@ -34,12 +34,17 @@ const playfair = Playfair_Display({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: "#0D0D0D",
+};
+
 export const metadata: Metadata = {
   title: "nutunion — protocol collective",
   description: "공간, 문화, 플랫폼, 바이브를 잇는 protocol collective. Scene을 설계하는 커뮤니티.",
   manifest: "/manifest.json",
-  themeColor: "#0D0D0D",
-  viewport: { width: "device-width", initialScale: 1, maximumScale: 1 },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
