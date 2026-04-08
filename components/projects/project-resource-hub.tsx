@@ -143,7 +143,7 @@ export function ProjectResourceHub({
       const supabase = createClient();
       const { data, error } = await supabase
         .from("project_resources")
-        .select("*, uploader:profiles!project_resources_uploaded_by_fkey(nickname)")
+        .select("*, uploader:profiles!uploaded_by(nickname)")
         .eq("project_id", projectId)
         .order("created_at", { ascending: false });
 

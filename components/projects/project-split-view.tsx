@@ -158,7 +158,7 @@ export function ProjectSplitView({
     const supabase = createClient();
     const { data, error } = await supabase
       .from("project_action_items")
-      .select("*, assignee:profiles!project_action_items_assigned_to_fkey(id, nickname, avatar_url)")
+      .select("*, assignee:profiles!assigned_to(id, nickname, avatar_url)")
       .eq("project_id", projectId)
       .order("created_at", { ascending: false })
       .limit(100);
@@ -241,7 +241,7 @@ export function ProjectSplitView({
           assigned_to: newActionAssignee || null,
           source_url: selectedResource?.url || null,
         })
-        .select("*, assignee:profiles!project_action_items_assigned_to_fkey(id, nickname, avatar_url)")
+        .select("*, assignee:profiles!assigned_to(id, nickname, avatar_url)")
         .single();
 
       if (error) throw error;

@@ -61,7 +61,7 @@ export function SquadRecommender({ projectId, projectTitle }: { projectId: strin
           { count: postCount },
           { count: projCount },
         ] = await Promise.all([
-          supabase.from("meeting_attendees").select("id", { count: "exact", head: true }).eq("user_id", p.id),
+          supabase.from("meeting_notes").select("id", { count: "exact", head: true }).eq("author_id", p.id),
           supabase.from("crew_posts").select("id", { count: "exact", head: true }).eq("author_id", p.id),
           supabase.from("project_members").select("id", { count: "exact", head: true }).eq("user_id", p.id),
         ]);

@@ -87,7 +87,7 @@ export function ProjectFinanceDashboard({
       setLoading(true);
       const supabase = createClient();
       const { data, error } = await supabase
-        .from("project_finances")
+        .from("project_finance")
         .select("*")
         .eq("project_id", projectId)
         .order("recorded_at", { ascending: false });
@@ -173,7 +173,7 @@ export function ProjectFinanceDashboard({
     try {
       const supabase = createClient();
       const { data, error } = await supabase
-        .from("project_finances")
+        .from("project_finance")
         .insert({
           project_id: projectId,
           title: formData.title.trim(),
