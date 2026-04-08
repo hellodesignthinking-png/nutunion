@@ -414,7 +414,12 @@ async function GroupSidebarSections({ id, colors, isHost, isMember, group }: any
         <GroupRoadmap groupId={id} groupTopic={(group as any).topic} canEdit={isHost} />
       )}
       
-      <WorkspaceLinks workspaceType="crew" workspaceId={id} canEdit={isHost} kakaoUrl={group.kakao_chat_url} driveUrl={group.google_drive_url} />
+      <div className="bg-nu-white border-[2px] border-nu-ink/[0.08] p-5">
+        <h2 className="font-head text-sm font-bold text-nu-ink mb-4 flex items-center gap-2">
+          <MessageCircle size={16} className="text-nu-pink" /> Communication & Knowledge
+        </h2>
+        <WorkspaceLinks workspaceType="crew" workspaceId={id} canEdit={isHost} kakaoUrl={group.kakao_chat_url} driveUrl={group.google_drive_url} />
+      </div>
 
       <div>
         <h2 className="font-head text-lg font-extrabold text-nu-ink mb-3 flex items-center gap-2">

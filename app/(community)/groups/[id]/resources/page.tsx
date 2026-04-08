@@ -31,6 +31,7 @@ function getFileIcon(fileType: string | null) {
   if (fileType.startsWith("video/")) return <Film size={20} className="text-nu-blue" />;
   if (fileType.includes("pdf") || fileType.includes("document")) return <FileText size={20} className="text-nu-amber" />;
   if (fileType === "drive-link") return <HardDrive size={20} className="text-green-600" />;
+  if (fileType === "url-link") return <Link2 size={20} className="text-nu-blue" />;
   return <File size={20} className="text-nu-graphite" />;
 }
 
@@ -145,6 +146,37 @@ export default function ResourcesPage() {
     e.target.value = "";
   }
 
+  async function handleAddLink() {
+    const name = window.prompt("링크 이름을 입력하세요 (예: 노션 기획안, 피그마 디자인)");
+    if (!name) return;
+    const url = window.prompt("URL을 입력하세요 (https://...)");
+    if (!url || !url.startsWith("http")) {
+      if (url) toast.error("올바른 URL을 입력해주세요");
+      return;
+    }
+
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase.from("file_attachments").insert({
+      target_type: "group",
+      target_id: groupId,
+      uploaded_by: user.id,
+      file_name: name,
+      file_url: url,
+      file_size: null,
+      file_type: "url-link",
+    });
+
+    if (error) {
+      toast.error("링크 등록에 실패했습니다");
+    } else {
+      toast.success("링크가 추가되었습니다");
+      await loadData();
+    }
+  }
+
   // Called when user picks a file from Google Drive
   async function handleDriveFilePicked(driveFile: { name: string; url: string; mimeType: string }) {
     const supabase = createClient();
@@ -187,11 +219,13 @@ export default function ResourcesPage() {
     }
   }
 
-  const uploadedFiles = files.filter((f) => f.file_type !== "drive-link");
+  const uploadedFiles = files.filter((f) => f.file_type !== "drive-link" && f.file_type !== "url-link");
   const driveFiles = files.filter((f) => f.file_type === "drive-link");
+  const externalLinks = files.filter((f) => f.file_type === "url-link");
 
   const filteredUploadedFiles = uploadedFiles.filter((f) => f.file_name.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredDriveFiles = driveFiles.filter((f) => f.file_name.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredExternalLinks = externalLinks.filter((f) => f.file_name.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredMeetingResources = meetingResources.filter((r) => r.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   if (loading) {
@@ -227,6 +261,14 @@ export default function ResourcesPage() {
           <p className="text-nu-gray text-sm mt-1">소모임 파일, 드라이브, 미팅 자료를 한곳에서 관리하세요</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* External Link */}
+          <button
+            onClick={handleAddLink}
+            className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-paper border-[2px] border-nu-ink text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-colors inline-flex items-center gap-2"
+          >
+            <Link2 size={13} /> 링크 추가
+          </button>
+
           {/* Google Drive Picker */}
           <DrivePicker onFilePicked={handleDriveFilePicked} />
 
@@ -251,11 +293,12 @@ export default function ResourcesPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-0 border-b-[2px] border-nu-ink/[0.08] mb-6">
+      <div className="flex gap-0 border-b-[2px] border-nu-ink/[0.08] mb-6 overflow-x-auto whitespace-nowrap scrollbar-hide">
         {([
-          { key: "files", label: "업로드 파일", icon: <Upload size={13} />, count: filteredUploadedFiles.length },
-          { key: "drive", label: "Google Drive", icon: <HardDrive size={13} />, count: filteredDriveFiles.length },
-          { key: "meetings", label: "미팅 자료", icon: <Link2 size={13} />, count: filteredMeetingResources.length },
+          { key: "files", label: "파일", icon: <Upload size={13} />, count: filteredUploadedFiles.length },
+          { key: "drive", label: "드라이브", icon: <HardDrive size={13} />, count: filteredDriveFiles.length },
+          { key: "links", label: "공유 링크", icon: <Link2 size={13} />, count: filteredExternalLinks.length },
+          { key: "meetings", label: "미팅 자료", icon: <FileText size={13} />, count: filteredMeetingResources.length },
         ] as const).map((tab) => (
           <button
             key={tab.key}
@@ -267,7 +310,7 @@ export default function ResourcesPage() {
             }`}
           >
             {tab.icon} {tab.label}
-            <span className={`px-1.5 py-0.5 text-[9px] rounded ${activeTab === tab.key ? "bg-nu-pink/10 text-nu-pink" : "bg-nu-ink/5 text-nu-muted"}`}>
+            <span className={`ml-1 px-1.5 py-0.5 text-[9px] rounded ${activeTab === tab.key ? "bg-nu-pink/10 text-nu-pink" : "bg-nu-ink/5 text-nu-muted"}`}>
               {tab.count}
             </span>
           </button>
@@ -300,7 +343,7 @@ export default function ResourcesPage() {
             <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-12 text-center">
               <HardDrive size={32} className="text-green-400 mx-auto mb-3" />
               <p className="text-nu-gray text-sm mb-2">{searchQuery ? "검색 결과가 없습니다" : "구글 드라이브 파일이 없습니다"}</p>
-              <p className="font-mono-nu text-[10px] text-nu-muted">상단의 'Drive 연결' 버튼으로 드라이브 파일을 추가하세요</p>
+              <p className="font-mono-nu text-[10px] text-nu-muted">상단의 '드라이브' 버튼으로 드라이브 파일을 추가하세요</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -312,12 +355,31 @@ export default function ResourcesPage() {
         </section>
       )}
 
+      {/* Tab: External Links */}
+      {activeTab === "links" && (
+        <section>
+          {filteredExternalLinks.length === 0 ? (
+            <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-12 text-center">
+              <Link2 size={32} className="text-nu-blue mx-auto mb-3" />
+              <p className="text-nu-gray text-sm mb-2">{searchQuery ? "검색 결과가 없습니다" : "등록된 외부 링크가 없습니다"}</p>
+              <p className="font-mono-nu text-[10px] text-nu-muted">노션, 피그마 등 소모임에 공유할 외부 링크를 등록하세요</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {filteredExternalLinks.map((file) => (
+                <FileCard key={file.id} file={file} userId={userId} onDelete={handleDelete} isLink />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
       {/* Tab: Meeting Materials */}
       {activeTab === "meetings" && (
         <section>
           {filteredMeetingResources.length === 0 ? (
             <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-12 text-center">
-              <Link2 size={32} className="text-nu-pink mx-auto mb-3" />
+              <FileText size={32} className="text-nu-pink mx-auto mb-3" />
               <p className="text-nu-gray text-sm">{searchQuery ? "검색 결과가 없습니다" : "미팅 안건에 등록된 자료가 없습니다"}</p>
             </div>
           ) : (
@@ -351,17 +413,18 @@ export default function ResourcesPage() {
 }
 
 function FileCard({
-  file, userId, onDelete, isDrive,
+  file, userId, onDelete, isDrive, isLink,
 }: {
   file: FileAttachment & { uploader?: { nickname: string | null } };
   userId: string | null;
   onDelete: (id: string, url: string, type: string | null) => void;
   isDrive?: boolean;
+  isLink?: boolean;
 }) {
   return (
     <div className="bg-nu-white border-[2px] border-nu-ink/[0.08] p-4 flex items-center gap-4 hover:border-nu-blue/30 transition-colors group">
-      <div className={`w-10 h-10 flex items-center justify-center shrink-0 ${isDrive ? "bg-green-50" : "bg-nu-cream/50"}`}>
-        {isDrive ? <HardDrive size={18} className="text-green-600" /> : getFileIcon(file.file_type)}
+      <div className={`w-10 h-10 flex items-center justify-center shrink-0 ${isDrive ? "bg-green-50" : isLink ? "bg-nu-blue/5" : "bg-nu-cream/50"}`}>
+        {isDrive ? <HardDrive size={18} className="text-green-600" /> : isLink ? <Link2 size={18} className="text-nu-blue" /> : getFileIcon(file.file_type)}
       </div>
       <div className="flex-1 min-w-0">
         <a
@@ -373,7 +436,8 @@ function FileCard({
           {file.file_name}
         </a>
         <div className="flex items-center gap-2 mt-0.5">
-          {isDrive && <span className="font-mono-nu text-[9px] text-green-600 bg-green-50 px-1.5 py-0.5">Drive</span>}
+          {isDrive && <span className="font-mono-nu text-[9px] text-green-600 bg-green-50 px-1.5 py-0.5">드라이브</span>}
+          {isLink && <span className="font-mono-nu text-[9px] text-nu-blue bg-nu-blue/5 px-1.5 py-0.5">외부 링크</span>}
           {file.file_size && <span className="font-mono-nu text-[10px] text-nu-muted">{formatFileSize(file.file_size)}</span>}
           <span className="font-mono-nu text-[10px] text-nu-muted">{new Date(file.created_at).toLocaleDateString("ko")}</span>
           {(file as any).uploader?.nickname && (
