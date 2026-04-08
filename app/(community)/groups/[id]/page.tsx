@@ -28,6 +28,7 @@ import { GoogleCalendarButton } from "@/components/integrations/google-calendar-
 import { EventRsvpButton } from "@/components/groups/event-rsvp-button";
 import { GroupSearch } from "@/components/groups/group-search";
 import { GroupRoadmap } from "@/components/groups/group-roadmap";
+import { GroupRadarChart, ActivityHeatmap } from "@/components/groups/group-vitals";
 import { Nav } from "@/components/shared/nav";
 import { Footer } from "@/components/landing/footer";
 
@@ -120,7 +121,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
               <div className="flex flex-wrap items-center gap-6 font-mono-nu text-[11px]">
                  <span className="flex items-center gap-2 text-nu-muted">
                    <span className="w-1.5 h-1.5 rounded-full bg-nu-pink animate-pulse" />
-                   CREW_HEAD: <span className="text-nu-ink font-bold">{group.host?.nickname || "—"}</span>
+                   호스트: <span className="text-nu-ink font-bold">{group.host?.nickname || "—"}</span>
                  </span>
                  {group.topic && (
                    <span className="flex items-center gap-2 text-nu-blue font-bold">
@@ -417,6 +418,10 @@ async function GroupSidebarSections({ id, colors, isHost, isMember, group }: any
       {(isMember || isHost) && (
         <GroupRoadmap groupId={id} groupTopic={(group as any).topic} canEdit={isHost} />
       )}
+
+      {/* Team Vitals: Radar + Heatmap */}
+      <GroupRadarChart groupId={id} />
+      <ActivityHeatmap groupId={id} />
       
       <div className="bg-nu-white border-[2px] border-nu-ink/[0.08] p-5">
         <h2 className="font-head text-sm font-bold text-nu-ink mb-4 flex items-center gap-2">
