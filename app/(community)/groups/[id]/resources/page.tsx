@@ -546,6 +546,29 @@ function FileCard({
   };
   const st = statusConfig[status];
   
+  const fireConfetti = () => {
+    const container = document.createElement("div");
+    container.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden";
+    document.body.appendChild(container);
+    const colors = ["#FF2E97", "#2E6FFF", "#FFB800", "#0d0d0d", "#10B981"];
+    for (let i = 0; i < 40; i++) {
+      const p = document.createElement("div");
+      const c = colors[Math.floor(Math.random() * colors.length)];
+      const x = Math.random() * 100;
+      const d = Math.random() * 2 + 1;
+      const r = Math.random() * 360;
+      p.style.cssText = `position:absolute;left:${x}%;top:-10px;width:${4+Math.random()*6}px;height:${4+Math.random()*6}px;background:${c};transform:rotate(${r}deg);animation:confetti-fall ${d}s ease-in forwards;animation-delay:${Math.random()*0.5}s;opacity:0.9;`;
+      container.appendChild(p);
+    }
+    if (!document.getElementById("confetti-style")) {
+      const s = document.createElement("style");
+      s.id = "confetti-style";
+      s.textContent = `@keyframes confetti-fall{0%{top:-10px;opacity:1;transform:rotate(0deg)translateX(0)}100%{top:110vh;opacity:0;transform:rotate(720deg)translateX(${Math.random()>0.5?'':'-'}80px)}}`;
+      document.head.appendChild(s);
+    }
+    setTimeout(() => container.remove(), 3000);
+  };
+
   const cycleStatus = () => {
     if (!isOwner) return;
     const next = { draft: "review" as const, review: "asset" as const, asset: "draft" as const };
@@ -555,6 +578,7 @@ function FileCard({
     if (newStatus === "review") {
       toast.info("📋 문서가 Review 상태로 전환되었습니다. 동료들의 피드백을 받아보세요!");
     } else if (newStatus === "asset") {
+      fireConfetti();
       toast.success("🎉 축하합니다! 이 자료가 공식 Asset으로 승격되었습니다. Professionalism 지수가 +5 상승합니다!", { duration: 5000 });
     } else {
       toast("✏️ Draft 상태로 되돌렸습니다.");

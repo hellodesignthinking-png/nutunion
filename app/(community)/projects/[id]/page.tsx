@@ -6,6 +6,8 @@ import { Suspense } from "react";
 import { Settings, Calendar, MessageCircle, UserPlus, ClipboardList, CheckCircle2, Clock } from "lucide-react";
 import { TabsInner } from "./tabs-inner";
 import { PageHero } from "@/components/shared/page-hero";
+import { SquadRecommender } from "@/components/projects/squad-recommender";
+import { MilestoneSettlement } from "@/components/projects/milestone-settlement";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -106,6 +108,12 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         }>
           <ProjectTabsWrapper id={id} userId={user.id} isAdmin={isAdmin} project={project} />
         </Suspense>
+
+        {/* AI Squad & Settlement */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-12">
+          <SquadRecommender projectId={id} projectTitle={project.title} />
+          <MilestoneSettlement projectTitle={project.title} />
+        </div>
       </div>
     </>
   );
