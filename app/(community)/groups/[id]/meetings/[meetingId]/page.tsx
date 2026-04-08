@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { ResourcePreviewModal } from "@/components/shared/resource-preview-modal";
+import { AiAgendaManager } from "@/components/meetings/ai-agenda-manager";
 
 function getEmbedUrl(url: string) {
   if (!url) return "";
@@ -524,6 +525,11 @@ export default function MeetingDetailPage() {
 
         {/* ── 안건 */}
         <TabsContent value="agendas">
+          {canEdit && meeting.status === "upcoming" && (
+            <div className="mb-6">
+              <AiAgendaManager groupId={groupId} />
+            </div>
+          )}
           <AgendaList meetingId={meetingId} canEdit={canEdit} members={members} />
         </TabsContent>
 
