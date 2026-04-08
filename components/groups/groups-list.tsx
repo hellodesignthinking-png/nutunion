@@ -32,6 +32,7 @@ interface GroupItem {
   host_nickname: string;
   host_id: string;
   image_url?: string;
+  user_status?: "active" | "pending" | "waitlist" | null;
 }
 
 export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: string }) {
@@ -50,7 +51,7 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
 
   async function handleJoin(g: GroupItem) {
     if (!userId) { router.push("/login"); return; }
-    if (joining) return;
+    if (joining || g.user_status) return; // 이미 상태가 있으면 클릭 불가
     setJoining(g.id);
     const supabase = createClient();
 
@@ -93,6 +94,14 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
       router.refresh();
     }
     setJoining(null);
+  }
+
+  function getButtonLabel(g: GroupItem, isJoining: boolean) {
+    if (isJoining) return "요청 중...";
+    if (g.user_status === "active") return "가입 완료";
+    if (g.user_status === "pending") return "승인 중";
+    if (g.user_status === "waitlist") return "대기 중";
+    return "가입 신청";
   }
 
   return (
@@ -195,8 +204,15 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
                          MANAGE <ArrowUpRight size={10} />
                       </Link>
                     ) : (
-                      <button onClick={() => handleJoin(g)} disabled={isJoining} className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-ink hover:text-nu-pink transition-colors disabled:opacity-50">
-                        {isJoining ? "JOINING..." : "JOIN NOW"}
+                      <button 
+                        onClick={() => handleJoin(g)} 
+                        disabled={isJoining || !!g.user_status} 
+                        className={`font-mono-nu text-[9px] font-bold uppercase tracking-widest transition-colors disabled:opacity-70 ${
+                          g.user_status === "active" ? "text-green-600" : 
+                          g.user_status === "pending" ? "text-nu-amber" : "text-nu-ink hover:text-nu-pink"
+                        }`}
+                      >
+                        {getButtonLabel(g, isJoining)}
                       </button>
                     )}
                   </div>
@@ -211,6 +227,7 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
           {filtered.map((g) => {
             const cat = CAT[g.category] || CAT.platform;
             const isJoining = joining === g.id;
+            const isHost = g.host_id === userId;
             return (
               <div key={g.id} className="bg-nu-white border border-nu-ink/[0.08] p-4 flex items-center gap-5 hover:border-nu-pink/30 transition-all">
                 <div className={`w-16 h-16 shrink-0 ${cat.bg} bg-gradient-to-br ${cat.gradient} flex items-center justify-center font-head text-2xl font-black text-white/20`}>
@@ -229,11 +246,18 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
                 </div>
                 <div className="text-right shrink-0">
                   <p className="font-mono-nu text-[10px] text-nu-muted mb-1">{g.member_count}/{g.max_members} 멤버</p>
-                  {g.host_id === userId ? (
-                    <Link href={`/groups/${g.id}/settings`} className="text-[10px] font-bold text-nu-pink no-underline">관리</Link>
+                  {isHost ? (
+                    <Link href={`/groups/${g.id}/settings`} className="text-[10px] font-bold text-nu-pink no-underline uppercase tracking-wider">MANAGE</Link>
                   ) : (
-                    <button onClick={() => handleJoin(g)} disabled={isJoining} className="text-[10px] font-bold text-nu-ink hover:text-nu-pink disabled:opacity-50">
-                      {isJoining ? "요청중" : "가입신청"}
+                    <button 
+                      onClick={() => handleJoin(g)} 
+                      disabled={isJoining || !!g.user_status} 
+                      className={`text-[10px] font-bold disabled:opacity-70 transition-colors ${
+                        g.user_status === "active" ? "text-green-600" : 
+                        g.user_status === "pending" ? "text-nu-amber" : "text-nu-ink hover:text-nu-pink"
+                      }`}
+                    >
+                      {getButtonLabel(g, isJoining)}
                     </button>
                   )}
                 </div>

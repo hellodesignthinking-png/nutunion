@@ -10,29 +10,34 @@ export const metadata: Metadata = {
   description: "nutunion 소모임을 탐색하고 참여하세요",
 };
 
-// 30초 ISR 캐싱 (목록 페이지)
-export const revalidate = 30;
-
 export default async function GroupsPage() {
   const supabase = await createClient();
 
-  // auth + groups 병렬 조회
+  // auth + groups + user_memberships 조회
+  const { data: { user } } = await supabase.auth.getUser();
+
   const [
-    { data: { user } },
     { data: groups },
+    { data: userMemberships },
   ] = await Promise.all([
-    supabase.auth.getUser(),
     supabase
       .from("groups")
       .select("*, host:profiles!groups_host_id_fkey(id, nickname), group_members(count)")
       .eq("is_active", true)
       .order("created_at", { ascending: false }),
+    user 
+      ? supabase.from("group_members").select("group_id, status").eq("user_id", user.id)
+      : Promise.resolve({ data: [] }),
   ]);
+
+  // membership Map 생성
+  const statusMap = new Map((userMemberships || []).map((m: any) => [m.group_id, m.status]));
 
   const formattedGroups = (groups || []).map((g: any) => ({
     ...g,
     member_count: g.group_members?.[0]?.count || 0,
     host_nickname: g.host?.nickname || "unknown",
+    user_status: statusMap.get(g.id) || null,
   }));
 
   return (
