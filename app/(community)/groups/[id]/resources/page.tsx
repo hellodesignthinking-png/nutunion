@@ -549,7 +549,16 @@ function FileCard({
   const cycleStatus = () => {
     if (!isOwner) return;
     const next = { draft: "review" as const, review: "asset" as const, asset: "draft" as const };
-    setStatus(next[status]);
+    const newStatus = next[status];
+    setStatus(newStatus);
+    
+    if (newStatus === "review") {
+      toast.info("📋 문서가 Review 상태로 전환되었습니다. 동료들의 피드백을 받아보세요!");
+    } else if (newStatus === "asset") {
+      toast.success("🎉 축하합니다! 이 자료가 공식 Asset으로 승격되었습니다. Professionalism 지수가 +5 상승합니다!", { duration: 5000 });
+    } else {
+      toast("✏️ Draft 상태로 되돌렸습니다.");
+    }
   };
 
   // Detect resource age for "hot" badge

@@ -42,6 +42,23 @@ interface Talent {
   project_count: number;
 }
 
+// Mini radar chart for talent cards
+function MiniRadar({ scores }: { scores: number[] }) {
+  const r = 28, cx = 35, cy = 35;
+  const getP = (i: number, v: number) => {
+    const a = (Math.PI * 2 * i) / 6 - Math.PI / 2;
+    return `${cx + (r * v / 100) * Math.cos(a)},${cy + (r * v / 100) * Math.sin(a)}`;
+  };
+  return (
+    <svg width="70" height="70" className="shrink-0">
+      {[30, 60, 100].map(v => (
+        <polygon key={v} points={Array.from({length:6}).map((_,i)=>getP(i,v)).join(' ')} className="fill-none stroke-nu-ink/5 stroke-[0.5]" />
+      ))}
+      <polygon points={scores.map((s,i)=>getP(i,s)).join(' ')} className="fill-nu-blue/15 stroke-nu-blue stroke-[1.5]" />
+    </svg>
+  );
+}
+
 export default function TalentSearchPage() {
   const [talents, setTalents] = useState<Talent[]>([]);
   const [filtered, setFiltered] = useState<Talent[]>([]);
@@ -50,6 +67,9 @@ export default function TalentSearchPage() {
   const [minActivity, setMinActivity] = useState(0);
   const [minAttendances, setMinAttendances] = useState(0);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [minPlanning, setMinPlanning] = useState(0);
+  const [minExecution, setMinExecution] = useState(0);
+  const [minCollab, setMinCollab] = useState(0);
 
   useEffect(() => {
     async function load() {
@@ -68,17 +88,34 @@ export default function TalentSearchPage() {
     load();
   }, []);
 
+  // Compute competency scores for each talent
+  const getCompetency = (t: Talent) => {
+    const planning = Math.min(100, t.total_attendances * 12 + t.leadership_count * 15);
+    const sincerity = Math.min(100, t.total_attendances * 10);
+    const docs = Math.min(100, t.activity_score * 0.8 + t.leadership_count * 10);
+    const execution = Math.min(100, t.project_count * 20 + t.total_attendances * 5);
+    const expertise = Math.min(100, t.activity_score * 0.9 + t.project_count * 10);
+    const collab = Math.min(100, t.total_attendances * 8 + t.leadership_count * 12);
+    return [planning, sincerity, docs, execution, expertise, collab];
+  };
+
   useEffect(() => {
-    let res = talents.filter(t => 
-      (t.nickname?.toLowerCase().includes(search.toLowerCase()) || (t.skill_tags || []).some(s => s.toLowerCase().includes(search.toLowerCase()))) &&
-      (t.activity_score >= minActivity) &&
-      (t.total_attendances >= minAttendances)
-    );
+    let res = talents.filter(t => {
+      const [planning,,, execution,, collab] = getCompetency(t);
+      return (
+        (t.nickname?.toLowerCase().includes(search.toLowerCase()) || (t.skill_tags || []).some(s => s.toLowerCase().includes(search.toLowerCase()))) &&
+        (t.activity_score >= minActivity) &&
+        (t.total_attendances >= minAttendances) &&
+        (planning >= minPlanning) &&
+        (execution >= minExecution) &&
+        (collab >= minCollab)
+      );
+    });
     if (selectedTag) {
       res = res.filter(t => (t.skill_tags || []).includes(selectedTag));
     }
     setFiltered(res);
-  }, [search, minActivity, minAttendances, selectedTag, talents]);
+  }, [search, minActivity, minAttendances, selectedTag, minPlanning, minExecution, minCollab, talents]);
 
   // Extract all tags for filter
   const allTags = Array.from(new Set(talents.flatMap(t => t.skill_tags || []))).sort();
@@ -151,6 +188,27 @@ export default function TalentSearchPage() {
               <option value="30">30회 이상 (마스터)</option>
             </select>
           </div>
+
+        {/* Competency Filter */}
+        <div className="mt-6 pt-6 border-t border-nu-ink/5">
+          <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-3 flex items-center gap-2">
+            <Filter size={12} /> 역량 필터 (Competency Radar)
+          </p>
+          <div className="grid grid-cols-3 gap-6">
+            <div>
+              <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-blue font-bold block mb-1">기획 ({minPlanning}+)</label>
+              <input type="range" min="0" max="100" step="10" value={minPlanning} onChange={e => setMinPlanning(parseInt(e.target.value))} className="w-full h-1 bg-nu-cream rounded-lg appearance-none cursor-pointer accent-nu-blue" />
+            </div>
+            <div>
+              <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-pink font-bold block mb-1">실행 ({minExecution}+)</label>
+              <input type="range" min="0" max="100" step="10" value={minExecution} onChange={e => setMinExecution(parseInt(e.target.value))} className="w-full h-1 bg-nu-cream rounded-lg appearance-none cursor-pointer accent-nu-pink" />
+            </div>
+            <div>
+              <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-amber font-bold block mb-1">협업 ({minCollab}+)</label>
+              <input type="range" min="0" max="100" step="10" value={minCollab} onChange={e => setMinCollab(parseInt(e.target.value))} className="w-full h-1 bg-nu-cream rounded-lg appearance-none cursor-pointer accent-nu-amber" />
+            </div>
+          </div>
+        </div>
         </div>
         
         {/* Popular Tags */}
@@ -213,18 +271,21 @@ export default function TalentSearchPage() {
                     </div>
                  </div>
 
-                 <div className="grid grid-cols-3 gap-2 mb-4">
-                    <div className="text-center p-2 bg-nu-cream/30 border border-nu-ink/5">
-                       <p className="font-head text-sm font-extrabold">{talent.activity_score}%</p>
-                       <p className="text-[8px] uppercase font-mono-nu text-nu-muted">활동지수</p>
-                    </div>
-                    <div className="text-center p-2 bg-nu-cream/30 border border-nu-ink/5">
-                       <p className="font-head text-sm font-extrabold">{talent.total_attendances}회</p>
-                       <p className="text-[8px] uppercase font-mono-nu text-nu-muted">출석</p>
-                    </div>
-                    <div className="text-center p-2 bg-nu-cream/30 border border-nu-ink/5">
-                       <p className="font-head text-sm font-extrabold">{talent.leadership_count}회</p>
-                       <p className="text-[8px] uppercase font-mono-nu text-nu-muted">리더십</p>
+                 <div className="flex items-center gap-3 mb-4">
+                    <MiniRadar scores={getCompetency(talent)} />
+                    <div className="flex-1 grid grid-cols-3 gap-1.5">
+                       <div className="text-center p-1.5 bg-nu-cream/30 border border-nu-ink/5">
+                          <p className="font-head text-xs font-extrabold">{talent.activity_score}%</p>
+                          <p className="text-[7px] uppercase font-mono-nu text-nu-muted">활동</p>
+                       </div>
+                       <div className="text-center p-1.5 bg-nu-cream/30 border border-nu-ink/5">
+                          <p className="font-head text-xs font-extrabold">{talent.total_attendances}</p>
+                          <p className="text-[7px] uppercase font-mono-nu text-nu-muted">출석</p>
+                       </div>
+                       <div className="text-center p-1.5 bg-nu-cream/30 border border-nu-ink/5">
+                          <p className="font-head text-xs font-extrabold">{talent.leadership_count}</p>
+                          <p className="text-[7px] uppercase font-mono-nu text-nu-muted">리더</p>
+                       </div>
                     </div>
                  </div>
 
