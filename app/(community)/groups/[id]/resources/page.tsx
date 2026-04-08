@@ -582,3 +582,19 @@ function FileCard({
     </div>
   );
 }
+function getEmbedUrl(url: string | null) {
+  if (!url) return "";
+  if (url.includes("notion.so")) {
+    const notionUrl = new URL(url);
+    if (!notionUrl.searchParams.has("pvs")) {
+      notionUrl.searchParams.set("pvs", "4");
+    }
+    return notionUrl.toString();
+  }
+  if (url.includes("docs.google.com")) {
+    if (url.includes("/edit")) return url.replace("/edit", "/preview");
+    if (url.includes("/view")) return url.replace("/view", "/preview");
+    return url;
+  }
+  return url;
+}
