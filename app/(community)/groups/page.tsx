@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { Zap, BookOpen, Rocket, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import { GroupsList } from "@/components/groups/groups-list";
 import { TemplateCard } from "@/components/groups/template-card";
 import { PageHero } from "@/components/shared/page-hero";
@@ -45,7 +45,7 @@ export default async function GroupsPage() {
            <TemplateCard
               title="Project Sprint - Standard"
               description="6주 단위의 고밀도 실행 스프린트에 최적화된 자료 구조와 미팅 아카이브 템플릿입니다."
-              icon={<Rocket size={24} />}
+              iconName="rocket"
               color="bg-nu-blue/5 border-nu-blue/20 text-nu-blue"
               tag="MOST POPULAR"
               templateId="sprint"
@@ -65,7 +65,7 @@ export default async function GroupsPage() {
            <TemplateCard
               title="Weekly Paper Review"
               description="매주 1편의 논문이나 보고서를 깊게 읽고 인사이트를 나누는 지식 기반 소모임 전용입니다."
-              icon={<BookOpen size={24} />}
+              iconName="book-open"
               color="bg-nu-pink/5 border-nu-pink/20 text-nu-pink"
               tag="KNOWLEDGE BASE"
               templateId="paper-review"
@@ -85,7 +85,7 @@ export default async function GroupsPage() {
            <TemplateCard
               title="Venture Building 101"
               description="아이디어 검증부터 MVP 제작, 정산까지 비즈니스 빌딩의 전 과정을 관리하는 통합 템플릿입니다."
-              icon={<Zap size={24} />}
+              iconName="zap"
               color="bg-nu-amber/5 border-nu-amber/20 text-nu-amber"
               tag="PRO WORKFLOW"
               templateId="venture"

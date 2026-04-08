@@ -512,7 +512,7 @@ export default function ResourcesPage() {
                             {resource.name}
                           </a>
                           <p className="font-mono-nu text-[10px] text-nu-muted mt-0.5 truncate">
-                            {resource.meetingTitle} · {resource.agendaTopic}
+                            {resource.meetingTitle}
                           </p>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">

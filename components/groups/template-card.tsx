@@ -2,13 +2,18 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { ArrowRight, X } from "lucide-react";
+import { ArrowRight, X, Rocket, BookOpen, Zap } from "lucide-react";
+
+const iconMap: Record<string, React.ReactNode> = {
+  rocket: <Rocket size={24} />,
+  "book-open": <BookOpen size={24} />,
+  zap: <Zap size={24} />,
+};
 
 interface TemplateCardProps {
   title: string;
   description: string;
-  icon: any;
+  iconName: string;
   color: string;
   tag: string;
   templateId: string;
@@ -23,12 +28,13 @@ interface TemplateCardProps {
 export function TemplateCard({
   title,
   description,
-  icon,
+  iconName,
   color,
   tag,
   templateId,
   details,
 }: TemplateCardProps) {
+  const icon = iconMap[iconName] || <Rocket size={24} />;
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
 
