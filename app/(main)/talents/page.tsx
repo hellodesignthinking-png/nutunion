@@ -74,38 +74,75 @@ export default function TalentSearchPage() {
   useEffect(() => {
     async function load() {
       const supabase = createClient();
-      // Using the view 'talent_stats' we created in the migration
-      const { data, error } = await supabase.from("talent_stats").select("*").order("activity_score", { ascending: false });
-      if (error) {
-        // Fallback if view doesn't exist: query profiles directly and calculate stats
-        console.warn("View talent_stats not available, using direct query.");
-        const { data: profiles, error: profileError } = await supabase.from("profiles").select("*").order("activity_score", { ascending: false });
-        if (profileError) {
-          console.error("Failed to load profiles:", profileError);
-          setLoading(false);
-          return;
-        }
-        // Map profiles to talent format with empty counts (will be calculated client-side if needed)
-        const talents = (profiles || []).map((p: any) => ({
-          profile_id: p.id,
-          nickname: p.nickname,
-          avatar_url: p.avatar_url,
-          skill_tags: p.skill_tags || [],
-          tier: p.tier || "bronze",
-          activity_score: p.activity_score || 0,
-          points: p.points || 0,
-          specialty: p.specialty || null,
-          total_attendances: 0,
-          leadership_count: 0,
-          project_count: 0,
-        }));
-        setTalents(talents as Talent[]);
-        setFiltered(talents as Talent[]);
+
+      // Try the talent_stats view first
+      const { data, error } = await supabase
+        .from("talent_stats")
+        .select("*")
+        .order("activity_score", { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        setTalents(data as Talent[]);
+        setFiltered(data as Talent[]);
         setLoading(false);
         return;
       }
-      setTalents(data as Talent[]);
-      setFiltered(data as Talent[]);
+
+      // Fallback: query profiles directly (no activity_score column — use created_at)
+      console.warn("talent_stats view unavailable, falling back to profiles.");
+      const { data: profiles, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, nickname, avatar_url, bio, created_at")
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (profileError || !profiles) {
+        console.error("Failed to load profiles:", profileError);
+        setLoading(false);
+        return;
+      }
+
+      // Compute real activity counts for each profile
+      const enriched: Talent[] = [];
+      for (const p of profiles) {
+        const [
+          { count: meetingCount },
+          { count: postCount },
+          { count: projectCount },
+          { count: groupCount },
+        ] = await Promise.all([
+          supabase.from("meeting_notes").select("id", { count: "exact", head: true }).eq("author_id", p.id),
+          supabase.from("crew_posts").select("id", { count: "exact", head: true }).eq("author_id", p.id),
+          supabase.from("project_members").select("id", { count: "exact", head: true }).eq("user_id", p.id),
+          supabase.from("group_members").select("id", { count: "exact", head: true }).eq("user_id", p.id).eq("status", "active"),
+        ]);
+
+        const mc = meetingCount || 0;
+        const pc = postCount || 0;
+        const pj = projectCount || 0;
+        const gc = groupCount || 0;
+
+        const activityScore = Math.min(100, mc * 10 + pc * 8 + pj * 15 + gc * 5);
+
+        enriched.push({
+          profile_id: p.id,
+          nickname: p.nickname || "멤버",
+          avatar_url: p.avatar_url,
+          skill_tags: [],
+          tier: activityScore >= 80 ? "gold" : activityScore >= 40 ? "silver" : "bronze",
+          activity_score: activityScore,
+          points: 0,
+          specialty: null,
+          total_attendances: mc,
+          leadership_count: gc,
+          project_count: pj,
+        });
+      }
+
+      // Sort by computed activity score
+      enriched.sort((a, b) => b.activity_score - a.activity_score);
+      setTalents(enriched);
+      setFiltered(enriched);
       setLoading(false);
     }
     load();
@@ -318,17 +355,14 @@ export default function TalentSearchPage() {
                     ))}
                  </div>
 
-                 <Button 
-                   variant="outline" 
-                   className="w-full font-mono-nu text-[10px] uppercase tracking-widest group-hover:bg-nu-pink group-hover:text-white transition-all group-hover:border-nu-pink"
-                   onClick={() => toast.promise(new Promise(r => setTimeout(r, 800)), {
-                     loading: '프로필 확인 중...',
-                     success: '정보가 로드되었습니다.',
-                     error: '오류가 발생했습니다.'
-                   })}
-                 >
-                   VIEW PROFILE <ArrowRight size={14} className="ml-2 group-hover:translate-x-1 transition-transform" />
-                 </Button>
+                 <Link href={`/portfolio/${talent.profile_id}`}>
+                   <Button
+                     variant="outline"
+                     className="w-full font-mono-nu text-[10px] uppercase tracking-widest group-hover:bg-nu-pink group-hover:text-white transition-all group-hover:border-nu-pink"
+                   >
+                     VIEW PROFILE <ArrowRight size={14} className="ml-2 group-hover:translate-x-1 transition-transform" />
+                   </Button>
+                 </Link>
                </div>
             </div>
           );
