@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Users, Calendar, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Users, Calendar, ArrowRight } from "lucide-react";
 
 const categoryFilters = [
   { key: "all", label: "전체" },
@@ -45,7 +45,6 @@ interface ProjectItem {
   creator_nickname: string;
   creator_avatar: string | null;
   member_count: number;
-  task_stats: { todo: number; in_progress: number; done: number } | null;
 }
 
 function formatDateRange(start: string | null, end: string | null) {
@@ -62,12 +61,6 @@ function formatDateRange(start: string | null, end: string | null) {
   return `${s} — ${e}`;
 }
 
-function getProgress(stats: { todo: number; in_progress: number; done: number } | null) {
-  if (!stats) return null;
-  const total = stats.todo + stats.in_progress + stats.done;
-  if (total === 0) return null;
-  return Math.round((stats.done / total) * 100);
-}
 
 export function ProjectsGrid({
   projects,
@@ -158,7 +151,6 @@ export function ProjectsGrid({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((p) => {
             const style = catStyles[p.category || "platform"] || catStyles.platform;
-            const progress = getProgress(p.task_stats);
 
             return (
               <div
@@ -211,6 +203,7 @@ export function ProjectsGrid({
                   <Link
                     href={userId ? `/projects/${p.id}` : "/login"}
                     className="no-underline block"
+                    prefetch={true}
                   >
                     <h3 className="font-head text-lg font-extrabold text-nu-ink leading-tight mb-2 hover:text-nu-pink transition-colors">
                       {p.title}
@@ -230,22 +223,6 @@ export function ProjectsGrid({
                     </div>
                   )}
 
-                  {/* Progress bar */}
-                  {progress !== null && (
-                    <div className="mb-3">
-                      <div className="progress-bar">
-                        <div
-                          className={`progress-bar-fill ${style.bg}`}
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="font-mono-nu text-[10px] text-nu-muted flex items-center gap-1">
-                          <CheckCircle2 size={10} /> {progress}%
-                        </span>
-                      </div>
-                    </div>
-                  )}
 
                   {/* Footer info */}
                   <div className="flex items-center justify-between pt-3 border-t border-nu-ink/[0.06]">
@@ -271,7 +248,6 @@ export function ProjectsGrid({
         <div className="flex flex-col gap-3">
           {filtered.map((p) => {
             const style = catStyles[p.category || "platform"] || catStyles.platform;
-            const progress = getProgress(p.task_stats);
 
             return (
               <div
@@ -312,6 +288,7 @@ export function ProjectsGrid({
                     <Link
                       href={userId ? `/projects/${p.id}` : "/login"}
                       className="font-head text-base font-extrabold text-nu-ink no-underline hover:text-nu-pink truncate"
+                      prefetch={true}
                     >
                       {p.title}
                     </Link>
@@ -330,17 +307,13 @@ export function ProjectsGrid({
                         {formatDateRange(p.start_date, p.end_date)}
                       </span>
                     )}
-                    {progress !== null && (
-                      <span className="font-mono-nu text-[10px] text-nu-muted">
-                        {progress}% 완료
-                      </span>
-                    )}
                   </div>
                 </div>
                 {/* Action */}
                 <Link
                   href={userId ? `/projects/${p.id}` : "/login"}
                   className="shrink-0 font-mono-nu text-[10px] font-bold uppercase tracking-[0.1em] px-5 py-2.5 border border-nu-ink/15 text-nu-graphite hover:bg-nu-ink hover:text-nu-paper transition-colors no-underline inline-flex items-center gap-1"
+                  prefetch={true}
                 >
                   보기 <ArrowRight size={12} />
                 </Link>

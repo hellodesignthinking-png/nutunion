@@ -123,6 +123,7 @@ export function Nav() {
           <Link
             key={l.label}
             href={getHref(l.href)}
+            prefetch={true}
             className={`font-mono-nu text-[11px] no-underline tracking-[0.1em] uppercase transition-all relative ${
               pathname === l.href || (l.href !== "/" && pathname.startsWith(l.href) && l.href.length > 1)
                 ? "text-nu-ink font-bold"
@@ -138,6 +139,7 @@ export function Nav() {
         {isAdmin && (
           <Link
             href="/admin"
+            prefetch={true}
             className={`font-mono-nu text-[11px] no-underline tracking-[0.08em] uppercase transition-colors inline-flex items-center gap-1.5 px-3 py-1.5 ${
               pathname.startsWith("/admin") ? "bg-nu-pink text-white" : "text-nu-pink hover:bg-nu-pink/10"
             }`}
@@ -161,7 +163,7 @@ export function Nav() {
               <kbd className="font-mono-nu text-[8px] text-nu-muted">⌘K</kbd>
             </button>
             {/* 알림 벨 */}
-            <Link href="/notifications" className="relative p-2 text-nu-graphite hover:text-nu-ink transition-colors">
+            <Link href="/notifications" className="relative p-2 text-nu-graphite hover:text-nu-ink transition-colors" prefetch={true}>
               <Bell size={18} />
               {notifCount > 0 && (
                 <span className="absolute top-1 right-1 w-4 h-4 bg-nu-pink text-white text-[8px] font-bold rounded-full flex items-center justify-center">
@@ -172,6 +174,7 @@ export function Nav() {
             {/* 아바타 드롭다운 대신 간단 버튼 */}
             <Link
               href="/profile"
+              prefetch={true}
               className="w-8 h-8 rounded-full bg-nu-pink text-white flex items-center justify-center font-head text-sm font-bold cursor-pointer hover:bg-nu-pink/80 transition-colors no-underline"
               title={profile?.nickname}
             >
@@ -233,6 +236,7 @@ export function Nav() {
                     key={l.href}
                     href={getHref(l.href)}
                     onClick={() => setOpen(false)}
+                    prefetch={true}
                     className={`font-mono-nu text-[12px] uppercase tracking-widest no-underline border-b border-nu-ink/10 pb-2 ${
                       pathname === l.href ? "text-nu-ink font-bold" : "text-nu-graphite"
                     }`}
@@ -241,7 +245,7 @@ export function Nav() {
                   </Link>
                 ))}
                 {user && (
-                  <Link href="/profile" onClick={() => setOpen(false)} className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-graphite no-underline border-b border-nu-ink/10 pb-2">
+                  <Link href="/profile" onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-graphite no-underline border-b border-nu-ink/10 pb-2">
                     프로필
                   </Link>
                 )}
@@ -257,7 +261,7 @@ export function Nav() {
                     { href: "/admin/projects", label: "프로젝트 관리" },
                     { href: "/admin/content", label: "콘텐츠 관리" },
                   ].map(a => (
-                    <Link key={a.href} href={a.href} onClick={() => setOpen(false)} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
+                    <Link key={a.href} href={a.href} onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
                       {a.label}
                     </Link>
                   ))}

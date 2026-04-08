@@ -53,7 +53,6 @@ interface MeetingResource {
   name: string;
   url: string;
   meetingTitle: string;
-  agendaTopic: string;
 }
 
 export default function ResourcesPage() {
@@ -112,7 +111,7 @@ export default function ResourcesPage() {
 
     const { data: agendas } = await supabase
       .from("meeting_agendas")
-      .select("topic, resources, meeting:meetings!meeting_agendas_meeting_id_fkey(title, group_id)")
+      .select("resources, meeting:meetings!meeting_agendas_meeting_id_fkey(title, group_id)")
       .not("resources", "eq", "[]");
 
     if (agendas) {
@@ -122,7 +121,7 @@ export default function ResourcesPage() {
         if (meeting?.group_id !== groupId) continue;
         if (!agenda.resources || !Array.isArray(agenda.resources)) continue;
         for (const r of agenda.resources as { name: string; url: string }[]) {
-          resources.push({ name: r.name, url: r.url, meetingTitle: meeting.title, agendaTopic: agenda.topic });
+          resources.push({ name: r.name, url: r.url, meetingTitle: meeting.title });
         }
       }
       setMeetingResources(resources);

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { Calendar, CheckCircle2, Loader2 } from "lucide-react";
+import { Calendar, Loader2 } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   draft: "bg-nu-gray text-white",
@@ -19,7 +19,6 @@ interface CrewProject {
   category: string | null;
   start_date: string | null;
   end_date: string | null;
-  task_stats: { todo: number; in_progress: number; done: number } | null;
 }
 
 function formatDateRange(start: string | null, end: string | null) {
@@ -36,12 +35,6 @@ function formatDateRange(start: string | null, end: string | null) {
   return `${s} — ${e}`;
 }
 
-function getProgress(stats: { todo: number; in_progress: number; done: number } | null) {
-  if (!stats) return null;
-  const total = stats.todo + stats.in_progress + stats.done;
-  if (total === 0) return null;
-  return Math.round((stats.done / total) * 100);
-}
 
 const catBg: Record<string, string> = {
   space: "bg-nu-blue",
@@ -73,7 +66,7 @@ export function CrewProjects({ groupId }: { groupId: string }) {
 
       const { data: projectsData } = await supabase
         .from("projects")
-        .select("id, title, status, category, start_date, end_date, task_stats")
+        .select("id, title, status, category, start_date, end_date")
         .in("id", projectIds)
         .neq("status", "draft")
         .order("created_at", { ascending: false });
@@ -102,61 +95,43 @@ export function CrewProjects({ groupId }: { groupId: string }) {
 
   return (
     <div className="space-y-3">
-      {projects.map((p) => {
-        const progress = getProgress(p.task_stats);
-        return (
-          <Link
-            key={p.id}
-            href={`/projects/${p.id}`}
-            className="block bg-nu-white border border-nu-ink/[0.08] p-4 no-underline hover:border-nu-pink/30 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  {p.category && (
-                    <span
-                      className={`font-mono-nu text-[8px] font-bold uppercase tracking-[0.15em] px-2 py-0.5 text-white ${catBg[p.category] || "bg-nu-gray"}`}
-                    >
-                      {p.category}
-                    </span>
-                  )}
+      {projects.map((p) => (
+        <Link
+          key={p.id}
+          href={`/projects/${p.id}`}
+          className="block bg-nu-white border border-nu-ink/[0.08] p-4 no-underline hover:border-nu-pink/30 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                {p.category && (
                   <span
-                    className={`font-mono-nu text-[8px] font-bold uppercase tracking-[0.15em] px-2 py-0.5 ${statusColors[p.status] || "bg-nu-gray text-white"}`}
+                    className={`font-mono-nu text-[8px] font-bold uppercase tracking-[0.15em] px-2 py-0.5 text-white ${catBg[p.category] || "bg-nu-gray"}`}
                   >
-                    {p.status}
+                    {p.category}
                   </span>
-                </div>
-                <h4 className="font-head text-sm font-extrabold text-nu-ink truncate">
-                  {p.title}
-                </h4>
-                <div className="flex items-center gap-3 mt-1 text-xs text-nu-muted">
-                  {(p.start_date || p.end_date) && (
-                    <span className="flex items-center gap-1 font-mono-nu text-[10px]">
-                      <Calendar size={10} />
-                      {formatDateRange(p.start_date, p.end_date)}
-                    </span>
-                  )}
-                  {progress !== null && (
-                    <span className="flex items-center gap-1 font-mono-nu text-[10px]">
-                      <CheckCircle2 size={10} /> {progress}%
-                    </span>
-                  )}
-                </div>
+                )}
+                <span
+                  className={`font-mono-nu text-[8px] font-bold uppercase tracking-[0.15em] px-2 py-0.5 ${statusColors[p.status] || "bg-nu-gray text-white"}`}
+                >
+                  {p.status}
+                </span>
               </div>
-              {progress !== null && (
-                <div className="w-16 shrink-0">
-                  <div className="h-1.5 bg-nu-cream rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-green-600 rounded-full"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                </div>
-              )}
+              <h4 className="font-head text-sm font-extrabold text-nu-ink truncate">
+                {p.title}
+              </h4>
+              <div className="flex items-center gap-3 mt-1 text-xs text-nu-muted">
+                {(p.start_date || p.end_date) && (
+                  <span className="flex items-center gap-1 font-mono-nu text-[10px]">
+                    <Calendar size={10} />
+                    {formatDateRange(p.start_date, p.end_date)}
+                  </span>
+                )}
+              </div>
             </div>
-          </Link>
-        );
-      })}
+          </div>
+        </Link>
+      ))}
     </div>
   );
 }

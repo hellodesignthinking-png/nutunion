@@ -13,12 +13,13 @@ import { Bell, LogOut, User, Shield, Menu, Settings, Star, Crown, Award } from "
 import { GlobalSearch } from "@/components/shared/global-search";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
-const navLinks = [
+// Unified with Nav component appLinks
+const appLinks = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "소모임", href: "/groups" },
   { label: "프로젝트", href: "/projects" },
-  { label: "멤버", href: "/members" },
-  { label: "알림", href: "/notifications" },
+  { label: "인재", href: "/talents" },
+  { label: "의뢰", href: "/challenges" },
 ];
 
 export function AuthNav({ profile }: { profile: Profile }) {
@@ -77,10 +78,11 @@ export function AuthNav({ profile }: { profile: Profile }) {
 
       {/* Desktop links */}
       <div className="hidden md:flex gap-6 items-center">
-        {navLinks.map((l) => (
+        {appLinks.map((l) => (
           <Link
             key={l.href}
             href={l.href}
+            prefetch={true}
             className={`font-mono-nu text-[11px] text-nu-graphite no-underline tracking-[0.08em] uppercase transition-opacity ${
               pathname === l.href ? "opacity-100 font-bold" : "opacity-70 hover:opacity-100"
             }`}
@@ -92,6 +94,7 @@ export function AuthNav({ profile }: { profile: Profile }) {
         {isAdmin && (
           <Link
             href="/admin"
+            prefetch={true}
             className={`font-mono-nu text-[11px] no-underline tracking-[0.08em] uppercase transition-colors inline-flex items-center gap-1.5 px-3 py-1.5 ${
               pathname.startsWith("/admin")
                 ? "bg-nu-pink text-white"
@@ -106,7 +109,7 @@ export function AuthNav({ profile }: { profile: Profile }) {
       {/* Right side */}
       <div className="hidden md:flex gap-2 items-center">
         <GlobalSearch />
-        <Link href="/notifications" className="relative p-2 text-nu-graphite hover:text-nu-ink transition-colors">
+        <Link href="/notifications" prefetch={true} className="relative p-2 text-nu-graphite hover:text-nu-ink transition-colors">
           <Bell size={18} />
           {notifCount > 0 && (
             <span className="absolute top-1 right-1 w-4 h-4 bg-nu-pink text-white text-[8px] font-bold rounded-full flex items-center justify-center">
@@ -179,39 +182,40 @@ export function AuthNav({ profile }: { profile: Profile }) {
                 </div>
               </div>
               <div className="border-t border-nu-ink/10 pt-4 flex flex-col gap-4">
-                {navLinks.map((l) => (
+                {appLinks.map((l) => (
                   <Link
                     key={l.href}
                     href={l.href}
                     onClick={() => setOpen(false)}
+                    prefetch={true}
                     className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-graphite no-underline"
                   >
                     {l.label}
                   </Link>
                 ))}
-                <Link href="/profile" onClick={() => setOpen(false)} className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-graphite no-underline">
+                <Link href="/profile" onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-graphite no-underline">
                   프로필
                 </Link>
               </div>
               {isAdmin && (
                 <div className="border-t border-nu-pink/20 pt-4 flex flex-col gap-3">
                   <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-pink font-bold">관리자</span>
-                  <Link href="/admin" onClick={() => setOpen(false)} className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-pink no-underline">
+                  <Link href="/admin" onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-pink no-underline">
                     관리자 대시보드
                   </Link>
-                  <Link href="/admin/content" onClick={() => setOpen(false)} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
+                  <Link href="/admin/content" onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
                     콘텐츠 관리
                   </Link>
-                  <Link href="/admin/media" onClick={() => setOpen(false)} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
+                  <Link href="/admin/media" onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
                     미디어 관리
                   </Link>
-                  <Link href="/admin/users" onClick={() => setOpen(false)} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
+                  <Link href="/admin/users" onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
                     회원 관리
                   </Link>
-                  <Link href="/admin/groups" onClick={() => setOpen(false)} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
+                  <Link href="/admin/groups" onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
                     소모임 관리
                   </Link>
-                  <Link href="/admin/projects" onClick={() => setOpen(false)} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
+                  <Link href="/admin/projects" onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
                     프로젝트 관리
                   </Link>
                 </div>

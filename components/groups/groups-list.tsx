@@ -176,7 +176,7 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
 
                 <div className="p-5 flex-1 flex flex-col">
                   <div className="flex-1">
-                    <Link href={`/groups/${g.id}`} className="no-underline block">
+                    <Link href={`/groups/${g.id}`} className="no-underline block" prefetch={true}>
                       <h3 className="font-head text-lg font-extrabold text-nu-ink mb-1.5 group-hover:text-nu-pink transition-colors">
                         {g.name}
                       </h3>
@@ -201,7 +201,7 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
                   <div className="pt-4 border-t border-nu-ink/[0.05] flex items-center justify-between">
                     <span className="font-mono-nu text-[10px] text-nu-muted">by {g.host_nickname}</span>
                     {isHost ? (
-                      <Link href={`/groups/${g.id}/settings`} className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-pink no-underline hover:underline flex items-center gap-1">
+                      <Link href={`/groups/${g.id}/settings`} className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-pink no-underline hover:underline flex items-center gap-1" prefetch={true}>
                          MANAGE <ArrowUpRight size={10} />
                       </Link>
                     ) : (
@@ -243,7 +243,7 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
                     <span className={`font-mono-nu text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 ${cat.bg} ${cat.text}`}>
                       {cat.label}
                     </span>
-                    <Link href={`/groups/${g.id}`} className="font-head text-base font-extrabold text-nu-ink no-underline hover:text-nu-pink truncate">
+                    <Link href={`/groups/${g.id}`} className="font-head text-base font-extrabold text-nu-ink no-underline hover:text-nu-pink truncate" prefetch={true}>
                       {g.name}
                     </Link>
                   </div>
@@ -252,7 +252,7 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
                 <div className="text-right shrink-0">
                   <p className="font-mono-nu text-[10px] text-nu-muted mb-1">{g.member_count}/{g.max_members} 멤버</p>
                   {isHost ? (
-                    <Link href={`/groups/${g.id}/settings`} className="text-[10px] font-bold text-nu-pink no-underline uppercase tracking-wider">MANAGE</Link>
+                    <Link href={`/groups/${g.id}/settings`} className="text-[10px] font-bold text-nu-pink no-underline uppercase tracking-wider" prefetch={true}>MANAGE</Link>
                   ) : (
                     <button 
                       onClick={() => handleJoin(g)} 

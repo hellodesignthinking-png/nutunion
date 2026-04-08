@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
-import { Zap, BookOpen, Rocket, Star, ArrowRight } from "lucide-react";
+import { Zap, BookOpen, Rocket, Star } from "lucide-react";
 import { GroupsList } from "@/components/groups/groups-list";
+import { TemplateCard } from "@/components/groups/template-card";
 import { PageHero } from "@/components/shared/page-hero";
 import { Suspense } from "react";
 import { GroupSkeleton } from "@/components/shared/skeletons";
@@ -41,26 +42,65 @@ export default async function GroupsPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-           <TemplateCard 
+           <TemplateCard
               title="Project Sprint - Standard"
               description="6주 단위의 고밀도 실행 스프린트에 최적화된 자료 구조와 미팅 아카이브 템플릿입니다."
               icon={<Rocket size={24} />}
               color="bg-nu-blue/5 border-nu-blue/20 text-nu-blue"
               tag="MOST POPULAR"
+              templateId="sprint"
+              details={{
+                longDescription: "Project Sprint - Standard는 6주 단위의 고밀도 실행을 위해 설계된 템플릿입니다. 목표 설정, 주간 체크인, 미팅 아카이브, 결과 리뷰 등 전체 스프린트 사이클을 관리할 수 있는 구조를 제공합니다.",
+                features: [
+                  "주간 체크인 및 진행상황 추적",
+                  "미팅 노트 아카이브 시스템",
+                  "결과 리뷰 및 피드백",
+                  "스프린트 평가 템플릿",
+                  "자동화된 주간 리포트"
+                ],
+                groupSize: "4-12명",
+                duration: "6주 사이클"
+              }}
            />
-           <TemplateCard 
+           <TemplateCard
               title="Weekly Paper Review"
               description="매주 1편의 논문이나 보고서를 깊게 읽고 인사이트를 나누는 지식 기반 소모임 전용입니다."
               icon={<BookOpen size={24} />}
               color="bg-nu-pink/5 border-nu-pink/20 text-nu-pink"
               tag="KNOWLEDGE BASE"
+              templateId="paper-review"
+              details={{
+                longDescription: "Weekly Paper Review는 지식 공유와 깊이 있는 토론을 위해 설계된 템플릿입니다. 매주 선정된 논문이나 보고서를 함께 읽고, 핵심 내용을 정리하고, 인사이트를 나누는 정기적인 모임을 운영할 수 있습니다.",
+                features: [
+                  "주간 논문 선정 및 공지",
+                  "읽기 진행도 추적",
+                  "토론 노트 및 요약",
+                  "인사이트 공유 게시판",
+                  "논문 아카이브 라이브러리"
+                ],
+                groupSize: "5-15명",
+                duration: "지속적 운영"
+              }}
            />
-           <TemplateCard 
+           <TemplateCard
               title="Venture Building 101"
               description="아이디어 검증부터 MVP 제작, 정산까지 비즈니스 빌딩의 전 과정을 관리하는 통합 템플릿입니다."
               icon={<Zap size={24} />}
               color="bg-nu-amber/5 border-nu-amber/20 text-nu-amber"
               tag="PRO WORKFLOW"
+              templateId="venture"
+              details={{
+                longDescription: "Venture Building 101은 초기 스타트업이나 사이드 프로젝트를 함께 검증하고 개발하는 팀을 위한 템플릿입니다. 아이디어 검증, 고객 인터뷰, MVP 개발, 테스트, 정산까지 전체 빌딩 사이클을 체계적으로 관리합니다.",
+                features: [
+                  "아이디어 검증 프레임워크",
+                  "고객 인터뷰 관리",
+                  "MVP 개발 로드맵",
+                  "테스트 및 피드백 수집",
+                  "재정 관리 및 정산 도구"
+                ],
+                groupSize: "2-8명",
+                duration: "12주 사이클"
+              }}
            />
         </div>
 
@@ -82,25 +122,6 @@ export default async function GroupsPage() {
   );
 }
 
-function TemplateCard({ title, description, icon, color, tag }: { title: string; description: string; icon: any; color: string; tag: string }) {
-  return (
-    <div className={`group relative p-6 border-2 transition-all hover:-translate-y-1 cursor-pointer overflow-hidden ${color} border-current`}>
-       <div className="absolute top-0 right-0 p-4 opacity-10 scale-150 rotate-12 transition-transform group-hover:rotate-45">
-          {icon}
-       </div>
-       <div className="relative z-10">
-          <span className="font-mono-nu text-[9px] font-black tracking-widest px-2 py-1 bg-white border border-nu-ink/10 mb-4 inline-block">
-             {tag}
-          </span>
-          <h3 className="font-head text-xl font-bold mb-2 group-hover:text-nu-ink">{title}</h3>
-          <p className="text-[11px] leading-relaxed opacity-70 mb-6">{description}</p>
-          <div className="flex items-center gap-2 font-mono-nu text-[10px] font-black uppercase tracking-widest">
-             Apply This Template <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
-          </div>
-       </div>
-    </div>
-  );
-}
 
 async function GroupsListWrapper({ userId }: { userId?: string }) {
   try {

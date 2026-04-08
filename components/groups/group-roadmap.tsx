@@ -37,16 +37,22 @@ export function GroupRoadmap({ groupId, groupTopic: initialTopic, canEdit }: Gro
   useEffect(() => {
     async function load() {
       const supabase = createClient();
-      const { data, error } = await supabase
-        .from("group_roadmap_phases")
-        .select("*")
-        .eq("group_id", groupId)
-        .order("order");
-      if (error) {
-        console.error("Roadmap fetch error:", error);
-        toast.error("로드맵을 불러오는데 실패했습니다");
+      try {
+        const { data, error } = await supabase
+          .from("group_roadmap_phases")
+          .select("*")
+          .eq("group_id", groupId)
+          .order("order");
+        if (error) {
+          console.warn("Roadmap feature not available:", error.message);
+          // Gracefully degrade - feature not available in this version
+        } else {
+          setPhases(data || []);
+        }
+      } catch (err) {
+        console.warn("Roadmap feature not available");
+        // Gracefully degrade - feature not available in this version
       }
-      setPhases(data || []);
       setLoading(false);
     }
     load();
@@ -55,41 +61,64 @@ export function GroupRoadmap({ groupId, groupTopic: initialTopic, canEdit }: Gro
   async function saveTopic() {
     setSavingTopic(true);
     const supabase = createClient();
-    await supabase.from("groups").update({ topic: topic.trim() }).eq("id", groupId);
-    router.refresh();
-    setEditingTopic(false);
-    toast.success("주제가 저장되었습니다");
+    try {
+      await supabase.from("groups").update({ topic: topic.trim() }).eq("id", groupId);
+      router.refresh();
+      setEditingTopic(false);
+      toast.success("주제가 저장되었습니다");
+    } catch (err) {
+      console.warn("Failed to save topic:", err);
+      toast.error("주제 저장에 실패했습니다");
+    }
     setSavingTopic(false);
   }
 
   async function addPhase() {
     if (!newPhase.title.trim()) return;
     const supabase = createClient();
-    const maxOrder = phases.length > 0 ? Math.max(...phases.map(p => p.order)) + 1 : 0;
-    const { data, error } = await supabase
-      .from("group_roadmap_phases")
-      .insert({ group_id: groupId, title: newPhase.title.trim(), description: newPhase.description || null, status: "pending", order: maxOrder })
-      .select().single();
-    if (error) { toast.error("단계 추가에 실패했습니다"); return; }
-    setPhases(prev => [...prev, data as RoadmapPhase]);
-    setNewPhase({ title: "", description: "" });
-    setAddingPhase(false);
-    toast.success("단계가 추가되었습니다");
+    try {
+      const maxOrder = phases.length > 0 ? Math.max(...phases.map(p => p.order)) + 1 : 0;
+      const { data, error } = await supabase
+        .from("group_roadmap_phases")
+        .insert({ group_id: groupId, title: newPhase.title.trim(), description: newPhase.description || null, status: "pending", order: maxOrder })
+        .select().single();
+      if (error) {
+        console.warn("Failed to add phase:", error);
+        toast.error("단계 추가에 실패했습니다");
+        return;
+      }
+      setPhases(prev => [...prev, data as RoadmapPhase]);
+      setNewPhase({ title: "", description: "" });
+      setAddingPhase(false);
+      toast.success("단계가 추가되었습니다");
+    } catch (err) {
+      console.warn("Failed to add phase:", err);
+      toast.error("단계 추가에 실패했습니다");
+    }
   }
 
   async function updatePhaseStatus(id: string, status: RoadmapPhase["status"]) {
     if (!canEdit) return;
     const next: RoadmapPhase["status"] = status === "pending" ? "active" : status === "active" ? "done" : "pending";
     const supabase = createClient();
-    await supabase.from("group_roadmap_phases").update({ status: next }).eq("id", id);
-    setPhases(prev => prev.map(p => p.id === id ? { ...p, status: next } : p));
+    try {
+      await supabase.from("group_roadmap_phases").update({ status: next }).eq("id", id);
+      setPhases(prev => prev.map(p => p.id === id ? { ...p, status: next } : p));
+    } catch (err) {
+      console.warn("Failed to update phase status:", err);
+    }
   }
 
   async function deletePhase(id: string) {
     if (!confirm("이 단계를 삭제하시겠습니까?")) return;
     const supabase = createClient();
-    await supabase.from("group_roadmap_phases").delete().eq("id", id);
-    setPhases(prev => prev.filter(p => p.id !== id));
+    try {
+      await supabase.from("group_roadmap_phases").delete().eq("id", id);
+      setPhases(prev => prev.filter(p => p.id !== id));
+    } catch (err) {
+      console.warn("Failed to delete phase:", err);
+      toast.error("단계 삭제에 실패했습니다");
+    }
   }
 
   const doneCount   = phases.filter(p => p.status === "done").length;
