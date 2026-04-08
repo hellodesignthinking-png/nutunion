@@ -27,11 +27,8 @@ export function ResourcePreviewModal({ isOpen, onClose, url, name }: ResourcePre
     }
     // Google Sheets
     else if (url.includes("docs.google.com/spreadsheets")) {
-      if (url.includes("?")) {
-        targetUrl = url.replace(/\/edit.*$/, "/preview?widget=true&headers=false");
-      } else {
-        targetUrl = url.replace(/\/edit.*$/, "/preview") + "?widget=true&headers=false";
-      }
+      const base = url.replace(/\/edit.*$/, "/preview");
+      targetUrl = `${base}?widget=true&headers=false&rm=minimal`;
     }
     // Google Drive Files (PDF, Image, Video)
     else if (url.includes("drive.google.com/file/d/")) {
@@ -45,35 +42,35 @@ export function ResourcePreviewModal({ isOpen, onClose, url, name }: ResourcePre
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-8">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-nu-ink/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-nu-ink/80 backdrop-blur-md"
         onClick={onClose}
       />
       
       {/* Modal Container */}
-      <div className="relative w-full h-full max-w-6xl bg-nu-paper border-2 border-nu-ink shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+      <div className="relative w-full h-full md:max-w-7xl bg-nu-paper border-0 md:border-2 border-nu-ink shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300">
         
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b-2 border-nu-ink bg-nu-cream/30">
+        <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b-2 border-nu-ink bg-nu-cream/30 z-20">
           <div className="flex-1 min-w-0 pr-4">
-            <h3 className="font-head text-lg font-extrabold text-nu-ink truncate">{name}</h3>
-            <p className="font-mono-nu text-[10px] text-nu-muted truncate uppercase tracking-widest">{url}</p>
+            <h3 className="font-head text-sm md:text-lg font-extrabold text-nu-ink truncate">{name}</h3>
+            <p className="font-mono-nu text-[9px] md:text-[10px] text-nu-muted truncate uppercase tracking-widest">{url}</p>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3">
             <a 
               href={url} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-4 py-2 border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all flex items-center gap-2"
+              className="font-mono-nu text-[9px] md:text-[11px] font-bold uppercase tracking-widest px-3 md:px-4 py-1.5 md:py-2 border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all flex items-center gap-2"
             >
-              <ExternalLink size={14} /> <span className="hidden sm:inline">원본 보기</span>
+              <ExternalLink size={12} /> <span className="hidden sm:inline">ORIGINAL</span>
             </a>
             <button 
               onClick={onClose}
-              className="p-2 text-nu-muted hover:text-nu-ink transition-colors"
+              className="p-1.5 md:p-2 text-nu-muted hover:text-nu-ink transition-colors"
             >
               <X size={24} />
             </button>
@@ -81,13 +78,18 @@ export function ResourcePreviewModal({ isOpen, onClose, url, name }: ResourcePre
         </div>
 
         {/* Iframe View */}
-        <div className="flex-1 bg-nu-white relative">
+        <div className="flex-1 bg-nu-white relative z-10">
           {loading && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-nu-white z-10">
-              <Loader2 size={32} className="text-nu-pink animate-spin mb-4" />
-              <p className="font-mono-nu text-xs text-nu-muted uppercase tracking-[0.2em] animate-pulse">
-                Initializing Secure Viewer...
-              </p>
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-nu-white z-20">
+              <div className="w-full h-full p-8 space-y-6">
+                 <div className="h-8 bg-nu-ink/5 w-1/3 animate-pulse" />
+                 <div className="h-4 bg-nu-ink/5 w-full animate-pulse" />
+                 <div className="h-4 bg-nu-ink/5 w-full animate-pulse" />
+                 <div className="h-64 bg-nu-ink/5 w-full animate-pulse flex items-center justify-center">
+                    <Loader2 size={32} className="text-nu-pink animate-spin" />
+                 </div>
+                 <div className="h-4 bg-nu-ink/5 w-2/3 animate-pulse" />
+              </div>
             </div>
           )}
           

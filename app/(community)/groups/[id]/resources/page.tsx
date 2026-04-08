@@ -22,6 +22,8 @@ import {
   ArrowLeft,
   ChevronRight,
   Eye,
+  Columns,
+  Maximize2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { DrivePicker } from "@/components/integrations/drive-picker";
@@ -247,172 +249,250 @@ export default function ResourcesPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-8 py-12">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-1.5 mb-6 font-mono-nu text-[11px] uppercase tracking-widest">
-        <Link href={`/groups/${groupId}`}
-          className="text-nu-muted hover:text-nu-ink no-underline flex items-center gap-1 transition-colors">
-          <ArrowLeft size={12} /> {groupName || "소모임"}
-        </Link>
-        <ChevronRight size={12} className="text-nu-muted/40" />
-        <span className="text-nu-ink">자료실</span>
-      </nav>
-      {/* Header */}
-      <div className="flex items-start justify-between mb-8">
-        <div>
-          <h1 className="font-head text-3xl font-extrabold text-nu-ink">자료실</h1>
-          <p className="text-nu-gray text-sm mt-1">소모임 파일, 드라이브, 미팅 자료를 한곳에서 관리하세요</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* External Link */}
-          <button
-            onClick={handleAddLink}
-            className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-paper border-[2px] border-nu-ink text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-colors inline-flex items-center gap-2"
-          >
-            <Link2 size={13} /> 링크 추가
-          </button>
+    <div className={`mx-auto px-4 md:px-8 py-10 transition-all duration-500 ${isSplitView ? "max-w-full" : "max-w-5xl"}`}>
+      {/* Split View Wrapper */}
+      <div className={`flex flex-col lg:flex-row gap-8 ${isSplitView ? "lg:items-start" : ""}`}>
+        
+        {/* Main Content Area */}
+        <div className={`transition-all duration-500 ${isSplitView ? "lg:w-[60%] xl:w-[55%] shrink-0" : "w-full"}`}>
+          {/* Breadcrumb */}
+          <nav className="flex items-center gap-1.5 mb-6 font-mono-nu text-[11px] uppercase tracking-widest">
+            <Link href={`/groups/${groupId}`}
+              className="text-nu-muted hover:text-nu-ink no-underline flex items-center gap-1 transition-colors">
+              <ArrowLeft size={12} /> {groupName || "소모임"}
+            </Link>
+            <ChevronRight size={12} className="text-nu-muted/40" />
+            <span className="text-nu-ink">자료실</span>
+          </nav>
 
-          {/* Google Drive Picker */}
-          <DrivePicker onFilePicked={handleDriveFilePicked} />
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
+            <div>
+              <h1 className="font-head text-3xl font-extrabold text-nu-ink">자료실</h1>
+              <p className="text-nu-gray text-sm mt-1">지식 자산을 한곳에서 관리하고 즉시 활용하세요</p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              {/* Split View Toggle */}
+              <button
+                onClick={() => setIsSplitView(!isSplitView)}
+                className={`font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-2.5 border-[2px] transition-all flex items-center gap-2 ${
+                  isSplitView ? "bg-nu-ink text-nu-paper border-nu-ink" : "bg-nu-white border-nu-ink/10 text-nu-muted hover:border-nu-ink"
+                }`}
+                title="스플릿 뷰 토글"
+              >
+                {isSplitView ? <Maximize2 size={13} /> : <Columns size={13} />}
+                <span className="hidden md:inline">{isSplitView ? "단일 뷰로 보기" : "사이드 패널 모드"}</span>
+              </button>
 
-          {/* Direct file upload */}
-          <label className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors inline-flex items-center gap-2 cursor-pointer">
-            <Upload size={13} />
-            {uploading ? "업로드 중..." : "파일 업로드"}
-            <input type="file" className="hidden" onChange={handleUpload} disabled={uploading} />
-          </label>
+              {/* External Link */}
+              <button
+                onClick={handleAddLink}
+                className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-paper border-[2px] border-nu-ink text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-colors inline-flex items-center gap-2"
+              >
+                <Link2 size={13} /> 링크
+              </button>
+
+              {/* Google Drive Picker */}
+              <DrivePicker onFilePicked={handleDriveFilePicked} />
+
+              {/* Direct file upload */}
+              <label className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors inline-flex items-center gap-2 cursor-pointer shadow-lg shadow-nu-ink/10">
+                <Upload size={13} />
+                {uploading ? "..." : "업로드"}
+                <input type="file" className="hidden" onChange={handleUpload} disabled={uploading} />
+              </label>
+            </div>
+          </div>
+
+          {/* Search */}
+          <div className="relative mb-6">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-nu-muted" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="파일 이름 또는 내용 검색"
+              className="pl-10 border-nu-ink/15 bg-nu-white/50 focus:bg-nu-white transition-all h-11"
+            />
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-0 border-b-[2px] border-nu-ink/[0.08] mb-6 overflow-x-auto whitespace-nowrap scrollbar-hide">
+            {([
+              { key: "files", label: "파일", icon: <Upload size={13} />, count: filteredUploadedFiles.length },
+              { key: "drive", label: "드라이브", icon: <HardDrive size={13} />, count: filteredDriveFiles.length },
+              { key: "links", label: "공유 링크", icon: <Link2 size={13} />, count: filteredExternalLinks.length },
+              { key: "meetings", label: "미팅 자료", icon: <FileText size={13} />, count: filteredMeetingResources.length },
+            ] as const).map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-2 font-mono-nu text-[11px] uppercase tracking-widest px-5 py-3 border-b-[3px] transition-all ${
+                  activeTab === tab.key
+                    ? "border-nu-pink text-nu-ink font-bold"
+                    : "border-transparent text-nu-muted hover:text-nu-graphite"
+                }`}
+              >
+                {tab.icon} {tab.label}
+                <span className={`ml-1 px-1.5 py-0.5 text-[9px] rounded ${activeTab === tab.key ? "bg-nu-pink/10 text-nu-pink" : "bg-nu-ink/5 text-nu-muted"}`}>
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Tab Content Area */}
+          <div className="relative min-h-[400px]">
+            {/* Tab: Uploaded Files */}
+            {activeTab === "files" && (
+              <section className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                {filteredUploadedFiles.length === 0 ? (
+                  <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-12 text-center">
+                    <Upload size={32} className="text-nu-muted mx-auto mb-3" />
+                    <p className="text-nu-gray text-sm mb-2">{searchQuery ? "검색 결과가 없습니다" : "업로드된 파일이 없습니다"}</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {filteredUploadedFiles.map((file) => (
+                      <FileCard key={file.id} file={file} userId={userId} onDelete={handleDelete} onPreview={(url, name) => setPreviewData({ url, name })} />
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* Tab: Google Drive Links */}
+            {activeTab === "drive" && (
+              <section className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                {filteredDriveFiles.length === 0 ? (
+                  <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-12 text-center">
+                    <HardDrive size={32} className="text-green-400 mx-auto mb-3" />
+                    <p className="text-nu-gray text-sm mb-2">{searchQuery ? "검색 결과가 없습니다" : "구글 드라이브 파일이 없습니다"}</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {filteredDriveFiles.map((file) => (
+                      <FileCard key={file.id} file={file} userId={userId} onDelete={handleDelete} isDrive onPreview={(url, name) => setPreviewData({ url, name })} />
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* Tab: External Links */}
+            {activeTab === "links" && (
+              <section className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                {filteredExternalLinks.length === 0 ? (
+                  <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-12 text-center">
+                    <Link2 size={32} className="text-nu-blue mx-auto mb-3" />
+                    <p className="text-nu-gray text-sm mb-2">{searchQuery ? "검색 결과가 없습니다" : "등록된 외부 링크가 없습니다"}</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {filteredExternalLinks.map((file) => (
+                      <FileCard key={file.id} file={file} userId={userId} onDelete={handleDelete} isLink onPreview={(url, name) => setPreviewData({ url, name })} />
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* Tab: Meeting Materials */}
+            {activeTab === "meetings" && (
+              <section className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                {filteredMeetingResources.length === 0 ? (
+                  <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-12 text-center">
+                    <FileText size={32} className="text-nu-pink mx-auto mb-3" />
+                    <p className="text-nu-gray text-sm">{searchQuery ? "검색 결과가 없습니다" : "미팅 안건에 등록된 자료가 없습니다"}</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {filteredMeetingResources.map((resource, i) => (
+                      <div
+                        key={i}
+                        className="bg-nu-white border-[2px] border-nu-ink/[0.08] p-4 flex items-center gap-4 hover:border-nu-pink/40 transition-colors group"
+                      >
+                        <div className="w-10 h-10 bg-nu-pink/10 flex items-center justify-center shrink-0">
+                          <FileText size={18} className="text-nu-pink" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-nu-ink truncate block no-underline hover:text-nu-pink">
+                            {resource.name}
+                          </a>
+                          <p className="font-mono-nu text-[10px] text-nu-muted mt-0.5 truncate">
+                            {resource.meetingTitle} · {resource.agendaTopic}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button 
+                            onClick={() => setPreviewData({ url: resource.url, name: resource.name })}
+                            className="p-1.5 text-nu-muted hover:text-nu-pink transition-colors"
+                            title="미리보기"
+                          >
+                            <Eye size={14} />
+                          </button>
+                          <a href={resource.url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-nu-muted hover:text-nu-ink transition-colors">
+                            <ExternalLink size={14} />
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+          </div>
         </div>
+
+        {/* Side Panel Area (Split View Document Viewer) */}
+        {isSplitView && (
+          <div className="lg:flex-1 lg:sticky lg:top-8 w-full animate-in fade-in slide-in-from-right-4 duration-500 overflow-hidden">
+            <div className="bg-nu-paper border-2 border-nu-ink shadow-2xl flex flex-col h-[80vh] lg:h-[calc(100vh-80px)]">
+              {previewData ? (
+                <div className="flex-1 flex flex-col h-full">
+                  <div className="flex items-center justify-between px-5 py-3 border-b-2 border-nu-ink bg-nu-cream/30">
+                    <div className="min-w-0 pr-4">
+                      <p className="font-head text-[13px] font-black text-nu-ink truncate uppercase tracking-tight">{previewData.name}</p>
+                      <p className="font-mono-nu text-[9px] text-nu-muted truncate uppercase tracking-widest mt-0.5">Live Document Integration</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <a href={previewData.url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-nu-muted hover:text-nu-ink" title="원본 보기">
+                        <ExternalLink size={14} />
+                      </a>
+                      <button onClick={() => setPreviewData(null)} className="p-1.5 text-nu-muted hover:text-nu-ink">
+                        <X size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex-1 bg-nu-white overflow-hidden relative">
+                    <iframe 
+                      src={getEmbedUrl(previewData.url)}
+                      className="w-full h-full border-0"
+                      allow="autoplay; encrypted-media; fullscreen"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-nu-muted">
+                  <div className="w-20 h-20 bg-nu-ink/[0.03] rounded-full flex items-center justify-center mb-4">
+                    <Eye size={32} className="opacity-20" />
+                  </div>
+                  <p className="font-head text-sm font-bold text-nu-ink/40 uppercase tracking-widest">Select a document to preview</p>
+                  <p className="text-[11px] mt-2 max-w-[200px]">자료를 선택하면 이 사이드 패널에서 실시간으로 확인하면서 작업할 수 있습니다.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Search */}
-      <div className="relative mb-6">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-nu-muted" />
-        <Input
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="파일 이름으로 검색"
-          className="pl-10 border-nu-ink/15 bg-transparent"
+      {/* Resource Preview Modal (Desktop/Standard mode) */}
+      {!isSplitView && (
+        <ResourcePreviewModal 
+          isOpen={!!previewData}
+          onClose={() => setPreviewData(null)}
+          url={previewData?.url || ""}
+          name={previewData?.name || ""}
         />
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-0 border-b-[2px] border-nu-ink/[0.08] mb-6 overflow-x-auto whitespace-nowrap scrollbar-hide">
-        {([
-          { key: "files", label: "파일", icon: <Upload size={13} />, count: filteredUploadedFiles.length },
-          { key: "drive", label: "드라이브", icon: <HardDrive size={13} />, count: filteredDriveFiles.length },
-          { key: "links", label: "공유 링크", icon: <Link2 size={13} />, count: filteredExternalLinks.length },
-          { key: "meetings", label: "미팅 자료", icon: <FileText size={13} />, count: filteredMeetingResources.length },
-        ] as const).map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`flex items-center gap-2 font-mono-nu text-[11px] uppercase tracking-widest px-5 py-3 border-b-[3px] transition-all ${
-              activeTab === tab.key
-                ? "border-nu-pink text-nu-ink font-bold"
-                : "border-transparent text-nu-muted hover:text-nu-graphite"
-            }`}
-          >
-            {tab.icon} {tab.label}
-            <span className={`ml-1 px-1.5 py-0.5 text-[9px] rounded ${activeTab === tab.key ? "bg-nu-pink/10 text-nu-pink" : "bg-nu-ink/5 text-nu-muted"}`}>
-              {tab.count}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {/* Tab: Uploaded Files */}
-      {activeTab === "files" && (
-        <section>
-          {filteredUploadedFiles.length === 0 ? (
-            <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-12 text-center">
-              <Upload size={32} className="text-nu-muted mx-auto mb-3" />
-              <p className="text-nu-gray text-sm mb-2">{searchQuery ? "검색 결과가 없습니다" : "업로드된 파일이 없습니다"}</p>
-              <p className="font-mono-nu text-[10px] text-nu-muted">위의 '파일 업로드' 버튼을 눌러 파일을 추가하세요</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {filteredUploadedFiles.map((file) => (
-                <FileCard key={file.id} file={file} userId={userId} onDelete={handleDelete} onPreview={(url, name) => setPreviewData({ url, name })} />
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* Tab: Google Drive Links */}
-      {activeTab === "drive" && (
-        <section>
-          {filteredDriveFiles.length === 0 ? (
-            <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-12 text-center">
-              <HardDrive size={32} className="text-green-400 mx-auto mb-3" />
-              <p className="text-nu-gray text-sm mb-2">{searchQuery ? "검색 결과가 없습니다" : "구글 드라이브 파일이 없습니다"}</p>
-              <p className="font-mono-nu text-[10px] text-nu-muted">상단의 '드라이브' 버튼으로 드라이브 파일을 추가하세요</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {filteredDriveFiles.map((file) => (
-                <FileCard key={file.id} file={file} userId={userId} onDelete={handleDelete} isDrive onPreview={(url, name) => setPreviewData({ url, name })} />
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* Tab: External Links */}
-      {activeTab === "links" && (
-        <section>
-          {filteredExternalLinks.length === 0 ? (
-            <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-12 text-center">
-              <Link2 size={32} className="text-nu-blue mx-auto mb-3" />
-              <p className="text-nu-gray text-sm mb-2">{searchQuery ? "검색 결과가 없습니다" : "등록된 외부 링크가 없습니다"}</p>
-              <p className="font-mono-nu text-[10px] text-nu-muted">노션, 피그마 등 소모임에 공유할 외부 링크를 등록하세요</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {filteredExternalLinks.map((file) => (
-                <FileCard key={file.id} file={file} userId={userId} onDelete={handleDelete} isLink onPreview={(url, name) => setPreviewData({ url, name })} />
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* Tab: Meeting Materials */}
-      {activeTab === "meetings" && (
-        <section>
-          {filteredMeetingResources.length === 0 ? (
-            <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-12 text-center">
-              <FileText size={32} className="text-nu-pink mx-auto mb-3" />
-              <p className="text-nu-gray text-sm">{searchQuery ? "검색 결과가 없습니다" : "미팅 안건에 등록된 자료가 없습니다"}</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {filteredMeetingResources.map((resource, i) => (
-                <div
-                  key={i}
-                  className="bg-nu-white border-[2px] border-nu-ink/[0.08] p-4 flex items-center gap-4 hover:border-nu-pink/40 transition-colors group"
-                >
-                  <div className="w-10 h-10 bg-nu-pink/10 flex items-center justify-center shrink-0">
-                    <FileText size={18} className="text-nu-pink" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-nu-ink truncate block no-underline hover:text-nu-pink">
-                      {resource.name}
-                    </a>
-                    <p className="font-mono-nu text-[10px] text-nu-muted mt-0.5 truncate">
-                      {resource.meetingTitle} · {resource.agendaTopic}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button 
-                      onClick={() => setPreviewData({ url: resource.url, name: resource.name })}
-                      className="p-1.5 text-nu-muted hover:text-nu-pink transition-colors"
-                      title="미리보기"
-                    >
-                      <Eye size={14} />
-                    </button>
-                    <a href={resource.url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-nu-muted hover:text-nu-ink transition-colors">
-                      <ExternalLink size={14} />
                     </a>
                   </div>
                 </div>
