@@ -27,18 +27,24 @@ export default async function GroupsPage() {
         action={user ? { label: "소모임 만들기", href: "/groups/create" } : undefined}
       />
 
-      {/* Featured Templates Section */}
+      {/* ── Featured Templates Section ─────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-8 py-10">
-        <div className="flex items-center justify-between mb-8">
-           <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-nu-ink text-nu-paper flex items-center justify-center rotate-3 border-2 border-nu-ink shadow-[4px_4px_0px_0px_#FF2E97]">
-                 <Star size={24} className="fill-nu-paper" />
+        {/* Section Header — dark premium banner */}
+        <div className="relative overflow-hidden bg-nu-ink p-8 mb-8 border-2 border-nu-ink">
+          <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-[#FF2E97]/10 to-transparent" />
+          <div className="relative z-10 flex items-center gap-4">
+            <div className="w-14 h-14 bg-white/5 backdrop-blur-sm flex items-center justify-center border border-white/10">
+              <Star size={26} className="text-[#FF2E97]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <h2 className="font-head text-2xl font-black text-white uppercase tracking-tight">Success Templates</h2>
+                <span className="font-mono-nu text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 bg-[#FF2E97]/15 text-[#FF2E97] border border-[#FF2E97]/20">PRO</span>
               </div>
-              <div>
-                <h2 className="font-head text-2xl font-black text-nu-ink uppercase tracking-tight">Success Templates</h2>
-                <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-[0.2em] mt-0.5">Scale your community with proven structures</p>
-              </div>
-           </div>
+              <p className="font-mono-nu text-[10px] text-white/40 uppercase tracking-[0.2em]">검증된 구조로 커뮤니티를 스케일하세요</p>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
@@ -47,6 +53,7 @@ export default async function GroupsPage() {
               description="6주 단위의 고밀도 실행 스프린트에 최적화된 자료 구조와 미팅 아카이브 템플릿입니다."
               iconName="rocket"
               color="bg-nu-blue/5 border-nu-blue/20 text-nu-blue"
+              colorKey="blue"
               tag="MOST POPULAR"
               templateId="sprint"
               details={{
@@ -67,6 +74,7 @@ export default async function GroupsPage() {
               description="매주 1편의 논문이나 보고서를 깊게 읽고 인사이트를 나누는 지식 기반 소모임 전용입니다."
               iconName="book-open"
               color="bg-nu-pink/5 border-nu-pink/20 text-nu-pink"
+              colorKey="pink"
               tag="KNOWLEDGE BASE"
               templateId="paper-review"
               details={{
@@ -87,6 +95,7 @@ export default async function GroupsPage() {
               description="아이디어 검증부터 MVP 제작, 정산까지 비즈니스 빌딩의 전 과정을 관리하는 통합 템플릿입니다."
               iconName="zap"
               color="bg-nu-amber/5 border-nu-amber/20 text-nu-amber"
+              colorKey="amber"
               tag="PRO WORKFLOW"
               templateId="venture"
               details={{
