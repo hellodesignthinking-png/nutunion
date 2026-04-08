@@ -49,15 +49,17 @@ export default async function DashboardPage() {
     supabase.from("profiles").select("*").eq("id", user.id).single(),
     supabase.from("group_members")
       .select("group_id, role, groups(id, name, category, description, max_members)")
-      .eq("user_id", user.id).eq("status", "active"),
+      .eq("user_id", user.id).eq("status", "active").eq("groups.is_active", true),
     supabase.from("project_members")
       .select("project_id, role, reward_ratio, projects(id, title, description, status, category)")
-      .eq("user_id", user.id),
+      .eq("user_id", user.id)
+      .in("projects.status", ["active", "draft"]),
     supabase.from("notifications")
       .select("*", { count: "exact", head: true })
       .eq("user_id", user.id).eq("is_read", false),
     supabase.from("crew_posts")
-      .select("id, content, type, created_at, author:profiles!crew_posts_author_id_fkey(nickname, avatar_url), group:groups!crew_posts_group_id_fkey(id, name)")
+      .select("id, content, type, created_at, author:profiles!crew_posts_author_id_fkey(nickname, avatar_url), group:groups!crew_posts_group_id_fkey(id, name, is_active)")
+      .eq("group.is_active", true)
       .order("created_at", { ascending: false })
       .limit(6),
   ]);
@@ -207,7 +209,7 @@ export default async function DashboardPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {memberships?.slice(0, 4).map((m: any) => {
                   const g = m.groups;
-                  if (!g) return null;
+                  if (!g || g.is_active === false) return null;
                   const cat = CAT[g.category as keyof typeof CAT];
                   return (
                     <Link key={g.id} href={`/groups/${g.id}`}
@@ -255,7 +257,7 @@ export default async function DashboardPage() {
               <div className="space-y-2">
                 {projectMemberships?.slice(0, 4).map((pm: any) => {
                   const p = pm.projects;
-                  if (!p) return null;
+                  if (!p || !["active", "draft"].includes(p.status)) return null;
                   const cat = CAT[p.category as keyof typeof CAT];
                   return (
                     <Link key={p.id} href={`/projects/${p.id}`}
@@ -302,6 +304,7 @@ export default async function DashboardPage() {
               <div className="space-y-2">
                 {recentActivity.map((a: any) => {
                   const group = Array.isArray(a.group) ? a.group[0] : a.group;
+                  if (!group || group.is_active === false) return null;
                   return (
                     <div key={a.id} className="bg-nu-white border border-nu-ink/[0.06] px-4 py-3 flex items-start gap-3">
                       <div className="w-7 h-7 rounded-full bg-nu-ink/5 flex items-center justify-center font-head text-[10px] font-bold text-nu-ink shrink-0">

@@ -28,6 +28,7 @@ import { GroupRoadmap } from "@/components/groups/group-roadmap";
 import { GroupRadarChart, ActivityHeatmap } from "@/components/groups/group-vitals";
 import { DailyDigest } from "@/components/groups/daily-digest";
 import { RelatedGroups } from "@/components/groups/related-groups";
+import { GroupAnnouncements } from "@/components/groups/group-announcements";
 
 export const dynamic = "force-dynamic";
 
@@ -142,9 +143,6 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
                   <Link href={`/groups/${id}/finance`} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-paper border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all hover:-translate-y-0.5 inline-flex items-center gap-2">
                     <CreditCard size={14} /> 정산
                   </Link>
-                  <Link href={`/groups/${id}/chat`} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-paper border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all hover:-translate-y-0.5 inline-flex items-center gap-2">
-                    <MessageCircle size={14} /> 채팅
-                  </Link>
                 </>
               )}
               {(isHost || isManager) && (
@@ -173,6 +171,10 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
             <GroupSearch groupId={id} />
           </div>
         )}
+
+        <Suspense fallback={null}>
+          <GroupAnnouncements groupId={id} />
+        </Suspense>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
