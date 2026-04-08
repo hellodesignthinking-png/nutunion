@@ -78,32 +78,52 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
   return (
     <>
       {/* ── Hero Banner ──────────────────────────────── */}
-      <div className={`relative border-b-[3px] border-nu-ink ${colors.light} overflow-hidden`}>
-        <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: "radial-gradient(circle, #0d0d0d 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
+      <div className={`relative border-b-[3px] border-nu-ink ${colors.light} overflow-hidden min-h-[320px] flex items-center`}>
+        {/* Background Image/Pattern */}
+        {group.image_url ? (
+          <div className="absolute inset-0 z-0">
+            <img 
+              src={group.image_url} 
+              alt="" 
+              className="w-full h-full object-cover"
+            />
+            <div className={`absolute inset-0 bg-gradient-to-r ${colors.light} via-nu-paper/90 to-nu-paper/40 mix-blend-normal`} />
+            <div className="absolute inset-0 bg-nu-paper/20 backdrop-blur-[2px]" />
+          </div>
+        ) : (
+          <>
+            <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: "radial-gradient(circle, #0d0d0d 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
+            <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-nu-pink/5 rounded-full blur-3xl" />
+            <div className="absolute -left-20 -top-20 w-80 h-80 bg-nu-blue/5 rounded-full blur-3xl" />
+          </>
+        )}
         
-        <div className="max-w-6xl mx-auto px-8 py-10 relative">
-          <div className="flex items-center gap-1 font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest mb-4">
+        <div className="max-w-6xl mx-auto px-8 py-10 relative z-10 w-full">
+          <div className="flex items-center gap-1 font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest mb-6">
             <Link href="/groups" className="hover:text-nu-ink transition-colors no-underline">소모임</Link>
             <ChevronRight size={12} />
             <span className="text-nu-ink">{group.name}</span>
           </div>
 
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8">
             <div className="flex-1">
-              <span className={`inline-block font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-3 py-1 text-white mb-4 ${colors.bg} -rotate-1`}>
+              <span className={`inline-block font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-3 py-1 text-white mb-6 ${colors.bg} -rotate-1 shadow-lg shadow-black/10`}>
                 {group.category}
               </span>
-              <h1 className="font-head text-4xl font-extrabold text-nu-ink tracking-tight mb-3">
+              <h1 className="font-head text-5xl font-extrabold text-nu-ink tracking-tight mb-4 drop-shadow-sm">
                 {group.name}
               </h1>
-              <p className="text-nu-gray max-w-xl leading-relaxed mb-4">
+              <p className="text-nu-graphite max-w-xl leading-relaxed mb-6 text-sm font-medium">
                 {group.description}
               </p>
               <div className="flex flex-wrap items-center gap-6 font-mono-nu text-[11px]">
-                 <span className="text-nu-muted">호스트: <span className="text-nu-ink font-bold">{group.host?.nickname || "—"}</span></span>
+                 <span className="flex items-center gap-2 text-nu-muted">
+                   <span className="w-1.5 h-1.5 rounded-full bg-nu-pink animate-pulse" />
+                   호스트: <span className="text-nu-ink font-bold">{group.host?.nickname || "—"}</span>
+                 </span>
                  {group.topic && (
-                   <span className="flex items-center gap-2 text-nu-pink font-bold">
-                     <Target size={12} fill="currentColor" className="opacity-20" /> TOPIC: {group.topic}
+                   <span className="flex items-center gap-2 text-nu-blue font-bold">
+                     <Target size={12} className="opacity-40" /> TOPIC: {group.topic}
                    </span>
                  )}
               </div>
@@ -112,20 +132,20 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
             <div className="flex flex-wrap gap-2 shrink-0">
               {(isMember || isHost || isManager) && (
                 <>
-                  <Link href={`/groups/${id}/meetings`} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-2.5 bg-nu-blue text-nu-paper no-underline hover:bg-nu-blue/90 transition-colors inline-flex items-center gap-2">
+                  <Link href={`/groups/${id}/meetings`} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-blue text-nu-paper no-underline hover:bg-nu-blue/90 shadow-lg shadow-nu-blue/20 transition-all hover:-translate-y-0.5 inline-flex items-center gap-2">
                     <BookOpen size={14} /> 미팅
                   </Link>
-                  <Link href={`/groups/${id}/resources`} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-2.5 border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-colors inline-flex items-center gap-2">
+                  <Link href={`/groups/${id}/resources`} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-paper border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all hover:-translate-y-0.5 inline-flex items-center gap-2">
                     <FolderOpen size={14} /> 자료실
                   </Link>
-                  <Link href={`/groups/${id}/chat`} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-2.5 border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-colors inline-flex items-center gap-2">
+                  <Link href={`/groups/${id}/chat`} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-paper border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all hover:-translate-y-0.5 inline-flex items-center gap-2">
                     <MessageCircle size={14} /> 채팅
                   </Link>
                 </>
               )}
               {(isHost || isManager) && (
-                <Link href={`/groups/${id}/settings`} className="p-2.5 border-[2px] border-nu-ink/20 text-nu-graphite no-underline hover:bg-nu-ink hover:text-nu-paper transition-colors inline-flex items-center">
-                  <Settings size={16} />
+                <Link href={`/groups/${id}/settings`} className="p-3 bg-nu-paper border-[2px] border-nu-ink/20 text-nu-graphite no-underline hover:bg-nu-ink hover:text-nu-paper transition-all hover:-translate-y-0.5 inline-flex items-center">
+                  <Settings size={18} />
                 </Link>
               )}
               {!isHost && !isManager && (

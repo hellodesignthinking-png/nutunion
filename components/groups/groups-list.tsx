@@ -164,11 +164,12 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
                 {/* Header Visual */}
                 <div className={`h-32 relative overflow-hidden bg-gradient-to-br ${cat.gradient}`}>
                   {g.image_url ? (
-                    <img src={g.image_url} alt="" className="absolute inset-0 w-full h-full object-cover mix-blend-overlay opacity-60" />
+                    <img src={g.image_url} alt="" className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                   ) : (
                     <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "16px 16px" }} />
                   )}
-                  <span className={`absolute top-4 left-4 font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 ${cat.bg} ${cat.text}`}>
+                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/20 to-transparent" />
+                  <span className={`absolute top-4 left-4 font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 ${cat.bg} ${cat.text} shadow-lg shadow-black/10`}>
                     {cat.label}
                   </span>
                 </div>
@@ -230,8 +231,12 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
             const isHost = g.host_id === userId;
             return (
               <div key={g.id} className="bg-nu-white border border-nu-ink/[0.08] p-4 flex items-center gap-5 hover:border-nu-pink/30 transition-all">
-                <div className={`w-16 h-16 shrink-0 ${cat.bg} bg-gradient-to-br ${cat.gradient} flex items-center justify-center font-head text-2xl font-black text-white/20`}>
-                  {g.name.charAt(0)}
+                <div className={`w-16 h-16 shrink-0 relative overflow-hidden ${cat.bg} bg-gradient-to-br ${cat.gradient} flex items-center justify-center`}>
+                  {g.image_url ? (
+                    <img src={g.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                  ) : (
+                    <span className="font-head text-2xl font-black text-white/20 capitalize">{g.name.charAt(0)}</span>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
