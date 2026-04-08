@@ -18,6 +18,7 @@ import {
   Activity,
   Target,
   TrendingUp,
+  CreditCard,
 } from "lucide-react";
 import { GroupActions } from "@/components/groups/group-actions";
 import { CrewActivityFeed } from "@/components/crews/crew-activity-feed";
@@ -137,6 +138,9 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
                   </Link>
                   <Link href={`/groups/${id}/resources`} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-paper border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all hover:-translate-y-0.5 inline-flex items-center gap-2">
                     <FolderOpen size={14} /> 자료실
+                  </Link>
+                  <Link href={`/groups/${id}/finance`} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-paper border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all hover:-translate-y-0.5 inline-flex items-center gap-2">
+                    <CreditCard size={14} /> 정산
                   </Link>
                   <Link href={`/groups/${id}/chat`} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-paper border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all hover:-translate-y-0.5 inline-flex items-center gap-2">
                     <MessageCircle size={14} /> 채팅
