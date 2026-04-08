@@ -25,13 +25,26 @@ import {
 } from "lucide-react";
 import { MilestoneList } from "@/components/projects/milestone-list";
 import { ProjectActivityFeed } from "@/components/projects/project-activity-feed";
+import { ProjectRoadmap } from "@/components/projects/project-roadmap";
+import { ProjectResourceHub } from "@/components/projects/project-resource-hub";
+import { ProjectFinanceDashboard } from "@/components/projects/project-finance-dashboard";
+import { ProjectSplitView } from "@/components/projects/project-split-view";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  FolderOpen,
+  LayoutPanelLeft,
+  TrendingUp,
+} from "lucide-react";
 
 const tabs = [
   { key: "overview", label: "Overview", icon: Target },
+  { key: "roadmap", label: "로드맵", icon: TrendingUp },
+  { key: "resources", label: "자료실", icon: FolderOpen },
+  { key: "workspace", label: "워크스페이스", icon: LayoutPanelLeft },
   { key: "milestones", label: "Milestones", icon: Layers },
-  { key: "rewards", label: "Rewards", icon: Wallet },
+  { key: "finance", label: "자금", icon: Wallet },
+  { key: "rewards", label: "Rewards", icon: DollarSign },
   { key: "activity", label: "Activity", icon: Activity },
 ];
 
@@ -94,26 +107,26 @@ export function TabsInner({
 
   return (
     <>
-      {/* Tab bar */}
-      <div className="flex gap-0 border-b border-nu-ink/[0.08] mb-8">
+      {/* Tab bar — scrollable on mobile */}
+      <div className="flex gap-0 border-b border-nu-ink/[0.08] mb-8 overflow-x-auto scrollbar-hide">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`font-mono-nu text-[11px] uppercase tracking-widest px-6 py-3 border-b-2 transition-colors flex items-center gap-2 ${
+            className={`font-mono-nu text-[10px] uppercase tracking-widest px-4 py-3 border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
               activeTab === tab.key
                 ? "border-nu-pink text-nu-ink font-bold"
                 : "border-transparent text-nu-muted hover:text-nu-graphite"
             }`}
           >
-            <tab.icon size={14} />
+            <tab.icon size={13} />
             {tab.label}
           </button>
         ))}
         {canEdit && (
           <Link
             href={`/projects/${projectId}/settings`}
-            className="font-mono-nu text-[11px] uppercase tracking-widest px-6 py-3 border-b-2 border-transparent text-nu-muted hover:text-nu-graphite no-underline ml-auto flex items-center gap-2"
+            className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-3 border-b-2 border-transparent text-nu-muted hover:text-nu-graphite no-underline ml-auto flex items-center gap-1.5 whitespace-nowrap shrink-0"
           >
             Settings
           </Link>
@@ -507,6 +520,32 @@ export function TabsInner({
         </div>
       )}
 
+      {/* Roadmap Tab */}
+      {activeTab === "roadmap" && (
+        <ProjectRoadmap
+          projectId={projectId}
+          isLead={canEdit}
+        />
+      )}
+
+      {/* Resources Tab */}
+      {activeTab === "resources" && (
+        <ProjectResourceHub
+          projectId={projectId}
+          isLead={canEdit}
+          isMember={isMember}
+        />
+      )}
+
+      {/* Workspace (Split View) Tab */}
+      {activeTab === "workspace" && (
+        <ProjectSplitView
+          projectId={projectId}
+          isMember={isMember}
+          userId={userId}
+        />
+      )}
+
       {/* Milestones Tab */}
       {activeTab === "milestones" && (
         <MilestoneList
@@ -516,12 +555,21 @@ export function TabsInner({
         />
       )}
 
+      {/* Finance Tab */}
+      {activeTab === "finance" && (
+        <ProjectFinanceDashboard
+          projectId={projectId}
+          totalBudget={project?.total_budget ? parseInt(project.total_budget) : 0}
+          isLead={canEdit}
+        />
+      )}
+
       {/* Rewards Tab */}
       {activeTab === "rewards" && (
-        <ProjectRewardsTab 
-          project={project} 
-          members={userMembers} 
-          canEdit={canEdit} 
+        <ProjectRewardsTab
+          project={project}
+          members={userMembers}
+          canEdit={canEdit}
         />
       )}
 

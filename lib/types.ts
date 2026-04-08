@@ -324,3 +324,52 @@ export interface ChatMessage {
   created_at: string;
   sender?: Profile;
 }
+
+// === Project Advanced ===
+
+export interface ProjectResource {
+  id: string;
+  project_id: string;
+  name: string;
+  url: string;
+  type: "file" | "google_doc" | "google_sheet" | "notion" | "link";
+  stage: "planning" | "interim" | "evidence" | "final";
+  uploaded_by?: string;
+  file_size?: number;
+  mime_type?: string;
+  description?: string;
+  created_at: string;
+  uploader?: { nickname: string | null; avatar_url: string | null };
+}
+
+export interface ProjectFinance {
+  id: string;
+  project_id: string;
+  title: string;
+  amount: number;
+  type: "expense" | "income" | "budget_allocation";
+  category: "general" | "personnel" | "tools" | "marketing" | "other";
+  milestone_id?: string;
+  receipt_url?: string;
+  description?: string;
+  recorded_by?: string;
+  recorded_at: string;
+  recorder?: { nickname: string | null };
+  milestone?: { title: string };
+}
+
+export interface ProjectActionItem {
+  id: string;
+  project_id: string;
+  title: string;
+  description?: string;
+  status: "open" | "in_progress" | "done";
+  priority: "low" | "medium" | "high" | "urgent";
+  assigned_to?: string;
+  source_url?: string;
+  due_date?: string;
+  created_by?: string;
+  created_at: string;
+  completed_at?: string;
+  assignee?: { nickname: string | null; avatar_url: string | null };
+}
