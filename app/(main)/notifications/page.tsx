@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { PageHero } from "@/components/shared/page-hero";
 import type { Notification } from "@/lib/types";
 
 // ─── 타입별 설정 ────────────────────────────────────────────────────
@@ -141,33 +142,29 @@ export default function NotificationsPage() {
   const groups = ["오늘", "어제", "이번 주", "이전"].filter((g) => grouped[g]?.length);
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-10">
+    <div className="bg-nu-paper min-h-screen pb-20">
+      <PageHero 
+        category="Updates"
+        title="Notifications"
+        description={unreadCount > 0 ? `읽지 않은 알림이 ${unreadCount}개 있습니다. 최근 활동 소식을 확인하세요.` : "모든 알림을 읽었습니다. 새로운 소식이 있으면 알려드릴게요."}
+      />
 
-      {/* Header */}
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h1 className="font-head text-3xl font-extrabold text-nu-ink">알림</h1>
-          <p className="text-nu-gray text-sm mt-1">
-            {unreadCount > 0 ? (
-              <span className="text-nu-pink font-medium">읽지 않은 알림 {unreadCount}개</span>
-            ) : "모두 읽었습니다"}
-          </p>
+      <div className="max-w-2xl mx-auto px-6 py-10">
+        {/* Actions bar if any */}
+        <div className="flex items-center justify-end gap-3 mb-8">
+           {unreadCount > 0 && (
+             <button onClick={markAllRead}
+               className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-blue hover:bg-nu-blue/5 px-4 py-2 border border-nu-blue/20 transition-all">
+               <CheckCheck size={12} className="inline mr-1" /> Mark All Read
+             </button>
+           )}
+           {notifications.length > 0 && (
+             <button onClick={deleteAll}
+               className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-muted hover:text-nu-red px-4 py-2 border border-nu-ink/10 hover:border-nu-red/30 transition-all">
+               <Trash2 size={12} className="inline mr-1" /> Clear All
+             </button>
+           )}
         </div>
-        <div className="flex items-center gap-2">
-          {unreadCount > 0 && (
-            <button onClick={markAllRead}
-              className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-blue hover:underline flex items-center gap-1.5 px-3 py-2 border border-nu-blue/20 hover:bg-nu-blue/5 transition-colors">
-              <CheckCheck size={13} /> 모두 읽음
-            </button>
-          )}
-          {notifications.length > 0 && (
-            <button onClick={deleteAll}
-              className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted hover:text-nu-red flex items-center gap-1.5 px-3 py-2 border border-nu-ink/10 hover:border-nu-red/30 transition-colors">
-              <Trash2 size={13} /> 전체 삭제
-            </button>
-          )}
-        </div>
-      </div>
 
       {/* Filter tabs */}
       <div className="flex border-b border-nu-ink/[0.08] mb-6">
@@ -261,6 +258,7 @@ export default function NotificationsPage() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

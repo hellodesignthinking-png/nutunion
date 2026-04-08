@@ -16,7 +16,7 @@ import { GoogleCalendarButton } from "@/components/integrations/google-calendar-
 import {
   Calendar, Clock, MapPin, User, Play, CheckCircle2, Lightbulb,
   Users, Edit3, Save, FileText, ArrowLeft, ChevronRight,
-  Link2, ExternalLink, Plus, Trash2, AlertCircle,
+  Link2, ExternalLink, Plus, Trash2, AlertCircle, Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -98,7 +98,7 @@ export default function MeetingDetailPage() {
     setUserId(user.id);
 
     const [{ data: meetingData }, { data: groupData }] = await Promise.all([
-      supabase.from("meetings").select("*, organizer:profiles!meetings_organizer_id_fkey(id, nickname, avatar_url)").eq("id", meetingId).single(),
+      supabase.from("meetings").select("*, organizer:profiles!meetings_organizer_id_fkey(id, nickname, avatar_url), secretary:profiles!meetings_secretary_id_fkey(nickname), speaker:profiles!meetings_speaker_id_fkey(nickname)").eq("id", meetingId).single(),
       supabase.from("groups").select("host_id, name").eq("id", groupId).single(),
     ]);
 
@@ -119,39 +119,32 @@ export default function MeetingDetailPage() {
       .from("group_members").select("profile:profiles(*)").eq("group_id", groupId).eq("status", "active");
     if (membersData) setMembers(membersData.map((m: any) => m.profile).filter(Boolean) as Profile[]);
 
-    // Shared resources (from meeting_resources table if exists, else skip gracefully)
-    const { data: resData } = await supabase
-      .from("meeting_resources")
-      .select("*, author:profiles!meeting_resources_created_by_fkey(nickname)")
-      .eq("meeting_id", meetingId)
-      .order("created_at");
+    // Shared resources
+    const { data: resData } = await supabase.from("meeting_resources").select("*, author:profiles!meeting_resources_created_by_fkey(nickname)").eq("meeting_id", meetingId).order("created_at");
     if (resData) {
-      // Load replies for each resource
-      const resWithReplies = await Promise.all(
-        resData.map(async (r: any) => {
-          const { data: replies } = await supabase
-            .from("meeting_resource_replies")
-            .select("*, author:profiles!meeting_resource_replies_created_by_fkey(nickname)")
-            .eq("resource_id", r.id)
-            .order("created_at");
-          return { ...r, replies: replies || [] };
-        })
-      );
+      const resWithReplies = await Promise.all(resData.map(async (r: any) => {
+        const { data: replies } = await supabase.from("meeting_resource_replies").select("*, author:profiles!meeting_resource_replies_created_by_fkey(nickname)").eq("resource_id", r.id).order("created_at");
+        return { ...r, replies: replies || [] };
+      }));
       setResources(resWithReplies as SharedResource[]);
     }
 
     // Linked issues
-    const { data: issueData } = await supabase
-      .from("meeting_issues")
-      .select("*")
-      .eq("meeting_id", meetingId)
-      .order("created_at");
+    const { data: issueData } = await supabase.from("meeting_issues").select("*").eq("meeting_id", meetingId).order("created_at");
     if (issueData) setIssues(issueData as LinkedIssue[]);
 
     setLoading(false);
   }, [groupId, meetingId]);
 
   useEffect(() => { loadMeeting(); }, [loadMeeting]);
+
+  // ── Roles & Links Updaters ─────────────────────────────────────────────
+  async function updateMeetingField(field: string, value: any) {
+    const supabase = createClient();
+    const { error } = await supabase.from("meetings").update({ [field]: value }).eq("id", meetingId);
+    if (error) toast.error("수정에 실패했습니다");
+    else { toast.success("수정되었습니다"); await loadMeeting(); }
+  }
 
   // ── Status actions ─────────────────────────────────────────────────────
   async function handleStartMeeting() {
@@ -298,12 +291,93 @@ export default function MeetingDetailPage() {
           <Badge className={`text-[10px] ${cfg.className}`}>{cfg.label}</Badge>
           {meeting.organizer && (
             <span className="font-mono-nu text-[10px] text-nu-muted flex items-center gap-1">
-              <User size={12} />{meeting.organizer.nickname}
+              <User size={12} />{meeting.organizer.nickname} (주최)
             </span>
           )}
         </div>
-        <h1 className="font-head text-3xl font-extrabold text-nu-ink">{meeting.title}</h1>
-        {meeting.description && <p className="text-nu-gray mt-2 max-w-2xl">{meeting.description}</p>}
+        <h1 className="font-head text-4xl font-extrabold text-nu-ink tracking-tight">{meeting.title}</h1>
+        {meeting.description && <p className="text-nu-gray mt-2 max-w-2xl leading-relaxed">{meeting.description}</p>}
+      </div>
+
+      {/* Roles & Quick Assets Panel */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="bg-nu-white border border-nu-ink/[0.08] p-5">
+          <h3 className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-3 flex items-center gap-2">
+            <Users size={12} /> 세션 역할
+          </h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">✍️ 서기</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-nu-ink">{(meeting as any).secretary?.nickname || "미지정"}</span>
+                {canEdit && (
+                  <select 
+                    className="text-[10px] border border-nu-ink/10 bg-nu-cream/30 px-1 py-0.5"
+                    onChange={(e) => updateMeetingField("secretary_id", e.target.value || null)}
+                    value={(meeting as any).secretary_id || ""}
+                  >
+                    <option value="">지정</option>
+                    {members.map(m => <option key={m.id} value={m.id}>{m.nickname}</option>)}
+                  </select>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">🎤 발표자</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-nu-ink">{(meeting as any).speaker?.nickname || "미지정"}</span>
+                {canEdit && (
+                  <select 
+                    className="text-[10px] border border-nu-ink/10 bg-nu-cream/30 px-1 py-0.5"
+                    onChange={(e) => updateMeetingField("speaker_id", e.target.value || null)}
+                    value={(meeting as any).speaker_id || ""}
+                  >
+                    <option value="">지정</option>
+                    {members.map(m => <option key={m.id} value={m.id}>{m.nickname}</option>)}
+                  </select>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-nu-white border border-nu-ink/[0.08] p-5">
+          <h3 className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-3 flex items-center gap-2">
+             <Link2 size={12} /> 세션 아카이브
+          </h3>
+          {canEdit || (meeting as any).log_url ? (
+            <div className="space-y-3">
+              {(meeting as any).log_url ? (
+                <a href={(meeting as any).log_url} target="_blank" rel="noreferrer"
+                  className="flex items-center gap-2 p-2 bg-nu-pink/5 border border-nu-pink/20 text-nu-pink no-underline hover:bg-nu-pink/10 transition-all group">
+                  <ExternalLink size={14} />
+                  <span className="text-xs font-bold truncate flex-1">외부 세션 로그 (Notion/Docs)</span>
+                  <ChevronRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
+                </a>
+              ) : (
+                <p className="text-xs text-nu-muted italic">외부 로그 링크가 등록되지 않았습니다.</p>
+              )}
+              {canEdit && (
+                <div className="flex gap-2">
+                  <input 
+                    type="text"
+                    placeholder="https://notion.so/..."
+                    className="flex-1 text-[10px] bg-transparent border border-nu-ink/10 px-2 py-1"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        updateMeetingField("log_url", (e.target as HTMLInputElement).value);
+                      }
+                    }}
+                    defaultValue={(meeting as any).log_url || ""}
+                  />
+                  <Button variant="outline" className="h-6 px-2 text-[8px]" onClick={() => toast.info("링크를 입력하고 엔터를 눌러주세요")}>등록</Button>
+                </div>
+              )}
+            </div>
+          ) : (
+             <p className="text-xs text-nu-muted italic py-4">등록된 링크가 없습니다.</p>
+          )}
+        </div>
       </div>
 
       {/* Meeting info */}

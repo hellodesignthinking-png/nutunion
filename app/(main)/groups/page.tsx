@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { GroupsList } from "@/components/groups/groups-list";
+import { PageHero } from "@/components/shared/page-hero";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -35,23 +36,17 @@ export default async function GroupsPage() {
   }));
 
   return (
-    <div className="max-w-7xl mx-auto px-8 py-12">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="font-head text-3xl font-extrabold text-nu-ink">소모임</h1>
-          <p className="text-nu-gray text-sm mt-1">Scene을 만들어가는 크루들을 탐색하세요</p>
-        </div>
-        {user && (
-          <Link
-            href="/groups/create"
-            className="font-mono-nu text-[11px] font-bold tracking-[0.08em] uppercase px-5 py-3 bg-nu-pink text-nu-paper hover:bg-nu-pink/90 transition-colors no-underline inline-flex items-center gap-2"
-          >
-            <Plus size={14} /> 소모임 만들기
-          </Link>
-        )}
-      </div>
+    <div className="bg-nu-paper min-h-screen pb-20">
+      <PageHero 
+        category="Collaborate"
+        title="Groups"
+        description="Scene을 만들어가는 크루들을 탐색하고 함께 성장하세요. 관심사나 프로젝트 성격에 맞는 팀을 찾아보세요."
+        action={user ? { label: "소모임 만들기", href: "/groups/create", icon: Plus } : undefined}
+      />
 
-      <GroupsList groups={formattedGroups} userId={user?.id} />
+      <div className="max-w-7xl mx-auto px-8 py-16">
+        <GroupsList groups={formattedGroups} userId={user?.id} />
+      </div>
     </div>
   );
 }

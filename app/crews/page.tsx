@@ -14,11 +14,18 @@ export const metadata: Metadata = {
 export default async function CrewsPage() {
   const supabase = await createClient();
 
-  const { data: groups } = await supabase
-    .from("groups")
-    .select("*, host:profiles!groups_host_id_fkey(id, nickname, avatar_url), group_members(count)")
-    .eq("is_active", true)
-    .order("created_at", { ascending: false });
+  // ── 데이터 조회를 병렬로 실행하여 성능 최적화 ─────────────────────────
+  const [
+    { data: groups },
+    { data: { user } },
+  ] = await Promise.all([
+    supabase
+      .from("groups")
+      .select("*, host:profiles!groups_host_id_fkey(id, nickname, avatar_url), group_members(count)")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false }),
+    supabase.auth.getUser(),
+  ]);
 
   const formatted = (groups || []).map((g: any) => ({
     id: g.id,
@@ -34,17 +41,27 @@ export default async function CrewsPage() {
     created_at: g.created_at,
   }));
 
-  // Check if user is logged in
-  const { data: { user } } = await supabase.auth.getUser();
-
-  // Check if user can create crew
+  // 유저 정보에 기반한 추가 조회
+  let memberships: any[] = [];
   let canCreateCrew = false;
+
   if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("can_create_crew, role")
-      .eq("id", user.id)
-      .single();
+    const [
+      { data: m },
+      { data: profile },
+    ] = await Promise.all([
+      supabase
+        .from("group_members")
+        .select("group_id, status, role, rejection_reason")
+        .eq("user_id", user.id),
+      supabase
+        .from("profiles")
+        .select("can_create_crew, role")
+        .eq("id", user.id)
+        .single(),
+    ]);
+
+    memberships = m || [];
     canCreateCrew = profile?.can_create_crew === true || profile?.role === "admin";
   }
 
@@ -115,9 +132,10 @@ export default async function CrewsPage() {
             </Link>
           </div>
         ) : (
-          <CrewsGrid groups={formatted} userId={user?.id} />
+          <CrewsGrid groups={formatted} userId={user?.id} memberships={memberships} />
         )}
       </div>
+
       <Footer />
     </div>
   );

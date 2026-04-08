@@ -14,7 +14,7 @@ import {
   Camera, Loader2, Users, Briefcase, Archive,
   BookOpen, ExternalLink, Edit3, Check, X,
   Star, Crown, Award, Shield, Link2, ChevronRight,
-  Layers, FileText, MessageSquare, Calendar,
+  Layers, FileText, MessageSquare, Calendar, Zap, DollarSign, Plus,
 } from "lucide-react";
 import Link from "next/link";
 import type { Profile } from "@/lib/types";
@@ -44,11 +44,12 @@ function GradeBadge({ profile }: { profile: any }) {
   if (profile.role === "admin") {
     return (
       <span className="inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest bg-nu-pink text-white px-2 py-0.5 border border-nu-pink">
-        <Shield size={9} /> 최고관리자
+        <Shield size={9} /> MASTER
       </span>
     );
   }
-  const g = GRADE_MAP[profile.grade || "bronze"] || GRADE_MAP.bronze;
+  const tier = profile.tier || "bronze";
+  const g = GRADE_MAP[tier] || GRADE_MAP.bronze;
   return (
     <span className={`inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 border ${g.color}`}>
       <g.icon size={9} /> {g.label}
@@ -93,15 +94,18 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<any | null>(null);
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ name: "", nickname: "", specialty: "", bio: "", phone: "" });
-  const [links, setLinks] = useState({ notion: "", github: "", drive: "", website: "" });
+  const [form, setForm] = useState({ name: "", nickname: "", specialty: "", bio: "", phone: "", skill_tags: [] as string[] });
+  const [links, setLinks] = useState({ notion: "", github: "", drive: "", website: "", instagram: "", facebook: "" });
+  const [newSkill, setNewSkill] = useState("");
   const [editLinks, setEditLinks] = useState(false);
   const [savingLinks, setSavingLinks] = useState(false);
   const [crews, setCrews]   = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
+  const [portfolios, setPortfolios] = useState<any[]>([]);
+  const [pointLogs, setPointLogs] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [tab, setTab] = useState<"archive"|"crews"|"projects">("archive");
+  const [tab, setTab] = useState<"archive"|"crews"|"projects"|"portfolios"|"history">("archive");
 
   useEffect(() => {
     async function load() {
@@ -112,37 +116,44 @@ export default function ProfilePage() {
       const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
       if (data) {
         setProfile(data);
-        setForm({ name: data.name||"", nickname: data.nickname||"", specialty: data.specialty||"", bio: data.bio||"", phone: data.phone||"" });
-        setLinks({ notion: data.link_notion||"", github: data.link_github||"", drive: data.link_drive||"", website: data.link_website||"" });
+        setForm({ 
+          name: data.name||"", 
+          nickname: data.nickname||"", 
+          specialty: data.specialty||"", 
+          bio: data.bio||"", 
+          phone: data.phone||"",
+          skill_tags: data.skill_tags || []
+        });
+        setLinks({ 
+          notion: data.link_notion||"", 
+          github: data.link_github||"", 
+          drive: data.link_drive||"", 
+          website: data.link_website||"",
+          instagram: data.link_instagram||"",
+          facebook: data.link_facebook||""
+        });
       }
 
-      const { data: memberData } = await supabase
-        .from("group_members")
-        .select("role, status, groups(id, name, category, description)")
-        .eq("user_id", user.id)
-        .eq("status", "active");
+      const [
+        { data: memberData },
+        { data: projData },
+        { data: portData },
+        { data: pointData },
+        { data: posts },
+        { data: resources }
+      ] = await Promise.all([
+        supabase.from("group_members").select("role, status, groups(id, name, category, description, image_url)").eq("user_id", user.id).eq("status", "active"),
+        supabase.from("project_members").select("role, projects(id, title, status, category, image_url)").eq("user_id", user.id),
+        supabase.from("project_portfolios").select("*, project:projects(title, category, image_url)").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("point_logs").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("crew_posts").select("id, content, type, created_at, group:groups!crew_posts_group_id_fkey(name, id)").eq("author_id", user.id).order("created_at", { ascending: false }).limit(8),
+        supabase.from("crew_resources").select("id, title, url, created_at, group:groups!crew_resources_group_id_fkey(name, id)").eq("author_id", user.id).order("created_at", { ascending: false }).limit(5)
+      ]);
+
       setCrews(memberData || []);
-
-      const { data: projData } = await supabase
-        .from("project_members")
-        .select("role, projects(id, title, status, category)")
-        .eq("user_id", user.id);
       setProjects(projData || []);
-
-      // 최근 활동: crew_posts, crew_resources 등 합치기
-      const { data: posts } = await supabase
-        .from("crew_posts")
-        .select("id, content, type, created_at, group:groups!crew_posts_group_id_fkey(name, id)")
-        .eq("author_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(8);
-
-      const { data: resources } = await supabase
-        .from("crew_resources")
-        .select("id, title, url, created_at, group:groups!crew_resources_group_id_fkey(name, id)")
-        .eq("author_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(5);
+      setPortfolios(portData || []);
+      setPointLogs(pointData || []);
 
       const combined = [
         ...(posts||[]).map((p: any) => ({ ...p, _type: "post" })),
@@ -158,9 +169,12 @@ export default function ProfilePage() {
     setLoading(true);
     const supabase = createClient();
     const { error } = await supabase.from("profiles").update({
-      name: form.name, nickname: form.nickname,
+      name: form.name, 
+      nickname: form.nickname,
       specialty: form.specialty || null,
-      bio: form.bio || null, phone: form.phone || null,
+      bio: form.bio || null, 
+      phone: form.phone || null,
+      skill_tags: form.skill_tags
     }).eq("id", profile.id);
     if (error) toast.error(error.code === "23505" ? "이미 사용 중인 닉네임입니다" : error.message);
     else { setProfile({ ...profile, ...form }); setEditing(false); toast.success("프로필이 업데이트되었습니다"); }
@@ -172,10 +186,12 @@ export default function ProfilePage() {
     setSavingLinks(true);
     const supabase = createClient();
     const { error } = await supabase.from("profiles").update({
-      link_notion:  links.notion  || null,
-      link_github:  links.github  || null,
-      link_drive:   links.drive   || null,
-      link_website: links.website || null,
+      link_notion:    links.notion    || null,
+      link_github:    links.github    || null,
+      link_drive:     links.drive     || null,
+      link_website:   links.website   || null,
+      link_instagram: links.instagram || null,
+      link_facebook:  links.facebook  || null,
     }).eq("id", profile.id);
 
     if (error) {
@@ -187,7 +203,15 @@ export default function ProfilePage() {
         toast.error(error.message);
       }
     } else {
-      setProfile({ ...profile, link_notion: links.notion, link_github: links.github, link_drive: links.drive, link_website: links.website });
+      setProfile({ 
+        ...profile, 
+        link_notion: links.notion, 
+        link_github: links.github, 
+        link_drive: links.drive, 
+        link_website: links.website,
+        link_instagram: links.instagram,
+        link_facebook: links.facebook
+      });
       setEditLinks(false);
       toast.success("외부 링크가 저장되었습니다");
     }
@@ -265,17 +289,29 @@ export default function ProfilePage() {
           {profile.bio && <p className="text-sm text-nu-gray max-w-xl">{profile.bio}</p>}
 
           {/* 활동 요약 pills */}
-          <div className="flex items-center gap-4 mt-4">
-            <span className="flex items-center gap-1 font-mono-nu text-[11px] text-nu-muted">
-              <Layers size={12} /> {crews.length} 소모임
+          <div className="flex flex-wrap items-center gap-3 mt-4">
+            <span className="flex items-center gap-1.5 font-mono-nu text-[10px] bg-nu-cream/50 px-3 py-1.5 border border-nu-ink/5">
+              <Layers size={12} className="text-nu-pink" /> <b>{crews.length}</b> 소모임
             </span>
-            <span className="flex items-center gap-1 font-mono-nu text-[11px] text-nu-muted">
-              <Briefcase size={12} /> {projects.length} 프로젝트
+            <span className="flex items-center gap-1.5 font-mono-nu text-[10px] bg-nu-cream/50 px-3 py-1.5 border border-nu-ink/5">
+              <Briefcase size={12} className="text-nu-blue" /> <b>{projects.length}</b> 프로젝트
             </span>
-            <span className="flex items-center gap-1 font-mono-nu text-[11px] text-nu-muted">
-              <Archive size={12} /> {recentActivity.length} 활동
+            <span className="flex items-center gap-1.5 font-mono-nu text-[10px] bg-nu-ink text-nu-paper px-3 py-1.5">
+              <Award size={12} className="text-nu-pink" /> <b>{profile.points || 0}</b> NUT Pts
+            </span>
+            <span className="flex items-center gap-1.5 font-mono-nu text-[10px] bg-nu-pink text-white px-3 py-1.5">
+              <Zap size={12} /> <b>{profile.activity_score || 0}%</b> Activity
             </span>
           </div>
+
+          {/* Skill tags list */}
+          {profile.skill_tags && profile.skill_tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {profile.skill_tags.map((tag: string) => (
+                <span key={tag} className="text-[10px] font-bold text-nu-muted border border-nu-ink/10 px-2 py-0.5 bg-nu-white">#{tag}</span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -317,6 +353,33 @@ export default function ProfilePage() {
                   <Label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">자기소개</Label>
                   <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} rows={3} className="mt-1 border-nu-ink/15 bg-transparent resize-none text-sm" />
                 </div>
+                <div>
+                  <Label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">스킬 태그</Label>
+                  <div className="flex flex-wrap gap-1 mb-2 mt-1">
+                    {form.skill_tags.map(tag => (
+                      <span key={tag} className="flex items-center gap-1 text-[10px] bg-nu-ink text-nu-paper px-2 py-0.5">
+                        {tag} <X size={10} className="cursor-pointer" onClick={() => setForm({...form, skill_tags: form.skill_tags.filter(t => t !== tag)})} />
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input 
+                      value={newSkill} 
+                      onChange={e => setNewSkill(e.target.value)} 
+                      placeholder="스킬 추가 (엔터)" 
+                      className="h-8 text-[11px] border-nu-ink/10 bg-transparent"
+                      onKeyDown={e => {
+                        if (e.key === "Enter" && newSkill.trim()) {
+                          e.preventDefault();
+                          if (!form.skill_tags.includes(newSkill.trim())) {
+                            setForm({...form, skill_tags: [...form.skill_tags, newSkill.trim()]});
+                          }
+                          setNewSkill("");
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
                 <div className="flex gap-2 pt-1">
                   <button onClick={handleSave} disabled={loading}
                     className="flex-1 font-mono-nu text-[10px] uppercase tracking-widest py-2 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors disabled:opacity-50 flex items-center justify-center gap-1">
@@ -357,6 +420,8 @@ export default function ProfilePage() {
                 {[
                   { key: "notion", label: "Notion", placeholder: "https://notion.so/..." },
                   { key: "github", label: "GitHub", placeholder: "https://github.com/..." },
+                  { key: "instagram", label: "Instagram", placeholder: "https://instagram.com/..." },
+                  { key: "facebook", label: "Facebook", placeholder: "https://facebook.com/..." },
                   { key: "drive",  label: "Google Drive", placeholder: "https://drive.google.com/..." },
                   { key: "website", label: "Website", placeholder: "https://..." },
                 ].map(({ key, label, placeholder }) => (
@@ -375,10 +440,12 @@ export default function ProfilePage() {
             ) : (
               <div className="space-y-2">
                 {[
-                  { key: "link_notion",  label: "Notion",  icon: BookOpen },
-                  { key: "link_github",  label: "GitHub",  icon: Link2 },
-                  { key: "link_drive",   label: "Drive",   icon: FileText },
-                  { key: "link_website", label: "Website", icon: ExternalLink },
+                  { key: "link_notion",    label: "Notion",    icon: BookOpen },
+                  { key: "link_github",    label: "GitHub",    icon: Link2 },
+                  { key: "link_instagram", label: "Instagram", icon: Camera },
+                  { key: "link_facebook",  label: "Facebook",  icon: MessageSquare },
+                  { key: "link_drive",     label: "Drive",     icon: FileText },
+                  { key: "link_website",   label: "Website",   icon: ExternalLink },
                 ].map(({ key, label, icon: Icon }) => (
                   profile[key] ? (
                     <a key={key} href={profile[key]} target="_blank" rel="noreferrer"
@@ -408,6 +475,8 @@ export default function ProfilePage() {
               { key: "archive",  label: "활동 아카이브", icon: Archive },
               { key: "crews",    label: `소모임 (${crews.length})`,   icon: Users },
               { key: "projects", label: `프로젝트 (${projects.length})`, icon: Briefcase },
+              { key: "portfolios", label: `포트폴리오 (${portfolios.length})`, icon: Layers },
+              { key: "history",  label: "포인트 내역", icon: DollarSign },
             ].map(t => (
               <button key={t.key} onClick={() => setTab(t.key as any)}
                 className={`flex items-center gap-1.5 px-4 py-3 font-mono-nu text-[10px] uppercase tracking-widest border-b-2 transition-colors ${tab === t.key ? "border-nu-pink text-nu-pink" : "border-transparent text-nu-muted hover:text-nu-ink"}`}>
@@ -536,6 +605,68 @@ export default function ProfilePage() {
                   </Link>
                 );
               })}
+            </div>
+          )}
+          {/* ── 포트폴리오 탭 ─────────────────────────────────── */}
+          {tab === "portfolios" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+               {portfolios.length === 0 ? (
+                 <div className="col-span-2 bg-nu-white border border-nu-ink/[0.08] p-10 text-center">
+                    <Layers size={32} className="text-nu-muted/30 mx-auto mb-3" />
+                    <p className="text-nu-gray text-sm">등록된 포트폴리오가 없습니다</p>
+                    <p className="text-xs text-nu-muted mt-1">프로젝트를 완료하고 성과를 증명해보세요</p>
+                 </div>
+               ) : portfolios.map(p => (
+                 <div key={p.id} className="bg-nu-white border border-nu-ink/[0.08] overflow-hidden group">
+                    <div className="h-32 bg-nu-cream relative overflow-hidden">
+                       {p.project?.image_url ? (
+                         <img src={p.project.image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                       ) : (
+                         <div className="w-full h-full flex items-center justify-center font-head text-4xl font-black text-nu-ink/5 uppercase">{p.project?.category}</div>
+                       )}
+                       <div className="absolute top-2 right-2 flex gap-1">
+                          <span className="bg-nu-ink text-white text-[8px] px-1.5 py-0.5 font-bold uppercase tracking-widest">{p.project?.category}</span>
+                       </div>
+                    </div>
+                    <div className="p-4">
+                       <h4 className="font-head text-sm font-bold text-nu-ink mb-1">{p.title}</h4>
+                       <p className="text-[10px] text-nu-muted mb-3 line-clamp-2">{p.description}</p>
+                       <div className="flex items-center justify-between mt-auto">
+                          <span className="font-mono-nu text-[9px] text-nu-muted flex items-center gap-1"><Calendar size={10} /> {formatDate(p.created_at)}</span>
+                          {p.url && (
+                             <a href={p.url} target="_blank" rel="noreferrer" className="text-nu-blue flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest hover:underline whitespace-nowrap">VIEW WORK <ExternalLink size={10} /></a>
+                          )}
+                       </div>
+                    </div>
+                 </div>
+               ))}
+            </div>
+          )}
+          {/* ── 포인트 내역 탭 ─────────────────────────────────── */}
+          {tab === "history" && (
+            <div className="bg-nu-white border border-nu-ink/[0.08] overflow-hidden">
+               <div className="flex flex-col divide-y divide-nu-ink/5">
+                  {pointLogs.length === 0 ? (
+                    <div className="p-12 text-center text-nu-muted text-sm italic">
+                      아직 포인트 활동 내역이 없습니다.
+                    </div>
+                  ) : pointLogs.map(log => (
+                    <div key={log.id} className="flex items-center justify-between p-5 hover:bg-nu-cream/5 transition-colors">
+                       <div className="flex items-center gap-4">
+                          <div className={`w-10 h-10 flex items-center justify-center ${log.amount > 0 ? "bg-green-50 text-green-600" : "bg-red-50 text-nu-red"}`}>
+                             {log.amount > 0 ? <Plus size={18} /> : <X size={18} />}
+                          </div>
+                          <div>
+                             <p className="text-sm font-bold text-nu-ink">{log.reason}</p>
+                             <p className="text-[10px] text-nu-muted font-mono-nu mt-1">{formatDate(log.created_at)} · {log.type?.toUpperCase()}</p>
+                          </div>
+                       </div>
+                       <div className={`font-mono-nu text-base font-extrabold ${log.amount > 0 ? "text-green-600" : "text-nu-red"}`}>
+                          {log.amount > 0 ? "+" : ""}{log.amount} <span className="text-[10px] text-nu-muted font-normal ml-0.5">pts</span>
+                       </div>
+                    </div>
+                  ))}
+               </div>
             </div>
           )}
         </div>

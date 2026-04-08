@@ -12,6 +12,7 @@ import {
   UserPlus,
   Users,
   AlertTriangle,
+  Layers,
 } from "lucide-react";
 import type { Specialty, ProjectStatus } from "@/lib/types";
 
@@ -73,6 +74,7 @@ export default function ProjectSettingsPage() {
   const [notionUrl, setNotionUrl] = useState("");
   const [totalBudget, setTotalBudget] = useState("");
   const [budgetCurrency, setBudgetCurrency] = useState("KRW");
+  const [dashUrl, setDashUrl]           = useState("");
 
   const [members, setMembers] = useState<MemberItem[]>([]);
   const [crews, setCrews] = useState<{ id: string; name: string; category: string }[]>([]);
@@ -143,6 +145,7 @@ export default function ProjectSettingsPage() {
     setNotionUrl(project.tool_notion || "");
     setTotalBudget(project.total_budget ? String(project.total_budget) : "");
     setBudgetCurrency(project.budget_currency || "KRW");
+    setDashUrl(project.milestone_dashboard_url || "");
 
     // Load members
     const { data: membersData } = await supabase
@@ -217,6 +220,7 @@ export default function ProjectSettingsPage() {
           tool_kakao: kakaoUrl.trim() || null,
           total_budget: totalBudget ? parseInt(totalBudget) : null,
           budget_currency: budgetCurrency || "KRW",
+          milestone_dashboard_url: dashUrl.trim() || null,
         })
         .eq("id", projectId);
 
@@ -343,6 +347,41 @@ export default function ProjectSettingsPage() {
     setMembers((prev) => [...prev, newMember]);
     setSelectedCrewId("");
     toast.success("크루가 추가되었습니다");
+  }
+
+  async function handleSnapshot() {
+    if (!confirm("현재 프로젝트 상태를 스냅샷으로 박제하시겠습니까? 외부 링크가 사라져도 넛유니온 내에서 영구히 조회 가능해집니다.")) return;
+    setSaving(true);
+    try {
+      const supabase = createClient();
+      const snapshot = `
+# Project Snapshot: ${title}
+- Status: ${status}
+- Category: ${category}
+- Duration: ${startDate} ~ ${endDate}
+
+## Description
+${description}
+
+## Team Members
+${members.map(m => `- ${m.profile?.nickname || m.crew?.name} (${m.role})`).join('\n')}
+
+## Tool Hub Links
+- Slack: ${slackUrl}
+- Notion: ${notionUrl}
+- Drive: ${driveUrl}
+
+Generated at: ${new Date().toLocaleString()}
+      `;
+
+      const { error } = await supabase.from("projects").update({ snapshot_content: snapshot }).eq("id", projectId);
+      if (error) throw error;
+      toast.success("프로젝트 스냅샷이 서버에 보관되었습니다");
+    } catch (err: any) {
+      toast.error("스냅샷 생성 실패: " + err.message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleArchive() {
@@ -586,7 +625,15 @@ export default function ProjectSettingsPage() {
               </select>
             </div>
           </div>
-          <p className="font-mono-nu text-[10px] text-nu-muted mt-2">설정하면 프로젝트 상세 페이지의 [예산 & 보상] 패널에 공개됩니다</p>
+          <div className="flex flex-col gap-4 mt-6">
+            <div>
+              <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink block mb-1.5 flex items-center gap-2">
+                <Layers size={13} /> 실시간 프로젝트 대시보드 URL (외부)
+              </label>
+              <input value={dashUrl} onChange={(e) => setDashUrl(e.target.value)} placeholder="https://databox.com/board/..." className="w-full border border-nu-ink/15 bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-nu-pink" />
+              <p className="font-mono-nu text-[9px] text-nu-muted mt-1">프로젝트 대시보드 탭에 대시보드를 연동하여 팀원들과 공유합니다</p>
+            </div>
+          </div>
         </div>
 
         <button
@@ -738,6 +785,13 @@ export default function ProjectSettingsPage() {
           <AlertTriangle size={18} /> 위험 영역
         </h2>
         <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            onClick={handleSnapshot}
+            disabled={saving}
+            className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-3 border border-nu-ink text-nu-ink hover:bg-nu-ink hover:text-white transition-colors"
+          >
+            스냅샷 박제 (Snapshot)
+          </button>
           <button
             onClick={handleArchive}
             className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-3 border border-nu-amber text-nu-amber hover:bg-nu-amber hover:text-white transition-colors"

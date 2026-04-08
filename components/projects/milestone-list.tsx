@@ -43,6 +43,7 @@ export function MilestoneList({
   const [addingMilestone, setAddingMilestone] = useState(false);
   const [newMsTitle, setNewMsTitle] = useState("");
   const [newMsDueDate, setNewMsDueDate] = useState("");
+  const [newMsReward, setNewMsReward]   = useState(0);
   const [savingMs, setSavingMs] = useState(false);
   const [addingTaskFor, setAddingTaskFor] = useState<string | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -63,6 +64,7 @@ export function MilestoneList({
           project_id: projectId,
           title: newMsTitle.trim(),
           due_date: newMsDueDate || null,
+          reward_percentage: newMsReward,
           status: "pending",
           sort_order: milestones.length,
         })
@@ -74,6 +76,7 @@ export function MilestoneList({
       setMilestones((prev) => [...prev, { ...data, tasks: [] }]);
       setNewMsTitle("");
       setNewMsDueDate("");
+      setNewMsReward(0);
       setAddingMilestone(false);
       toast.success("마일스톤이 추가되었습니다");
     } catch (err: any) {
@@ -170,9 +173,9 @@ export function MilestoneList({
               className="w-full flex items-center gap-3 p-5 text-left hover:bg-nu-cream/20 transition-colors"
             >
               {isExpanded ? (
-                <ChevronDown size={16} className="text-nu-muted shrink-0" />
+                <ChevronDown size={14} className="text-nu-muted shrink-0" />
               ) : (
-                <ChevronRight size={16} className="text-nu-muted shrink-0" />
+                <ChevronRight size={14} className="text-nu-muted shrink-0" />
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -184,6 +187,16 @@ export function MilestoneList({
                   >
                     {statusStyle.label}
                   </span>
+                  {(ms as any).reward_percentage > 0 && (
+                    <span className="font-mono-nu text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 bg-nu-pink/10 text-nu-pink border border-nu-pink/20">
+                      REWARD {(ms as any).reward_percentage}%
+                    </span>
+                  )}
+                  {(ms as any).is_settled && (
+                    <span className="font-mono-nu text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 bg-nu-ink text-white">
+                      SETTLED
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-4 mt-1 text-xs text-nu-muted">
                   <span>
@@ -200,6 +213,27 @@ export function MilestoneList({
                   )}
                 </div>
               </div>
+              
+              {/* Settlement Button */}
+              {canEdit && ms.status === "completed" && !(ms as any).is_settled && (ms as any).reward_percentage > 0 && (
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (!confirm("이 마일스톤의 보상을 정산하시겠습니까? 정산 후에는 수정이 불가능합니다.")) return;
+                    const supabase = createClient();
+                    const { error } = await supabase.from("project_milestones").update({ is_settled: true, settled_at: new Date().toISOString() }).eq("id", ms.id);
+                    if (error) toast.error("정산 실패: " + error.message);
+                    else {
+                      toast.success("마일스톤 정산이 확정되었습니다");
+                      setMilestones(prev => prev.map(m => m.id === ms.id ? { ...m, is_settled: true } as any : m));
+                    }
+                  }}
+                  className="font-mono-nu text-[9px] font-bold uppercase tracking-widest px-3 py-2 bg-nu-pink text-white hover:bg-nu-pink/90 transition-colors shrink-0"
+                >
+                  SETTLE NOW
+                </button>
+              )}
+
               {tasks.length > 0 && (
                 <div className="w-20 shrink-0">
                   <div className="h-1.5 bg-nu-cream rounded-full overflow-hidden">
@@ -357,12 +391,27 @@ export function MilestoneList({
                 }}
                 autoFocus
               />
-              <input
-                type="date"
-                value={newMsDueDate}
-                onChange={(e) => setNewMsDueDate(e.target.value)}
-                className="w-full px-4 py-3 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink"
-              />
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-1 block">목표 날짜</label>
+                  <input
+                    type="date"
+                    value={newMsDueDate}
+                    onChange={(e) => setNewMsDueDate(e.target.value)}
+                    className="w-full px-4 py-3 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink"
+                  />
+                </div>
+                <div className="w-32">
+                  <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-1 block">보상 비율 (%)</label>
+                  <input
+                    type="number"
+                    min="0" max="100"
+                    value={newMsReward}
+                    onChange={(e) => setNewMsReward(parseInt(e.target.value) || 0)}
+                    className="w-full px-4 py-3 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink"
+                  />
+                </div>
+              </div>
               <div className="flex gap-2">
                 <button
                   onClick={addMilestone}

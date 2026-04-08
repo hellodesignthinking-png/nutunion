@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   Target, ChevronRight, CheckCircle2, Circle, Loader2,
@@ -23,6 +24,7 @@ interface GroupRoadmapProps {
 }
 
 export function GroupRoadmap({ groupId, groupTopic: initialTopic, canEdit }: GroupRoadmapProps) {
+  const router = useRouter();
   const [topic, setTopic] = useState(initialTopic || "");
   const [editingTopic, setEditingTopic] = useState(false);
   const [phases, setPhases] = useState<RoadmapPhase[]>([]);
@@ -35,11 +37,15 @@ export function GroupRoadmap({ groupId, groupTopic: initialTopic, canEdit }: Gro
   useEffect(() => {
     async function load() {
       const supabase = createClient();
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("group_roadmap_phases")
         .select("*")
         .eq("group_id", groupId)
         .order("order");
+      if (error) {
+        console.error("Roadmap fetch error:", error);
+        toast.error("로드맵을 불러오는데 실패했습니다");
+      }
       setPhases(data || []);
       setLoading(false);
     }
@@ -50,6 +56,7 @@ export function GroupRoadmap({ groupId, groupTopic: initialTopic, canEdit }: Gro
     setSavingTopic(true);
     const supabase = createClient();
     await supabase.from("groups").update({ topic: topic.trim() }).eq("id", groupId);
+    router.refresh();
     setEditingTopic(false);
     toast.success("주제가 저장되었습니다");
     setSavingTopic(false);

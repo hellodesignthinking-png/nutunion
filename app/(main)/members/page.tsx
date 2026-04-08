@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Search, Users, Filter, Star, Crown, Award, Shield } from "lucide-react";
+import { PageHero } from "@/components/shared/page-hero";
 
 interface MemberItem {
   id: string;
@@ -75,13 +76,15 @@ export default function MembersPage() {
   }), [members, search, specialty, gradeFilter]);
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-10">
-      <div className="mb-6">
-        <h1 className="font-head text-3xl font-extrabold text-nu-ink">멤버 디렉토리</h1>
-        <p className="text-nu-gray text-sm mt-1">nutunion 커뮤니티 멤버들을 찾아보세요</p>
-      </div>
+    <div className="bg-nu-paper min-h-screen pb-20">
+      <PageHero 
+        category="Connect"
+        title="Members"
+        description="nutunion 커뮤니티의 동료들을 탐색하고 성장을 위한 연결을 시작하세요. 기획자, 개발자, 디렉터 등 다양한 Scene의 멤버들이 활동 중입니다."
+      />
 
-      {/* Search & Filter */}
+      <div className="max-w-7xl mx-auto px-8 py-12">
+        {/* Search & Filter */}
       <div className="flex flex-col sm:flex-row gap-3 mb-5">
         <div className="relative flex-1">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-nu-muted" />
@@ -175,6 +178,7 @@ export default function MembersPage() {
           <p className="text-nu-gray text-sm">검색 결과가 없습니다</p>
         </div>
       )}
+      </div>
     </div>
   );
 }

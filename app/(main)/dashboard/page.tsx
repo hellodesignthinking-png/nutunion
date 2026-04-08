@@ -91,60 +91,66 @@ export default async function DashboardPage() {
   const projectCount = projectMemberships?.length || 0;
   const eventCount  = events?.length || 0;
 
+  // ── KPI stats ────────────────────────────────────────────────
+  const nutPoints = profile?.points || 0;
+  const activityScore = profile?.activity_score || 0;
+  const skills = profile?.skill_tags || [];
+
   return (
     <div className="max-w-6xl mx-auto px-6 py-10">
 
       {/* ── Hero greeting ──────────────────────────────────────────── */}
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className={`inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 border ${gradeInfo.color}`}>
-              <GradeIcon size={9} /> {gradeInfo.label}
+      <div className="mb-8 flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-3">
+            <span className={`inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-2 py-1 border ${gradeInfo.color}`}>
+              <GradeIcon size={10} /> {gradeInfo.label}
             </span>
-            {notifCount ? (
-              <Link href="/notifications" className="inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 bg-nu-pink text-white no-underline">
-                <Bell size={9} /> 알림 {notifCount}
-              </Link>
-            ) : null}
-            {(pendingCount || 0) > 0 && (
-              <span className="inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 bg-nu-amber text-white">
-                <Users size={9} /> 가입 승인 대기 {pendingCount}
-              </span>
-            )}
+            <span className="inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-2 py-1 bg-nu-ink text-white">
+              <Zap size={10} className="text-nu-yellow" /> {nutPoints} NUT
+            </span>
           </div>
-          <h1 className="font-head text-3xl font-extrabold text-nu-ink">
+          <h1 className="font-head text-4xl font-extrabold text-nu-ink tracking-tight">
             안녕하세요, {nickname}님 👋
           </h1>
-          <p className="text-nu-gray text-sm mt-1">오늘도 너트유니온과 함께 성장하세요</p>
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {skills.map((s: string) => (
+              <span key={s} className="font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 bg-nu-cream border border-nu-ink/10 text-nu-muted">
+                #{s}
+              </span>
+            ))}
+            {skills.length === 0 && (
+              <p className="text-nu-gray text-[11px]">프로필에서 관심 스킬을 추가해보세요</p>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 self-end md:self-start">
           <Link href="/groups/create"
-            className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 border border-nu-ink/20 hover:bg-nu-ink hover:text-nu-paper transition-colors no-underline flex items-center gap-1.5">
-            <Plus size={12} /> 소모임
+            className="font-mono-nu text-[10px] uppercase tracking-widest px-5 py-3 border-[2px] border-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-all no-underline flex items-center gap-2">
+            <Plus size={14} /> 소모임
           </Link>
           <Link href="/projects/create"
-            className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 bg-nu-pink text-nu-paper hover:bg-nu-pink/90 transition-colors no-underline flex items-center gap-1.5">
-            <Plus size={12} /> 프로젝트
+            className="font-mono-nu text-[10px] uppercase tracking-widest px-5 py-3 bg-nu-pink text-nu-paper hover:bg-nu-pink/90 transition-all no-underline flex items-center gap-2">
+            <Plus size={14} /> 프로젝트
           </Link>
         </div>
       </div>
 
-      {/* ── KPI stats ──────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
         {[
           { label: "내 소모임",   val: groupCount,   href: "/groups",       icon: Layers,    accent: "text-nu-blue",   bg: "bg-nu-blue/8" },
-          { label: "내 프로젝트", val: projectCount,  href: "/projects",     icon: Briefcase, accent: "text-green-600", bg: "bg-green-50" },
+          { label: "활동 지수",   val: activityScore, href: "/profile",     icon: TrendingUp, accent: "text-green-600", bg: "bg-green-50" },
           { label: "다가오는 일정", val: eventCount, href: "/dashboard",     icon: Calendar,  accent: "text-nu-pink",   bg: "bg-nu-pink/8" },
-          { label: "읽지 않은 알림", val: notifCount||0, href: "/notifications", icon: Bell, accent: "text-nu-amber",  bg: "bg-nu-amber/10" },
+          { label: "넛 포인트",   val: nutPoints,    href: "/profile",     icon: Zap,       accent: "text-nu-amber",  bg: "bg-nu-amber/10" },
         ].map((s) => (
           <Link key={s.label} href={s.href}
-            className="bg-nu-white border border-nu-ink/[0.08] p-5 flex items-center gap-3 no-underline hover:border-nu-pink/30 hover:shadow-sm transition-all group">
-            <div className={`w-10 h-10 flex items-center justify-center shrink-0 ${s.bg}`}>
-              <s.icon size={18} className={s.accent} />
+            className="bg-nu-white border-[2px] border-nu-ink/[0.06] p-6 flex flex-col gap-3 no-underline hover:border-nu-pink/30 hover:shadow-md transition-all group">
+            <div className={`w-10 h-10 flex items-center justify-center shrink-0 ${s.bg} border border-nu-ink/5`}>
+              <s.icon size={20} className={s.accent} />
             </div>
             <div>
-              <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">{s.label}</p>
-              <p className="font-head text-2xl font-extrabold text-nu-ink group-hover:text-nu-pink transition-colors">{s.val}</p>
+              <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-1">{s.label}</p>
+              <p className="font-head text-3xl font-extrabold text-nu-ink group-hover:text-nu-pink transition-colors">{s.val}</p>
             </div>
           </Link>
         ))}

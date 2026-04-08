@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Trash2, UserPlus, Loader2 } from "lucide-react";
+import { Trash2, UserPlus, Loader2, Upload, X } from "lucide-react";
 
 interface GroupData {
   id: string;
@@ -26,6 +26,7 @@ interface GroupData {
   host_id: string;
   kakao_chat_url: string | null;
   google_drive_url: string | null;
+  image_url: string | null;
 }
 
 interface MemberData {
@@ -44,6 +45,9 @@ export default function GroupSettingsPage() {
   const [group, setGroup] = useState<GroupData | null>(null);
   const [members, setMembers] = useState<MemberData[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -65,6 +69,7 @@ export default function GroupSettingsPage() {
       }
 
       setGroup(g);
+      setImagePreview(g.image_url);
 
       const { data: m } = await supabase
         .from("group_members")
@@ -83,12 +88,37 @@ export default function GroupSettingsPage() {
     load();
   }, [groupId, router]);
 
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+  }
+
   async function handleSave(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!group) return;
     setLoading(true);
     const fd = new FormData(e.currentTarget);
     const supabase = createClient();
+
+    let finalImageUrl = group.image_url;
+    if (imageFile) {
+      const ext = imageFile.name.split(".").pop();
+      const path = `crews/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("media")
+        .upload(path, imageFile);
+      if (uploadError) {
+        toast.error("이미지 업로드 실패: " + uploadError.message);
+        setLoading(false);
+        return;
+      }
+      const { data: { publicUrl } } = supabase.storage.from("media").getPublicUrl(path);
+      finalImageUrl = publicUrl;
+    }
 
     const { error } = await supabase
       .from("groups")
@@ -99,11 +129,15 @@ export default function GroupSettingsPage() {
         max_members: Math.max(2, Math.min(200, parseInt(fd.get("maxMembers") as string) || 20)),
         kakao_chat_url: (fd.get("kakao_chat_url") as string) || null,
         google_drive_url: (fd.get("google_drive_url") as string) || null,
+        image_url: finalImageUrl,
       })
       .eq("id", groupId);
 
     if (error) toast.error(error.message);
-    else toast.success("소모임 정보가 업데이트되었습니다");
+    else {
+      toast.success("소모임 정보가 업데이트되었습니다");
+      setGroup({ ...group, image_url: finalImageUrl });
+    }
     setLoading(false);
   }
 
@@ -177,21 +211,37 @@ export default function GroupSettingsPage() {
   }
 
   async function handleRejectMember(targetUserId: string, targetNickname: string) {
-    if (!confirm(`${targetNickname}님의 가입 신청을 거절하시겠습니까?`)) return;
+    const reason = window.prompt(`${targetNickname}님의 가입 신청을 거절하시겠습니까? 거절 사유를 입력해주세요 (공백 시 기본 메시지 발송):`, "소모임 성격에 맞지 않아 거절되었습니다.");
+    if (reason === null) return; // Cancelled
+
     const supabase = createClient();
-    await supabase.from("group_members").delete().eq("group_id", groupId).eq("user_id", targetUserId);
+    // Update status to rejected instead of deleting, so we can show it or just notify.
+    // For now, let's keep the existing logic of deleting if status check doesn't allow 'rejected',
+    // but try to update if it does.
+    const { error: updateError } = await supabase
+      .from("group_members")
+      .update({ status: "rejected", rejection_reason: reason })
+      .eq("group_id", groupId)
+      .eq("user_id", targetUserId);
+
+    if (updateError) {
+      toast.error("거절 처리에 실패했습니다: " + updateError.message);
+      return;
+    }
+
     setMembers(prev => prev.filter(m => m.user_id !== targetUserId));
 
     await supabase.from("notifications").insert({
       user_id: targetUserId,
       type: "group_rejected",
       title: "소모임 가입 거절",
-      body: `${group?.name} 소모임 가입 신청이 거절되었습니다.`,
-      metadata: { group_id: groupId },
+      body: `${group?.name} 소모임 가입 신청이 거절되었습니다.\n사유: ${reason}`,
+      metadata: { group_id: groupId, reason },
       is_read: false,
     });
     toast.success("거절되었습니다");
   }
+
 
   async function handleDelete() {
     if (!confirm("정말로 이 소모임을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) return;
@@ -230,6 +280,42 @@ export default function GroupSettingsPage() {
       <div className="bg-nu-white border border-nu-ink/[0.08] p-8 mb-8">
         <h2 className="font-head text-lg font-extrabold mb-4">기본 정보</h2>
         <form onSubmit={handleSave} className="flex flex-col gap-5">
+          <div>
+            <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">썸네일 이미지</Label>
+            <div className="mt-2 border border-dashed border-nu-ink/20 p-4 text-center">
+              {imagePreview ? (
+                <div className="relative inline-block">
+                  <img
+                    src={imagePreview}
+                    alt="미리보기"
+                    className="max-h-40 mx-auto object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImageFile(null);
+                      setImagePreview(null);
+                    }}
+                    className="absolute -top-2 -right-2 bg-nu-red text-white rounded-full p-1 shadow-sm hover:bg-red-600 transition-colors"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ) : (
+                <label className="cursor-pointer flex flex-col items-center gap-2 py-4">
+                  <Upload size={20} className="text-nu-muted" />
+                  <span className="text-xs text-nu-gray">이미지 업로드</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </label>
+              )}
+            </div>
+          </div>
+
           <div>
             <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">이름</Label>
             <Input name="name" defaultValue={group.name} required className="mt-1.5 border-nu-ink/15 bg-transparent" />
