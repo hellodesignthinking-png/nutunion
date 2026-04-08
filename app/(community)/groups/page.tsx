@@ -7,7 +7,7 @@ import { GroupSkeleton } from "@/components/shared/skeletons";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "소모임 — nutunion",
+  title: "소모임 (ALPHA 2.2) — nutunion",
   description: "nutunion 소모임을 탐색하고 참여하세요",
 };
 
