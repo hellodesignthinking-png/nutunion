@@ -28,13 +28,6 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
         ],
       },
-      // 공개 페이지 — stale-while-revalidate 30초
-      {
-        source: "/(groups|projects|members)",
-        headers: [
-          { key: "Cache-Control", value: "public, s-maxage=30, stale-while-revalidate=60" },
-        ],
-      },
       // 보안 헤더 (전체)
       {
         source: "/(.*)",

@@ -44,7 +44,7 @@ export default async function GroupsPage() {
     <>
       <PageHero 
         category="Collaborate"
-        title="Groups"
+        title="소모임 탐색"
         description="Scene을 만들어가는 크루들을 탐색하고 함께 성장하세요. 관심사나 프로젝트 성격에 맞는 팀을 찾아보세요."
         action={user ? { label: "소모임 만들기", href: "/groups/create", icon: Plus } : undefined}
       />
