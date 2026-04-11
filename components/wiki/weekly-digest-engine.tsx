@@ -61,7 +61,7 @@ export function WeeklyDigestEngine({
   const [result, setResult] = useState<WeeklyDigestResult | null>(null);
   const [previousDigest, setPreviousDigest] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    digest: true, carryOver: true, decisions: false, wiki: false, agenda: true,
+    digest: true, carryOver: true, decisions: false, wiki: false, agenda: true, growth: true,
   });
   const [saving, setSaving] = useState(false);
   const [daysRange, setDaysRange] = useState(7);

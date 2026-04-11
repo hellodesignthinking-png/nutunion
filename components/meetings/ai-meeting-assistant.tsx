@@ -160,6 +160,8 @@ export function AiMeetingAssistant({
     decisions: true,
     actions: true,
     nextTopics: true,
+    growth: true,
+    learning: true,
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
