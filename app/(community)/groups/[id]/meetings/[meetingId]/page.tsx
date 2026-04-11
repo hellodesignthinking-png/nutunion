@@ -26,6 +26,7 @@ import { AiAgendaManager } from "@/components/meetings/ai-agenda-manager";
 import { AiMeetingAssistant } from "@/components/meetings/ai-meeting-assistant";
 import { WikiSyncPanel } from "@/components/wiki/wiki-sync-panel";
 import { WeeklyDigestEngine } from "@/components/wiki/weekly-digest-engine";
+import { AiErrorBoundary } from "@/components/shared/ai-error-boundary";
 
 function getEmbedUrl(url: string) {
   if (!url) return "";
@@ -647,6 +648,7 @@ export default function MeetingDetailPage() {
 
         {/* ── AI 회의록 */}
         <TabsContent value="ai-notes">
+          <AiErrorBoundary fallbackTitle="AI 회의록 분석 오류">
           <AiMeetingAssistant
             meetingId={meetingId}
             meetingTitle={meeting.title}
@@ -702,6 +704,7 @@ export default function MeetingDetailPage() {
             }}
             onNavigateTab={(tab) => setActiveTab(tab)}
           />
+          </AiErrorBoundary>
         </TabsContent>
 
         {/* ── 자료 공유 */}
@@ -903,6 +906,7 @@ export default function MeetingDetailPage() {
 
         {/* ── 위키 동기화 */}
         <TabsContent value="wiki-sync">
+          <AiErrorBoundary fallbackTitle="위키 동기화 오류">
           <WikiSyncPanel 
             meetingId={meetingId} 
             groupId={groupId} 
@@ -914,16 +918,19 @@ export default function MeetingDetailPage() {
               ...meetingNotes,
             ].filter(Boolean).join("\n\n")} 
           />
+          </AiErrorBoundary>
         </TabsContent>
 
         {/* ── 주간 다이제스트 */}
         <TabsContent value="digest">
+          <AiErrorBoundary fallbackTitle="주간 다이제스트 오류">
           <WeeklyDigestEngine
             groupId={groupId}
             meetingId={meetingId}
             autoTrigger={meeting.status === "completed"}
             onDigestSaved={(digest) => setPreviousDigest(digest)}
           />
+          </AiErrorBoundary>
         </TabsContent>
 
         {/* ── 출석 */}

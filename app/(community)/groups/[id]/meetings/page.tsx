@@ -182,42 +182,62 @@ function MeetingCard({
 
   return (
     <Link href={`/groups/${groupId}/meetings/${meeting.id}`}
-      className="bg-nu-white border border-nu-ink/[0.08] p-5 flex items-center gap-5 no-underline hover:border-nu-pink/30 transition-colors">
-      <div className="w-14 h-14 bg-nu-pink/10 flex flex-col items-center justify-center shrink-0">
-        <span className="font-head text-lg font-extrabold text-nu-pink leading-none">{date.getDate()}</span>
-        <span className="font-mono-nu text-[9px] uppercase text-nu-pink/70">
-          {date.toLocaleDateString("ko", { month: "short" })}
-        </span>
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1 flex-wrap">
-          <h3 className="font-head text-sm font-bold text-nu-ink truncate">{meeting.title}</h3>
-          <Badge className={`text-[10px] shrink-0 ${cfg.className}`}>{cfg.label}</Badge>
-          {meeting.status === "completed" && meeting.summary && (
-            <span className="font-mono-nu text-[9px] text-nu-pink">📝 회의록</span>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-3 text-xs text-nu-muted">
-          <span className="flex items-center gap-1">
-            <Clock size={12} />
-            {date.toLocaleString("ko", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+      className="bg-nu-white border border-nu-ink/[0.08] p-5 no-underline hover:border-nu-pink/30 transition-colors block">
+      <div className="flex items-center gap-5">
+        <div className="w-14 h-14 bg-nu-pink/10 flex flex-col items-center justify-center shrink-0">
+          <span className="font-head text-lg font-extrabold text-nu-pink leading-none">{date.getDate()}</span>
+          <span className="font-mono-nu text-[9px] uppercase text-nu-pink/70">
+            {date.toLocaleDateString("ko", { month: "short" })}
           </span>
-          {meeting.duration_min && (
-            <span className="flex items-center gap-1"><Clock size={12} />{meeting.duration_min}분</span>
-          )}
-          {meeting.location && (
-            <span className="flex items-center gap-1 max-w-[160px] truncate">
-              <MapPin size={12} />{meeting.location}
-            </span>
-          )}
-          {(meeting as any).agenda_count > 0 && (
-            <span className="flex items-center gap-1">
-              <ListChecks size={12} />안건 {(meeting as any).agenda_count}개
-            </span>
-          )}
         </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <h3 className="font-head text-sm font-bold text-nu-ink truncate">{meeting.title}</h3>
+            <Badge className={`text-[10px] shrink-0 ${cfg.className} ${meeting.status === "in_progress" ? "animate-pulse" : ""}`}>
+              {meeting.status === "in_progress" && <span className="w-1.5 h-1.5 rounded-full bg-nu-amber mr-1" />}
+              {cfg.label}
+            </Badge>
+            {meeting.status === "completed" && meeting.summary && (
+              <span className="font-mono-nu text-[9px] text-nu-pink">📝 회의록</span>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-3 text-xs text-nu-muted">
+            <span className="flex items-center gap-1">
+              <Clock size={12} />
+              {date.toLocaleString("ko", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+            </span>
+            {meeting.duration_min && (
+              <span className="flex items-center gap-1"><Clock size={12} />{meeting.duration_min}분</span>
+            )}
+            {meeting.location && (
+              <span className="flex items-center gap-1 max-w-[160px] truncate">
+                <MapPin size={12} />{meeting.location}
+              </span>
+            )}
+            {(meeting as any).agenda_count > 0 && (
+              <span className="flex items-center gap-1">
+                <ListChecks size={12} />안건 {(meeting as any).agenda_count}개
+              </span>
+            )}
+          </div>
+        </div>
+        <ChevronRight size={16} className="text-nu-muted shrink-0" />
       </div>
-      <ChevronRight size={16} className="text-nu-muted shrink-0" />
+      {/* Summary preview for completed meetings */}
+      {meeting.status === "completed" && meeting.summary && (
+        <p className="mt-2 ml-[76px] text-[11px] text-nu-gray line-clamp-2 leading-relaxed">
+          {meeting.summary}
+        </p>
+      )}
+      {/* Next topic carry-over */}
+      {meeting.status === "completed" && (meeting as any).next_topic && (
+        <div className="mt-2 ml-[76px] flex items-center gap-1.5">
+          <Lightbulb size={10} className="text-nu-amber shrink-0" />
+          <span className="font-mono-nu text-[9px] text-nu-amber uppercase tracking-widest truncate">
+            다음 주제: {(meeting as any).next_topic}
+          </span>
+        </div>
+      )}
     </Link>
   );
 }
