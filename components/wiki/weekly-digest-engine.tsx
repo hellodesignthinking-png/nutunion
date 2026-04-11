@@ -7,7 +7,7 @@ import {
   Brain, Sparkles, Loader2, CheckCircle2,
   ArrowRight, Save, BookOpen, ChevronDown, ChevronUp,
   Clock, FileText, Zap, RefreshCw, ListChecks,
-  HelpCircle, TrendingUp,
+  HelpCircle, TrendingUp, Copy, Calendar,
 } from "lucide-react";
 
 interface WeeklyDigestResult {
@@ -50,6 +50,7 @@ export function WeeklyDigestEngine({
     digest: true, carryOver: true, decisions: false, wiki: false, agenda: true,
   });
   const [saving, setSaving] = useState(false);
+  const [daysRange, setDaysRange] = useState(7);
 
   // Load previous digest on mount
   useEffect(() => {
@@ -97,12 +98,16 @@ export function WeeklyDigestEngine({
       setPhase("compressing");
 
       // Phase 2: AI compression
+      const periodStart = new Date(Date.now() - daysRange * 24 * 60 * 60 * 1000).toISOString();
+      const periodEnd = new Date().toISOString();
       const res = await fetch("/api/ai/weekly-digest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           groupId,
           previousDigest,
+          periodStart,
+          periodEnd,
         }),
       });
 
@@ -295,11 +300,30 @@ export function WeeklyDigestEngine({
             </div>
           )}
 
+          {/* Date range selector */}
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Calendar size={12} className="text-nu-muted" />
+            <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">분석 기간:</span>
+            {[7, 14, 30].map(days => (
+              <button
+                key={days}
+                onClick={() => setDaysRange(days)}
+                className={`px-3 py-1.5 font-mono-nu text-[9px] uppercase tracking-widest transition-all ${
+                  daysRange === days
+                    ? "bg-purple-600 text-white shadow-sm"
+                    : "bg-white/60 text-nu-muted border border-purple-200 hover:border-purple-400"
+                }`}
+              >
+                {days}일
+              </button>
+            ))}
+          </div>
+
           <button
             onClick={handleGenerate}
             className="bg-nu-ink text-white px-8 py-3.5 font-mono-nu text-[11px] font-bold uppercase tracking-widest hover:bg-purple-700 transition-all shadow-[4px_4px_0px_rgba(156,39,176,0.3)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] flex items-center gap-3 mx-auto"
           >
-            <Brain size={16} /> 주간 다이제스트 생성
+            <Brain size={16} /> 최근 {daysRange}일 다이제스트 생성
           </button>
         </div>
       </div>
@@ -510,7 +534,41 @@ export function WeeklyDigestEngine({
       )}
 
       {/* Save button */}
-      <div className="p-4 bg-nu-ink text-nu-paper">
+      <div className="p-4 bg-nu-ink text-nu-paper space-y-3">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => { setPhase("idle"); setResult(null); }}
+            className="flex items-center gap-1.5 font-mono-nu text-[9px] uppercase tracking-widest text-nu-paper/60 hover:text-nu-paper transition-colors"
+          >
+            <RefreshCw size={12} /> 다시 생성
+          </button>
+          <button
+            onClick={async () => {
+              try {
+                const text = [
+                  `# 주간 다이제스트`,
+                  `> ${new Date(result.periodStart).toLocaleDateString("ko")} ~ ${new Date(result.periodEnd).toLocaleDateString("ko")}`,
+                  `> ${result.meetingCount}개 회의 / ${result.noteCount}개 노트 / ${result.resourceCount}개 자료`,
+                  "",
+                  `## 요약`,
+                  result.digest,
+                  "",
+                  ...(result.keyDecisions.length > 0 ? [`## 핵심 결정`, ...result.keyDecisions.map(d => `- ${d}`), ""] : []),
+                  ...(result.carryOverItems.length > 0 ? [`## 이월 항목`, ...result.carryOverItems.map(i => `- [ ] ${i}`), ""] : []),
+                  ...(result.openQuestions.length > 0 ? [`## 미결 질문`, ...result.openQuestions.map(q => `- ${q}`), ""] : []),
+                  ...(result.suggestedAgenda.length > 0 ? [`## 다음 안건 제안`, ...result.suggestedAgenda.map(a => `- ${a}`), ""] : []),
+                  `---`,
+                  `**다음 회의 AI 컨텍스트:** ${result.nextMeetingContext}`,
+                ].join("\n");
+                await navigator.clipboard.writeText(text);
+                toast.success("마크다운 형식으로 복사되었습니다");
+              } catch { toast.error("복사 실패"); }
+            }}
+            className="flex items-center gap-1.5 font-mono-nu text-[9px] uppercase tracking-widest text-nu-paper/60 hover:text-nu-paper transition-colors"
+          >
+            <Copy size={12} /> MD 복사
+          </button>
+        </div>
         <button
           onClick={handleSave}
           disabled={saving}
@@ -519,7 +577,7 @@ export function WeeklyDigestEngine({
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
           다이제스트 저장 + 위키 자동 등록
         </button>
-        <p className="font-mono-nu text-[8px] text-nu-paper/40 uppercase tracking-widest text-center mt-2">
+        <p className="font-mono-nu text-[8px] text-nu-paper/40 uppercase tracking-widest text-center">
           다이제스트가 위키에 저장되면 다음 회의 AI가 자동으로 참조합니다
         </p>
       </div>

@@ -227,7 +227,22 @@ export default function MeetingDetailPage() {
     const supabase = createClient();
     const { error } = await supabase.from("meetings").update({ status: "completed", summary: summary.trim() }).eq("id", meetingId);
     if (error) toast.error("상태 변경에 실패했습니다");
-    else { toast.success("미팅이 완료되었습니다!"); setShowSummaryInput(false); await loadMeeting(); }
+    else {
+      toast.success("미팅이 완료되었습니다!", {
+        description: "주간 다이제스트를 생성하여 다음 회의 AI 컨텍스트를 준비하세요.",
+        duration: 8000,
+        action: {
+          label: "다이제스트 생성",
+          onClick: () => {
+            // Switch to digest tab
+            const digestTab = document.querySelector('[data-value="digest"]') as HTMLElement;
+            digestTab?.click();
+          },
+        },
+      });
+      setShowSummaryInput(false);
+      await loadMeeting();
+    }
     setActionLoading(false);
   }
 

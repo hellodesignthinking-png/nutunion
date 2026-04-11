@@ -404,10 +404,21 @@ export function AiMeetingAssistant({
         {/* Process Button + Save Notes */}
         {canEdit && (
           <div className="border-t border-nu-ink/[0.06] p-4 flex items-center justify-between bg-nu-cream/10">
-            <p className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">
-              {rawNotes.trim().split(/\s+/).filter(Boolean).length} words
-              {audioUrl && " + 녹음파일"}
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">
+                {rawNotes.trim().split(/\s+/).filter(Boolean).length} words
+              </p>
+              {previousDigest && (
+                <span className="px-1.5 py-0.5 bg-purple-100 text-purple-600 font-mono-nu text-[7px] uppercase tracking-widest">
+                  ⚡ digest
+                </span>
+              )}
+              {audioUrl && (
+                <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 font-mono-nu text-[7px] uppercase tracking-widest">
+                  🎤 audio
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               {/* Save raw notes as meeting_notes */}
               <button
@@ -445,6 +456,37 @@ export function AiMeetingAssistant({
           </div>
         )}
       </div>
+
+      {/* ── AI Processing Animation ─── */}
+      {processing && (
+        <div className="bg-nu-ink text-white p-6 border-[2px] border-nu-ink animate-in fade-in duration-300">
+          <div className="flex items-center gap-3 mb-4">
+            <Loader2 size={20} className="animate-spin text-nu-pink" />
+            <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-pink">
+              Gemini 2.5 Flash 분석 중
+            </span>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-[11px] text-green-400">
+              <CheckCircle2 size={11} /> 회의 내용 전송
+            </div>
+            {previousDigest && (
+              <div className="flex items-center gap-2 text-[11px] text-purple-400">
+                <Zap size={11} /> 이전 다이제스트 컨텍스트 주입
+              </div>
+            )}
+            {audioFile && (
+              <div className="flex items-center gap-2 text-[11px] text-amber-400">
+                <Mic size={11} /> 녹음 파일 분석
+              </div>
+            )}
+            <div className="flex items-center gap-2 text-[11px] text-white/40 animate-pulse">
+              <div className="w-1.5 h-1.5 rounded-full bg-nu-pink animate-ping" />
+              AI 회의록 생성 중...
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── AI Results ─── */}
       {aiResult && (
@@ -557,6 +599,17 @@ export function AiMeetingAssistant({
 
           {/* Save All / Regenerate */}
           <div className="p-4 bg-nu-ink text-nu-paper space-y-3">
+            {/* Context indicator */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="font-mono-nu text-[7px] uppercase tracking-widest text-nu-paper/30">AI 입력:</span>
+              <span className="px-1.5 py-0.5 bg-nu-paper/10 text-nu-paper/50 font-mono-nu text-[7px] uppercase tracking-widest">텍스트</span>
+              {previousDigest && (
+                <span className="px-1.5 py-0.5 bg-purple-500/30 text-purple-300 font-mono-nu text-[7px] uppercase tracking-widest">⚡ 다이제스트</span>
+              )}
+              {agendas.length > 0 && (
+                <span className="px-1.5 py-0.5 bg-nu-paper/10 text-nu-paper/50 font-mono-nu text-[7px] uppercase tracking-widest">{agendas.length}개 안건</span>
+              )}
+            </div>
             <div className="flex items-center justify-between">
               <button
                 onClick={handleAiProcess}
@@ -568,20 +621,28 @@ export function AiMeetingAssistant({
               <button
                 onClick={async () => {
                   try {
+                    const now = new Date();
                     const text = [
-                      `📋 회의 요약: ${aiResult.summary}`,
-                      `\n💬 논의 사항:\n${aiResult.discussions.map(d => `  • ${d}`).join("\n")}`,
-                      aiResult.decisions.length > 0 ? `\n✅ 결정 사항:\n${aiResult.decisions.map(d => `  • ${d}`).join("\n")}` : "",
-                      aiResult.actionItems.length > 0 ? `\n📌 액션 아이템:\n${aiResult.actionItems.map(a => `  • ${a.task}${a.assignee ? ` (@${a.assignee})` : ""}`).join("\n")}` : "",
-                      aiResult.nextTopics.length > 0 ? `\n💡 다음 미팅 주제:\n${aiResult.nextTopics.map(t => `  • ${t}`).join("\n")}` : "",
-                    ].filter(Boolean).join("\n");
+                      `# ${meetingTitle}`,
+                      `> ${now.toLocaleDateString("ko-KR")}`,
+                      "",
+                      `## 요약`,
+                      aiResult.summary,
+                      "",
+                      `## 논의 사항`,
+                      ...aiResult.discussions.map(d => `- ${d}`),
+                      "",
+                      ...(aiResult.decisions.length > 0 ? [`## 결정 사항`, ...aiResult.decisions.map(d => `- ${d}`), ""] : []),
+                      ...(aiResult.actionItems.length > 0 ? [`## 액션 아이템`, ...aiResult.actionItems.map(a => `- [ ] ${a.task}${a.assignee ? ` @${a.assignee}` : ""}`), ""] : []),
+                      ...(aiResult.nextTopics.length > 0 ? [`## 다음 미팅 주제`, ...aiResult.nextTopics.map(t => `- ${t}`)] : []),
+                    ].join("\n");
                     await navigator.clipboard.writeText(text);
-                    toast.success("클립보드에 복사되었습니다");
+                    toast.success("마크다운 형식으로 복사되었습니다");
                   } catch { toast.error("복사 실패"); }
                 }}
                 className="flex items-center gap-1.5 font-mono-nu text-[9px] uppercase tracking-widest text-nu-paper/60 hover:text-nu-paper transition-colors"
               >
-                <Copy size={12} /> 복사
+                <Copy size={12} /> MD 복사
               </button>
             </div>
             <button
