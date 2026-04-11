@@ -743,6 +743,7 @@ export function AiMeetingAssistant({
                 onClick={async () => {
                   try {
                     const now = new Date();
+                    const r = aiResult as any;
                     const text = [
                       `# ${meetingTitle}`,
                       `> ${now.toLocaleDateString("ko-KR")}`,
@@ -755,7 +756,10 @@ export function AiMeetingAssistant({
                       "",
                       ...(aiResult.decisions.length > 0 ? [`## 결정 사항`, ...aiResult.decisions.map(d => `- ${d}`), ""] : []),
                       ...(aiResult.actionItems.length > 0 ? [`## 액션 아이템`, ...aiResult.actionItems.map(a => `- [ ] ${a.task}${a.assignee ? ` @${a.assignee}` : ""}`), ""] : []),
-                      ...(aiResult.nextTopics.length > 0 ? [`## 다음 미팅 주제`, ...aiResult.nextTopics.map(t => `- ${t}`)] : []),
+                      ...(aiResult.nextTopics.length > 0 ? [`## 다음 미팅 주제`, ...aiResult.nextTopics.map(t => `- ${t}`), ""] : []),
+                      ...(r.growthInsights?.length > 0 ? [`## 🌱 성장 인사이트`, ...r.growthInsights.map((g: string) => `- ${g}`), ""] : []),
+                      ...(r.learningRecommendations?.length > 0 ? [`## 📚 학습 추천`, ...r.learningRecommendations.map((l: string) => `- ${l}`), ""] : []),
+                      ...(r.discussionQuality ? [`## 📊 토론 품질`, `- 깊이: ${r.discussionQuality.depth}`, `- 참여도: ${r.discussionQuality.participation}`, `- 실행성: ${r.discussionQuality.actionability}`, ""] : []),
                     ].join("\n");
                     await navigator.clipboard.writeText(text);
                     toast.success("마크다운 형식으로 복사되었습니다");

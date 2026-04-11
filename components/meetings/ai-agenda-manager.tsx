@@ -126,6 +126,26 @@ export function AiAgendaManager({ groupId, onAccept }: { groupId: string; onAcce
                 });
               });
             }
+            // Add open questions as discussion items
+            if (Array.isArray(parsed.openQuestions)) {
+              parsed.openQuestions.slice(0, 2).forEach((q: string) => {
+                items.push({
+                  type: "carryover",
+                  title: `[미결] ${q}`,
+                  reason: "주간 다이제스트의 미해결 질문 — 논의 필요",
+                  priority: "high",
+                });
+              });
+            }
+            // Add learning recommendations as growth agenda
+            if (parsed.learningJourney?.recommendedReading?.length > 0) {
+              items.push({
+                type: "new",
+                title: `📚 학습 공유: ${parsed.learningJourney.recommendedReading[0]}`,
+                reason: "AI 성장 촉진자가 추천한 학습 주제를 함께 토론",
+                priority: "medium",
+              });
+            }
           } catch { /* ignore parse errors */ }
         }
       } catch { /* wiki_ai_analyses table may not exist */ }

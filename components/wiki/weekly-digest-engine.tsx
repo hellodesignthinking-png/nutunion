@@ -57,7 +57,7 @@ export function WeeklyDigestEngine({
   autoTrigger = false,
   onDigestSaved,
 }: WeeklyDigestEngineProps) {
-  const [phase, setPhase] = useState<"idle" | "gathering" | "compressing" | "reviewing" | "saving" | "done">("idle");
+  const [phase, setPhase] = useState<"idle" | "gathering" | "compressing" | "reviewing" | "saving" | "saved" | "done">("idle");
   const [result, setResult] = useState<WeeklyDigestResult | null>(null);
   const [previousDigest, setPreviousDigest] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -307,7 +307,7 @@ export function WeeklyDigestEngine({
 
       toast.success("다이제스트가 위키에 저장되었습니다!");
       onDigestSaved?.(result.nextMeetingContext);
-      setPhase("done");
+      setPhase("saved");
     } catch (err: any) {
       toast.error(err.message || "저장에 실패했습니다");
       setPhase("reviewing");
@@ -760,16 +760,53 @@ export function WeeklyDigestEngine({
             <Copy size={12} /> MD 복사
           </button>
         </div>
+
+        {/* Share summary (for quick team briefing) */}
+        <button
+          onClick={async () => {
+            try {
+              const briefing = [
+                `📋 주간 다이제스트 (${new Date(result.periodStart).toLocaleDateString("ko")} ~ ${new Date(result.periodEnd).toLocaleDateString("ko")})`,
+                "",
+                result.digest,
+                "",
+                ...(result.keyDecisions.length > 0 ? ["📌 핵심 결정:", ...result.keyDecisions.map(d => `  ✅ ${d}`), ""] : []),
+                ...(result.carryOverItems.length > 0 ? ["⏳ 이월 항목:", ...result.carryOverItems.map(i => `  ⬜ ${i}`), ""] : []),
+                ...(result.suggestedAgenda.length > 0 ? ["📝 다음 회의 안건:", ...result.suggestedAgenda.map(a => `  → ${a}`), ""] : []),
+                ...(result.encouragement ? [`\n💜 ${result.encouragement}`] : []),
+                "",
+                "— NutUnion AI 성장 촉진자",
+              ].join("\n");
+              await navigator.clipboard.writeText(briefing);
+              toast.success("팀 브리핑 요약이 복사되었습니다 — 채팅에 바로 붙여넣기 하세요!");
+            } catch { toast.error("복사 실패"); }
+          }}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 font-mono-nu text-[10px] uppercase tracking-widest border border-nu-paper/20 text-nu-paper/70 hover:text-nu-paper hover:border-nu-paper/40 transition-all"
+        >
+          <Copy size={12} /> 팀 브리핑 요약 복사 (채팅용)
+        </button>
+
         <button
           onClick={handleSave}
-          disabled={saving}
-          className="w-full flex items-center justify-center gap-2 px-5 py-3 font-mono-nu text-[11px] font-bold uppercase tracking-widest bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-40 transition-all shadow-lg"
+          disabled={saving || phase === "saved"}
+          className={`w-full flex items-center justify-center gap-2 px-5 py-3 font-mono-nu text-[11px] font-bold uppercase tracking-widest transition-all shadow-lg ${
+            phase === "saved"
+              ? "bg-green-600 text-white cursor-default"
+              : "bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-40"
+          }`}
         >
-          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-          다이제스트 저장 + 위키 자동 등록
+          {saving ? (
+            <><Loader2 size={14} className="animate-spin" /> 저장 중...</>
+          ) : phase === "saved" ? (
+            <><CheckCircle2 size={14} /> 저장 완료</>
+          ) : (
+            <><Save size={14} /> 다이제스트 저장 + 위키 자동 등록</>
+          )}
         </button>
         <p className="font-mono-nu text-[8px] text-nu-paper/40 uppercase tracking-widest text-center">
-          다이제스트가 위키에 저장되면 다음 회의 AI가 자동으로 참조합니다
+          {phase === "saved" 
+            ? "✅ 다이제스트가 위키에 등록되었습니다. 다음 회의 AI가 자동 참조합니다."
+            : "다이제스트가 위키에 저장되면 다음 회의 AI가 자동으로 참조합니다"}
         </p>
       </div>
     </div>
