@@ -231,6 +231,7 @@ export interface FileAttachment {
   file_url: string;
   file_size: number | null;
   file_type: string | null;
+  content: string | null;
   created_at: string;
 }
 

@@ -377,8 +377,9 @@ export function ProjectFinanceDashboard({
                   (t) => t.milestone_id === ms.id && t.type === "expense"
                 );
                 const msSpent = msTransactions.reduce((sum, t) => sum + t.amount, 0);
-                // Estimate allocated budget proportionally
-                const msAllocated = totalBudget * 0.25; // Simplified allocation
+                // Use actual reward_percentage from milestone, fallback to equal split
+                const pct = (ms as any).reward_percentage || (milestones.length > 0 ? 100 / milestones.length : 25);
+                const msAllocated = totalBudget * (pct / 100);
 
                 return (
                   <div key={ms.id} className="space-y-2">

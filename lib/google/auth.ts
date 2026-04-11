@@ -16,6 +16,7 @@ export function createOAuth2Client() {
  * All Google Workspace scopes we request
  */
 export const GOOGLE_SCOPES = [
+  "https://www.googleapis.com/auth/drive.file",
   "https://www.googleapis.com/auth/drive.readonly",
   "https://www.googleapis.com/auth/documents.readonly",
   "https://www.googleapis.com/auth/spreadsheets.readonly",

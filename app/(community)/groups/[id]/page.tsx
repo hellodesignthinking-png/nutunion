@@ -17,6 +17,7 @@ import {
   Activity,
   Target,
   CreditCard,
+  Sparkles,
 } from "lucide-react";
 import { GroupActions } from "@/components/groups/group-actions";
 import { CrewActivityFeed } from "@/components/crews/crew-activity-feed";
@@ -29,6 +30,7 @@ import { GroupRadarChart, ActivityHeatmap } from "@/components/groups/group-vita
 import { DailyDigest } from "@/components/groups/daily-digest";
 import { RelatedGroups } from "@/components/groups/related-groups";
 import { GroupAnnouncements } from "@/components/groups/group-announcements";
+import { OnboardingChecklist } from "@/components/groups/onboarding-checklist";
 
 export const dynamic = "force-dynamic";
 
@@ -143,6 +145,12 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
                   <Link href={`/groups/${id}/finance`} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-paper border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all hover:-translate-y-0.5 inline-flex items-center gap-2">
                     <CreditCard size={14} /> 정산
                   </Link>
+                  <Link href={`/groups/${id}/wiki`} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-paper border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all hover:-translate-y-0.5 inline-flex items-center gap-2">
+                    <Sparkles size={14} /> 성장하는 소셜링
+                  </Link>
+                  <Link href={`/groups/${id}/best-practices`} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-paper border-[2px] border-nu-pink/30 text-nu-pink no-underline hover:bg-nu-pink hover:text-white transition-all hover:-translate-y-0.5 inline-flex items-center gap-2">
+                    <Sparkles size={14} /> 베스트 프랙티스
+                  </Link>
                 </>
               )}
               {(isHost || isManager) && (
@@ -192,7 +200,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
           
           <div className="space-y-6">
             <Suspense fallback={<div className="h-64 bg-black/5 animate-pulse" />}>
-              <GroupSidebarSections id={id} colors={colors} isHost={isHost} isMember={isMember} group={groupData} />
+              <GroupSidebarSections id={id} colors={colors} isHost={isHost} isMember={isMember} group={groupData} userId={user.id} />
             </Suspense>
           </div>
         </div>
@@ -426,15 +434,19 @@ async function ActivitySection({ id, userId, isMember, isHost }: any) {
   );
 }
 
-async function GroupSidebarSections({ id, colors, isHost, isMember, group }: any) {
+async function GroupSidebarSections({ id, colors, isHost, isMember, group, userId }: any) {
   try {
   const supabase = await createClient();
   const { data: members } = await supabase.from("group_members").select("user_id, role, profile:profiles(id, nickname, avatar_url)").eq("group_id", id).eq("status", "active").order("joined_at");
 
   return (
     <div className="space-y-6">
+      {isHost && (
+        <OnboardingChecklist groupId={id} isHost={isHost} />
+      )}
+
       {(isMember || isHost) && (
-        <GroupRoadmap groupId={id} canEdit={isHost} />
+        <GroupRoadmap groupId={id} canEdit={isHost} userId={userId} />
       )}
 
       {/* Team Vitals: Radar + Heatmap */}

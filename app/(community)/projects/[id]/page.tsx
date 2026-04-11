@@ -64,9 +64,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         description={project.description || ""}
       />
 
-      <div className="max-w-6xl mx-auto px-8 py-12 pb-24">
-        {/* Detail Meta & Actions */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 border-b border-nu-ink/5 pb-8">
+      {/* Detail Meta & Actions — constrained width */}
+      <div className="max-w-6xl mx-auto px-4 md:px-8 pt-10 pb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-0 border-b border-nu-ink/5 pb-6">
           <div className="flex flex-wrap items-center gap-6 font-mono-nu text-[11px]">
             <span className="flex items-center gap-1.5 text-nu-muted">
               <Clock size={12} /> {project.status.toUpperCase()}
@@ -97,9 +97,12 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             )}
           </div>
         </div>
+      </div>
 
+      {/* Tabs — full-width container for split-view panels */}
+      <div className="mx-auto px-4 md:px-8 pb-24">
         <Suspense fallback={
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-8">
             <div className="lg:col-span-3 space-y-4">
               <div className="h-64 bg-nu-ink/5 animate-pulse" />
             </div>
@@ -110,9 +113,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         </Suspense>
 
         {/* AI Squad & Settlement */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-12">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 mt-12">
           <SquadRecommender projectId={id} projectTitle={project.title} />
-          <MilestoneSettlement projectTitle={project.title} />
+          <MilestoneSettlement projectId={id} userId={user.id} />
         </div>
       </div>
     </>
@@ -122,17 +125,45 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 async function ProjectTabsWrapper({ id, userId, isAdmin, project }: any) {
   const supabase = await createClient();
   
-  const [
-    { data: milestones },
-    { data: members },
-    { data: updates },
-    { data: events },
-  ] = await Promise.all([
-    supabase.from("project_milestones").select("*, tasks:project_tasks(*, assignee:profiles!project_tasks_assigned_to_fkey(id, nickname, avatar_url))").eq("project_id", id).order("sort_order"),
-    supabase.from("project_members").select("*, profile:profiles!project_members_user_id_fkey(id, nickname, avatar_url, email), crew:groups!project_members_crew_id_fkey(id, name, category, image_url)").eq("project_id", id).order("joined_at"),
-    supabase.from("project_updates").select("*, author:profiles!project_updates_author_id_fkey(id, nickname, avatar_url)").eq("project_id", id).order("created_at", { ascending: false }).limit(50),
-    supabase.from("events").select("*, group:groups(name)").eq("project_id", id).order("start_at").limit(10),
-  ]);
+  // Run queries with individual fallbacks for resilience
+  let milestones: any[] = [];
+  let members: any[] = [];
+  let updates: any[] = [];
+  let events: any[] = [];
+
+  // Milestones — basic query first, then try enriched
+  const msBasic = await supabase.from("project_milestones").select("*").eq("project_id", id).order("sort_order");
+  if (msBasic.data) {
+    // Try to enrich with tasks
+    const msRich = await supabase.from("project_milestones").select("*, tasks:project_tasks(*, assignee:profiles!project_tasks_assigned_to_fkey(id, nickname, avatar_url))").eq("project_id", id).order("sort_order");
+    if (!msRich.error && msRich.data) {
+      milestones = msRich.data;
+    } else {
+      milestones = msBasic.data.map((m: any) => ({ ...m, tasks: [] }));
+    }
+  }
+
+  // Members — try with profile+crew join, fallback to basic
+  const memRes = await supabase.from("project_members").select("*, profile:profiles!project_members_user_id_fkey(id, nickname, avatar_url, email), crew:groups!project_members_crew_id_fkey(id, name, category, image_url)").eq("project_id", id).order("joined_at");
+  if (!memRes.error && memRes.data) {
+    members = memRes.data;
+  } else {
+    const memBasic = await supabase.from("project_members").select("*").eq("project_id", id).order("joined_at");
+    members = memBasic.data || [];
+  }
+
+  // Updates — try with author join, fallback to basic
+  const updRes = await supabase.from("project_updates").select("*, author:profiles!project_updates_author_id_fkey(id, nickname, avatar_url)").eq("project_id", id).order("created_at", { ascending: false }).limit(50);
+  if (!updRes.error && updRes.data) {
+    updates = updRes.data;
+  } else {
+    const updBasic = await supabase.from("project_updates").select("*").eq("project_id", id).order("created_at", { ascending: false }).limit(50);
+    updates = updBasic.data || [];
+  }
+
+  // Events
+  const evtRes = await supabase.from("events").select("*, group:groups(name)").eq("project_id", id).order("start_at").limit(10);
+  events = evtRes.data || [];
 
   const membersList = members || [];
   const userMembers = membersList.filter((m: any) => m.user_id && m.profile);

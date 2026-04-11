@@ -55,7 +55,6 @@ interface UserContribution {
 export default function GroupFinancePage() {
   const params = useParams();
   const groupId = params.id as string;
-  const supabase = createClient();
 
   // State
   const [expenditures, setExpenditures] = useState<ExpenditureRow[]>([]);
@@ -111,6 +110,7 @@ export default function GroupFinancePage() {
     const fetchData = async () => {
       try {
         setLoading(true);
+        const supabase = createClient();
 
         // Get current user
         const {
@@ -181,35 +181,23 @@ export default function GroupFinancePage() {
         if (payerIds.length > 0) {
           const contrib: Record<string, UserContribution> = {};
 
-          for (const payerId of payerIds) {
-            // Count meetings attended by this user
-            const { count: meetingsCount } = await supabase
-              .from("meeting_notes")
-              .select("*", { count: "exact", head: true })
-              .eq("author_id", payerId);
-
-            // Count resources uploaded by this user
-            const { count: resourcesCount } = await supabase
-              .from("file_attachments")
-              .select("*", { count: "exact", head: true })
-              .eq("uploaded_by", payerId);
-
-            // Get group member status
-            const { data: memberStatus } = await supabase
-              .from("group_members")
-              .select("status")
-              .eq("group_id", groupId)
-              .eq("user_id", payerId)
-              .single();
-
-            contrib[payerId] = {
-              payerId,
-              meetings: meetingsCount || 0,
-              resources: resourcesCount || 0,
-              memberStatus: memberStatus?.status || "inactive",
-            };
-          }
-
+          // Parallelized contribution queries (fixed N+1)
+          const results = await Promise.all(
+            payerIds.map(async (payerId) => {
+              const [{ count: meetingsCount }, { count: resourcesCount }, { data: memberStatus }] = await Promise.all([
+                supabase.from("meeting_notes").select("*", { count: "exact", head: true }).eq("author_id", payerId),
+                supabase.from("file_attachments").select("*", { count: "exact", head: true }).eq("uploaded_by", payerId),
+                supabase.from("group_members").select("status").eq("group_id", groupId).eq("user_id", payerId).single(),
+              ]);
+              return {
+                payerId,
+                meetings: meetingsCount || 0,
+                resources: resourcesCount || 0,
+                memberStatus: memberStatus?.status || "inactive",
+              };
+            })
+          );
+          results.forEach(r => { contrib[r.payerId] = r; });
           setContributions(contrib);
         }
       } catch (error) {
@@ -223,13 +211,13 @@ export default function GroupFinancePage() {
     if (groupId) {
       fetchData();
     }
-  }, [groupId, supabase]);
+  }, [groupId]);
 
   // Handle status update
   const handleStatusUpdate = async (id: string, newStatus: "approved" | "rejected") => {
     try {
       setFormLoading(true);
-
+      const supabase = createClient();
       const { error } = await supabase
         .from("group_expenditures")
         .update({
@@ -280,6 +268,7 @@ export default function GroupFinancePage() {
 
     try {
       setFormLoading(true);
+      const supabase = createClient();
 
       const { error } = await supabase.from("group_expenditures").insert({
         group_id: groupId,

@@ -83,25 +83,54 @@ export function AdminProjectList({ projects }: { projects: ProjectItem[] }) {
   }
 
   async function handleDelete(projectId: string, title: string) {
-    if (!confirm(`"${title}" 프로젝트를 삭제하시겠습니까?`)) return;
+    if (!confirm(`"${title}" 프로젝트를 완전히 삭제하시겠습니까?\n\n모든 마일스톤, 태스크, 회의, 자료, 멤버 데이터가 영구 삭제됩니다.\n이 작업은 되돌릴 수 없습니다.`)) return;
 
     const supabase = createClient();
 
-    await supabase.from("project_tasks").delete().eq("project_id", projectId);
-    await supabase.from("project_milestones").delete().eq("project_id", projectId);
-    await supabase.from("project_updates").delete().eq("project_id", projectId);
-    await supabase.from("project_members").delete().eq("project_id", projectId);
+    // Delete meeting notes for project meetings
+    try {
+      const { data: meetings } = await supabase.from("meetings").select("id").eq("project_id", projectId);
+      const meetingIds = (meetings || []).map((m: any) => m.id);
+      if (meetingIds.length > 0) {
+        await supabase.from("meeting_notes").delete().in("meeting_id", meetingIds);
+        await supabase.from("meeting_agendas").delete().in("meeting_id", meetingIds);
+      }
+    } catch { /* tables may not exist */ }
 
+    // Delete related tables — each in try/catch for resilience
+    const tablesToClean = [
+      "project_tasks",
+      "project_resources",
+      "project_milestones",
+      "project_updates",
+      "project_action_items",
+      "project_applications",
+      "project_members",
+      "project_financial_records",
+    ];
+
+    for (const table of tablesToClean) {
+      try {
+        await supabase.from(table).delete().eq("project_id", projectId);
+      } catch { /* table may not exist */ }
+    }
+
+    // Delete project meetings
+    try {
+      await supabase.from("meetings").delete().eq("project_id", projectId);
+    } catch { /* project_id column may not exist on meetings */ }
+
+    // Finally delete the project
     const { error } = await supabase
       .from("projects")
       .delete()
       .eq("id", projectId);
 
     if (error) {
-      toast.error(error.message);
+      toast.error("삭제 실패: " + error.message);
       return;
     }
-    toast.success("프로젝트가 삭제되었습니다");
+    toast.success("프로젝트가 완전히 삭제되었습니다");
     router.refresh();
   }
 

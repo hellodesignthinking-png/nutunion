@@ -1,0 +1,146 @@
+import { google } from "googleapis";
+import { NextRequest, NextResponse } from "next/server";
+import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
+import { createClient } from "@/lib/supabase/server";
+import { Readable } from "stream";
+
+/**
+ * POST /api/google/docs/create
+ * Creates a Google Doc with meeting notes content and archives it to Drive.
+ * Optionally registers the doc in group file_attachments or project_resources.
+ */
+export async function POST(req: NextRequest) {
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
+  }
+
+  try {
+    const body = await req.json();
+    const { title, content, targetType, targetId, meetingId } = body;
+
+    if (!title || !content) {
+      return NextResponse.json(
+        { error: "제목과 내용이 필요합니다" },
+        { status: 400 }
+      );
+    }
+
+    const auth = await getGoogleClient(userId);
+    const drive = google.drive({ version: "v3", auth });
+
+    // Create Google Doc via Drive API (drive.file scope covers this)
+    // Convert markdown-ish content to plain text for the doc
+    const plainContent = content
+      .replace(/^#+\s*/gm, "")
+      .replace(/\*\*(.*?)\*\*/g, "$1")
+      .replace(/\*(.*?)\*/g, "$1");
+
+    // Create the doc as a Google Docs file
+    const buffer = Buffer.from(plainContent, "utf-8");
+    const stream = new Readable();
+    stream.push(buffer);
+    stream.push(null);
+
+    const driveRes = await drive.files.create({
+      requestBody: {
+        name: title,
+        mimeType: "application/vnd.google-apps.document",
+      },
+      media: {
+        mimeType: "text/plain",
+        body: stream,
+      },
+      fields: "id, name, mimeType, webViewLink, size",
+    });
+
+    const fileId = driveRes.data.id!;
+    const webViewLink = driveRes.data.webViewLink!;
+
+    // Set "anyone with link can view" permission
+    try {
+      await drive.permissions.create({
+        fileId,
+        requestBody: { role: "reader", type: "anyone" },
+      });
+    } catch (permErr: any) {
+      console.warn("Permission setting skipped:", permErr.message);
+    }
+
+    // Auto-register in DB
+    if (targetType && targetId) {
+      const supabase = await createClient();
+
+      if (targetType === "group") {
+        await supabase.from("file_attachments").insert({
+          target_type: "group",
+          target_id: targetId,
+          uploaded_by: userId,
+          file_name: title,
+          file_url: webViewLink,
+          file_size: buffer.length,
+          file_type: "drive-link",
+        });
+      } else if (targetType === "project") {
+        await supabase.from("project_resources").insert({
+          project_id: targetId,
+          name: title,
+          url: webViewLink,
+          type: "google_doc",
+          stage: "evidence",
+          uploaded_by: userId,
+        });
+      }
+
+      // Try to update the meeting record with the doc link (column may not exist)
+      if (meetingId) {
+        try {
+          await supabase
+            .from("meetings")
+            .update({ doc_url: webViewLink } as any)
+            .eq("id", meetingId);
+        } catch {
+          // doc_url column may not exist — ignore
+        }
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      documentId: fileId,
+      webViewLink,
+      title: driveRes.data.name,
+    });
+  } catch (err: any) {
+    if (
+      err.code === 403 ||
+      err.message?.includes("insufficient") ||
+      err.message?.includes("Insufficient Permission")
+    ) {
+      return NextResponse.json(
+        {
+          error: "Google Docs 생성 권한이 없습니다. Google 계정을 다시 연결해주세요.",
+          code: "SCOPE_INSUFFICIENT",
+        },
+        { status: 403 }
+      );
+    }
+    if (err.message === "GOOGLE_NOT_CONNECTED") {
+      return NextResponse.json(
+        { error: "Google 계정이 연결되지 않았습니다.", code: "NOT_CONNECTED" },
+        { status: 403 }
+      );
+    }
+    if (err.message === "GOOGLE_TOKEN_EXPIRED") {
+      return NextResponse.json(
+        { error: "Google 토큰이 만료되었습니다. 다시 연결해주세요.", code: "TOKEN_EXPIRED" },
+        { status: 401 }
+      );
+    }
+    console.error("Google Docs create error:", err);
+    return NextResponse.json(
+      { error: "Google Docs 생성 실패: " + (err.message || "알 수 없는 오류") },
+      { status: 500 }
+    );
+  }
+}

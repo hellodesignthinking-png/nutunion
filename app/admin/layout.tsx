@@ -30,6 +30,7 @@ export default async function AdminLayout({
     { label: "회원", href: "/admin/users" },
     { label: "소모임", href: "/admin/groups" },
     { label: "프로젝트", href: "/admin/projects" },
+    { label: "의뢰", href: "/admin/proposals" },
   ];
 
   const adminName = profile?.nickname || user.email?.split("@")[0] || "Admin";

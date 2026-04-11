@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Menu, LogOut, Bell, Shield, Star, Crown, Award, Search, Command } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { createClient } from "@/lib/supabase/client";
+import { NotificationCenter } from "@/components/shared/notification-center";
 
 // ── 랜딩 전용 링크 (비로그인) ──────────────────────────────────────
 const landingLinks = [
@@ -162,15 +163,8 @@ export function Nav() {
               <Search size={13} />
               <kbd className="font-mono-nu text-[8px] text-nu-muted">⌘K</kbd>
             </button>
-            {/* 알림 벨 */}
-            <Link href="/notifications" className="relative p-2 text-nu-graphite hover:text-nu-ink transition-colors" prefetch={true}>
-              <Bell size={18} />
-              {notifCount > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 bg-nu-pink text-white text-[8px] font-bold rounded-full flex items-center justify-center">
-                  {notifCount > 9 ? "9+" : notifCount}
-                </span>
-              )}
-            </Link>
+            {/* 알림 센터 (드롭다운) */}
+            <NotificationCenter />
             {/* 아바타 드롭다운 대신 간단 버튼 */}
             <Link
               href="/profile"

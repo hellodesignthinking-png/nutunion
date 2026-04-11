@@ -44,14 +44,15 @@ export function AiAgendaManager({ groupId, onAccept }: { groupId: string; onAcce
           });
         }
 
-        // Get unresolved issues
-        const { data: issues } = await supabase
+        // Get unresolved issues (table may not exist if migration 009 not run)
+        const issuesRes = await supabase
           .from("meeting_issues")
           .select("title, status")
           .eq("meeting_id", lastMeeting.id)
           .eq("status", "open");
+        const issues = issuesRes.error ? [] : (issuesRes.data || []);
 
-        (issues || []).forEach((issue: any) => {
+        issues.forEach((issue: any) => {
           items.push({
             type: "carryover",
             title: `[미해결] ${issue.title}`,
@@ -72,22 +73,64 @@ export function AiAgendaManager({ groupId, onAccept }: { groupId: string; onAcce
       }
 
       // 2. Project milestone check
-      const { data: projects } = await supabase
-        .from("project_members")
-        .select("project:projects(title, status)")
-        .eq("status", "active")
-        .limit(3);
+      try {
+        const projRes = await supabase
+          .from("project_members")
+          .select("project:projects(title, status)")
+          .eq("status", "active")
+          .limit(3);
+        const projects = projRes.error ? null : projRes.data;
 
-      if (projects && projects.length > 0) {
-        items.push({
-          type: "milestone",
-          title: "프로젝트 마일스톤 진행 현황 공유",
-          reason: `소모임원이 참여 중인 ${projects.length}개 프로젝트 상태 점검`,
-          priority: "medium",
-        });
-      }
+        if (projects && projects.length > 0) {
+          items.push({
+            type: "milestone",
+            title: "프로젝트 마일스톤 진행 현황 공유",
+            reason: `소모임원이 참여 중인 ${projects.length}개 프로젝트 상태 점검`,
+            priority: "medium",
+          });
+        }
+      } catch { /* project_members FK join may not be available */ }
 
-      // 3. Always suggest these standard items
+      // 3. Weekly digest suggested agendas
+      try {
+        const { data: digestData } = await supabase
+          .from("wiki_ai_analyses")
+          .select("content")
+          .eq("group_id", groupId)
+          .eq("analysis_type", "weekly_digest")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (digestData?.content) {
+          try {
+            const parsed = JSON.parse(digestData.content);
+            if (Array.isArray(parsed.suggestedAgenda)) {
+              parsed.suggestedAgenda.forEach((agenda: string) => {
+                items.push({
+                  type: "follow_up",
+                  title: agenda,
+                  reason: "주간 다이제스트 AI가 제안한 안건",
+                  priority: "medium",
+                });
+              });
+            }
+            // Add carry-over items as high priority
+            if (Array.isArray(parsed.carryOverItems)) {
+              parsed.carryOverItems.slice(0, 3).forEach((item: string) => {
+                items.push({
+                  type: "carryover",
+                  title: `[이월] ${item}`,
+                  reason: "주간 다이제스트에서 이월된 미완료 항목",
+                  priority: "high",
+                });
+              });
+            }
+          } catch { /* ignore parse errors */ }
+        }
+      } catch { /* wiki_ai_analyses table may not exist */ }
+
+      // 4. Always suggest these standard items
       items.push({
         type: "new",
         title: "자유 발언 & 아이디어 브레인스토밍",

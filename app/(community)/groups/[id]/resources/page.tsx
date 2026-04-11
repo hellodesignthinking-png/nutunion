@@ -31,6 +31,11 @@ import {
 import { toast } from "sonner";
 import { DrivePicker } from "@/components/integrations/drive-picker";
 import { ResourcePreviewModal } from "@/components/shared/resource-preview-modal";
+import { ResourceInteractions } from "@/components/shared/resource-interactions";
+import { ResourceEditor } from "@/components/shared/resource-editor";
+import { resolveTemplateContent } from "@/lib/template-resolver";
+import { NewDocumentModal } from "@/components/shared/new-document-modal";
+import { DriveUploader } from "@/components/integrations/drive-uploader";
 
 function getFileIcon(fileType: string | null) {
   if (!fileType) return <File size={20} />;
@@ -68,7 +73,7 @@ export default function ResourcesPage() {
   const [isManager, setIsManager] = useState(false);
   const [activeTab, setActiveTab] = useState<"files" | "drive" | "links" | "meetings">("files");
   const [groupName, setGroupName] = useState("");
-  const [previewData, setPreviewData] = useState<{ url: string; name: string } | null>(null);
+  const [previewData, setPreviewData] = useState<{ url: string; name: string; id?: string; content?: string | null } | null>(null);
   const [isSplitView, setIsSplitView] = useState(true);
   const [showAiSummary, setShowAiSummary] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
@@ -76,6 +81,7 @@ export default function ResourcesPage() {
   const [linkName, setLinkName] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [addingLink, setAddingLink] = useState(false);
+  const [showNewDocModal, setShowNewDocModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Mock AI summary generator
@@ -353,8 +359,27 @@ export default function ResourcesPage() {
                       <Link2 size={14} /> 링크 연결
                     </button>
 
+                    {/* New Document */}
+                    <button
+                      onClick={() => setShowNewDocModal(true)}
+                      className="flex items-center gap-2 font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-pink text-white hover:bg-nu-pink/90 transition-all cursor-pointer border-none"
+                    >
+                      <FileText size={14} /> 새 문서
+                    </button>
+
                     {/* Drive */}
                     <DrivePicker onFilePicked={handleDriveFilePicked} />
+
+                    {/* Drive Upload */}
+                    <DriveUploader
+                      onUploaded={(file) => {
+                        // DB insert already done in API route when targetType/targetId are passed
+                        // Just refresh the list
+                        loadData();
+                      }}
+                      targetType="group"
+                      targetId={groupId}
+                    />
 
                     <span className="hidden sm:block font-mono-nu text-[9px] text-nu-muted/40 ml-auto">또는 파일을 이 영역에 드래그하세요</span>
                   </div>
@@ -446,7 +471,7 @@ export default function ResourcesPage() {
                         file={file} 
                         userId={userId} 
                         onDelete={handleDelete} 
-                        onPreview={(url, name) => setPreviewData({ url, name })} 
+                        onPreview={(url, name) => setPreviewData({ url, name, id: file.id, content: resolveTemplateContent(url, file.content) })}
                         showAiSummary={showAiSummary}
                         aiSummary={getAiSummary(file.file_name)}
                       />
@@ -466,7 +491,7 @@ export default function ResourcesPage() {
                 ) : (
                   <div className="grid grid-cols-1 gap-4">
                     {filteredDriveFiles.map((file) => (
-                      <FileCard key={file.id} file={file} userId={userId} onDelete={handleDelete} isDrive onPreview={(url, name) => setPreviewData({ url, name })} />
+                      <FileCard key={file.id} file={file} userId={userId} onDelete={handleDelete} isDrive onPreview={(url, name) => setPreviewData({ url, name, id: file.id, content: resolveTemplateContent(url, file.content) })} />
                     ))}
                   </div>
                 )}
@@ -483,7 +508,7 @@ export default function ResourcesPage() {
                 ) : (
                   <div className="grid grid-cols-1 gap-4">
                     {filteredExternalLinks.map((file) => (
-                      <FileCard key={file.id} file={file} userId={userId} onDelete={handleDelete} isLink onPreview={(url, name) => setPreviewData({ url, name })} />
+                      <FileCard key={file.id} file={file} userId={userId} onDelete={handleDelete} isLink onPreview={(url, name) => setPreviewData({ url, name, id: file.id, content: resolveTemplateContent(url, file.content) })} />
                     ))}
                   </div>
                 )}
@@ -540,51 +565,68 @@ export default function ResourcesPage() {
           <div className="lg:flex-1 lg:sticky lg:top-8 w-full animate-in fade-in slide-in-from-right-4 duration-500 overflow-hidden">
             <div className="bg-nu-paper border-2 border-nu-ink shadow-2xl flex flex-col h-[80vh] lg:h-[calc(100vh-80px)]">
               {previewData ? (
-                <div className="flex-1 flex flex-col h-full">
-                  <div className="flex items-center justify-between px-5 py-3 border-b-2 border-nu-ink bg-nu-cream/30">
-                    <div className="min-w-0 pr-4">
-                      <p className="font-head text-[13px] font-black text-nu-ink truncate uppercase tracking-tight">{previewData.name}</p>
-                      <p className="font-mono-nu text-[9px] text-nu-muted truncate uppercase tracking-widest mt-0.5">Live Document Integration</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <a href={previewData.url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-nu-muted hover:text-nu-ink" title="원본 보기">
-                        <ExternalLink size={14} />
-                      </a>
-                      <button onClick={() => setPreviewData(null)} className="p-1.5 text-nu-muted hover:text-nu-ink">
-                        <X size={16} />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex-1 bg-nu-white overflow-hidden relative">
-                    {/* Permission Guard Overlay */}
-                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-nu-paper/95 opacity-0 pointer-events-none peer-[.iframe-error]:opacity-100 peer-[.iframe-error]:pointer-events-auto transition-opacity" id="permission-guard">
-                      <div className="text-center px-6 max-w-xs">
-                        <div className="w-14 h-14 bg-nu-amber/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                          <span className="text-2xl">🔒</span>
-                        </div>
-                        <p className="font-head text-sm font-bold text-nu-ink mb-2">공유 설정을 확인해주세요</p>
-                        <p className="text-[11px] text-nu-muted leading-relaxed mb-4">
-                          이 문서가 보이지 않는다면 원본 문서의 공유 설정에서 
-                          <span className="font-bold text-nu-ink"> &quot;링크가 있는 모든 사용자에게 공개&quot;</span>로 
-                          변경해 주세요.
-                        </p>
-                        <a href={previewData.url} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors no-underline">
-                          <ExternalLink size={12} /> 원본에서 열기
+                previewData.content ? (
+                  /* ─── Inline Editor for template resources ─── */
+                  <ResourceEditor
+                    targetType="file_attachment"
+                    resourceId={previewData.id || ""}
+                    name={previewData.name}
+                    initialContent={previewData.content}
+                    canEdit={!!userId}
+                    onSave={(newContent) => {
+                      setFiles((prev) => prev.map((f) => f.id === previewData.id ? { ...f, content: newContent } : f));
+                      setPreviewData((prev) => prev ? { ...prev, content: newContent } : prev);
+                    }}
+                    onClose={() => setPreviewData(null)}
+                  />
+                ) : (
+                  /* ─── iframe preview for external links ─── */
+                  <div className="flex-1 flex flex-col h-full">
+                    <div className="flex items-center justify-between px-5 py-3 border-b-2 border-nu-ink bg-nu-cream/30">
+                      <div className="min-w-0 pr-4">
+                        <p className="font-head text-[13px] font-black text-nu-ink truncate uppercase tracking-tight">{previewData.name}</p>
+                        <p className="font-mono-nu text-[9px] text-nu-muted truncate uppercase tracking-widest mt-0.5">Live Document Integration</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <a href={previewData.url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-nu-muted hover:text-nu-ink" title="원본 보기">
+                          <ExternalLink size={14} />
                         </a>
+                        <button onClick={() => setPreviewData(null)} className="p-1.5 text-nu-muted hover:text-nu-ink">
+                          <X size={16} />
+                        </button>
                       </div>
                     </div>
-                    <iframe 
-                      src={getEmbedUrl(previewData.url)}
-                      className="w-full h-full border-0"
-                      allow="autoplay; encrypted-media; fullscreen"
-                      onError={() => {
-                        const guard = document.getElementById("permission-guard");
-                        if (guard) { guard.style.opacity = "1"; guard.style.pointerEvents = "auto"; }
-                      }}
-                    />
+                    <div className="flex-1 bg-nu-white overflow-hidden relative">
+                      {/* Permission Guard Overlay */}
+                      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-nu-paper/95 opacity-0 pointer-events-none peer-[.iframe-error]:opacity-100 peer-[.iframe-error]:pointer-events-auto transition-opacity" id="permission-guard">
+                        <div className="text-center px-6 max-w-xs">
+                          <div className="w-14 h-14 bg-nu-amber/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <span className="text-2xl">🔒</span>
+                          </div>
+                          <p className="font-head text-sm font-bold text-nu-ink mb-2">공유 설정을 확인해주세요</p>
+                          <p className="text-[11px] text-nu-muted leading-relaxed mb-4">
+                            이 문서가 보이지 않는다면 원본 문서의 공유 설정에서
+                            <span className="font-bold text-nu-ink"> &quot;링크가 있는 모든 사용자에게 공개&quot;</span>로
+                            변경해 주세요.
+                          </p>
+                          <a href={previewData.url} target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors no-underline">
+                            <ExternalLink size={12} /> 원본에서 열기
+                          </a>
+                        </div>
+                      </div>
+                      <iframe
+                        src={getEmbedUrl(previewData.url)}
+                        className="w-full h-full border-0"
+                        allow="autoplay; encrypted-media; fullscreen"
+                        onError={() => {
+                          const guard = document.getElementById("permission-guard");
+                          if (guard) { guard.style.opacity = "1"; guard.style.pointerEvents = "auto"; }
+                        }}
+                      />
+                    </div>
                   </div>
-                </div>
+                )
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-nu-muted">
                   <div className="w-20 h-20 bg-nu-ink/[0.03] rounded-full flex items-center justify-center mb-4">
@@ -599,12 +641,41 @@ export default function ResourcesPage() {
         )}
       </div>
 
-      {!isSplitView && (
-        <ResourcePreviewModal 
-          isOpen={!!previewData}
-          onClose={() => setPreviewData(null)}
-          url={previewData?.url || ""}
-          name={previewData?.name || ""}
+      {!isSplitView && previewData && (
+        previewData.content ? (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-nu-white w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col border-2 border-nu-ink">
+              <ResourceEditor
+                targetType="file_attachment"
+                resourceId={previewData.id || ""}
+                name={previewData.name}
+                initialContent={previewData.content}
+                canEdit={!!userId}
+                onSave={(newContent) => {
+                  setFiles((prev) => prev.map((f) => f.id === previewData.id ? { ...f, content: newContent } : f));
+                  setPreviewData((prev) => prev ? { ...prev, content: newContent } : prev);
+                }}
+                onClose={() => setPreviewData(null)}
+              />
+            </div>
+          </div>
+        ) : (
+          <ResourcePreviewModal
+            isOpen={!!previewData}
+            onClose={() => setPreviewData(null)}
+            url={previewData?.url || ""}
+            name={previewData?.name || ""}
+          />
+        )
+      )}
+
+      {/* New Document Modal */}
+      {showNewDocModal && (
+        <NewDocumentModal
+          targetType="group"
+          targetId={groupId}
+          onCreated={loadData}
+          onClose={() => setShowNewDocModal(false)}
         />
       )}
     </div>
@@ -692,6 +763,9 @@ function FileCard({
             >
               {file.file_name}
             </a>
+            {resolveTemplateContent(file.file_url, file.content) && (
+              <span className="shrink-0 font-mono-nu text-[7px] font-bold uppercase tracking-widest px-1.5 py-0.5 bg-nu-blue/10 text-nu-blue border border-nu-blue/20">편집</span>
+            )}
             {isNew && (
               <span className="shrink-0 font-mono-nu text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 bg-nu-pink text-white animate-pulse">
                 🔥 NEW
@@ -756,6 +830,10 @@ function FileCard({
            </div>
         </div>
       )}
+      {/* Like & Comment interactions */}
+      <div className="px-4 pb-3 border-t border-nu-ink/[0.04]">
+        <ResourceInteractions targetType="file_attachment" targetId={file.id} compact />
+      </div>
     </div>
   );
 }

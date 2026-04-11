@@ -64,6 +64,7 @@ interface TemplateCardProps {
   colorKey?: "blue" | "pink" | "amber";
   tag: string;
   templateId: string;
+  basePath?: string; // e.g., "/groups/create" or "/projects/create", defaults to "/groups/create"
   details: {
     longDescription: string;
     features: string[];
@@ -81,6 +82,7 @@ export function TemplateCard({
   colorKey = "blue",
   tag,
   templateId,
+  basePath = "/groups/create",
   details,
 }: TemplateCardProps) {
   const icon = iconMap[iconName] || <Rocket size={20} />;
@@ -101,7 +103,7 @@ export function TemplateCard({
 
   const handleStartTemplate = () => {
     setIsOpen(false);
-    router.push(`/groups/create?template=${templateId}`);
+    router.push(`${basePath}?template=${templateId}`);
   };
 
   return (

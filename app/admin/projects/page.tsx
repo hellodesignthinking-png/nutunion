@@ -1,55 +1,92 @@
 import { createClient } from "@/lib/supabase/server";
 import { AdminProjectList } from "@/components/admin/project-list";
-import { Briefcase } from "lucide-react";
 
 export default async function AdminProjectsPage() {
   const supabase = await createClient();
 
-  const { data: projects } = await supabase
-    .from("projects")
-    .select(
-      "*, creator:profiles!projects_created_by_fkey(nickname), project_members(count, crew_id)"
-    )
-    .order("created_at", { ascending: false });
+  // Resilient query: try FK join first, fallback to basic select
+  let projects: any[] = [];
+  try {
+    const { data, error } = await supabase
+      .from("projects")
+      .select(
+        "*, creator:profiles!projects_created_by_fkey(nickname), project_members(count)"
+      )
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    projects = data || [];
+  } catch {
+    // Fallback: basic query without FK joins
+    const { data } = await supabase
+      .from("projects")
+      .select("*")
+      .order("created_at", { ascending: false });
+    projects = data || [];
+  }
+
+  // Fetch creator profiles separately for fallback
+  const creatorIds = [...new Set(projects.map((p: any) => p.created_by).filter(Boolean))];
+  let creatorMap: Record<string, string> = {};
+  if (creatorIds.length > 0) {
+    const { data: creators } = await supabase
+      .from("profiles")
+      .select("id, nickname")
+      .in("id", creatorIds);
+    (creators || []).forEach((c: any) => {
+      creatorMap[c.id] = c.nickname || "unknown";
+    });
+  }
+
+  // Fetch member counts separately (more resilient)
+  const projectIds = projects.map((p: any) => p.id);
+  let memberCountMap: Record<string, number> = {};
+  if (projectIds.length > 0) {
+    const { data: members } = await supabase
+      .from("project_members")
+      .select("project_id");
+    (members || []).forEach((m: any) => {
+      memberCountMap[m.project_id] = (memberCountMap[m.project_id] || 0) + 1;
+    });
+  }
 
   // Fetch milestones with status
-  const { data: milestones } = await supabase
-    .from("project_milestones")
-    .select("project_id, status");
+  const [
+    milestoneResult,
+    taskResult,
+    crewResult,
+  ] = await Promise.allSettled([
+    supabase.from("project_milestones").select("project_id, status"),
+    supabase.from("project_tasks").select("project_id, status"),
+    supabase.from("project_members").select("project_id, crew_id").not("crew_id", "is", null),
+  ]);
 
-  // Fetch tasks with status
-  const { data: tasks } = await supabase
-    .from("project_tasks")
-    .select("project_id, status");
-
-  // Fetch crew member counts separately
-  const { data: crewMembers } = await supabase
-    .from("project_members")
-    .select("project_id, crew_id")
-    .not("crew_id", "is", null);
+  const milestones = milestoneResult.status === "fulfilled" ? milestoneResult.value.data || [] : [];
+  const tasks = taskResult.status === "fulfilled" ? taskResult.value.data || [] : [];
+  const crewMembers = crewResult.status === "fulfilled" ? crewResult.value.data || [] : [];
 
   // Build maps
   const milestoneMap: Record<string, { total: number; completed: number }> = {};
-  (milestones || []).forEach((m: any) => {
+  milestones.forEach((m: any) => {
     if (!milestoneMap[m.project_id]) milestoneMap[m.project_id] = { total: 0, completed: 0 };
     milestoneMap[m.project_id].total++;
     if (m.status === "completed") milestoneMap[m.project_id].completed++;
   });
 
   const taskMap: Record<string, { total: number; done: number }> = {};
-  (tasks || []).forEach((t: any) => {
+  tasks.forEach((t: any) => {
     if (!taskMap[t.project_id]) taskMap[t.project_id] = { total: 0, done: 0 };
     taskMap[t.project_id].total++;
     if (t.status === "done") taskMap[t.project_id].done++;
   });
 
   const crewCountMap: Record<string, number> = {};
-  (crewMembers || []).forEach((cm: any) => {
+  crewMembers.forEach((cm: any) => {
     if (!crewCountMap[cm.project_id]) crewCountMap[cm.project_id] = 0;
     crewCountMap[cm.project_id]++;
   });
 
-  const formatted = (projects || []).map((p: any) => ({
+  const formatted = projects.map((p: any) => ({
     id: p.id,
     title: p.title,
     category: p.category,
@@ -57,8 +94,8 @@ export default async function AdminProjectsPage() {
     start_date: p.start_date,
     end_date: p.end_date,
     created_at: p.created_at,
-    creator_nickname: p.creator?.nickname || "unknown",
-    member_count: p.project_members?.[0]?.count || 0,
+    creator_nickname: p.creator?.nickname || creatorMap[p.created_by] || "unknown",
+    member_count: p.project_members?.[0]?.count || memberCountMap[p.id] || 0,
     crew_count: crewCountMap[p.id] || 0,
     milestone_count: milestoneMap[p.id]?.total || 0,
     milestone_completed: milestoneMap[p.id]?.completed || 0,

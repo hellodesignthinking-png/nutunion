@@ -16,11 +16,16 @@ import { GoogleCalendarButton } from "@/components/integrations/google-calendar-
 import {
   Calendar, Clock, MapPin, User, Play, CheckCircle2, Lightbulb,
   Users, Edit3, Save, FileText, ArrowLeft, ChevronRight,
-  Link2, ExternalLink, Plus, Trash2, AlertCircle, Zap, Eye, Columns, Maximize2, X
+  Link2, ExternalLink, Plus, Trash2, AlertCircle, Zap, Eye, Columns, Maximize2, X,
+  Sparkles,
 } from "lucide-react";
+import { BestPracticePromote } from "@/components/shared/best-practice-promote";
 import { toast } from "sonner";
 import { ResourcePreviewModal } from "@/components/shared/resource-preview-modal";
 import { AiAgendaManager } from "@/components/meetings/ai-agenda-manager";
+import { AiMeetingAssistant } from "@/components/meetings/ai-meeting-assistant";
+import { WikiSyncPanel } from "@/components/wiki/wiki-sync-panel";
+import { WeeklyDigestEngine } from "@/components/wiki/weekly-digest-engine";
 
 function getEmbedUrl(url: string) {
   if (!url) return "";
@@ -90,6 +95,9 @@ export default function MeetingDetailPage() {
   const [actionLoading, setActionLoading]       = useState(false);
   const [editingSummary, setEditingSummary]     = useState(false);
   const [editedSummary, setEditedSummary]       = useState("");
+  const [showPromote, setShowPromote]           = useState(false);
+  const [meetingNotes, setMeetingNotes]           = useState<string[]>([]);
+  const [previousDigest, setPreviousDigest]       = useState<string | null>(null);
 
   // Next topic + issues
   const [nextTopic, setNextTopic]         = useState("");
@@ -114,10 +122,22 @@ export default function MeetingDetailPage() {
     if (!user) return;
     setUserId(user.id);
 
-    const [{ data: meetingData }, { data: groupData }] = await Promise.all([
-      supabase.from("meetings").select("*, organizer:profiles!meetings_organizer_id_fkey(id, nickname, avatar_url), secretary:profiles!meetings_secretary_id_fkey(nickname), speaker:profiles!meetings_speaker_id_fkey(nickname)").eq("id", meetingId).single(),
-      supabase.from("groups").select("host_id, name").eq("id", groupId).single(),
-    ]);
+    // Query meeting — basic query with organizer join only (secretary/speaker columns may not exist)
+    let meetingData: any = null;
+    let groupData: any = null;
+    const { data: mData, error: mErr } = await supabase.from("meetings")
+      .select("*, organizer:profiles!meetings_organizer_id_fkey(id, nickname, avatar_url)")
+      .eq("id", meetingId).single();
+    if (mErr) {
+      // Fallback: without any FK joins
+      const { data: basicData } = await supabase.from("meetings")
+        .select("*").eq("id", meetingId).single();
+      meetingData = basicData;
+    } else {
+      meetingData = mData;
+    }
+    const groupResult = await supabase.from("groups").select("host_id, name").eq("id", groupId).single();
+    groupData = groupResult.data;
 
     if (!meetingData) return;
     setMeeting(meetingData);
@@ -136,19 +156,56 @@ export default function MeetingDetailPage() {
       .from("group_members").select("profile:profiles(*)").eq("group_id", groupId).eq("status", "active");
     if (membersData) setMembers(membersData.map((m: any) => m.profile).filter(Boolean) as Profile[]);
 
-    // Shared resources
-    const { data: resData } = await supabase.from("meeting_resources").select("*, author:profiles!meeting_resources_created_by_fkey(nickname)").eq("meeting_id", meetingId).order("created_at");
-    if (resData) {
-      const resWithReplies = await Promise.all(resData.map(async (r: any) => {
-        const { data: replies } = await supabase.from("meeting_resource_replies").select("*, author:profiles!meeting_resource_replies_created_by_fkey(nickname)").eq("resource_id", r.id).order("created_at");
-        return { ...r, replies: replies || [] };
-      }));
-      setResources(resWithReplies as SharedResource[]);
-    }
+    // Shared resources (table may not exist if migration 009 not run)
+    try {
+      const { data: resData, error: resError } = await supabase.from("meeting_resources").select("*, author:profiles!meeting_resources_created_by_fkey(nickname)").eq("meeting_id", meetingId).order("created_at");
+      if (!resError && resData) {
+        const resWithReplies = await Promise.all(resData.map(async (r: any) => {
+          const { data: replies } = await supabase.from("meeting_resource_replies").select("*, author:profiles!meeting_resource_replies_created_by_fkey(nickname)").eq("resource_id", r.id).order("created_at");
+          return { ...r, replies: replies || [] };
+        }));
+        setResources(resWithReplies as SharedResource[]);
+      }
+    } catch { /* meeting_resources table may not exist */ }
 
-    // Linked issues
-    const { data: issueData } = await supabase.from("meeting_issues").select("*").eq("meeting_id", meetingId).order("created_at");
-    if (issueData) setIssues(issueData as LinkedIssue[]);
+    // Linked issues (table may not exist if migration 009 not run)
+    try {
+      const { data: issueData, error: issueError } = await supabase.from("meeting_issues").select("*").eq("meeting_id", meetingId).order("created_at");
+      if (!issueError && issueData) setIssues(issueData as LinkedIssue[]);
+    } catch { /* meeting_issues table may not exist */ }
+
+    // Fetch meeting notes for AI context
+    try {
+      const { data: notesData } = await supabase
+        .from("meeting_notes")
+        .select("content, type")
+        .eq("meeting_id", meetingId)
+        .order("created_at");
+      if (notesData) {
+        setMeetingNotes(notesData.map((n: any) => {
+          const prefix = n.type === "decision" ? "[결정] " : n.type === "action_item" ? "[액션] " : "";
+          return prefix + n.content;
+        }));
+      }
+    } catch { /* notes table may not exist */ }
+
+    // Load previous weekly digest context for AI
+    try {
+      const { data: digestData } = await supabase
+        .from("wiki_ai_analyses")
+        .select("content")
+        .eq("group_id", groupId)
+        .eq("analysis_type", "weekly_digest")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (digestData?.content) {
+        try {
+          const parsed = JSON.parse(digestData.content);
+          setPreviousDigest(parsed.nextMeetingContext || parsed.digest || null);
+        } catch { /* ignore parse errors */ }
+      }
+    } catch { /* wiki_ai_analyses table may not exist */ }
 
     setLoading(false);
   }, [groupId, meetingId]);
@@ -454,12 +511,20 @@ export default function MeetingDetailPage() {
             <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink font-bold flex items-center gap-1.5">
               <FileText size={12} /> 회의 요약
             </p>
-            {canEdit && !editingSummary && (
-              <button onClick={() => { setEditingSummary(true); setEditedSummary(meeting.summary || ""); }}
-                className="font-mono-nu text-[10px] text-nu-pink hover:underline flex items-center gap-1">
-                <Edit3 size={11} /> 수정
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {canEdit && (
+                <button onClick={() => setShowPromote(true)}
+                  className="font-mono-nu text-[10px] text-nu-pink hover:underline flex items-center gap-1">
+                  <Sparkles size={11} /> 베스트 프랙티스 승격
+                </button>
+              )}
+              {canEdit && !editingSummary && (
+                <button onClick={() => { setEditingSummary(true); setEditedSummary(meeting.summary || ""); }}
+                  className="font-mono-nu text-[10px] text-nu-pink hover:underline flex items-center gap-1">
+                  <Edit3 size={11} /> 수정
+                </button>
+              )}
+            </div>
           </div>
           {editingSummary ? (
             <div className="flex flex-col gap-2">
@@ -517,10 +582,17 @@ export default function MeetingDetailPage() {
       <Tabs defaultValue="agendas">
         <TabsList variant="line" className="mb-6">
           <TabsTrigger value="agendas" className="font-mono-nu text-[11px] uppercase tracking-widest">안건</TabsTrigger>
+          <TabsTrigger value="ai-notes" className="font-mono-nu text-[11px] uppercase tracking-widest flex items-center gap-1"><Sparkles size={11} /> AI 회의록</TabsTrigger>
           <TabsTrigger value="resources" className="font-mono-nu text-[11px] uppercase tracking-widest">자료 공유 ({resources.length})</TabsTrigger>
           <TabsTrigger value="notes" className="font-mono-nu text-[11px] uppercase tracking-widest">노트</TabsTrigger>
           <TabsTrigger value="next" className="font-mono-nu text-[11px] uppercase tracking-widest">다음 주제</TabsTrigger>
           <TabsTrigger value="attendance" className="font-mono-nu text-[11px] uppercase tracking-widest">출석</TabsTrigger>
+          <TabsTrigger value="wiki-sync" className="font-mono-nu text-[11px] uppercase tracking-widest flex items-center gap-1 text-nu-pink font-bold">
+            <Sparkles size={11} /> 위키 동기화
+          </TabsTrigger>
+          <TabsTrigger value="digest" className="font-mono-nu text-[11px] uppercase tracking-widest flex items-center gap-1 text-purple-600 font-bold">
+            <Zap size={11} /> 주간 다이제스트
+          </TabsTrigger>
         </TabsList>
 
         {/* ── 안건 */}
@@ -530,7 +602,65 @@ export default function MeetingDetailPage() {
               <AiAgendaManager groupId={groupId} />
             </div>
           )}
-          <AgendaList meetingId={meetingId} canEdit={canEdit} members={members} />
+          <AgendaList meetingId={meetingId} groupId={groupId} canEdit={canEdit} members={members} />
+        </TabsContent>
+
+        {/* ── AI 회의록 */}
+        <TabsContent value="ai-notes">
+          <AiMeetingAssistant
+            meetingId={meetingId}
+            meetingTitle={meeting.title}
+            existingNotes={meetingNotes}
+            existingSummary={meeting.summary || ""}
+            previousDigest={previousDigest || undefined}
+            agendas={(meeting as any).agendas?.map((a: any) => ({ topic: a.topic, description: a.description })) || []}
+            canEdit={canEdit}
+            onSaveSummary={async (summary) => {
+              const supabase = createClient();
+              await supabase.from("meetings").update({ summary }).eq("id", meetingId);
+              await loadMeeting();
+            }}
+            onSaveNextTopic={async (topic) => {
+              const supabase = createClient();
+              await supabase.from("meetings").update({ next_topic: topic }).eq("id", meetingId);
+              setNextTopic(topic);
+            }}
+            onAddNote={async (content, type) => {
+              const supabase = createClient();
+              const insertData: any = {
+                meeting_id: meetingId,
+                content,
+                type,
+                created_by: userId,
+              };
+              if (type === "action_item") insertData.status = "pending";
+              const { error } = await supabase.from("meeting_notes").insert(insertData);
+              if (error) {
+                console.error("meeting_notes insert error:", error);
+                throw new Error(error.message);
+              }
+            }}
+            onArchiveToGoogleDoc={async (title, docContent) => {
+              try {
+                const res = await fetch("/api/google/docs/create", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    title,
+                    content: docContent,
+                    targetType: "group",
+                    targetId: groupId,
+                    meetingId,
+                  }),
+                });
+                const data = await res.json();
+                if (!res.ok) return { error: data.error || "Google Docs 저장 실패" };
+                return { url: data.webViewLink };
+              } catch {
+                return { error: "Google Docs 연결에 실패했습니다" };
+              }
+            }}
+          />
         </TabsContent>
 
         {/* ── 자료 공유 */}
@@ -730,6 +860,31 @@ export default function MeetingDetailPage() {
           </div>
         </TabsContent>
 
+        {/* ── 위키 동기화 */}
+        <TabsContent value="wiki-sync">
+          <WikiSyncPanel 
+            meetingId={meetingId} 
+            groupId={groupId} 
+            meetingContent={[
+              meeting.summary || "",
+              meeting.description || "",
+              (meeting as any).next_topic || "",
+              meeting.title || "",
+              ...meetingNotes,
+            ].filter(Boolean).join("\n\n")} 
+          />
+        </TabsContent>
+
+        {/* ── 주간 다이제스트 */}
+        <TabsContent value="digest">
+          <WeeklyDigestEngine
+            groupId={groupId}
+            meetingId={meetingId}
+            autoTrigger={meeting.status === "completed"}
+            onDigestSaved={(digest) => setPreviousDigest(digest)}
+          />
+        </TabsContent>
+
         {/* ── 출석 */}
         <TabsContent value="attendance">
           <div className="bg-nu-white border-[2px] border-nu-ink/[0.08] p-6">
@@ -794,6 +949,22 @@ export default function MeetingDetailPage() {
           onClose={() => setPreviewData(null)}
           url={previewData?.url || ""}
           name={previewData?.name || ""}
+        />
+      )}
+
+      {/* Best Practice Promote Modal */}
+      {showPromote && meeting && (
+        <BestPracticePromote
+          sourceType="meeting"
+          sourceId={meetingId}
+          groupId={groupId}
+          sourceName={meeting.title}
+          sourceContent={meeting.summary || undefined}
+          onClose={() => setShowPromote(false)}
+          onPromoted={() => {
+            setShowPromote(false);
+            toast.success("베스트 프랙티스로 승격되었습니다!");
+          }}
         />
       )}
     </div>

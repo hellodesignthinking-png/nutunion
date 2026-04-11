@@ -151,11 +151,15 @@ export function ProjectSplitView({
 
     if (!error && data) {
       setFeedbackUpdates(data as ProjectUpdate[]);
+    } else {
+      const { data: basicData } = await supabase.from("project_updates").select("*").eq("project_id", projectId).order("created_at", { ascending: false }).limit(100);
+      if (basicData) setFeedbackUpdates(basicData as ProjectUpdate[]);
     }
   }, [projectId]);
 
   const loadActionItems = useCallback(async () => {
     const supabase = createClient();
+    // Try full query with assignee join
     const { data, error } = await supabase
       .from("project_action_items")
       .select("*, assignee:profiles!assigned_to(id, nickname, avatar_url)")
@@ -165,6 +169,17 @@ export function ProjectSplitView({
 
     if (!error && data) {
       setActionItems(data as ProjectActionItem[]);
+    } else {
+      // Fallback: without assignee join (table or FK may not exist)
+      const { data: basicData } = await supabase
+        .from("project_action_items")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (basicData) {
+        setActionItems(basicData as ProjectActionItem[]);
+      }
     }
   }, [projectId]);
 
@@ -177,6 +192,10 @@ export function ProjectSplitView({
 
     if (!error && data) {
       setMembers(data.map((m: any) => m.profiles).filter(Boolean));
+    } else {
+      // Fallback: just get user_ids without profile join
+      const { data: basicData } = await supabase.from("project_members").select("user_id").eq("project_id", projectId);
+      if (basicData) setMembers(basicData.map((m: any) => ({ id: m.user_id, nickname: "멤버" })));
     }
   }, [projectId]);
 
@@ -199,23 +218,30 @@ export function ProjectSplitView({
     setPostingFeedback(true);
     try {
       const supabase = createClient();
+      const insertPayload = {
+        project_id: projectId,
+        author_id: userId,
+        content: newFeedback.trim(),
+        type: "post",
+        metadata: {
+          resource_id: selectedResourceId,
+          is_feedback: true,
+        },
+      };
       const { data, error } = await supabase
         .from("project_updates")
-        .insert({
-          project_id: projectId,
-          author_id: userId,
-          content: newFeedback.trim(),
-          type: "post",
-          metadata: {
-            resource_id: selectedResourceId,
-            is_feedback: true,
-          },
-        })
+        .insert(insertPayload)
         .select("*, author:profiles!project_updates_author_id_fkey(id, nickname, avatar_url)")
         .single();
 
-      if (error) throw error;
-      setFeedbackUpdates((prev) => [data as ProjectUpdate, ...prev]);
+      if (error) {
+        // Retry without author join
+        const { data: basicData, error: basicError } = await supabase.from("project_updates").insert(insertPayload).select("*").single();
+        if (basicError) throw basicError;
+        setFeedbackUpdates((prev) => [basicData as ProjectUpdate, ...prev]);
+      } else {
+        setFeedbackUpdates((prev) => [data as ProjectUpdate, ...prev]);
+      }
       setNewFeedback("");
       toast.success("피드백이 게시되었습니다");
     } catch (err: any) {
@@ -231,21 +257,27 @@ export function ProjectSplitView({
     setSavingAction(true);
     try {
       const supabase = createClient();
+      const actionPayload = {
+        project_id: projectId,
+        title: newActionTitle.trim(),
+        priority: newActionPriority,
+        status: "open",
+        assigned_to: newActionAssignee || null,
+        source_url: selectedResource?.url || null,
+      };
       const { data, error } = await supabase
         .from("project_action_items")
-        .insert({
-          project_id: projectId,
-          title: newActionTitle.trim(),
-          priority: newActionPriority,
-          status: "open",
-          assigned_to: newActionAssignee || null,
-          source_url: selectedResource?.url || null,
-        })
+        .insert(actionPayload)
         .select("*, assignee:profiles!assigned_to(id, nickname, avatar_url)")
         .single();
 
-      if (error) throw error;
-      setActionItems((prev) => [data as ProjectActionItem, ...prev]);
+      if (error) {
+        const { data: basicData, error: basicError } = await supabase.from("project_action_items").insert(actionPayload).select("*").single();
+        if (basicError) throw basicError;
+        setActionItems((prev) => [basicData as ProjectActionItem, ...prev]);
+      } else {
+        setActionItems((prev) => [data as ProjectActionItem, ...prev]);
+      }
       setNewActionTitle("");
       setNewActionAssignee("");
       setNewActionPriority("medium");

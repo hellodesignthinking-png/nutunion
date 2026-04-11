@@ -5,10 +5,11 @@ import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  Users, Search, Filter, Award, Zap, Briefcase, 
+import {
+  Users, Search, Filter, Award, Zap, Briefcase,
   CheckCircle2, Star, ChefHat, BookOpen, Layers,
-  ChevronRight, ArrowRight, UserPlus, Trophy
+  ChevronRight, ArrowRight, UserPlus, Trophy, ChevronDown,
+  FileText, Award as AwardIcon, Heart
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -28,6 +29,24 @@ const specialtyColors: Record<string, string> = {
   vibe: "bg-nu-pink text-white",
 };
 
+const desiredFieldsOptions = [
+  "브랜딩",
+  "개발",
+  "디자인",
+  "마케팅",
+  "기획",
+  "데이터",
+  "콘텐츠",
+  "운영",
+];
+
+interface Portfolio {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+}
+
 interface Talent {
   profile_id: string;
   nickname: string;
@@ -40,6 +59,12 @@ interface Talent {
   total_attendances: number;
   leadership_count: number;
   project_count: number;
+  bio: string | null;
+  desired_fields: string[];
+  available_hours: number | null;
+  portfolio_count: number;
+  endorsement_count: number;
+  portfolios: Portfolio[];
 }
 
 // Mini radar chart for talent cards
@@ -70,75 +95,108 @@ export default function TalentSearchPage() {
   const [minPlanning, setMinPlanning] = useState(0);
   const [minExecution, setMinExecution] = useState(0);
   const [minCollab, setMinCollab] = useState(0);
+  const [selectedDesiredFields, setSelectedDesiredFields] = useState<string[]>([]);
+  const [selectedAvailableHours, setSelectedAvailableHours] = useState<string>("전체");
+  const [minEndorsements, setMinEndorsements] = useState(0);
+  const [sortBy, setSortBy] = useState<"activity" | "competency" | "endorsements">("activity");
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    basic: true,
+    competency: false,
+    advanced: false,
+  });
 
   useEffect(() => {
     async function load() {
       const supabase = createClient();
 
-      // Try the talent_stats view first
-      const { data, error } = await supabase
-        .from("talent_stats")
-        .select("*")
-        .order("activity_score", { ascending: false });
+      // ── Step 1: Load profiles (most resilient approach) ──
+      let profiles: any[] | null = null;
 
-      if (!error && data && data.length > 0) {
-        setTalents(data as Talent[]);
-        setFiltered(data as Talent[]);
+      // Try progressively simpler queries until one works
+      const queries = [
+        "id, nickname, avatar_url, bio, created_at, skill_tags, tier, activity_score, points, specialty, desired_fields, available_hours",
+        "id, nickname, avatar_url, bio, created_at, skill_tags, tier, activity_score, points, specialty",
+        "id, nickname, avatar_url, bio, created_at, skill_tags",
+        "id, nickname, avatar_url, created_at",
+      ];
+
+      for (const cols of queries) {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select(cols)
+          .order("created_at", { ascending: false });
+        if (!error && data) {
+          profiles = data;
+          break;
+        }
+        console.warn(`profiles query failed with columns [${cols}]:`, error?.message);
+      }
+
+      if (!profiles || profiles.length === 0) {
+        console.error("No profiles found or all queries failed");
         setLoading(false);
         return;
       }
 
-      // Fallback: query profiles directly (no activity_score column — use created_at)
-      console.warn("talent_stats view unavailable, falling back to profiles.");
-      const { data: profiles, error: profileError } = await supabase
-        .from("profiles")
-        .select("id, nickname, avatar_url, bio, created_at")
-        .order("created_at", { ascending: false })
-        .limit(50);
-
-      if (profileError || !profiles) {
-        console.error("Failed to load profiles:", profileError);
-        setLoading(false);
-        return;
-      }
-
-      // Compute real activity counts for each profile
+      // ── Step 2: Enrich each profile with activity counts ──
       const enriched: Talent[] = [];
+
       for (const p of profiles) {
-        // Use correct column names: meeting_notes uses created_by, group_members has no id column
+        // Run all count queries in parallel — each wrapped in allSettled so failures don't break anything
         const results = await Promise.allSettled([
+          supabase.from("group_members").select("user_id", { count: "exact", head: true }).eq("user_id", p.id).eq("status", "active"),
+          supabase.from("project_members").select("user_id", { count: "exact", head: true }).eq("user_id", p.id),
           supabase.from("meeting_notes").select("meeting_id", { count: "exact", head: true }).eq("created_by", p.id),
           supabase.from("crew_posts").select("id", { count: "exact", head: true }).eq("author_id", p.id),
-          supabase.from("project_members").select("user_id", { count: "exact", head: true }).eq("user_id", p.id),
-          supabase.from("group_members").select("user_id", { count: "exact", head: true }).eq("user_id", p.id).eq("status", "active"),
+          supabase.from("portfolios").select("id", { count: "exact", head: true }).eq("user_id", p.id),
+          supabase.from("endorsements").select("id", { count: "exact", head: true }).eq("endorsed_id", p.id),
         ]);
 
-        const getCount = (r: PromiseSettledResult<any>) =>
-          r.status === "fulfilled" && !r.value.error ? (r.value.count || 0) : 0;
+        const c = (i: number) => {
+          const r = results[i];
+          return r.status === "fulfilled" && !r.value.error ? r.value.count || 0 : 0;
+        };
 
-        const mc = getCount(results[0]);
-        const pc = getCount(results[1]);
-        const pj = getCount(results[2]);
-        const gc = getCount(results[3]);
+        const gc = c(0);
+        const pj = c(1);
+        const mc = c(2);
+        const pc = c(3);
+        const portfolioCount = c(4);
+        const endorsementCount = c(5);
 
-        const activityScore = Math.min(100, mc * 10 + pc * 8 + pj * 15 + gc * 5);
+        const activityScore = p.activity_score || Math.min(100, mc * 10 + pc * 8 + pj * 15 + gc * 5);
+
+        // Map DB tier values (scout/settler/pioneer/master) to UI tier values (bronze/silver/gold/vip)
+        const tierMap: Record<string, string> = {
+          scout: "bronze",
+          settler: "silver",
+          pioneer: "gold",
+          master: "vip",
+        };
+        const rawTier = p.tier || "";
+        const uiTier = tierMap[rawTier] || rawTier || (activityScore >= 80 ? "gold" : activityScore >= 40 ? "silver" : "bronze");
 
         enriched.push({
           profile_id: p.id,
           nickname: p.nickname || "멤버",
-          avatar_url: p.avatar_url,
-          skill_tags: [],
-          tier: activityScore >= 80 ? "gold" : activityScore >= 40 ? "silver" : "bronze",
+          avatar_url: p.avatar_url || null,
+          skill_tags: p.skill_tags || [],
+          tier: uiTier,
           activity_score: activityScore,
-          points: 0,
-          specialty: null,
+          points: p.points || 0,
+          specialty: p.specialty || null,
           total_attendances: mc,
           leadership_count: gc,
           project_count: pj,
+          bio: p.bio || null,
+          desired_fields: p.desired_fields || [],
+          available_hours: p.available_hours || null,
+          portfolio_count: portfolioCount,
+          endorsement_count: endorsementCount,
+          portfolios: [],
         });
       }
 
-      // Sort by computed activity score
       enriched.sort((a, b) => b.activity_score - a.activity_score);
       setTalents(enriched);
       setFiltered(enriched);
@@ -158,26 +216,112 @@ export default function TalentSearchPage() {
     return [planning, sincerity, docs, execution, expertise, collab];
   };
 
+  const getCompetencyAverage = (t: Talent) => {
+    const scores = getCompetency(t);
+    return scores.reduce((a, b) => a + b, 0) / scores.length;
+  };
+
+  const mapAvailableHours = (hourStr: string): number => {
+    switch (hourStr) {
+      case "전체":
+        return 0;
+      case "주 5시간 이상":
+        return 5;
+      case "주 10시간 이상":
+        return 10;
+      case "주 20시간 이상":
+        return 20;
+      default:
+        return 0;
+    }
+  };
+
   useEffect(() => {
-    let res = talents.filter(t => {
-      const [planning,,, execution,, collab] = getCompetency(t);
+    let res = talents.filter((t) => {
+      const [planning, , , execution, , collab] = getCompetency(t);
+      const searchLower = search.toLowerCase();
+      const matchesSearch =
+        (t.nickname?.toLowerCase().includes(searchLower) ||
+          (t.skill_tags || []).some((s) => s.toLowerCase().includes(searchLower)) ||
+          (t.bio && t.bio.toLowerCase().includes(searchLower)) ||
+          (t.portfolios || []).some(
+            (p) =>
+              (p.title && p.title.toLowerCase().includes(searchLower)) ||
+              (p.description && p.description.toLowerCase().includes(searchLower))
+          )) ??
+        false;
+
+      const matchesDesiredFields =
+        selectedDesiredFields.length === 0 ||
+        selectedDesiredFields.some((field) => (t.desired_fields || []).includes(field));
+
+      const minHours = mapAvailableHours(selectedAvailableHours);
+      const matchesAvailableHours =
+        minHours === 0 || (t.available_hours || 0) >= minHours;
+
       return (
-        (t.nickname?.toLowerCase().includes(search.toLowerCase()) || (t.skill_tags || []).some(s => s.toLowerCase().includes(search.toLowerCase()))) &&
-        (t.activity_score >= minActivity) &&
-        (t.total_attendances >= minAttendances) &&
-        (planning >= minPlanning) &&
-        (execution >= minExecution) &&
-        (collab >= minCollab)
+        matchesSearch &&
+        t.activity_score >= minActivity &&
+        t.total_attendances >= minAttendances &&
+        planning >= minPlanning &&
+        execution >= minExecution &&
+        collab >= minCollab &&
+        matchesDesiredFields &&
+        matchesAvailableHours &&
+        t.endorsement_count >= minEndorsements &&
+        (!selectedTag || (t.skill_tags || []).includes(selectedTag))
       );
     });
-    if (selectedTag) {
-      res = res.filter(t => (t.skill_tags || []).includes(selectedTag));
+
+    // Apply sorting
+    if (sortBy === "competency") {
+      res.sort((a, b) => getCompetencyAverage(b) - getCompetencyAverage(a));
+    } else if (sortBy === "endorsements") {
+      res.sort((a, b) => b.endorsement_count - a.endorsement_count);
+    } else {
+      // Default: activity
+      res.sort((a, b) => b.activity_score - a.activity_score);
     }
+
     setFiltered(res);
-  }, [search, minActivity, minAttendances, selectedTag, minPlanning, minExecution, minCollab, talents]);
+  }, [
+    search,
+    minActivity,
+    minAttendances,
+    selectedTag,
+    minPlanning,
+    minExecution,
+    minCollab,
+    selectedDesiredFields,
+    selectedAvailableHours,
+    minEndorsements,
+    sortBy,
+    talents,
+  ]);
 
   // Extract all tags for filter
-  const allTags = Array.from(new Set(talents.flatMap(t => t.skill_tags || []))).sort();
+  const allTags = Array.from(new Set(talents.flatMap((t) => t.skill_tags || []))).sort();
+
+  const toggleSection = (section: string) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
+
+  const resetFilters = () => {
+    setSearch("");
+    setMinActivity(0);
+    setMinAttendances(0);
+    setSelectedTag(null);
+    setMinPlanning(0);
+    setMinExecution(0);
+    setMinCollab(0);
+    setSelectedDesiredFields([]);
+    setSelectedAvailableHours("전체");
+    setMinEndorsements(0);
+    setSortBy("activity");
+  };
 
   if (loading) {
     return (
@@ -217,71 +361,252 @@ export default function TalentSearchPage() {
 
       {/* Filter Bar */}
       <div className="bg-nu-white border border-nu-ink/[0.08] p-6 mb-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Search + Sort + Reset */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
           <div className="lg:col-span-2 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-nu-muted" size={16} />
-            <Input 
-              placeholder="이름 또는 스킬 태그 검색 (ex. 기획, 디자인, JS...)" 
-              value={search} 
-              onChange={e => setSearch(e.target.value)}
+            <Input
+              placeholder="이름, 스킬, 포트폴리오, 소개 검색"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               className="pl-10 h-12 bg-nu-cream/20 border-nu-ink/10"
             />
           </div>
-          <div>
-            <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-2">활동 지수 ({minActivity}%+)</label>
-            <input 
-              type="range" min="0" max="100" step="10" 
-              value={minActivity} onChange={e => setMinActivity(parseInt(e.target.value))}
-              className="w-full h-1.5 bg-nu-cream rounded-lg appearance-none cursor-pointer accent-nu-pink"
-            />
-          </div>
-          <div>
-            <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-2">최소 출석 (평균)</label>
-            <select 
-              value={minAttendances} onChange={e => setMinAttendances(parseInt(e.target.value))}
-              className="w-full h-10 border border-nu-ink/10 bg-nu-cream/10 px-3 text-sm focus:outline-none"
+          <div className="flex gap-2">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="flex-1 h-12 border border-nu-ink/10 bg-nu-cream/10 px-3 text-sm focus:outline-none font-mono-nu text-[10px] uppercase tracking-widest"
             >
-              <option value="0">전체</option>
-              <option value="3">3회 이상 (성실)</option>
-              <option value="10">10회 이상 (숙련)</option>
-              <option value="30">30회 이상 (마스터)</option>
+              <option value="activity">최신 활동순</option>
+              <option value="competency">역량 점수 높은순</option>
+              <option value="endorsements">동료 보증 많은순</option>
             </select>
+            <Button
+              variant="outline"
+              onClick={resetFilters}
+              className="font-mono-nu text-[9px] uppercase tracking-widest"
+            >
+              필터 초기화
+            </Button>
           </div>
+        </div>
 
-        {/* Competency Filter */}
-        <div className="mt-6 pt-6 border-t border-nu-ink/5">
-          <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-3 flex items-center gap-2">
-            <Filter size={12} /> 역량 필터 (Competency Radar)
+        {/* Results Count */}
+        <div className="mb-6 pb-4 border-b border-nu-ink/5">
+          <p className="font-head text-sm font-bold text-nu-ink">
+            {filtered.length}명의 인재
           </p>
-          <div className="grid grid-cols-3 gap-6">
-            <div>
-              <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-blue font-bold block mb-1">기획 ({minPlanning}+)</label>
-              <input type="range" min="0" max="100" step="10" value={minPlanning} onChange={e => setMinPlanning(parseInt(e.target.value))} className="w-full h-1 bg-nu-cream rounded-lg appearance-none cursor-pointer accent-nu-blue" />
-            </div>
-            <div>
-              <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-pink font-bold block mb-1">실행 ({minExecution}+)</label>
-              <input type="range" min="0" max="100" step="10" value={minExecution} onChange={e => setMinExecution(parseInt(e.target.value))} className="w-full h-1 bg-nu-cream rounded-lg appearance-none cursor-pointer accent-nu-pink" />
-            </div>
-            <div>
-              <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-amber font-bold block mb-1">협업 ({minCollab}+)</label>
-              <input type="range" min="0" max="100" step="10" value={minCollab} onChange={e => setMinCollab(parseInt(e.target.value))} className="w-full h-1 bg-nu-cream rounded-lg appearance-none cursor-pointer accent-nu-amber" />
-            </div>
-          </div>
         </div>
+
+        {/* Basic Filters (Collapsible) */}
+        <div className="mb-4">
+          <button
+            onClick={() => toggleSection("basic")}
+            className="w-full flex items-center justify-between p-3 bg-nu-cream/20 border border-nu-ink/5 hover:bg-nu-cream/30 transition-colors"
+          >
+            <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-ink font-bold flex items-center gap-2">
+              <Filter size={12} /> 기본 필터
+            </p>
+            <ChevronDown
+              size={16}
+              className={`transition-transform ${expandedSections.basic ? "" : "-rotate-90"}`}
+            />
+          </button>
+          {expandedSections.basic && (
+            <div className="p-4 border border-t-0 border-nu-ink/5 grid grid-cols-1 lg:grid-cols-4 gap-4">
+              <div>
+                <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-2">
+                  활동 지수 ({minActivity}%+)
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="10"
+                  value={minActivity}
+                  onChange={(e) => setMinActivity(parseInt(e.target.value))}
+                  className="w-full h-1.5 bg-nu-cream rounded-lg appearance-none cursor-pointer accent-nu-pink"
+                />
+              </div>
+              <div>
+                <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-2">
+                  최소 출석
+                </label>
+                <select
+                  value={minAttendances}
+                  onChange={(e) => setMinAttendances(parseInt(e.target.value))}
+                  className="w-full h-10 border border-nu-ink/10 bg-nu-cream/10 px-3 text-sm focus:outline-none"
+                >
+                  <option value="0">전체</option>
+                  <option value="3">3회 이상</option>
+                  <option value="10">10회 이상</option>
+                  <option value="30">30회 이상</option>
+                </select>
+              </div>
+              <div>
+                <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-2">
+                  희망 분야
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {desiredFieldsOptions.map((field) => (
+                    <button
+                      key={field}
+                      onClick={() => {
+                        setSelectedDesiredFields((prev) =>
+                          prev.includes(field) ? prev.filter((f) => f !== field) : [...prev, field]
+                        );
+                      }}
+                      className={`text-[9px] px-2 py-1 transition-all ${
+                        selectedDesiredFields.includes(field)
+                          ? "bg-nu-pink text-white"
+                          : "border border-nu-ink/10 text-nu-muted hover:border-nu-pink"
+                      }`}
+                    >
+                      {field}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-2">
+                  가용 시간
+                </label>
+                <select
+                  value={selectedAvailableHours}
+                  onChange={(e) => setSelectedAvailableHours(e.target.value)}
+                  className="w-full h-10 border border-nu-ink/10 bg-nu-cream/10 px-3 text-sm focus:outline-none"
+                >
+                  <option value="전체">전체</option>
+                  <option value="주 5시간 이상">주 5시간 이상</option>
+                  <option value="주 10시간 이상">주 10시간 이상</option>
+                  <option value="주 20시간 이상">주 20시간 이상</option>
+                </select>
+              </div>
+            </div>
+          )}
         </div>
-        
-        {/* Popular Tags */}
-        <div className="mt-6 flex flex-wrap gap-2">
-           <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted self-center mr-2">인기 태그:</p>
-           {allTags.slice(0, 15).map(tag => (
-             <button 
-               key={tag} 
-               onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
-               className={`text-[10px] px-2.5 py-1 transition-all ${selectedTag === tag ? "bg-nu-ink text-white" : "border border-nu-ink/10 text-nu-muted hover:border-nu-pink"}`}
-             >
-               #{tag}
-             </button>
-           ))}
+
+        {/* Competency Filter (Collapsible) */}
+        <div className="mb-4">
+          <button
+            onClick={() => toggleSection("competency")}
+            className="w-full flex items-center justify-between p-3 bg-nu-cream/20 border border-nu-ink/5 hover:bg-nu-cream/30 transition-colors"
+          >
+            <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-ink font-bold flex items-center gap-2">
+              <Layers size={12} /> 역량 필터
+            </p>
+            <ChevronDown
+              size={16}
+              className={`transition-transform ${expandedSections.competency ? "" : "-rotate-90"}`}
+            />
+          </button>
+          {expandedSections.competency && (
+            <div className="p-4 border border-t-0 border-nu-ink/5 grid grid-cols-3 gap-4">
+              <div>
+                <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-blue font-bold block mb-1">
+                  기획 ({minPlanning}+)
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="10"
+                  value={minPlanning}
+                  onChange={(e) => setMinPlanning(parseInt(e.target.value))}
+                  className="w-full h-1 bg-nu-cream rounded-lg appearance-none cursor-pointer accent-nu-blue"
+                />
+              </div>
+              <div>
+                <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-pink font-bold block mb-1">
+                  실행 ({minExecution}+)
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="10"
+                  value={minExecution}
+                  onChange={(e) => setMinExecution(parseInt(e.target.value))}
+                  className="w-full h-1 bg-nu-cream rounded-lg appearance-none cursor-pointer accent-nu-pink"
+                />
+              </div>
+              <div>
+                <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-amber font-bold block mb-1">
+                  협업 ({minCollab}+)
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="10"
+                  value={minCollab}
+                  onChange={(e) => setMinCollab(parseInt(e.target.value))}
+                  className="w-full h-1 bg-nu-cream rounded-lg appearance-none cursor-pointer accent-nu-amber"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Advanced Filters (Collapsible) */}
+        <div className="mb-4">
+          <button
+            onClick={() => toggleSection("advanced")}
+            className="w-full flex items-center justify-between p-3 bg-nu-cream/20 border border-nu-ink/5 hover:bg-nu-cream/30 transition-colors"
+          >
+            <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-ink font-bold flex items-center gap-2">
+              <Award size={12} /> 고급 필터
+            </p>
+            <ChevronDown
+              size={16}
+              className={`transition-transform ${expandedSections.advanced ? "" : "-rotate-90"}`}
+            />
+          </button>
+          {expandedSections.advanced && (
+            <div className="p-4 border border-t-0 border-nu-ink/5 space-y-4">
+              <div>
+                <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-3">
+                  최소 보증 수 ({minEndorsements})
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[0, 3, 5, 10].map((val) => (
+                    <button
+                      key={val}
+                      onClick={() => setMinEndorsements(val)}
+                      className={`py-2 text-[10px] font-bold uppercase tracking-widest transition-all ${
+                        minEndorsements === val
+                          ? "bg-nu-pink text-white"
+                          : "border border-nu-ink/10 text-nu-muted hover:border-nu-pink"
+                      }`}
+                    >
+                      {val}건
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-3 flex items-center gap-2">
+                  인기 태그:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {allTags.slice(0, 15).map((tag) => (
+                    <button
+                      key={tag}
+                      onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+                      className={`text-[10px] px-2.5 py-1 transition-all ${
+                        selectedTag === tag
+                          ? "bg-nu-ink text-white"
+                          : "border border-nu-ink/10 text-nu-muted hover:border-nu-pink"
+                      }`}
+                    >
+                      #{tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -342,16 +667,23 @@ export default function TalentSearchPage() {
                           <p className="text-[7px] uppercase font-mono-nu text-nu-muted">출석</p>
                        </div>
                        <div className="text-center p-1.5 bg-nu-cream/30 border border-nu-ink/5">
-                          <p className="font-head text-xs font-extrabold">{talent.leadership_count}</p>
-                          <p className="text-[7px] uppercase font-mono-nu text-nu-muted">리더</p>
+                          <p className="font-head text-xs font-extrabold">{talent.endorsement_count}</p>
+                          <p className="text-[7px] uppercase font-mono-nu text-nu-muted">보증</p>
                        </div>
                     </div>
                  </div>
 
                  <div className="flex flex-wrap gap-1 mb-6 h-[44px] overflow-hidden">
-                    {(talent.skill_tags || []).map(tag => (
-                      <span key={tag} className="text-[10px] border border-nu-ink/10 px-2 py-0.5 text-nu-muted">#{tag}</span>
+                    {(talent.skill_tags || []).map((tag) => (
+                      <span key={tag} className="text-[10px] border border-nu-ink/10 px-2 py-0.5 text-nu-muted">
+                        #{tag}
+                      </span>
                     ))}
+                    {talent.portfolio_count > 0 && (
+                      <span className="text-[10px] border border-nu-pink/30 bg-nu-pink/5 px-2 py-0.5 text-nu-pink font-bold flex items-center gap-1">
+                        <FileText size={10} /> 포트폴리오 {talent.portfolio_count}건
+                      </span>
+                    )}
                  </div>
 
                  <Link href={`/portfolio/${talent.profile_id}`}>

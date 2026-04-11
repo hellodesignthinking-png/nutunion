@@ -3,7 +3,7 @@ import {
   Users, Layers, Calendar, FileText, Briefcase,
   UserPlus, FolderGit2, MessageSquare, Pencil, Upload,
   UserCog, ExternalLink, Clock, Shield, Star, Crown, Award,
-  AlertTriangle, CheckCircle2, TrendingUp, ArrowUpRight,
+  AlertTriangle, CheckCircle2, TrendingUp, ArrowUpRight, Send,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -42,6 +42,7 @@ export default async function AdminDashboard() {
     { count: contentCount },
     { count: projectCount },
     { count: pendingMembersCount },
+    { count: proposalCount },
   ] = await Promise.all([
     supabase.from("profiles").select("*", { count: "exact", head: true }),
     supabase.from("groups").select("*", { count: "exact", head: true }).eq("is_active", true),
@@ -49,6 +50,7 @@ export default async function AdminDashboard() {
     supabase.from("page_content").select("*", { count: "exact", head: true }),
     supabase.from("projects").select("*", { count: "exact", head: true }).eq("status", "active"),
     supabase.from("group_members").select("*", { count: "exact", head: true }).eq("status", "pending"),
+    supabase.from("challenge_proposals").select("*", { count: "exact", head: true }).eq("status", "submitted"),
   ]);
 
   // ── 등급 분포 ─────────────────────────────────────────────────────
@@ -97,6 +99,7 @@ export default async function AdminDashboard() {
     { label: "예정 일정",   count: eventCount   || 0, icon: Calendar, color: "bg-nu-amber/10 text-nu-amber",      href: "/admin" },
     { label: "활성 프로젝트",count: projectCount || 0, icon: Briefcase,color: "bg-green-50 text-green-600",       href: "/admin/projects" },
     { label: "가입 대기",   count: pendingMembersCount || 0, icon: Clock, color: "bg-orange-50 text-orange-500", href: "/admin/groups", urgent: (pendingMembersCount || 0) > 0 },
+    { label: "새 의뢰",    count: proposalCount || 0, icon: Send, color: "bg-nu-pink/10 text-nu-pink",   href: "/admin/proposals", urgent: (proposalCount || 0) > 0 },
   ];
 
   const updateTypeLabels: Record<string, string> = {
@@ -134,7 +137,7 @@ export default async function AdminDashboard() {
       )}
 
       {/* ── KPI Stats ────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
         {stats.map((s) => (
           <Link key={s.label} href={s.href}
             className={`bg-nu-white border p-5 hover:shadow-sm transition-all no-underline group ${s.urgent ? "border-orange-300 bg-orange-50" : "border-nu-ink/[0.08] hover:border-nu-ink/20"}`}>
@@ -237,6 +240,7 @@ export default async function AdminDashboard() {
               { label: "회원 등급 관리", href: "/admin/users",    icon: UserCog,    color: "text-nu-pink" },
               { label: "소모임 관리",   href: "/admin/groups",   icon: Layers,     color: "text-nu-blue" },
               { label: "프로젝트 관리", href: "/admin/projects", icon: Briefcase,  color: "text-green-600" },
+              { label: "의뢰 관리",   href: "/admin/proposals",icon: Send,      color: "text-nu-pink" },
               { label: "콘텐츠 수정",  href: "/admin/content",  icon: Pencil,     color: "text-nu-amber" },
               { label: "미디어 업로드",href: "/admin/media",    icon: Upload,     color: "text-nu-graphite" },
             ].map((a) => (

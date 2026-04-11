@@ -18,6 +18,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { Profile } from "@/lib/types";
+import { SkillBadgeDisplay } from "@/components/shared/skill-badge-display";
+import { EndorsementPanel } from "@/components/shared/endorsement-panel";
+import { PortfolioManager } from "@/components/portfolio/portfolio-manager";
 
 // ─── 등급 helper ──────────────────────────────────────────────────────
 const GRADE_MAP: Record<string, { label: string; color: string; icon: any }> = {
@@ -185,7 +188,7 @@ export default function ProfilePage() {
   const [pointLogs, setPointLogs] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [tab, setTab] = useState<"archive"|"crews"|"projects"|"portfolios"|"history">("archive");
+  const [tab, setTab] = useState<"archive"|"crews"|"projects"|"badges"|"portfolios"|"history">("archive");
 
   useEffect(() => {
     async function load() {
@@ -214,14 +217,7 @@ export default function ProfilePage() {
         });
       }
 
-      const [
-        { data: memberData },
-        { data: projData },
-        { data: portData },
-        { data: pointData },
-        { data: posts },
-        { data: resources }
-      ] = await Promise.all([
+      const results = await Promise.allSettled([
         supabase.from("group_members").select("role, status, groups(id, name, category, description, image_url)").eq("user_id", user.id).eq("status", "active"),
         supabase.from("project_members").select("role, projects(id, title, status, category, image_url)").eq("user_id", user.id),
         supabase.from("project_portfolios").select("*, project:projects(title, category, image_url)").eq("user_id", user.id).order("created_at", { ascending: false }),
@@ -230,15 +226,28 @@ export default function ProfilePage() {
         supabase.from("crew_resources").select("id, title, url, created_at, group:groups!crew_resources_group_id_fkey(name, id)").eq("author_id", user.id).order("created_at", { ascending: false }).limit(5)
       ]);
 
-      setCrews(memberData || []);
-      setProjects(projData || []);
-      setPortfolios(portData || []);
-      setPointLogs(pointData || []);
+      const getData = (i: number) => {
+        const r = results[i];
+        if (r.status === "fulfilled") return (r.value as any).data || [];
+        return [];
+      };
+
+      const memberData = getData(0);
+      const projData = getData(1);
+      const portData = getData(2);
+      const pointData = getData(3);
+      const posts = getData(4);
+      const resources = getData(5);
+
+      setCrews(memberData);
+      setProjects(projData);
+      setPortfolios(portData);
+      setPointLogs(pointData);
 
       const combined = [
-        ...(posts||[]).map((p: any) => ({ ...p, _type: "post" })),
-        ...(resources||[]).map((r: any) => ({ ...r, _type: "resource" })),
-      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10);
+        ...posts.map((p: any) => ({ ...p, _type: "post" })),
+        ...resources.map((r: any) => ({ ...r, _type: "resource" })),
+      ].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10);
       setRecentActivity(combined);
     }
     load();
@@ -561,6 +570,7 @@ export default function ProfilePage() {
               { key: "archive",  label: "활동 아카이브", icon: Archive },
               { key: "crews",    label: `소모임 (${crews.length})`,   icon: Users },
               { key: "projects", label: `프로젝트 (${projects.length})`, icon: Briefcase },
+              { key: "badges",   label: "뱃지·보증", icon: Award },
               { key: "portfolios", label: `포트폴리오 (${portfolios.length})`, icon: Layers },
               { key: "history",  label: "포인트 내역", icon: DollarSign },
             ].map(t => (
@@ -693,39 +703,58 @@ export default function ProfilePage() {
               })}
             </div>
           )}
+          {/* ── 뱃지·보증 탭 ──────────────────────────────────── */}
+          {tab === "badges" && profile && (
+            <div className="space-y-8">
+              <SkillBadgeDisplay userId={profile.id} showAll />
+              <EndorsementPanel targetUserId={profile.id} />
+            </div>
+          )}
           {/* ── 포트폴리오 탭 ─────────────────────────────────── */}
-          {tab === "portfolios" && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-               {portfolios.length === 0 ? (
-                 <div className="col-span-2 bg-nu-white border border-nu-ink/[0.08] p-10 text-center">
-                    <Layers size={32} className="text-nu-muted/30 mx-auto mb-3" />
-                    <p className="text-nu-gray text-sm">등록된 포트폴리오가 없습니다</p>
-                    <p className="text-xs text-nu-muted mt-1">프로젝트를 완료하고 성과를 증명해보세요</p>
-                 </div>
-               ) : portfolios.map(p => (
-                 <div key={p.id} className="bg-nu-white border border-nu-ink/[0.08] overflow-hidden group">
-                    <div className="h-32 bg-nu-cream relative overflow-hidden">
-                       {p.project?.image_url ? (
-                         <img src={p.project.image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                       ) : (
-                         <div className="w-full h-full flex items-center justify-center font-head text-4xl font-black text-nu-ink/5 uppercase">{p.project?.category}</div>
-                       )}
-                       <div className="absolute top-2 right-2 flex gap-1">
-                          <span className="bg-nu-ink text-white text-[8px] px-1.5 py-0.5 font-bold uppercase tracking-widest">{p.project?.category}</span>
-                       </div>
-                    </div>
-                    <div className="p-4">
-                       <h4 className="font-head text-sm font-bold text-nu-ink mb-1">{p.title}</h4>
-                       <p className="text-[10px] text-nu-muted mb-3 line-clamp-2">{p.description}</p>
-                       <div className="flex items-center justify-between mt-auto">
-                          <span className="font-mono-nu text-[9px] text-nu-muted flex items-center gap-1"><Calendar size={10} /> {formatDate(p.created_at)}</span>
-                          {p.url && (
-                             <a href={p.url} target="_blank" rel="noreferrer" className="text-nu-blue flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest hover:underline whitespace-nowrap">VIEW WORK <ExternalLink size={10} /></a>
+          {tab === "portfolios" && profile && (
+            <div className="space-y-8">
+              {/* Portfolio Manager Section */}
+              <div>
+                <h3 className="font-head text-sm font-bold uppercase tracking-tight text-nu-ink mb-4 pb-3 border-b-2 border-nu-ink">
+                  나의 포트폴리오
+                </h3>
+                <PortfolioManager userId={profile.id} />
+              </div>
+
+              {/* Project Portfolios Section */}
+              {portfolios.length > 0 && (
+                <div>
+                  <h3 className="font-head text-sm font-bold uppercase tracking-tight text-nu-ink mb-4 pb-3 border-b-2 border-nu-ink">
+                    프로젝트 포트폴리오
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {portfolios.map(p => (
+                      <div key={p.id} className="bg-nu-white border border-nu-ink/[0.08] overflow-hidden group">
+                        <div className="h-32 bg-nu-cream relative overflow-hidden">
+                          {p.project?.image_url ? (
+                            <img src={p.project.image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center font-head text-4xl font-black text-nu-ink/5 uppercase">{p.project?.category}</div>
                           )}
-                       </div>
-                    </div>
-                 </div>
-               ))}
+                          <div className="absolute top-2 right-2 flex gap-1">
+                            <span className="bg-nu-ink text-white text-[8px] px-1.5 py-0.5 font-bold uppercase tracking-widest">{p.project?.category}</span>
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <h4 className="font-head text-sm font-bold text-nu-ink mb-1">{p.title}</h4>
+                          <p className="text-[10px] text-nu-muted mb-3 line-clamp-2">{p.description}</p>
+                          <div className="flex items-center justify-between mt-auto">
+                            <span className="font-mono-nu text-[9px] text-nu-muted flex items-center gap-1"><Calendar size={10} /> {formatDate(p.created_at)}</span>
+                            {p.url && (
+                              <a href={p.url} target="_blank" rel="noreferrer" className="text-nu-blue flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest hover:underline whitespace-nowrap">VIEW WORK <ExternalLink size={10} /></a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
           {/* ── 포인트 내역 탭 ─────────────────────────────────── */}

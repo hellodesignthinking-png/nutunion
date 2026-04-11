@@ -27,27 +27,66 @@ export function RelatedGroups({ groupId, category }: { groupId: string; category
   useEffect(() => {
     async function load() {
       const supabase = createClient();
-      
-      // Fetch groups in the same category (excluding current)
-      const { data } = await supabase
+
+      // Fetch all groups with their member IDs (excluding current)
+      const { data: allGroups } = await supabase
         .from("groups")
-        .select("id, name, category, description, group_members(count)")
+        .select("id, name, category, description, group_members(user_id), crew_posts(id), meetings(id)")
         .eq("is_active", true)
         .neq("id", groupId)
         .order("created_at", { ascending: false })
         .limit(10);
 
-      if (!data) return;
+      if (!allGroups) return;
 
-      // Score by relevance: same category = high, others = lower
-      const scored = data.map((g: any) => ({
-        id: g.id,
-        name: g.name,
-        category: g.category,
-        description: g.description,
-        memberCount: g.group_members?.[0]?.count || 0,
-        matchScore: g.category === category ? 90 + Math.random() * 10 : 40 + Math.random() * 30,
-      }));
+      // Get current group's member IDs for shared member calculation
+      const { data: currentGroupMembers } = await supabase
+        .from("group_members")
+        .select("user_id")
+        .eq("group_id", groupId);
+
+      const currentGroupMemberIds = new Set(
+        currentGroupMembers?.map((m: any) => m.user_id) || []
+      );
+
+      // Score each group based on multiple factors
+      const scored = allGroups.map((g: any) => {
+        let matchScore = 0;
+
+        // Factor 1: Same category (+40 points)
+        if (g.category === category) {
+          matchScore += 40;
+        }
+
+        // Factor 2: Shared members (+20 points per shared member, max 40)
+        const groupMemberIds = new Set(
+          g.group_members?.map((m: any) => m.user_id) || []
+        );
+        let sharedMemberCount = 0;
+        for (const memberId of currentGroupMemberIds) {
+          if (groupMemberIds.has(memberId)) {
+            sharedMemberCount++;
+          }
+        }
+        const sharedMemberScore = Math.min(sharedMemberCount * 20, 40);
+        matchScore += sharedMemberScore;
+
+        // Factor 3: Activity level (0-20 points)
+        // Normalize meetings + posts count
+        const activityCount = (g.meetings?.length || 0) + (g.crew_posts?.length || 0);
+        // Simple normalization: assume max 50 activities for full points
+        const activityScore = Math.min((activityCount / 50) * 20, 20);
+        matchScore += activityScore;
+
+        return {
+          id: g.id,
+          name: g.name,
+          category: g.category,
+          description: g.description,
+          memberCount: g.group_members?.length || 0,
+          matchScore,
+        };
+      });
 
       scored.sort((a: RelatedGroup, b: RelatedGroup) => b.matchScore - a.matchScore);
       setGroups(scored.slice(0, 3));

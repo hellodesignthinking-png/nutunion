@@ -1,0 +1,603 @@
+"use client";
+
+import { useState, useRef, useCallback } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
+import {
+  Sparkles,
+  Mic,
+  FileAudio,
+  Upload,
+  Loader2,
+  Save,
+  CheckCircle2,
+  Edit3,
+  Copy,
+  ChevronDown,
+  ChevronUp,
+  Lightbulb,
+  ListChecks,
+  MessageSquare,
+  Target,
+  ArrowRight,
+  X,
+  Link2,
+  RefreshCw,
+} from "lucide-react";
+
+/* ─── Types ─── */
+interface AiMeetingAssistantProps {
+  meetingId: string;
+  meetingTitle: string;
+  /** Meeting notes so far (from meeting_notes table) */
+  existingNotes?: string[];
+  /** Current meeting summary if any */
+  existingSummary?: string;
+  /** Compressed context from previous weekly digest (token-saving) */
+  previousDigest?: string;
+  /** Agendas for context */
+  agendas?: { topic: string; description?: string }[];
+  canEdit: boolean;
+  /** Callback after AI generates summary and user saves */
+  onSaveSummary?: (summary: string) => void | Promise<void>;
+  onSaveNextTopic?: (topic: string) => void | Promise<void>;
+  /** Callback to add notes to meeting_notes table */
+  onAddNote?: (content: string, type: "note" | "action_item" | "decision") => void | Promise<void>;
+  /** Callback to archive as Google Doc */
+  onArchiveToGoogleDoc?: (title: string, content: string) => Promise<{ url?: string; error?: string } | void>;
+}
+
+interface AiResult {
+  summary: string;
+  discussions: string[];
+  decisions: string[];
+  actionItems: { task: string; assignee?: string }[];
+  nextTopics: string[];
+}
+
+/* ─── Helper: Convert File to Base64 ─── */
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // Remove data:audio/...;base64, prefix
+      const base64 = result.split(",")[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ─── Main Component ─── */
+export function AiMeetingAssistant({
+  meetingId,
+  meetingTitle,
+  existingNotes = [],
+  existingSummary,
+  previousDigest,
+  agendas = [],
+  canEdit,
+  onSaveSummary,
+  onSaveNextTopic,
+  onAddNote,
+  onArchiveToGoogleDoc,
+}: AiMeetingAssistantProps) {
+  const [rawNotes, setRawNotes] = useState(existingNotes.join("\n") || "");
+  const [audioUrl, setAudioUrl] = useState("");
+  const [showAudioInput, setShowAudioInput] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [aiResult, setAiResult] = useState<AiResult | null>(null);
+  const [editingResult, setEditingResult] = useState(false);
+  const [editedSummary, setEditedSummary] = useState("");
+
+  // Sync rawNotes when existingNotes prop updates (e.g., after meeting_notes are fetched)
+  const [prevNotesLength, setPrevNotesLength] = useState(existingNotes.length);
+  if (existingNotes.length !== prevNotesLength) {
+    setPrevNotesLength(existingNotes.length);
+    if (existingNotes.length > 0 && !rawNotes.trim()) {
+      setRawNotes(existingNotes.join("\n"));
+    }
+  }
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    summary: true,
+    discussions: true,
+    decisions: true,
+    actions: true,
+    nextTopics: true,
+  });
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const toggleSection = (key: string) => {
+    setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  /* ── Audio file upload ─── */
+  async function handleAudioUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file type
+    if (!file.type.startsWith("audio/") && !file.name.match(/\.(mp3|wav|m4a|ogg|webm|aac|flac)$/i)) {
+      toast.error("오디오 파일만 업로드할 수 있습니다");
+      return;
+    }
+
+    setUploading(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { toast.error("로그인이 필요합니다"); setUploading(false); return; }
+
+    const filePath = `meetings/${meetingId}/${Date.now()}_${file.name}`;
+    const { error: uploadError } = await supabase.storage.from("media").upload(filePath, file);
+    if (uploadError) {
+      toast.error("업로드 실패: " + uploadError.message);
+      setUploading(false);
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage.from("media").getPublicUrl(filePath);
+    setAudioUrl(publicUrl);
+    setAudioFile(file);
+    toast.success(`"${file.name}" 업로드 완료`);
+    setUploading(false);
+  }
+
+  /* ── AI Processing (Gemini 2.0 Flash) ─── */
+  async function handleAiProcess() {
+    if (!rawNotes.trim() && !audioFile && !audioUrl) {
+      toast.error("회의 내용을 입력하거나 녹음 파일을 업로드해주세요");
+      return;
+    }
+
+    setProcessing(true);
+
+    try {
+      // Build request body
+      const body: Record<string, any> = {
+        notes: rawNotes.trim() || null,
+        agendas,
+        meetingTitle,
+        previousDigest: previousDigest || null,
+      };
+
+      // If audio file exists, convert to base64 for Gemini
+      if (audioFile) {
+        const base64 = await fileToBase64(audioFile);
+        body.audioBase64 = base64;
+        body.audioMimeType = audioFile.type || "audio/mpeg";
+      }
+
+      const res = await fetch("/api/ai/meeting-summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || `API 오류 (${res.status})`);
+      }
+
+      const result: AiResult = await res.json();
+      setAiResult(result);
+      setEditedSummary(result.summary);
+      toast.success("AI 정리가 완료되었습니다");
+    } catch (err: any) {
+      console.error("AI processing error:", err);
+      toast.error(err.message || "AI 처리 중 오류가 발생했습니다");
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  /* ── Save results ─── */
+  async function handleSaveAll() {
+    if (!aiResult) return;
+    setSaving(true);
+
+    try {
+      // Save summary
+      const finalSummary = editingResult ? editedSummary : aiResult.summary;
+      await onSaveSummary?.(finalSummary);
+
+      // Save decisions as meeting notes (type: decision)
+      for (const decision of aiResult.decisions) {
+        await onAddNote?.(decision, "decision");
+      }
+
+      // Save action items as meeting notes (type: action_item)
+      for (const item of aiResult.actionItems) {
+        const content = item.assignee ? `${item.task} (@${item.assignee})` : item.task;
+        await onAddNote?.(content, "action_item");
+      }
+
+      // Save next topic suggestion
+      if (aiResult.nextTopics.length > 0) {
+        await onSaveNextTopic?.(aiResult.nextTopics.join("\n"));
+      }
+
+      // Archive to Google Docs
+      if (onArchiveToGoogleDoc) {
+        const docTitle = `회의록 - ${meetingTitle} (${new Date().toLocaleDateString("ko-KR")})`;
+        const docContent = formatMeetingAsDoc(aiResult, finalSummary);
+        const archiveResult = await onArchiveToGoogleDoc(docTitle, docContent);
+        if (archiveResult?.url) {
+          toast.success("Google Docs에 아카이브되었습니다");
+        } else if (archiveResult?.error) {
+          toast.error(archiveResult.error);
+        }
+      }
+
+      toast.success("회의록이 저장되었습니다");
+    } catch (err) {
+      console.error("Save error:", err);
+      toast.error("저장 중 오류가 발생했습니다");
+    }
+    setSaving(false);
+  }
+
+  /* ── Format meeting as doc content ─── */
+  function formatMeetingAsDoc(result: AiResult, summary: string) {
+    let doc = `# 회의록: ${meetingTitle}\n`;
+    doc += `**날짜:** ${new Date().toLocaleDateString("ko-KR")}\n\n`;
+    doc += `## 요약\n${summary}\n\n`;
+    if (result.discussions.length > 0) {
+      doc += `## 논의 사항\n${result.discussions.map((d) => `- ${d}`).join("\n")}\n\n`;
+    }
+    if (result.decisions.length > 0) {
+      doc += `## 결정 사항\n${result.decisions.map((d) => `- ${d}`).join("\n")}\n\n`;
+    }
+    if (result.actionItems.length > 0) {
+      doc += `## 액션 아이템\n${result.actionItems.map((a) => `- ${a.task}${a.assignee ? ` (담당: ${a.assignee})` : ""}`).join("\n")}\n\n`;
+    }
+    if (result.nextTopics.length > 0) {
+      doc += `## 다음 미팅 주제\n${result.nextTopics.map((t) => `- ${t}`).join("\n")}\n`;
+    }
+    return doc;
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* ── Header ─── */}
+      <div className="bg-nu-ink text-nu-paper p-5 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-4 opacity-5 rotate-12">
+          <Sparkles size={80} />
+        </div>
+        <div className="flex items-center gap-2 mb-2">
+          <Sparkles size={16} className="text-nu-pink" />
+          <span className="font-mono-nu text-[10px] font-black uppercase tracking-[0.2em] text-nu-pink">
+            AI_Meeting_Assistant
+          </span>
+        </div>
+        <p className="text-[12px] text-nu-paper/70 leading-relaxed">
+          회의 내용을 입력하거나 녹음 파일을 업로드하면 AI가 자동으로 정리합니다.
+          요약, 논의사항, 결정사항, 액션아이템, 다음 미팅 주제를 생성합니다.
+        </p>
+      </div>
+
+      {/* ── Raw Notes Input ─── */}
+      <div className="bg-nu-white border border-nu-ink/[0.08]">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-nu-ink/[0.06]">
+          <div className="flex items-center gap-2">
+            <MessageSquare size={14} className="text-nu-blue" />
+            <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink">회의 내용 기록</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setShowAudioInput(!showAudioInput)}
+              className={`flex items-center gap-1 px-2.5 py-1 font-mono-nu text-[9px] uppercase tracking-widest border transition-colors ${
+                showAudioInput || audioUrl
+                  ? "bg-nu-pink/10 text-nu-pink border-nu-pink/30"
+                  : "text-nu-muted border-nu-ink/10 hover:text-nu-pink hover:border-nu-pink/20"
+              }`}
+            >
+              <Mic size={11} /> 녹음파일
+            </button>
+          </div>
+        </div>
+
+        <textarea
+          value={rawNotes}
+          onChange={(e) => setRawNotes(e.target.value)}
+          placeholder={`회의 내용을 자유롭게 기록하세요...
+
+💡 팁: 다음 형식을 사용하면 AI가 더 정확하게 분류합니다:
+• [결정] 결정된 내용
+• [액션] 할 일 @담당자
+• 그 외 내용은 논의사항으로 분류됩니다`}
+          rows={10}
+          className="w-full p-4 text-sm leading-relaxed text-nu-ink bg-transparent border-0 focus:outline-none resize-none"
+          disabled={!canEdit}
+        />
+
+        {/* Audio Upload Area */}
+        {showAudioInput && (
+          <div className="border-t border-nu-ink/[0.06] p-4 bg-nu-cream/20">
+            <div className="flex items-center gap-2 mb-3">
+              <FileAudio size={14} className="text-nu-amber" />
+              <span className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-ink">녹음 파일 / 드라이브 링크</span>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              {/* File upload */}
+              <div className="flex items-center gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="audio/*,.mp3,.wav,.m4a,.ogg,.webm,.aac,.flac"
+                  className="hidden"
+                  onChange={handleAudioUpload}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="flex items-center gap-1.5 px-3 py-2 font-mono-nu text-[9px] uppercase tracking-widest bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors disabled:opacity-50"
+                >
+                  {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                  파일 업로드
+                </button>
+                <span className="text-[10px] text-nu-muted">mp3, wav, m4a, ogg, webm</span>
+              </div>
+
+              {/* Google Drive link */}
+              <div className="flex items-center gap-2">
+                <Link2 size={14} className="text-green-600 shrink-0" />
+                <input
+                  type="url"
+                  value={audioUrl}
+                  onChange={(e) => setAudioUrl(e.target.value)}
+                  placeholder="Google Drive 녹음 파일 링크를 붙여넣기..."
+                  className="flex-1 px-3 py-2 text-sm border border-nu-ink/10 bg-transparent focus:outline-none focus:border-nu-pink"
+                />
+              </div>
+
+              {audioUrl && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200">
+                  <CheckCircle2 size={14} className="text-green-600" />
+                  <span className="text-[11px] text-green-700 truncate flex-1">{audioUrl}</span>
+                  <button onClick={() => { setAudioUrl(""); setAudioFile(null); }} className="text-green-400 hover:text-red-500">
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Process Button + Save Notes */}
+        {canEdit && (
+          <div className="border-t border-nu-ink/[0.06] p-4 flex items-center justify-between bg-nu-cream/10">
+            <p className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">
+              {rawNotes.trim().split(/\s+/).filter(Boolean).length} words
+              {audioUrl && " + 녹음파일"}
+            </p>
+            <div className="flex items-center gap-2">
+              {/* Save raw notes as meeting_notes */}
+              <button
+                onClick={async () => {
+                  if (!rawNotes.trim()) { toast.error("저장할 내용이 없습니다"); return; }
+                  try {
+                    await onAddNote?.(rawNotes.trim(), "note");
+                    toast.success("회의 메모가 저장되었습니다");
+                  } catch (err) {
+                    console.error("메모 저장 오류:", err);
+                    toast.error("메모 저장에 실패했습니다");
+                  }
+                }}
+                disabled={!rawNotes.trim()}
+                className="flex items-center gap-1.5 px-3 py-2 font-mono-nu text-[10px] font-bold uppercase tracking-widest bg-nu-ink text-nu-paper hover:bg-nu-graphite disabled:opacity-40 transition-all"
+              >
+                <Save size={12} /> 메모 저장
+              </button>
+              <button
+                onClick={handleAiProcess}
+                disabled={processing || (!rawNotes.trim() && !audioUrl)}
+                className="flex items-center gap-2 px-4 py-2 font-mono-nu text-[10px] font-bold uppercase tracking-widest bg-gradient-to-r from-nu-pink to-purple-500 text-white hover:opacity-90 disabled:opacity-40 transition-all"
+              >
+                {processing ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin" /> AI 분석 중...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={13} /> AI 정리하기
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── AI Results ─── */}
+      {aiResult && (
+        <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {/* Summary */}
+          <ResultSection
+            title="회의 요약"
+            icon={<Target size={14} className="text-nu-pink" />}
+            expanded={expandedSections.summary}
+            onToggle={() => toggleSection("summary")}
+          >
+            {editingResult ? (
+              <textarea
+                value={editedSummary}
+                onChange={(e) => setEditedSummary(e.target.value)}
+                rows={4}
+                className="w-full p-3 text-sm leading-relaxed text-nu-ink bg-nu-cream/20 border border-nu-ink/10 focus:outline-none focus:border-nu-pink resize-none"
+              />
+            ) : (
+              <p className="text-sm leading-relaxed text-nu-graphite">{aiResult.summary}</p>
+            )}
+            <div className="flex items-center gap-2 mt-3">
+              <button
+                onClick={() => setEditingResult(!editingResult)}
+                className="flex items-center gap-1 font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted hover:text-nu-pink"
+              >
+                <Edit3 size={10} /> {editingResult ? "미리보기" : "수정"}
+              </button>
+            </div>
+          </ResultSection>
+
+          {/* Discussions */}
+          <ResultSection
+            title={`논의 사항 (${aiResult.discussions.length})`}
+            icon={<MessageSquare size={14} className="text-nu-blue" />}
+            expanded={expandedSections.discussions}
+            onToggle={() => toggleSection("discussions")}
+          >
+            <div className="flex flex-col gap-1.5">
+              {aiResult.discussions.map((d, i) => (
+                <div key={i} className="flex items-start gap-2 text-sm text-nu-graphite">
+                  <span className="text-nu-blue mt-0.5 shrink-0">•</span>
+                  <span className="leading-relaxed">{d}</span>
+                </div>
+              ))}
+            </div>
+          </ResultSection>
+
+          {/* Decisions */}
+          {aiResult.decisions.length > 0 && (
+            <ResultSection
+              title={`결정 사항 (${aiResult.decisions.length})`}
+              icon={<CheckCircle2 size={14} className="text-green-600" />}
+              expanded={expandedSections.decisions}
+              onToggle={() => toggleSection("decisions")}
+            >
+              <div className="flex flex-col gap-1.5">
+                {aiResult.decisions.map((d, i) => (
+                  <div key={i} className="flex items-start gap-2 text-sm text-nu-graphite">
+                    <CheckCircle2 size={13} className="text-green-500 mt-0.5 shrink-0" />
+                    <span className="leading-relaxed">{d}</span>
+                  </div>
+                ))}
+              </div>
+            </ResultSection>
+          )}
+
+          {/* Action Items */}
+          {aiResult.actionItems.length > 0 && (
+            <ResultSection
+              title={`액션 아이템 (${aiResult.actionItems.length})`}
+              icon={<ListChecks size={14} className="text-nu-amber" />}
+              expanded={expandedSections.actions}
+              onToggle={() => toggleSection("actions")}
+            >
+              <div className="flex flex-col gap-2">
+                {aiResult.actionItems.map((item, i) => (
+                  <div key={i} className="flex items-start gap-2 p-2 bg-nu-amber/5 border border-nu-amber/10">
+                    <ListChecks size={13} className="text-nu-amber mt-0.5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm text-nu-ink">{item.task}</span>
+                      {item.assignee && (
+                        <span className="ml-2 font-mono-nu text-[9px] uppercase tracking-widest text-nu-pink bg-nu-pink/10 px-1.5 py-0.5">
+                          @{item.assignee}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ResultSection>
+          )}
+
+          {/* Next Meeting Topics */}
+          <ResultSection
+            title={`다음 미팅 주제 제안 (${aiResult.nextTopics.length})`}
+            icon={<Lightbulb size={14} className="text-purple-500" />}
+            expanded={expandedSections.nextTopics}
+            onToggle={() => toggleSection("nextTopics")}
+          >
+            <div className="flex flex-col gap-1.5">
+              {aiResult.nextTopics.map((t, i) => (
+                <div key={i} className="flex items-start gap-2 text-sm text-nu-graphite">
+                  <ArrowRight size={13} className="text-purple-400 mt-0.5 shrink-0" />
+                  <span className="leading-relaxed">{t}</span>
+                </div>
+              ))}
+            </div>
+          </ResultSection>
+
+          {/* Save All / Regenerate */}
+          <div className="p-4 bg-nu-ink text-nu-paper space-y-3">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={handleAiProcess}
+                disabled={processing}
+                className="flex items-center gap-1.5 font-mono-nu text-[9px] uppercase tracking-widest text-nu-paper/60 hover:text-nu-paper transition-colors"
+              >
+                <RefreshCw size={12} /> 다시 분석
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const text = [
+                      `📋 회의 요약: ${aiResult.summary}`,
+                      `\n💬 논의 사항:\n${aiResult.discussions.map(d => `  • ${d}`).join("\n")}`,
+                      aiResult.decisions.length > 0 ? `\n✅ 결정 사항:\n${aiResult.decisions.map(d => `  • ${d}`).join("\n")}` : "",
+                      aiResult.actionItems.length > 0 ? `\n📌 액션 아이템:\n${aiResult.actionItems.map(a => `  • ${a.task}${a.assignee ? ` (@${a.assignee})` : ""}`).join("\n")}` : "",
+                      aiResult.nextTopics.length > 0 ? `\n💡 다음 미팅 주제:\n${aiResult.nextTopics.map(t => `  • ${t}`).join("\n")}` : "",
+                    ].filter(Boolean).join("\n");
+                    await navigator.clipboard.writeText(text);
+                    toast.success("클립보드에 복사되었습니다");
+                  } catch { toast.error("복사 실패"); }
+                }}
+                className="flex items-center gap-1.5 font-mono-nu text-[9px] uppercase tracking-widest text-nu-paper/60 hover:text-nu-paper transition-colors"
+              >
+                <Copy size={12} /> 복사
+              </button>
+            </div>
+            <button
+              onClick={handleSaveAll}
+              disabled={saving}
+              className="w-full flex items-center justify-center gap-2 px-5 py-3 font-mono-nu text-[11px] font-bold uppercase tracking-widest bg-nu-pink text-white hover:bg-nu-pink/90 disabled:opacity-40 transition-all shadow-lg"
+            >
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              회의록 전체 저장{onArchiveToGoogleDoc ? " + Google Docs 아카이브" : ""}
+            </button>
+            <p className="font-mono-nu text-[8px] text-nu-paper/40 uppercase tracking-widest text-center">
+              요약·결정사항·액션아이템·다음주제가 모두 저장됩니다
+              {onArchiveToGoogleDoc && " · Google Docs에 자동 아카이브"}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Result Section ─── */
+function ResultSection({
+  title,
+  icon,
+  expanded,
+  onToggle,
+  children,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  expanded: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="bg-nu-white border border-nu-ink/[0.08] overflow-hidden">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-nu-cream/20 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          {icon}
+          <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink">{title}</span>
+        </div>
+        {expanded ? <ChevronUp size={14} className="text-nu-muted" /> : <ChevronDown size={14} className="text-nu-muted" />}
+      </button>
+      {expanded && <div className="px-4 pb-4">{children}</div>}
+    </div>
+  );
+}

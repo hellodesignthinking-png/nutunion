@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { seedGroupTemplate } from "@/lib/template-seeder";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,6 +43,19 @@ interface TemplateInfo {
   duration: string;
   features: string[];
 }
+
+/* ── Template content info ────────────────────────────────── */
+interface TemplateContents {
+  meetings: number;
+  phases: number;
+  resources: number;
+}
+
+const TEMPLATE_CONTENTS: Record<string, TemplateContents> = {
+  sprint: { meetings: 6, phases: 3, resources: 2 },
+  "paper-review": { meetings: 4, phases: 2, resources: 1 },
+  venture: { meetings: 4, phases: 3, resources: 2 },
+};
 
 const TEMPLATES: Record<string, TemplateInfo> = {
   sprint: {
@@ -227,6 +241,17 @@ export default function CreateGroupPage() {
       toast.error("소모임은 생성되었으나 호스트 등록에 실패했습니다.");
       setLoading(false);
       return;
+    }
+
+    // Seed template if one was selected (non-blocking — group is already created)
+    if (template && templateKey) {
+      try {
+        await seedGroupTemplate(group.id, templateKey as any, user.id);
+      } catch (error) {
+        console.error("Template seeding error:", error);
+        // Don't block group creation — just warn user
+        toast.error("템플릿 일부 데이터 생성이 실패했습니다. 수동으로 추가해주세요.");
+      }
     }
 
     toast.success(
@@ -457,6 +482,18 @@ export default function CreateGroupPage() {
                       <span className="font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] text-white/50">
                         템플릿 혜택
                       </span>
+                    </div>
+                    <div
+                      className="p-3 mb-4 rounded border"
+                      style={{
+                        backgroundColor: `${template.accent}10`,
+                        borderColor: `${template.accent}40`,
+                      }}
+                    >
+                      <p className="text-[10px] text-white/70 leading-relaxed">
+                        이 템플릿에는 <strong>{TEMPLATE_CONTENTS[template.id]?.meetings || 0}개의 미팅</strong>과{" "}
+                        <strong>{TEMPLATE_CONTENTS[template.id]?.phases || 0}개의 기본 자료</strong>가 포함되어 있습니다.
+                      </p>
                     </div>
                     <p className="text-[10px] text-white/35 leading-relaxed">
                       소모임 생성 시 위 기능들이 자동으로 구성됩니다.

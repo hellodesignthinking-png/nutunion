@@ -63,14 +63,52 @@ export function AdminGroupList({ groups }: { groups: GroupItem[] }) {
   }
 
   async function forceDelete(groupId: string, groupName: string) {
-    if (!confirm(`"${groupName}" 소모임을 완전히 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) return;
+    if (!confirm(`"${groupName}" 소모임을 완전히 삭제하시겠습니까?\n\n모든 회의, 멤버, 게시글, 자료, 일정 데이터가 영구 삭제됩니다.\n이 작업은 되돌릴 수 없습니다.`)) return;
     setActionId(groupId);
     const supabase = createClient();
-    const { error } = await supabase.from("groups").update({ is_active: false }).eq("id", groupId);
-    if (error) { toast.error(error.message); }
-    else {
+
+    // Delete related data first (some tables have CASCADE, but be thorough)
+    // Order matters: delete child records before parent
+    try {
+      await supabase.from("meeting_notes").delete().in(
+        "meeting_id",
+        (await supabase.from("meetings").select("id").eq("group_id", groupId)).data?.map((m: any) => m.id) || []
+      );
+      await supabase.from("meeting_agendas").delete().in(
+        "meeting_id",
+        (await supabase.from("meetings").select("id").eq("group_id", groupId)).data?.map((m: any) => m.id) || []
+      );
+    } catch { /* tables may not exist */ }
+
+    // Delete in order — each wrapped in try/catch for missing tables
+    const tablesToClean = [
+      { table: "meetings", column: "group_id" },
+      { table: "events", column: "group_id" },
+      { table: "crew_posts", column: "group_id" },
+      { table: "group_members", column: "group_id" },
+      { table: "file_attachments", column: "target_id", extraFilter: { target_type: "group" } },
+      { table: "group_roadmap_phases", column: "group_id" },
+    ];
+
+    for (const { table, column, extraFilter } of tablesToClean) {
+      try {
+        let query = supabase.from(table).delete().eq(column, groupId);
+        if (extraFilter) {
+          for (const [k, v] of Object.entries(extraFilter)) {
+            query = query.eq(k, v);
+          }
+        }
+        await query;
+      } catch { /* table may not exist */ }
+    }
+
+    // Finally delete the group itself
+    const { error } = await supabase.from("groups").delete().eq("id", groupId);
+    if (error) {
+      toast.error("삭제 실패: " + error.message);
+    } else {
       setLocalGroups(prev => prev.filter(g => g.id !== groupId));
-      toast.success("소모임이 삭제되었습니다");
+      toast.success("소모임이 완전히 삭제되었습니다");
     }
     setActionId(null);
   }
