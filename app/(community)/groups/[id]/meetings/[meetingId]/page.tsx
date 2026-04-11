@@ -116,6 +116,14 @@ export default function MeetingDetailPage() {
   const [previewData, setPreviewData] = useState<{ url: string; name: string } | null>(null);
   const [isSplitView, setIsSplitView] = useState(false);
 
+  // Tab persistence
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(`nutunion_tab_${meetingId}`) || "agendas";
+    }
+    return "agendas";
+  });
+
   const loadMeeting = useCallback(async () => {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -234,9 +242,7 @@ export default function MeetingDetailPage() {
         action: {
           label: "다이제스트 생성",
           onClick: () => {
-            // Switch to digest tab
-            const digestTab = document.querySelector('[data-value="digest"]') as HTMLElement;
-            digestTab?.click();
+            setActiveTab("digest");
           },
         },
       });
@@ -585,7 +591,13 @@ export default function MeetingDetailPage() {
       )}
 
       {/* Tabs */}
-      <Tabs defaultValue="agendas">
+      <Tabs
+        value={activeTab}
+        onValueChange={(val) => {
+          setActiveTab(val);
+          try { localStorage.setItem(`nutunion_tab_${meetingId}`, val); } catch {}
+        }}
+      >
         <TabsList variant="line" className="mb-6">
           <TabsTrigger value="agendas" className="font-mono-nu text-[11px] uppercase tracking-widest">안건</TabsTrigger>
           <TabsTrigger value="ai-notes" className="font-mono-nu text-[11px] uppercase tracking-widest flex items-center gap-1"><Sparkles size={11} /> AI 회의록</TabsTrigger>
@@ -666,6 +678,7 @@ export default function MeetingDetailPage() {
                 return { error: "Google Docs 연결에 실패했습니다" };
               }
             }}
+            onNavigateTab={(tab) => setActiveTab(tab)}
           />
         </TabsContent>
 

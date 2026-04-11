@@ -230,6 +230,40 @@ export function WeeklyDigestEngine({
             ? result.knowledgeGrowth.map(k => `- ${k}`)
             : ["- 위키 업데이트 없음"]),
           "",
+          // Growth sections
+          ...(result.memberGrowth?.length > 0 ? [
+            "## 🌱 멤버 성장 포인트",
+            ...result.memberGrowth.map(g => `- 🌟 ${g}`),
+            "",
+          ] : []),
+          ...(result.learningJourney?.topicsExplored?.length > 0 || 
+              result.learningJourney?.recommendedReading?.length > 0 ? [
+            "## 📖 학습 여정",
+            ...(result.learningJourney.topicsExplored?.length > 0 ? [
+              "### 탐구한 주제",
+              ...result.learningJourney.topicsExplored.map(t => `- ${t}`),
+            ] : []),
+            ...(result.learningJourney.recommendedReading?.length > 0 ? [
+              "### 추천 학습",
+              ...result.learningJourney.recommendedReading.map(r => `- 📚 ${r}`),
+            ] : []),
+            ...(result.learningJourney.skillsSharpened?.length > 0 ? [
+              "### 연마된 역량",
+              ...result.learningJourney.skillsSharpened.map(s => `- 💪 ${s}`),
+            ] : []),
+            "",
+          ] : []),
+          ...(result.weeklyReflection?.whatWentWell || result.weeklyReflection?.whatToImprove ? [
+            "## 🔍 주간 회고",
+            ...(result.weeklyReflection.whatWentWell ? [`- ✅ **잘한 점:** ${result.weeklyReflection.whatWentWell}`] : []),
+            ...(result.weeklyReflection.whatToImprove ? [`- 🔧 **개선할 점:** ${result.weeklyReflection.whatToImprove}`] : []),
+            ...(result.weeklyReflection.discussionEvolution ? [`- 📈 **토론 변화:** ${result.weeklyReflection.discussionEvolution}`] : []),
+            "",
+          ] : []),
+          ...(result.encouragement ? [
+            `> 💜 ${result.encouragement}`,
+            "",
+          ] : []),
           "---",
           "",
           `### 🤖 다음 회의 AI 컨텍스트`,

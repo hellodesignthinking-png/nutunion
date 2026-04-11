@@ -49,6 +49,8 @@ interface AiMeetingAssistantProps {
   onAddNote?: (content: string, type: "note" | "action_item" | "decision") => void | Promise<void>;
   /** Callback to archive as Google Doc */
   onArchiveToGoogleDoc?: (title: string, content: string) => Promise<{ url?: string; error?: string } | void>;
+  /** Callback to navigate to a specific tab */
+  onNavigateTab?: (tab: string) => void;
 }
 
 interface AiResult {
@@ -87,6 +89,7 @@ export function AiMeetingAssistant({
   onSaveNextTopic,
   onAddNote,
   onArchiveToGoogleDoc,
+  onNavigateTab,
 }: AiMeetingAssistantProps) {
   const [rawNotes, setRawNotes] = useState(existingNotes.join("\n") || "");
   const [audioUrl, setAudioUrl] = useState("");
@@ -804,6 +807,24 @@ export function AiMeetingAssistant({
                 요약·결정사항·액션아이템·다음주제가 모두 저장됩니다
                 {onArchiveToGoogleDoc && " · Google Docs에 자동 아카이브"}
               </p>
+            )}
+            {/* Post-save quick navigation */}
+            {saved && onNavigateTab && (
+              <div className="flex items-center justify-center gap-2 pt-1">
+                <span className="font-mono-nu text-[7px] text-nu-paper/40 uppercase tracking-widest">다음 단계 →</span>
+                <button
+                  onClick={() => onNavigateTab("wiki-sync")}
+                  className="px-3 py-1.5 bg-nu-pink/20 text-nu-pink font-mono-nu text-[8px] uppercase tracking-widest hover:bg-nu-pink/30 transition-colors"
+                >
+                  위키 동기화
+                </button>
+                <button
+                  onClick={() => onNavigateTab("digest")}
+                  className="px-3 py-1.5 bg-purple-500/20 text-purple-300 font-mono-nu text-[8px] uppercase tracking-widest hover:bg-purple-500/30 transition-colors"
+                >
+                  주간 다이제스트
+                </button>
+              </div>
             )}
           </div>
         </div>
