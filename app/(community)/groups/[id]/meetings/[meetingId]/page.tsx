@@ -156,56 +156,47 @@ export default function MeetingDetailPage() {
       .from("group_members").select("profile:profiles(*)").eq("group_id", groupId).eq("status", "active");
     if (membersData) setMembers(membersData.map((m: any) => m.profile).filter(Boolean) as Profile[]);
 
-    // Shared resources (table may not exist if migration 009 not run)
-    try {
-      const { data: resData, error: resError } = await supabase.from("meeting_resources").select("*, author:profiles!meeting_resources_created_by_fkey(nickname)").eq("meeting_id", meetingId).order("created_at");
-      if (!resError && resData) {
-        const resWithReplies = await Promise.all(resData.map(async (r: any) => {
-          const { data: replies } = await supabase.from("meeting_resource_replies").select("*, author:profiles!meeting_resource_replies_created_by_fkey(nickname)").eq("resource_id", r.id).order("created_at");
-          return { ...r, replies: replies || [] };
-        }));
-        setResources(resWithReplies as SharedResource[]);
-      }
-    } catch { /* meeting_resources table may not exist */ }
+    // Parallel load: resources, issues, notes, digest (all independent)
+    const [resourcesResult, issuesResult, notesResult, digestResult] = await Promise.allSettled([
+      // Shared resources
+      (async () => {
+        const { data: resData, error: resError } = await supabase.from("meeting_resources").select("*, author:profiles!meeting_resources_created_by_fkey(nickname)").eq("meeting_id", meetingId).order("created_at");
+        if (!resError && resData) {
+          const resWithReplies = await Promise.all(resData.map(async (r: any) => {
+            const { data: replies } = await supabase.from("meeting_resource_replies").select("*, author:profiles!meeting_resource_replies_created_by_fkey(nickname)").eq("resource_id", r.id).order("created_at");
+            return { ...r, replies: replies || [] };
+          }));
+          return resWithReplies;
+        }
+        return null;
+      })(),
+      // Linked issues
+      supabase.from("meeting_issues").select("*").eq("meeting_id", meetingId).order("created_at"),
+      // Meeting notes for AI
+      supabase.from("meeting_notes").select("content, type").eq("meeting_id", meetingId).order("created_at"),
+      // Previous digest context
+      supabase.from("wiki_ai_analyses").select("content").eq("group_id", groupId).eq("analysis_type", "weekly_digest").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    ]);
 
-    // Linked issues (table may not exist if migration 009 not run)
-    try {
-      const { data: issueData, error: issueError } = await supabase.from("meeting_issues").select("*").eq("meeting_id", meetingId).order("created_at");
-      if (!issueError && issueData) setIssues(issueData as LinkedIssue[]);
-    } catch { /* meeting_issues table may not exist */ }
-
-    // Fetch meeting notes for AI context
-    try {
-      const { data: notesData } = await supabase
-        .from("meeting_notes")
-        .select("content, type")
-        .eq("meeting_id", meetingId)
-        .order("created_at");
-      if (notesData) {
-        setMeetingNotes(notesData.map((n: any) => {
-          const prefix = n.type === "decision" ? "[결정] " : n.type === "action_item" ? "[액션] " : "";
-          return prefix + n.content;
-        }));
-      }
-    } catch { /* notes table may not exist */ }
-
-    // Load previous weekly digest context for AI
-    try {
-      const { data: digestData } = await supabase
-        .from("wiki_ai_analyses")
-        .select("content")
-        .eq("group_id", groupId)
-        .eq("analysis_type", "weekly_digest")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (digestData?.content) {
-        try {
-          const parsed = JSON.parse(digestData.content);
-          setPreviousDigest(parsed.nextMeetingContext || parsed.digest || null);
-        } catch { /* ignore parse errors */ }
-      }
-    } catch { /* wiki_ai_analyses table may not exist */ }
+    // Apply results
+    if (resourcesResult.status === "fulfilled" && resourcesResult.value) {
+      setResources(resourcesResult.value as SharedResource[]);
+    }
+    if (issuesResult.status === "fulfilled" && issuesResult.value.data) {
+      setIssues(issuesResult.value.data as LinkedIssue[]);
+    }
+    if (notesResult.status === "fulfilled" && notesResult.value.data) {
+      setMeetingNotes(notesResult.value.data.map((n: any) => {
+        const prefix = n.type === "decision" ? "[결정] " : n.type === "action_item" ? "[액션] " : "";
+        return prefix + n.content;
+      }));
+    }
+    if (digestResult.status === "fulfilled" && digestResult.value.data?.content) {
+      try {
+        const parsed = JSON.parse(digestResult.value.data.content);
+        setPreviousDigest(parsed.nextMeetingContext || parsed.digest || null);
+      } catch { /* ignore parse errors */ }
+    }
 
     setLoading(false);
   }, [groupId, meetingId]);

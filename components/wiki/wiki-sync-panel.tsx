@@ -249,29 +249,27 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
             if (!pageError && newPage) {
               createdPageIds.push(newPage.id);
 
-              // Record contribution
-              await supabase.from("wiki_contributions").insert({
-                page_id: newPage.id,
-                user_id: user.id,
-                change_summary: "미팅 AI 동기화로 페이지 생성",
-              });
-
-              // Record version
-              await supabase.from("wiki_page_versions").insert({
-                page_id: newPage.id,
-                version: 1,
-                title: update.pageTitle,
-                content,
-                edited_by: user.id,
-                change_summary: "AI 자동 생성 초기 버전",
-              });
-
-              // Link meeting to page
-              await supabase.from("wiki_meeting_links").insert({
-                page_id: newPage.id,
-                meeting_id: meetingId,
-                description: `AI 추출: ${update.suggestion.slice(0, 100)}`,
-              });
+              // Record contribution, version, and meeting link in parallel
+              await Promise.all([
+                supabase.from("wiki_contributions").insert({
+                  page_id: newPage.id,
+                  user_id: user.id,
+                  change_summary: "미팅 AI 동기화로 페이지 생성",
+                }),
+                supabase.from("wiki_page_versions").insert({
+                  page_id: newPage.id,
+                  version: 1,
+                  title: update.pageTitle,
+                  content,
+                  edited_by: user.id,
+                  change_summary: "AI 자동 생성 초기 버전",
+                }),
+                supabase.from("wiki_meeting_links").insert({
+                  page_id: newPage.id,
+                  meeting_id: meetingId,
+                  description: `AI 추출: ${update.suggestion.slice(0, 100)}`,
+                }),
+              ]);
 
               toast.success(`"${update.pageTitle}" 페이지가 생성되었습니다!`);
             }

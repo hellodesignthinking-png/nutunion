@@ -23,6 +23,7 @@ import {
   X,
   Link2,
   RefreshCw,
+  Zap,
 } from "lucide-react";
 
 /* ─── Types ─── */
@@ -205,32 +206,45 @@ export function AiMeetingAssistant({
       const finalSummary = editingResult ? editedSummary : aiResult.summary;
       await onSaveSummary?.(finalSummary);
 
-      // Save decisions as meeting notes (type: decision)
+      // Batch save all notes in parallel (decisions + action items)
+      const notePromises: Promise<void>[] = [];
+
+      // Decisions
       for (const decision of aiResult.decisions) {
-        await onAddNote?.(decision, "decision");
+        if (onAddNote) notePromises.push(onAddNote(decision, "decision") as Promise<void>);
       }
 
-      // Save action items as meeting notes (type: action_item)
+      // Action items
       for (const item of aiResult.actionItems) {
         const content = item.assignee ? `${item.task} (@${item.assignee})` : item.task;
-        await onAddNote?.(content, "action_item");
+        if (onAddNote) notePromises.push(onAddNote(content, "action_item") as Promise<void>);
       }
 
-      // Save next topic suggestion
-      if (aiResult.nextTopics.length > 0) {
-        await onSaveNextTopic?.(aiResult.nextTopics.join("\n"));
+      // Execute all note saves in parallel
+      if (notePromises.length > 0) {
+        await Promise.all(notePromises);
       }
 
-      // Archive to Google Docs
+      // Save next topic + archive in parallel
+      const followupPromises: Promise<any>[] = [];
+
+      if (aiResult.nextTopics.length > 0 && onSaveNextTopic) {
+        followupPromises.push(Promise.resolve(onSaveNextTopic(aiResult.nextTopics.join("\n"))));
+      }
+
       if (onArchiveToGoogleDoc) {
         const docTitle = `회의록 - ${meetingTitle} (${new Date().toLocaleDateString("ko-KR")})`;
         const docContent = formatMeetingAsDoc(aiResult, finalSummary);
-        const archiveResult = await onArchiveToGoogleDoc(docTitle, docContent);
-        if (archiveResult?.url) {
-          toast.success("Google Docs에 아카이브되었습니다");
-        } else if (archiveResult?.error) {
-          toast.error(archiveResult.error);
-        }
+        followupPromises.push(
+          onArchiveToGoogleDoc(docTitle, docContent).then(archiveResult => {
+            if (archiveResult?.url) toast.success("Google Docs에 아카이브되었습니다");
+            else if (archiveResult?.error) toast.error(archiveResult.error);
+          })
+        );
+      }
+
+      if (followupPromises.length > 0) {
+        await Promise.all(followupPromises);
       }
 
       toast.success("회의록이 저장되었습니다");
@@ -279,6 +293,24 @@ export function AiMeetingAssistant({
           요약, 논의사항, 결정사항, 액션아이템, 다음 미팅 주제를 생성합니다.
         </p>
       </div>
+
+      {/* ── Previous Digest Context Banner ─── */}
+      {previousDigest && (
+        <div className="bg-purple-50 border-[2px] border-purple-300 p-4 flex items-start gap-3">
+          <Zap size={16} className="text-purple-600 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-purple-700 mb-1">
+              📌 이전 주간 다이제스트 컨텍스트 로드됨
+            </p>
+            <p className="text-[11px] text-purple-800/80 leading-relaxed">
+              {previousDigest}
+            </p>
+            <p className="font-mono-nu text-[7px] text-purple-400 mt-1.5 uppercase tracking-widest">
+              AI가 이 컨텍스트를 기반으로 분석합니다 · 과거 내용을 다시 입력할 필요 없음
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ── Raw Notes Input ─── */}
       <div className="bg-nu-white border border-nu-ink/[0.08]">
