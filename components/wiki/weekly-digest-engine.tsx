@@ -52,29 +52,41 @@ export function WeeklyDigestEngine({
   const [saving, setSaving] = useState(false);
   const [daysRange, setDaysRange] = useState(7);
 
-  // Load previous digest on mount
+  // Load previous digest and history on mount
+  const [digestHistory, setDigestHistory] = useState<Array<{ title: string; date: string; context: string }>>([]);
   useEffect(() => {
-    async function loadPreviousDigest() {
+    async function loadDigestHistory() {
       const supabase = createClient();
       const { data } = await supabase
         .from("wiki_ai_analyses")
-        .select("content, created_at")
+        .select("title, content, created_at")
         .eq("group_id", groupId)
         .eq("analysis_type", "weekly_digest")
         .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(5);
 
-      if (data?.content) {
+      if (data && data.length > 0) {
         try {
-          const parsed = JSON.parse(data.content);
+          const parsed = JSON.parse(data[0].content);
           setPreviousDigest(parsed.nextMeetingContext || parsed.digest || null);
         } catch {
           setPreviousDigest(null);
         }
+        setDigestHistory(data.map((d: any) => {
+          let context = "";
+          try {
+            const p = JSON.parse(d.content);
+            context = p.nextMeetingContext || p.digest || "";
+          } catch { /* ignore */ }
+          return {
+            title: d.title || "주간 다이제스트",
+            date: new Date(d.created_at).toLocaleDateString("ko"),
+            context,
+          };
+        }));
       }
     }
-    loadPreviousDigest();
+    loadDigestHistory();
   }, [groupId]);
 
   // Auto-trigger on mount if specified
@@ -325,6 +337,38 @@ export function WeeklyDigestEngine({
           >
             <Brain size={16} /> 최근 {daysRange}일 다이제스트 생성
           </button>
+
+          {/* Digest history timeline */}
+          {digestHistory.length > 0 && (
+            <div className="mt-8 max-w-md mx-auto w-full">
+              <div className="flex items-center gap-2 mb-3">
+                <Clock size={12} className="text-nu-muted" />
+                <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">다이제스트 히스토리 ({digestHistory.length})</span>
+              </div>
+              <div className="space-y-2">
+                {digestHistory.map((item, i) => (
+                  <button
+                    key={i}
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(item.context);
+                        toast.success("컨텍스트가 복사되었습니다");
+                      } catch { /* ignore */ }
+                    }}
+                    className="w-full text-left p-3 bg-white/60 border border-purple-100 hover:border-purple-300 hover:bg-purple-50/50 transition-all group"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-mono-nu text-[8px] text-purple-500 uppercase tracking-widest">{item.date}</span>
+                      {i === 0 && <span className="px-1.5 py-0.5 bg-purple-100 text-purple-600 font-mono-nu text-[6px] uppercase tracking-widest">latest</span>}
+                    </div>
+                    <p className="text-[10px] text-nu-ink/60 leading-relaxed line-clamp-2 group-hover:text-nu-ink/80">
+                      {item.context || item.title}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

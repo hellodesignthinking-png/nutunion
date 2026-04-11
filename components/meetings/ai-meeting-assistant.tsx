@@ -105,18 +105,26 @@ export function AiMeetingAssistant({
 
   // Auto-save draft to localStorage (protects against accidental page close)
   const draftKey = `nutunion_draft_${meetingId}`;
+  const [draftSaved, setDraftSaved] = useState(false);
+
   useEffect(() => {
     const savedDraft = localStorage.getItem(draftKey);
     if (savedDraft && !rawNotes.trim() && existingNotes.length === 0) {
       setRawNotes(savedDraft);
+      toast.info("이전에 작성 중이던 메모가 복구되었습니다", {
+        description: "페이지를 떠났을 때 자동 저장된 드래프트입니다.",
+        duration: 5000,
+      });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftKey]);
 
   useEffect(() => {
     if (rawNotes.trim()) {
+      setDraftSaved(false);
       const timer = setTimeout(() => {
         localStorage.setItem(draftKey, rawNotes);
+        setDraftSaved(true);
       }, 1000);
       return () => clearTimeout(timer);
     }
@@ -126,6 +134,19 @@ export function AiMeetingAssistant({
   useEffect(() => {
     if (saved) localStorage.removeItem(draftKey);
   }, [saved, draftKey]);
+
+  // Keyboard shortcut: Ctrl+Enter to trigger AI analysis
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && !processing && rawNotes.trim()) {
+        e.preventDefault();
+        handleAiProcess();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [processing, rawNotes]);
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     summary: true,
@@ -435,6 +456,11 @@ export function AiMeetingAssistant({
               <p className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">
                 {rawNotes.trim().split(/\s+/).filter(Boolean).length} words
               </p>
+              {draftSaved && rawNotes.trim() && (
+                <span className="px-1.5 py-0.5 bg-green-100 text-green-600 font-mono-nu text-[7px] uppercase tracking-widest flex items-center gap-0.5">
+                  <CheckCircle2 size={8} /> saved
+                </span>
+              )}
               {previousDigest && (
                 <span className="px-1.5 py-0.5 bg-purple-100 text-purple-600 font-mono-nu text-[7px] uppercase tracking-widest">
                   ⚡ digest
@@ -467,6 +493,7 @@ export function AiMeetingAssistant({
               <button
                 onClick={handleAiProcess}
                 disabled={processing || (!rawNotes.trim() && !audioUrl)}
+                title="⌘+Enter 또는 Ctrl+Enter"
                 className="flex items-center gap-2 px-4 py-2 font-mono-nu text-[10px] font-bold uppercase tracking-widest bg-gradient-to-r from-nu-pink to-purple-500 text-white hover:opacity-90 disabled:opacity-40 transition-all"
               >
                 {processing ? (
@@ -476,6 +503,7 @@ export function AiMeetingAssistant({
                 ) : (
                   <>
                     <Sparkles size={13} /> AI 정리하기
+                    <kbd className="ml-1 px-1 py-0.5 bg-white/20 text-[7px] rounded">⌘↵</kbd>
                   </>
                 )}
               </button>
