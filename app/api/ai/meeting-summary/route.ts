@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const startTime = Date.now();
     const body = await request.json();
     const { notes, agendas, meetingTitle, audioBase64, audioMimeType, previousDigest } = body;
 
@@ -102,17 +103,35 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    const response = await fetch(GEMINI_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(geminiBody),
-    });
+    // Retry logic with exponential backoff
+    let response: Response | null = null;
+    let lastError = "";
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        response = await fetch(GEMINI_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(geminiBody),
+        });
+        if (response.ok) break;
+        lastError = `HTTP ${response.status}`;
+        // Retry on 429 (rate limit) or 5xx (server error)
+        if (response.status === 429 || response.status >= 500) {
+          await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
+          continue;
+        }
+        break; // Don't retry on 4xx client errors
+      } catch (fetchErr: any) {
+        lastError = fetchErr.message || "Network error";
+        await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
+      }
+    }
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Gemini API error:", response.status, errorText);
+    if (!response || !response.ok) {
+      const errorText = response ? await response.text() : lastError;
+      console.error("Gemini API error after retries:", errorText);
       return NextResponse.json(
-        { error: `Gemini API 오류 (${response.status})` },
+        { error: `Gemini API 오류: ${lastError}` },
         { status: 502 }
       );
     }
@@ -156,6 +175,13 @@ export async function POST(request: NextRequest) {
           }))
         : [],
       nextTopics: Array.isArray(result.nextTopics) ? result.nextTopics : [],
+      // Performance metadata
+      _meta: {
+        model: GEMINI_MODEL,
+        responseTimeMs: Date.now() - startTime,
+        usedDigest: !!previousDigest,
+        inputTokenEstimate: Math.ceil((userPrompt.length + SYSTEM_PROMPT.length) / 4),
+      },
     };
 
     return NextResponse.json(normalized);

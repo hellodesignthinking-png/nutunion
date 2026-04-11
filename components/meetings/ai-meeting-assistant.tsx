@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import {
@@ -92,6 +92,7 @@ export function AiMeetingAssistant({
   const [aiResult, setAiResult] = useState<AiResult | null>(null);
   const [editingResult, setEditingResult] = useState(false);
   const [editedSummary, setEditedSummary] = useState("");
+  const [saved, setSaved] = useState(false);
 
   // Sync rawNotes when existingNotes prop updates (e.g., after meeting_notes are fetched)
   const [prevNotesLength, setPrevNotesLength] = useState(existingNotes.length);
@@ -101,6 +102,31 @@ export function AiMeetingAssistant({
       setRawNotes(existingNotes.join("\n"));
     }
   }
+
+  // Auto-save draft to localStorage (protects against accidental page close)
+  const draftKey = `nutunion_draft_${meetingId}`;
+  useEffect(() => {
+    const savedDraft = localStorage.getItem(draftKey);
+    if (savedDraft && !rawNotes.trim() && existingNotes.length === 0) {
+      setRawNotes(savedDraft);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (rawNotes.trim()) {
+      const timer = setTimeout(() => {
+        localStorage.setItem(draftKey, rawNotes);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [rawNotes, draftKey]);
+
+  // Clear draft after successful save
+  useEffect(() => {
+    if (saved) localStorage.removeItem(draftKey);
+  }, [saved, draftKey]);
+
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     summary: true,
     discussions: true,
@@ -248,6 +274,7 @@ export function AiMeetingAssistant({
       }
 
       toast.success("회의록이 저장되었습니다");
+      setSaved(true);
     } catch (err) {
       console.error("Save error:", err);
       toast.error("저장 중 오류가 발생했습니다");
@@ -647,16 +674,46 @@ export function AiMeetingAssistant({
             </div>
             <button
               onClick={handleSaveAll}
-              disabled={saving}
-              className="w-full flex items-center justify-center gap-2 px-5 py-3 font-mono-nu text-[11px] font-bold uppercase tracking-widest bg-nu-pink text-white hover:bg-nu-pink/90 disabled:opacity-40 transition-all shadow-lg"
+              disabled={saving || saved}
+              className={`w-full flex items-center justify-center gap-2 px-5 py-3 font-mono-nu text-[11px] font-bold uppercase tracking-widest transition-all shadow-lg ${
+                saved
+                  ? "bg-green-600 text-white cursor-default"
+                  : "bg-nu-pink text-white hover:bg-nu-pink/90 disabled:opacity-40"
+              }`}
             >
-              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              회의록 전체 저장{onArchiveToGoogleDoc ? " + Google Docs 아카이브" : ""}
+              {saving ? (
+                <><Loader2 size={14} className="animate-spin" /> 저장 중...</>
+              ) : saved ? (
+                <><CheckCircle2 size={14} /> 저장 완료</>
+              ) : (
+                <><Save size={14} /> 회의록 전체 저장{onArchiveToGoogleDoc ? " + Google Docs 아카이브" : ""}</>
+              )}
             </button>
-            <p className="font-mono-nu text-[8px] text-nu-paper/40 uppercase tracking-widest text-center">
-              요약·결정사항·액션아이템·다음주제가 모두 저장됩니다
-              {onArchiveToGoogleDoc && " · Google Docs에 자동 아카이브"}
-            </p>
+            {/* Performance metadata */}
+            {(aiResult as any)?._meta && (
+              <div className="flex items-center justify-center gap-3 flex-wrap">
+                <span className="font-mono-nu text-[7px] text-nu-paper/30 uppercase tracking-widest">
+                  {(aiResult as any)._meta.model}
+                </span>
+                <span className="font-mono-nu text-[7px] text-nu-paper/30 uppercase tracking-widest">
+                  {((aiResult as any)._meta.responseTimeMs / 1000).toFixed(1)}s
+                </span>
+                <span className="font-mono-nu text-[7px] text-nu-paper/30 uppercase tracking-widest">
+                  ~{(aiResult as any)._meta.inputTokenEstimate} tokens
+                </span>
+                {(aiResult as any)._meta.usedDigest && (
+                  <span className="font-mono-nu text-[7px] text-purple-400 uppercase tracking-widest">
+                    ⚡ digest injected
+                  </span>
+                )}
+              </div>
+            )}
+            {!saved && (
+              <p className="font-mono-nu text-[8px] text-nu-paper/40 uppercase tracking-widest text-center">
+                요약·결정사항·액션아이템·다음주제가 모두 저장됩니다
+                {onArchiveToGoogleDoc && " · Google Docs에 자동 아카이브"}
+              </p>
+            )}
           </div>
         </div>
       )}
