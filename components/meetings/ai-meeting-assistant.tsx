@@ -311,6 +311,7 @@ export function AiMeetingAssistant({
 
   /* ── Format meeting as doc content ─── */
   function formatMeetingAsDoc(result: AiResult, summary: string) {
+    const r = result as any;
     let doc = `# 회의록: ${meetingTitle}\n`;
     doc += `**날짜:** ${new Date().toLocaleDateString("ko-KR")}\n\n`;
     doc += `## 요약\n${summary}\n\n`;
@@ -324,8 +325,19 @@ export function AiMeetingAssistant({
       doc += `## 액션 아이템\n${result.actionItems.map((a) => `- ${a.task}${a.assignee ? ` (담당: ${a.assignee})` : ""}`).join("\n")}\n\n`;
     }
     if (result.nextTopics.length > 0) {
-      doc += `## 다음 미팅 주제\n${result.nextTopics.map((t) => `- ${t}`).join("\n")}\n`;
+      doc += `## 다음 미팅 주제\n${result.nextTopics.map((t) => `- ${t}`).join("\n")}\n\n`;
     }
+    // Growth sections
+    if (r.growthInsights?.length > 0) {
+      doc += `## 🌱 성장 인사이트\n${r.growthInsights.map((g: string) => `- ${g}`).join("\n")}\n\n`;
+    }
+    if (r.learningRecommendations?.length > 0) {
+      doc += `## 📚 학습 추천\n${r.learningRecommendations.map((l: string) => `- ${l}`).join("\n")}\n\n`;
+    }
+    if (r.discussionQuality) {
+      doc += `## 📊 토론 품질\n- 깊이: ${r.discussionQuality.depth}\n- 참여도: ${r.discussionQuality.participation}\n- 실행성: ${r.discussionQuality.actionability}\n\n`;
+    }
+    doc += `---\n*NutUnion AI 성장 촉진자에 의해 자동 생성됨*\n`;
     return doc;
   }
 

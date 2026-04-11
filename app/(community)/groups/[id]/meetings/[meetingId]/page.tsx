@@ -501,6 +501,10 @@ export default function MeetingDetailPage() {
             </div>
           )}
         </div>
+        {/* Elapsed timer for in-progress meetings */}
+        {meeting.status === "in_progress" && (
+          <MeetingTimer startTime={meeting.scheduled_at} />
+        )}
       </div>
 
       {/* Google Calendar */}
@@ -590,6 +594,23 @@ export default function MeetingDetailPage() {
         </div>
       )}
 
+      {/* Previous digest context preview */}
+      {previousDigest && (
+        <div className="mb-4 bg-purple-50 border border-purple-200 p-3 flex items-start gap-2">
+          <Zap size={14} className="text-purple-500 mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="font-mono-nu text-[8px] text-purple-500 uppercase tracking-widest mb-0.5">이전 다이제스트 컨텍스트 (AI 자동 참조 중)</p>
+            <p className="text-[11px] text-purple-800 leading-relaxed line-clamp-2">{previousDigest}</p>
+          </div>
+          <button
+            onClick={() => setActiveTab("digest")}
+            className="shrink-0 px-2 py-1 font-mono-nu text-[7px] uppercase tracking-widest text-purple-600 border border-purple-300 hover:bg-purple-100 transition-colors"
+          >
+            상세
+          </button>
+        </div>
+      )}
+
       {/* Tabs */}
       <Tabs
         value={activeTab}
@@ -610,6 +631,7 @@ export default function MeetingDetailPage() {
           </TabsTrigger>
           <TabsTrigger value="digest" className="font-mono-nu text-[11px] uppercase tracking-widest flex items-center gap-1 text-purple-600 font-bold">
             <Zap size={11} /> 주간 다이제스트
+            {previousDigest && <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />}
           </TabsTrigger>
         </TabsList>
 
@@ -1039,6 +1061,41 @@ function MeetingAttendanceCheck({ meetingId, groupId, canEdit }: { meetingId: st
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ─── Meeting Timer ─── */
+function MeetingTimer({ startTime }: { startTime: string }) {
+  const [elapsed, setElapsed] = useState("");
+
+  useEffect(() => {
+    const start = new Date(startTime).getTime();
+    const tick = () => {
+      const diff = Math.max(0, Date.now() - start);
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setElapsed(
+        h > 0
+          ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+          : `${m}:${String(s).padStart(2, "0")}`
+      );
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [startTime]);
+
+  return (
+    <div className="mt-4 flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200">
+      <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+      <span className="font-mono-nu text-[10px] uppercase tracking-widest text-green-700 font-bold">
+        회의 진행 중
+      </span>
+      <span className="font-mono-nu text-[13px] text-green-800 font-black tabular-nums">
+        {elapsed}
+      </span>
     </div>
   );
 }

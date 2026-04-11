@@ -746,10 +746,19 @@ export function WeeklyDigestEngine({
                   "",
                   ...(result.keyDecisions.length > 0 ? [`## 핵심 결정`, ...result.keyDecisions.map(d => `- ${d}`), ""] : []),
                   ...(result.carryOverItems.length > 0 ? [`## 이월 항목`, ...result.carryOverItems.map(i => `- [ ] ${i}`), ""] : []),
+                  ...(result.resolvedItems.length > 0 ? [`## 완료 사항`, ...result.resolvedItems.map(r => `- [x] ${r}`), ""] : []),
                   ...(result.openQuestions.length > 0 ? [`## 미결 질문`, ...result.openQuestions.map(q => `- ${q}`), ""] : []),
+                  ...(result.knowledgeGrowth.length > 0 ? [`## 지식 성장`, ...result.knowledgeGrowth.map(k => `- ${k}`), ""] : []),
+                  ...(result.memberGrowth?.length > 0 ? [`## 🌱 멤버 성장`, ...result.memberGrowth.map(g => `- ${g}`), ""] : []),
+                  ...(result.learningJourney?.topicsExplored?.length > 0 ? [`## 📖 학습 여정`, `### 탐구 주제`, ...result.learningJourney.topicsExplored.map(t => `- ${t}`)] : []),
+                  ...(result.learningJourney?.recommendedReading?.length > 0 ? [`### 추천 학습`, ...result.learningJourney.recommendedReading.map(r => `- 📚 ${r}`)] : []),
+                  ...(result.learningJourney?.skillsSharpened?.length > 0 ? [`### 연마 역량`, ...result.learningJourney.skillsSharpened.map(s => `- 💪 ${s}`), ""] : []),
+                  ...(result.weeklyReflection?.whatWentWell ? [`## 🔍 주간 회고`, `- ✅ 잘한 점: ${result.weeklyReflection.whatWentWell}`, `- 🔧 개선할 점: ${result.weeklyReflection.whatToImprove || "-"}`, `- 📈 토론 변화: ${result.weeklyReflection.discussionEvolution || "-"}`, ""] : []),
+                  ...(result.encouragement ? [`> 💜 ${result.encouragement}`, ""] : []),
                   ...(result.suggestedAgenda.length > 0 ? [`## 다음 안건 제안`, ...result.suggestedAgenda.map(a => `- ${a}`), ""] : []),
                   `---`,
                   `**다음 회의 AI 컨텍스트:** ${result.nextMeetingContext}`,
+                  `**토큰 절약:** ${result.tokenSavings}`,
                 ].join("\n");
                 await navigator.clipboard.writeText(text);
                 toast.success("마크다운 형식으로 복사되었습니다");
