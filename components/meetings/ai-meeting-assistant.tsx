@@ -24,6 +24,9 @@ import {
   Link2,
   RefreshCw,
   Zap,
+  TrendingUp,
+  BookOpen,
+  Heart,
 } from "lucide-react";
 
 /* ─── Types ─── */
@@ -651,6 +654,66 @@ export function AiMeetingAssistant({
               ))}
             </div>
           </ResultSection>
+
+          {/* Growth Insights */}
+          {(aiResult as any).growthInsights?.length > 0 && (
+            <ResultSection
+              title={`성장 인사이트 (${(aiResult as any).growthInsights.length})`}
+              icon={<TrendingUp size={14} className="text-green-500" />}
+              expanded={expandedSections.growth}
+              onToggle={() => toggleSection("growth")}
+            >
+              <div className="flex flex-col gap-2">
+                {(aiResult as any).growthInsights.map((g: string, i: number) => (
+                  <div key={i} className="flex items-start gap-2 text-sm text-nu-graphite p-2 bg-green-50 border border-green-100">
+                    <Heart size={13} className="text-green-500 mt-0.5 shrink-0" />
+                    <span className="leading-relaxed">{g}</span>
+                  </div>
+                ))}
+              </div>
+            </ResultSection>
+          )}
+
+          {/* Learning Recommendations */}
+          {(aiResult as any).learningRecommendations?.length > 0 && (
+            <ResultSection
+              title={`학습 추천 (${(aiResult as any).learningRecommendations.length})`}
+              icon={<BookOpen size={14} className="text-blue-500" />}
+              expanded={expandedSections.learning}
+              onToggle={() => toggleSection("learning")}
+            >
+              <div className="flex flex-col gap-1.5">
+                {(aiResult as any).learningRecommendations.map((l: string, i: number) => (
+                  <div key={i} className="flex items-start gap-2 text-sm text-nu-graphite">
+                    <BookOpen size={13} className="text-blue-400 mt-0.5 shrink-0" />
+                    <span className="leading-relaxed">{l}</span>
+                  </div>
+                ))}
+              </div>
+            </ResultSection>
+          )}
+
+          {/* Discussion Quality */}
+          {(aiResult as any).discussionQuality && (
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-100 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles size={14} className="text-purple-500" />
+                <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-purple-700">토론 품질 분석</span>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: "논의 깊이", value: (aiResult as any).discussionQuality.depth, color: "text-purple-600" },
+                  { label: "참여도", value: (aiResult as any).discussionQuality.participation, color: "text-blue-600" },
+                  { label: "실행 가능성", value: (aiResult as any).discussionQuality.actionability, color: "text-green-600" },
+                ].map((q, i) => (
+                  <div key={i} className="text-center">
+                    <p className="font-mono-nu text-[7px] uppercase tracking-widest text-nu-muted mb-1">{q.label}</p>
+                    <p className={`text-[11px] font-semibold ${q.color}`}>{q.value || "-"}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Save All / Regenerate */}
           <div className="p-4 bg-nu-ink text-nu-paper space-y-3">

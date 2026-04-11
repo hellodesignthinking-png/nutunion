@@ -20,6 +20,20 @@ interface WeeklyDigestResult {
   nextMeetingContext: string;
   suggestedAgenda: string[];
   tokenSavings: string;
+  // Growth facilitation
+  memberGrowth: string[];
+  learningJourney: {
+    topicsExplored: string[];
+    recommendedReading: string[];
+    skillsSharpened: string[];
+  };
+  weeklyReflection: {
+    whatWentWell: string;
+    whatToImprove: string;
+    discussionEvolution: string;
+  };
+  encouragement: string;
+  // Metadata
   periodStart: string;
   periodEnd: string;
   meetingCount: number;
@@ -575,6 +589,105 @@ export function WeeklyDigestEngine({
             ))}
           </div>
         </SectionCard>
+      )}
+
+      {/* Member Growth */}
+      {result.memberGrowth?.length > 0 && (
+        <SectionCard title={`🌱 멤버 성장 포인트 (${result.memberGrowth.length})`}
+          icon={<TrendingUp size={14} className="text-green-500" />}
+          expanded={expandedSections.growth ?? true} onToggle={() => toggleSection("growth")}>
+          <div className="flex flex-col gap-2">
+            {result.memberGrowth.map((g, i) => (
+              <div key={i} className="flex items-start gap-2 text-sm text-nu-ink p-2 bg-green-50 border border-green-100">
+                <span className="text-green-500 mt-0.5">🌟</span>
+                <span className="leading-relaxed">{g}</span>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
+      {/* Learning Journey */}
+      {(result.learningJourney?.topicsExplored?.length > 0 || 
+        result.learningJourney?.recommendedReading?.length > 0 ||
+        result.learningJourney?.skillsSharpened?.length > 0) && (
+        <div className="bg-white border border-blue-200 overflow-hidden">
+          <div className="px-4 py-3 bg-blue-50 flex items-center gap-2">
+            <BookOpen size={14} className="text-blue-500" />
+            <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-blue-700">학습 여정</span>
+          </div>
+          <div className="p-4 space-y-3">
+            {result.learningJourney.topicsExplored?.length > 0 && (
+              <div>
+                <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted mb-1.5">📖 탐구한 주제</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {result.learningJourney.topicsExplored.map((t, i) => (
+                    <span key={i} className="px-2 py-1 bg-blue-50 text-blue-700 text-[10px] border border-blue-100">{t}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {result.learningJourney.recommendedReading?.length > 0 && (
+              <div>
+                <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted mb-1.5">📚 추천 학습</p>
+                {result.learningJourney.recommendedReading.map((r, i) => (
+                  <div key={i} className="flex items-start gap-2 text-[11px] text-nu-ink mb-1">
+                    <ArrowRight size={11} className="text-blue-400 mt-0.5 shrink-0" /> {r}
+                  </div>
+                ))}
+              </div>
+            )}
+            {result.learningJourney.skillsSharpened?.length > 0 && (
+              <div>
+                <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted mb-1.5">💪 연마된 역량</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {result.learningJourney.skillsSharpened.map((s, i) => (
+                    <span key={i} className="px-2 py-1 bg-green-50 text-green-700 text-[10px] border border-green-100">{s}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Weekly Reflection */}
+      {result.weeklyReflection && (result.weeklyReflection.whatWentWell || result.weeklyReflection.whatToImprove) && (
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles size={14} className="text-amber-500" />
+            <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-amber-700">주간 회고</span>
+          </div>
+          <div className="space-y-2">
+            {result.weeklyReflection.whatWentWell && (
+              <div className="flex items-start gap-2 text-[11px]">
+                <span className="text-green-500 shrink-0">✅</span>
+                <div><strong className="text-green-700">잘한 점:</strong> <span className="text-nu-ink/70">{result.weeklyReflection.whatWentWell}</span></div>
+              </div>
+            )}
+            {result.weeklyReflection.whatToImprove && (
+              <div className="flex items-start gap-2 text-[11px]">
+                <span className="text-amber-500 shrink-0">🔧</span>
+                <div><strong className="text-amber-700">개선할 점:</strong> <span className="text-nu-ink/70">{result.weeklyReflection.whatToImprove}</span></div>
+              </div>
+            )}
+            {result.weeklyReflection.discussionEvolution && (
+              <div className="flex items-start gap-2 text-[11px]">
+                <span className="text-blue-500 shrink-0">📈</span>
+                <div><strong className="text-blue-700">토론 변화:</strong> <span className="text-nu-ink/70">{result.weeklyReflection.discussionEvolution}</span></div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Encouragement */}
+      {result.encouragement && (
+        <div className="bg-gradient-to-r from-pink-50 to-purple-50 border-[2px] border-pink-200 p-5 text-center">
+          <p className="text-lg mb-2">💜</p>
+          <p className="text-sm text-nu-ink leading-relaxed italic">{result.encouragement}</p>
+          <p className="font-mono-nu text-[7px] text-nu-muted uppercase tracking-widest mt-2">AI 성장 촉진자</p>
+        </div>
       )}
 
       {/* Save button */}

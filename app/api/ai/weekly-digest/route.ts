@@ -16,22 +16,35 @@ const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GE
  * Flow: Meetings + Notes + Resources + Wiki → AI Compress → Digest
  * Next meeting: Digest (small) + new notes → AI = less tokens
  */
-const SYSTEM_PROMPT = `당신은 NutUnion 소모임의 **주간 지식 다이제스트** 생성 AI입니다.
+const SYSTEM_PROMPT = `당신은 NutUnion 소모임의 **주간 지식 다이제스트 & 성장 촉진자** AI입니다.
 한 주간의 모든 회의 내용, 공유 자료, 결정 사항, 액션 아이템을 분석하여
-**다음 회의의 시작 컨텍스트**로 사용할 압축된 다이제스트를 생성합니다.
+**다음 회의의 시작 컨텍스트**로 사용할 압축된 다이제스트를 생성하고,
+회원들의 성장을 돕는 인사이트를 제공합니다.
 
 반드시 아래 JSON 형식으로만 응답하세요:
 
 {
-  "digest": "이번 주 핵심 내용을 3-5 문장으로 압축 요약. 다음 회의 참석자가 이것만 읽으면 맥락을 파악할 수 있도록.",
+  "digest": "이번 주 핵심 내용을 3-5 문장으로 압축 요약.",
   "carryOverItems": ["아직 완료되지 않은 액션 아이템 목록 (담당자 포함)"],
   "resolvedItems": ["이번 주 완료된 사항"],
   "keyDecisions": ["이번 주 확정된 결정 사항"],
   "openQuestions": ["아직 해결되지 않은 질문/과제"],
   "knowledgeGrowth": ["위키에 추가/업데이트된 지식 항목"],
-  "nextMeetingContext": "다음 회의에서 AI가 참고할 압축 컨텍스트 (200자 이내). 이 텍스트가 다음 회의 AI의 시작점이 됩니다.",
+  "nextMeetingContext": "다음 회의에서 AI가 참고할 압축 컨텍스트 (200자 이내)",
   "suggestedAgenda": ["다음 회의 안건 제안 3-5개"],
-  "tokenSavings": "이 다이제스트로 대체된 원본 데이터의 대략적 크기 (예: '3개 회의록 + 5개 노트 → 200자 압축')"
+  "tokenSavings": "이 다이제스트로 대체된 원본 데이터의 대략적 크기",
+  "memberGrowth": ["이번 주 회원들이 보여준 성장 포인트 (새 아이디어, 깊은 논의, 문제 해결 등)"],
+  "learningJourney": {
+    "topicsExplored": ["이번 주 탐구한 주요 주제들"],
+    "recommendedReading": ["다음 주 추천 학습 주제/자료"],
+    "skillsSharpened": ["이번 주 연마된 역량들"]
+  },
+  "weeklyReflection": {
+    "whatWentWell": "이번 주 잘된 점",
+    "whatToImprove": "다음 주 개선할 점",
+    "discussionEvolution": "지난주 대비 토론 품질 변화"
+  },
+  "encouragement": "팀에게 보내는 격려 메시지 (따뜻하고 구체적으로)"
 }
 
 규칙:
@@ -39,6 +52,10 @@ const SYSTEM_PROMPT = `당신은 NutUnion 소모임의 **주간 지식 다이제
 - 한국어로 작성
 - nextMeetingContext는 반드시 200자 이내로 핵심만
 - carryOverItems는 구체적으로 (누가 무엇을 언제까지)
+- memberGrowth: 회원들의 발전을 인정하고 격려하는 톤
+- learningJourney: 토론에서 자연스럽게 이어지는 학습 주제 제안
+- weeklyReflection: 건설적이고 긍정적인 피드백
+- encouragement: 다음 주 동기부여가 되는 메시지
 - 이전 다이제스트가 있다면 그 맥락을 이어서 작성
 - digest는 모든 참석자가 5초 안에 맥락을 파악할 수 있도록 간결하게`;
 
@@ -277,6 +294,11 @@ export async function POST(request: NextRequest) {
       nextMeetingContext: result.nextMeetingContext || "",
       suggestedAgenda: Array.isArray(result.suggestedAgenda) ? result.suggestedAgenda : [],
       tokenSavings: result.tokenSavings || "",
+      // Growth facilitation
+      memberGrowth: Array.isArray(result.memberGrowth) ? result.memberGrowth : [],
+      learningJourney: result.learningJourney || { topicsExplored: [], recommendedReading: [], skillsSharpened: [] },
+      weeklyReflection: result.weeklyReflection || { whatWentWell: "", whatToImprove: "", discussionEvolution: "" },
+      encouragement: result.encouragement || "",
       // Metadata
       periodStart: startISO,
       periodEnd: endISO,
