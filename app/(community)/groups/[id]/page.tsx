@@ -31,6 +31,7 @@ import { DailyDigest } from "@/components/groups/daily-digest";
 import { RelatedGroups } from "@/components/groups/related-groups";
 import { GroupAnnouncements } from "@/components/groups/group-announcements";
 import { OnboardingChecklist } from "@/components/groups/onboarding-checklist";
+import { GroupGrowthWidget } from "@/components/groups/group-growth-widget";
 
 export const dynamic = "force-dynamic";
 
@@ -199,6 +200,10 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
           </div>
           
           <div className="space-y-6">
+            {/* Growth Widget */}
+            {(isMember || isHost) && (
+              <GroupGrowthWidget groupId={id} />
+            )}
             <Suspense fallback={<div className="h-64 bg-black/5 animate-pulse" />}>
               <GroupSidebarSections id={id} colors={colors} isHost={isHost} isMember={isMember} group={groupData} userId={user.id} />
             </Suspense>

@@ -401,6 +401,14 @@ export default function MeetingDetailPage() {
             {isSplitView ? <Maximize2 size={13} /> : <Columns size={13} />}
             <span className="hidden md:inline">{isSplitView ? "단일 뷰" : "스플릿 뷰"}</span>
           </button>
+          {canEdit && (
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-nu-cream/50 border border-nu-ink/[0.06]">
+              <kbd className="font-mono-nu text-[8px] bg-nu-white px-1.5 py-0.5 border border-nu-ink/10 text-nu-muted">⌘</kbd>
+              <span className="font-mono-nu text-[8px] text-nu-muted">+</span>
+              <kbd className="font-mono-nu text-[8px] bg-nu-white px-1.5 py-0.5 border border-nu-ink/10 text-nu-muted">Enter</kbd>
+              <span className="font-mono-nu text-[8px] text-nu-muted ml-1">AI 분석</span>
+            </div>
+          )}
         </div>
 
       {/* Roles & Quick Assets Panel */}
@@ -580,15 +588,31 @@ export default function MeetingDetailPage() {
           {showSummaryInput && (
             <div className="w-full bg-nu-white border border-nu-ink/[0.08] p-5">
               <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray mb-2">회의 요약</p>
+              {meeting.summary && !summary && (
+                <button
+                  onClick={() => setSummary(meeting.summary || "")}
+                  className="mb-2 text-[10px] font-mono-nu text-nu-pink hover:underline"
+                >
+                  ✨ AI가 작성한 요약 불러오기
+                </button>
+              )}
               <Textarea value={summary} onChange={e => setSummary(e.target.value)}
-                placeholder="미팅에서 논의된 내용을 요약해주세요" rows={3}
+                placeholder="미팅에서 논의된 내용을 요약해주세요 (AI 회의록 탭에서 먼저 분석하면 자동 저장됩니다)" rows={3}
                 className="border-nu-ink/15 bg-transparent resize-none mb-3" />
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <Button onClick={handleCompleteMeeting} disabled={actionLoading}
                   className="bg-nu-pink text-nu-paper hover:bg-nu-pink/90 font-mono-nu text-[11px] uppercase tracking-widest">
                   {actionLoading ? "저장 중..." : "완료 처리"}
                 </Button>
                 <Button variant="outline" onClick={() => setShowSummaryInput(false)} className="font-mono-nu text-[11px] uppercase tracking-widest">취소</Button>
+                {!meeting.summary && (
+                  <button
+                    onClick={() => { setShowSummaryInput(false); setActiveTab("ai-notes"); }}
+                    className="ml-auto text-[10px] font-mono-nu text-nu-blue hover:underline flex items-center gap-1"
+                  >
+                    <Sparkles size={10} /> AI 회의록으로 먼저 분석하기
+                  </button>
+                )}
               </div>
             </div>
           )}
