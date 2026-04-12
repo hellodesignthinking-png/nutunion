@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   description: "nutunion 커뮤니티 프로젝트를 탐색하고 참여하세요",
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function ProjectsPage() {
   const supabase = await createClient();

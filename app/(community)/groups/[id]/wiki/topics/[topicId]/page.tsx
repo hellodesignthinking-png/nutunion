@@ -7,7 +7,7 @@ import {
 import { TopicDetailClient } from "@/components/wiki/topic-detail-client";
 import type { Metadata } from "next";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string; topicId: string }> }): Promise<Metadata> {
   const { topicId } = await params;

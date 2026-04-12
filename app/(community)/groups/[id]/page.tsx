@@ -19,21 +19,25 @@ import {
   CreditCard,
   Sparkles,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { GroupActions } from "@/components/groups/group-actions";
-import { CrewActivityFeed } from "@/components/crews/crew-activity-feed";
-import { CrewProjects } from "@/components/crews/crew-projects";
-import { WorkspaceLinks } from "@/components/integrations/workspace-links";
-import { EventRsvpButton } from "@/components/groups/event-rsvp-button";
 import { GroupSearch } from "@/components/groups/group-search";
-import { GroupRoadmap } from "@/components/groups/group-roadmap";
-import { GroupRadarChart, ActivityHeatmap } from "@/components/groups/group-vitals";
-import { DailyDigest } from "@/components/groups/daily-digest";
-import { RelatedGroups } from "@/components/groups/related-groups";
-import { GroupAnnouncements } from "@/components/groups/group-announcements";
 import { OnboardingChecklist } from "@/components/groups/onboarding-checklist";
-import { GroupGrowthWidget } from "@/components/groups/group-growth-widget";
 
-export const dynamic = "force-dynamic";
+// Lazy-load heavy below-fold components
+const CrewActivityFeed = dynamic(() => import("@/components/crews/crew-activity-feed").then(m => m.CrewActivityFeed));
+const CrewProjects = dynamic(() => import("@/components/crews/crew-projects").then(m => m.CrewProjects));
+const WorkspaceLinks = dynamic(() => import("@/components/integrations/workspace-links").then(m => m.WorkspaceLinks));
+const EventRsvpButton = dynamic(() => import("@/components/groups/event-rsvp-button").then(m => m.EventRsvpButton));
+const GroupRoadmap = dynamic(() => import("@/components/groups/group-roadmap").then(m => m.GroupRoadmap));
+const GroupRadarChart = dynamic(() => import("@/components/groups/group-vitals").then(m => m.GroupRadarChart));
+const ActivityHeatmap = dynamic(() => import("@/components/groups/group-vitals").then(m => m.ActivityHeatmap));
+const DailyDigest = dynamic(() => import("@/components/groups/daily-digest").then(m => m.DailyDigest));
+const RelatedGroups = dynamic(() => import("@/components/groups/related-groups").then(m => m.RelatedGroups));
+const GroupAnnouncements = dynamic(() => import("@/components/groups/group-announcements").then(m => m.GroupAnnouncements));
+const GroupGrowthWidget = dynamic(() => import("@/components/groups/group-growth-widget").then(m => m.GroupGrowthWidget));
+
+export const revalidate = 60; // ISR: 60초 캐시
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;

@@ -57,7 +57,28 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git remote:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(npm install:*)",
+      "Bash(node -e \"const l = require\\('lucide-react'\\); console.log\\(Object.keys\\(l\\).filter\\(k => k.toLowerCase\\(\\).includes\\('play'\\) || k.toLowerCase\\(\\).includes\\('video'\\)\\).join\\(', '\\)\\)\")",
+      "Bash(xargs ls:*)",
+      "Bash(git restore:*)",
+      "Bash(grep -r \"as any\" /Users/TaiNa0/Desktop/nutunion/components/wiki/*.tsx)",
+      "Bash(grep -n \"catch.*{\" /Users/TaiNa0/Desktop/nutunion/components/wiki/*.tsx)",
+      "Bash(grep -rn \"catch.*{$\" /Users/TaiNa0/Desktop/nutunion/components/wiki/*.tsx)",
+      "Bash(grep -rn \"dangerouslySetInnerHTML\" /Users/TaiNa0/Desktop/nutunion/components/wiki/*.tsx)",
+      "Bash(grep -rn \"DOMPurify.sanitize\" /Users/TaiNa0/Desktop/nutunion/components/wiki/*.tsx /Users/TaiNa0/Desktop/nutunion/app/wiki/)",
+      "Bash(grep -A 20 \"select.*\\\\`\" /Users/TaiNa0/Desktop/nutunion/app/\\\\\\(community\\\\\\)/groups/\\\\[id\\\\]/wiki/pages/\\\\[pageId\\\\]/page.tsx)",
+      "Bash(grep -n \"is_public\\\\|public_slug\" /Users/TaiNa0/Desktop/nutunion/supabase/migrations/*.sql)",
+      "Bash(grep -n \"select.*\\\\`\" /Users/TaiNa0/Desktop/nutunion/app/\\\\\\(community\\\\\\)/groups/\\\\[id\\\\]/wiki/page.tsx)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(gh api:*)",
+      "Bash(gh auth:*)",
+      "Bash(gh repo:*)",
+      "WebFetch(domain:nutunion.vercel.app)",
+      "WebFetch(domain:nutunion.co.kr)",
+      "WebFetch(domain:nutunion-git-main-hellodesignthinking-pngs-projects.vercel.app)",
+      "Bash(grep -r \"await supabase\" /Users/TaiNa0/Desktop/nutunion/app/\\\\\\(community\\\\\\)/groups/\\\\[id\\\\]/*.tsx)",
+      "Bash(grep -n \"dynamic.*force\\\\|revalidate\" /Users/TaiNa0/Desktop/nutunion/app/\\\\\\(community\\\\\\)/groups/\\\\[id\\\\]/*.tsx /Users/TaiNa0/Desktop/nutunion/app/\\\\\\(community\\\\\\)/groups/\\\\[id\\\\]/*/*.tsx)"
     ]
   }
 }

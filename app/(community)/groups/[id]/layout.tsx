@@ -16,12 +16,11 @@ export default async function GroupLayout({
   let isManager = false;
 
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data: group } = await supabase
-      .from("groups")
-      .select("name, host_id")
-      .eq("id", groupId)
-      .single();
+    // Parallelize auth + group query
+    const [{ data: { user } }, { data: group }] = await Promise.all([
+      supabase.auth.getUser(),
+      supabase.from("groups").select("name, host_id").eq("id", groupId).single(),
+    ]);
 
     if (group) {
       groupName = group.name;

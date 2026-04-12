@@ -47,7 +47,7 @@ const MonthlyEvolutionAnalysis = lazyLoad(() => import("@/components/wiki/monthl
   loading: () => <WikiSkeleton h="h-72" />,
 });
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function GroupWikiPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

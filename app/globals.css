@@ -454,61 +454,6 @@ body::after {
   background: #FF48B0;
 }
 
-/* ---- Page content fade-in ---- */
-@keyframes page-fade-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-main, [data-page-content] {
-  animation: page-fade-in 0.4s ease-out;
-}
-
-/* ---- Glitch text effect ---- */
-@keyframes glitch-shift {
-  0%, 100% { transform: translate(0); }
-  20% { transform: translate(-2px, 1px); }
-  40% { transform: translate(2px, -1px); }
-  60% { transform: translate(-1px, -1px); }
-  80% { transform: translate(1px, 2px); }
-}
-
-.glitch-text {
-  position: relative;
-}
-
-.glitch-text:hover::before {
-  content: attr(data-text);
-  position: absolute;
-  left: 2px;
-  top: -1px;
-  color: #FF48B0;
-  opacity: 0.6;
-  mix-blend-mode: multiply;
-  animation: glitch-shift 0.3s steps(5) infinite;
-}
-
-.glitch-text:hover::after {
-  content: attr(data-text);
-  position: absolute;
-  left: -2px;
-  top: 1px;
-  color: #0055FF;
-  opacity: 0.4;
-  mix-blend-mode: multiply;
-  animation: glitch-shift 0.3s steps(5) reverse infinite;
-}
-
-/* ---- Pulse glow → Ink pulse ---- */
-@keyframes ink-pulse {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
-}
-
-.pulse-glow {
-  animation: ink-pulse 3s ease-in-out infinite;
-}
-
 /* ---- Scroll bounce indicator ---- */
 @keyframes scroll-bounce {
   0%, 100% { transform: translateY(0); }
@@ -517,17 +462,6 @@ main, [data-page-content] {
 
 .scroll-bounce {
   animation: scroll-bounce 2s ease-in-out infinite;
-}
-
-/* ---- Stamp rotation on hover ---- */
-@keyframes stamp-press {
-  0% { transform: rotate(-2deg) scale(1); }
-  50% { transform: rotate(0deg) scale(1.03); }
-  100% { transform: rotate(-2deg) scale(1); }
-}
-
-.stamp-hover:hover {
-  animation: stamp-press 0.4s ease-out;
 }
 
 /* ---- Image risograph filter ---- */

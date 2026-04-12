@@ -5,7 +5,7 @@ import { ChevronRight } from "lucide-react";
 import { WikiPageViewer } from "@/components/wiki/wiki-page-viewer";
 import type { Metadata } from "next";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string; pageId: string }> }): Promise<Metadata> {
   const { id: groupId, pageId } = await params;
