@@ -9,6 +9,7 @@ import {
   Eye, Edit3, Save, History, Clock,
   Tag, Users, GitBranch, ChevronRight, Loader2
 } from "lucide-react";
+import DOMPurify from "isomorphic-dompurify";
 
 interface WikiPageEditorProps {
   pageId?: string;
@@ -366,7 +367,7 @@ export function WikiPageEditor({
           <h1 className="font-head text-3xl font-extrabold text-nu-ink mb-6">{title || "제목 없음"}</h1>
           <div
             className="prose prose-sm max-w-none text-nu-graphite leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: renderPreview(content) }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderPreview(content)) }}
           />
         </div>
       ) : (

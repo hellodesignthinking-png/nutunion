@@ -24,6 +24,7 @@ import {
   CheckSquare,
   Copy,
 } from "lucide-react";
+import DOMPurify from "isomorphic-dompurify";
 
 /* ─── Types ─── */
 interface ResourceEditorProps {
@@ -301,7 +302,7 @@ export function ResourceEditor({
         ) : (
           <div
             className="p-5 prose-nu text-sm leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderMarkdown(content)) }}
           />
         )}
       </div>

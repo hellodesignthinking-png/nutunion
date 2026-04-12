@@ -32,6 +32,7 @@ export function GlobalSearch() {
   const [loading, setLoading] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const router = useRouter();
 
   // Cmd+K shortcut
@@ -57,40 +58,50 @@ export function GlobalSearch() {
     }
   }, [open]);
 
-  // Search logic
+  // Search logic with abort to prevent race conditions
   const doSearch = useCallback(async (q: string) => {
+    abortRef.current?.abort();
     if (q.length < 2) { setResults([]); return; }
     setLoading(true);
 
-    const supabase = createClient();
-    const all: SearchResult[] = [];
+    const controller = new AbortController();
+    abortRef.current = controller;
 
-    const [
-      { data: profiles },
-      { data: groups },
-      { data: projects },
-    ] = await Promise.all([
-      supabase.from("profiles").select("id, nickname, bio").ilike("nickname", `%${q}%`).limit(5),
-      supabase.from("groups").select("id, name, category, description").ilike("name", `%${q}%`).eq("is_active", true).limit(5),
-      supabase.from("projects").select("id, title, description, category").ilike("title", `%${q}%`).neq("status", "draft").limit(5),
-    ]);
+    try {
+      const supabase = createClient();
+      const all: SearchResult[] = [];
 
-    (profiles || []).forEach((p: any) => all.push({
-      id: p.id, type: "member", title: p.nickname || "멤버",
-      subtitle: p.bio || "넛유니온 멤버", href: `/portfolio/${p.id}`
-    }));
-    (groups || []).forEach((g: any) => all.push({
-      id: g.id, type: "group", title: g.name,
-      subtitle: g.description?.slice(0, 60) || g.category, href: `/groups/${g.id}`
-    }));
-    (projects || []).forEach((p: any) => all.push({
-      id: p.id, type: "project", title: p.title,
-      subtitle: p.description?.slice(0, 60) || p.category, href: `/projects/${p.id}`
-    }));
+      const [
+        { data: profiles },
+        { data: groups },
+        { data: projects },
+      ] = await Promise.all([
+        supabase.from("profiles").select("id, nickname, bio").ilike("nickname", `%${q}%`).limit(5).abortSignal(controller.signal),
+        supabase.from("groups").select("id, name, category, description").ilike("name", `%${q}%`).eq("is_active", true).limit(5).abortSignal(controller.signal),
+        supabase.from("projects").select("id, title, description, category").ilike("title", `%${q}%`).neq("status", "draft").limit(5).abortSignal(controller.signal),
+      ]);
 
-    setResults(all);
-    setSelectedIdx(0);
-    setLoading(false);
+      (profiles || []).forEach((p: any) => all.push({
+        id: p.id, type: "member", title: p.nickname || "멤버",
+        subtitle: p.bio || "넛유니온 멤버", href: `/portfolio/${p.id}`
+      }));
+      (groups || []).forEach((g: any) => all.push({
+        id: g.id, type: "group", title: g.name,
+        subtitle: g.description?.slice(0, 60) || g.category, href: `/groups/${g.id}`
+      }));
+      (projects || []).forEach((p: any) => all.push({
+        id: p.id, type: "project", title: p.title,
+        subtitle: p.description?.slice(0, 60) || p.category, href: `/projects/${p.id}`
+      }));
+
+      setResults(all);
+      setSelectedIdx(0);
+      setLoading(false);
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") {
+        setLoading(false);
+      }
+    }
   }, []);
 
   useEffect(() => {

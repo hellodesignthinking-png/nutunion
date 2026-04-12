@@ -29,7 +29,7 @@ export function AuthNav({ profile }: { profile: Profile }) {
   const [notifCount, setNotifCount] = useState(0);
   const isAdmin = profile.role === "admin";
 
-  // 알림 카운트 (안정적 폴링)
+  // 알림 카운트 (Realtime 구독)
   useEffect(() => {
     const supabase = createClient();
 
@@ -41,9 +41,18 @@ export function AuthNav({ profile }: { profile: Profile }) {
         .then(({ count }) => setNotifCount(count || 0));
     };
     fetchCount();
-    const timer = setInterval(fetchCount, 30_000);
 
-    return () => clearInterval(timer);
+    const channel = supabase
+      .channel(`auth-nav-notifs-${profile.id}`)
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "notifications",
+        filter: `user_id=eq.${profile.id}`,
+      }, () => { fetchCount(); })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [profile.id]);
 
   // 등급 정보

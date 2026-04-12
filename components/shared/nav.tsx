@@ -46,7 +46,7 @@ export function Nav() {
     window.addEventListener("scroll", onScroll, { passive: true });
 
     const supabase = createClient();
-    let pollTimer: ReturnType<typeof setInterval> | null = null;
+    let notifChannel: any = null;
 
     // auth 상태 + 프로필 로드
     supabase.auth.getUser().then(async ({ data: { user: u } }) => {
@@ -70,8 +70,18 @@ export function Nav() {
         };
         await fetchNotifCount();
 
-        // 30초마다 알림 수 갱신 (realtime 대신 안정적 폴링)
-        pollTimer = setInterval(fetchNotifCount, 30_000);
+        // Realtime 구독으로 알림 수 갱신
+        const channel = supabase
+          .channel(`nav-notifs-${u.id}`)
+          .on("postgres_changes", {
+            event: "*",
+            schema: "public",
+            table: "notifications",
+            filter: `user_id=eq.${u.id}`,
+          }, () => { fetchNotifCount(); })
+          .subscribe();
+
+        notifChannel = channel;
       }
     });
 
@@ -83,7 +93,7 @@ export function Nav() {
     return () => {
       window.removeEventListener("scroll", onScroll);
       subscription.unsubscribe();
-      if (pollTimer) clearInterval(pollTimer);
+      if (notifChannel) supabase.removeChannel(notifChannel);
     };
   }, []);
 

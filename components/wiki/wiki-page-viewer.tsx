@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { WikiPageEditor } from "@/components/wiki/wiki-page-editor";
 import { toast } from "sonner";
+import DOMPurify from "isomorphic-dompurify";
 
 interface WikiPageViewerProps {
   page: {
@@ -332,7 +333,7 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
       {/* Content */}
       <div
         className="bg-white border-[2px] border-nu-ink/[0.08] p-8 md:p-12 text-sm text-nu-graphite leading-relaxed min-h-[300px]"
-        dangerouslySetInnerHTML={{ __html: renderMarkdownWithIds(page.content || "") }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderMarkdownWithIds(page.content || "")) }}
       />
 
       {/* Reactions — now DB-backed with counts */}

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { Send, Loader2, MessageSquare, Megaphone, Calendar, Trash2, FolderOpen, Sparkles, CheckCircle2, User, Award, Zap, Lightbulb, Users } from "lucide-react";
+import { Send, Loader2, MessageSquare, Megaphone, Calendar, Trash2, FolderOpen, Sparkles, CheckCircle2, User, Zap, Users } from "lucide-react";
 import type { CrewPost } from "@/lib/types";
 import { ReactionsBar } from "@/components/community/reactions-bar";
 import { CommentThread } from "@/components/community/comment-thread";
@@ -17,11 +17,6 @@ const typeIcons: Record<string, { icon: any; color: string; label: string; bgCol
   system: { icon: Zap, color: "text-nu-ink", bgColor: "bg-nu-cream/50", label: "ACTIVITY" },
 };
 
-const userBadges: Record<string, { label: string; icon: any; color: string }[]> = {
-  "홍길동": [{ label: "정리의 달인", icon: <Award size={10} />, color: "bg-blue-100 text-blue-600" }],
-  "김철수": [{ label: "아이디어 뱅크", icon: <Lightbulb size={10} />, color: "bg-amber-100 text-amber-600" }],
-  "이영희": [{ label: "최고의 서기", icon: <Award size={10} />, color: "bg-pink-100 text-pink-600" }],
-};
 
 function timeAgo(dateStr: string) {
   const now = Date.now();
@@ -214,8 +209,6 @@ export function CrewActivityFeed({
           const isSystem = post.type === "system" || post.content.startsWith("SYSTEM:");
           const typeInfo = isSystem ? typeIcons.system : (typeIcons[post.type] || typeIcons.post);
           const Icon = typeInfo.icon;
-          const badges = userBadges[post.author?.nickname || ""] || [];
-
           return (
             <div
               key={post.id}
@@ -245,13 +238,6 @@ export function CrewActivityFeed({
                       {isSystem ? "Community Discovery" : (post.author?.nickname || "Manager")}
                     </span>
                     
-                    {/* Badges */}
-                    {!isSystem && badges.map((b, i) => (
-                      <span key={i} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${b.color}`}>
-                        {b.icon} {b.label}
-                      </span>
-                    ))}
-
                     <span className={`inline-flex items-center gap-1 font-mono-nu text-[8px] font-black uppercase tracking-[0.2em] px-2 py-1 rounded ${typeInfo.bgColor} ${typeInfo.color}`}>
                       <Icon size={9} />
                       {typeInfo.label}
