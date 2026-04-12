@@ -19,6 +19,9 @@ const TestimonialsSection = dynamic(() => import("@/components/landing/testimoni
 const JoinSection = dynamic(() => import("@/components/landing/join-section").then(m => ({ default: m.JoinSection })));
 const Footer = dynamic(() => import("@/components/landing/footer").then(m => ({ default: m.Footer })));
 
+// ISR: cache page for 60 seconds, then revalidate in background
+export const revalidate = 60;
+
 export default async function LandingPage() {
   let content: Record<string, Record<string, string>> = {};
   let liveGroups: any[] = [];
@@ -28,64 +31,47 @@ export default async function LandingPage() {
   try {
     const supabase = await createClient();
 
-    // CMS content
-    const { data } = await supabase
-      .from("page_content")
-      .select("section, field_key, field_value")
-      .eq("page", "landing");
+    // Run ALL queries in parallel
+    const [contentRes, groupsRes, projectsRes, crewCountRes, memberCountRes, projectCountRes, eventCountRes] = await Promise.allSettled([
+      supabase.from("page_content").select("section, field_key, field_value").eq("page", "landing"),
+      supabase.from("groups").select("id, name, category, description, max_members, group_members(count)").eq("is_active", true).order("created_at", { ascending: false }).limit(8),
+      supabase.from("projects").select("id, title, description, status, category, start_date, end_date, project_members(count)").eq("status", "active").order("created_at", { ascending: false }).limit(4),
+      supabase.from("groups").select("*", { count: "exact", head: true }).eq("is_active", true),
+      supabase.from("profiles").select("*", { count: "exact", head: true }),
+      supabase.from("projects").select("*", { count: "exact", head: true }).eq("status", "active"),
+      supabase.from("events").select("*", { count: "exact", head: true }),
+    ]);
 
-    if (data) {
-      for (const item of data) {
+    // CMS content
+    if (contentRes.status === "fulfilled" && contentRes.value.data) {
+      for (const item of contentRes.value.data) {
         if (!content[item.section]) content[item.section] = {};
         content[item.section][item.field_key] = item.field_value || "";
       }
     }
 
-    // Live groups for preview
-    const { data: groups } = await supabase
-      .from("groups")
-      .select("id, name, category, description, max_members, group_members(count)")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false })
-      .limit(8);
-
-    liveGroups = (groups || []).map((g: any) => ({
-      id: g.id,
-      name: g.name,
-      cat: g.category,
-      desc: g.description || "",
-      m: g.group_members?.[0]?.count || 0,
-      max: g.max_members,
-    }));
+    // Live groups
+    if (groupsRes.status === "fulfilled" && groupsRes.value.data) {
+      liveGroups = groupsRes.value.data.map((g: any) => ({
+        id: g.id, name: g.name, cat: g.category, desc: g.description || "",
+        m: g.group_members?.[0]?.count || 0, max: g.max_members,
+      }));
+    }
 
     // Live projects
-    const { data: projects } = await supabase
-      .from("projects")
-      .select("id, title, description, status, category, start_date, end_date, project_members(count)")
-      .eq("status", "active")
-      .order("created_at", { ascending: false })
-      .limit(4);
+    if (projectsRes.status === "fulfilled" && projectsRes.value.data) {
+      liveProjects = projectsRes.value.data.map((p: any) => ({
+        id: p.id, title: p.title, description: p.description || "",
+        status: p.status, category: p.category, memberCount: p.project_members?.[0]?.count || 0,
+      }));
+    }
 
-    liveProjects = (projects || []).map((p: any) => ({
-      id: p.id,
-      title: p.title,
-      description: p.description || "",
-      status: p.status,
-      category: p.category,
-      memberCount: p.project_members?.[0]?.count || 0,
-    }));
-
-    // Real stats
-    const { count: crewCount } = await supabase.from("groups").select("*", { count: "exact", head: true }).eq("is_active", true);
-    const { count: memberCount } = await supabase.from("profiles").select("*", { count: "exact", head: true });
-    const { count: projectCount } = await supabase.from("projects").select("*", { count: "exact", head: true }).eq("status", "active");
-    const { count: eventCount } = await supabase.from("events").select("*", { count: "exact", head: true });
-
+    // Stats
     stats = {
-      crews: crewCount || 0,
-      members: memberCount || 0,
-      projects: projectCount || 0,
-      events: eventCount || 0,
+      crews: crewCountRes.status === "fulfilled" ? (crewCountRes.value.count || 0) : 0,
+      members: memberCountRes.status === "fulfilled" ? (memberCountRes.value.count || 0) : 0,
+      projects: projectCountRes.status === "fulfilled" ? (projectCountRes.value.count || 0) : 0,
+      events: eventCountRes.status === "fulfilled" ? (eventCountRes.value.count || 0) : 0,
     };
   } catch {
     // Supabase not configured

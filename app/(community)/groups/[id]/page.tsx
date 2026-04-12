@@ -58,22 +58,26 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // ── 데이터 조회 ──────────────────────────────────
-  const { data: group, error: groupError } = await supabase.from("groups")
-    .select("id, name, description, category, image_url, host_id, max_members, is_active, kakao_chat_url, google_drive_url, created_at, host:profiles!groups_host_id_fkey(id, nickname, avatar_url)")
-    .eq("id", id)
-    .single();
+  // ── 데이터 조회 (병렬) ──────────────────────────────────
+  const [groupRes, membershipRes] = await Promise.all([
+    supabase.from("groups")
+      .select("id, name, description, category, image_url, host_id, max_members, is_active, kakao_chat_url, google_drive_url, created_at, host:profiles!groups_host_id_fkey(id, nickname, avatar_url)")
+      .eq("id", id)
+      .single(),
+    supabase.from("group_members")
+      .select("status, role")
+      .eq("group_id", id)
+      .eq("user_id", user.id)
+      .maybeSingle(),
+  ]);
+
+  const { data: group, error: groupError } = groupRes;
+  const { data: userMembership } = membershipRes;
 
   if (!group) {
     console.error("Group not found:", id, groupError);
     notFound();
   }
-
-  const { data: userMembership } = await supabase.from("group_members")
-    .select("status, role")
-    .eq("group_id", id)
-    .eq("user_id", user.id)
-    .maybeSingle();
 
   const isHost        = group.host_id === user.id;
   const isManager     = isHost || userMembership?.role === "manager";
