@@ -41,7 +41,7 @@ export function GroupSubNav({ groupId, groupName, isHost = false, isManager = fa
   }
 
   return (
-    <nav className="bg-nu-white border-b-[2px] border-nu-ink/10 sticky top-[60px] z-40 shadow-sm">
+    <nav className="bg-white border-b-[3px] border-nu-ink/15 sticky top-[60px] z-[100] shadow-md">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
         <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide -mb-[2px]">
           {/* Group name */}

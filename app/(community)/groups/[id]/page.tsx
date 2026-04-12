@@ -150,8 +150,8 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
                   <Link href={`/groups/${id}/finance`} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-paper border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all hover:-translate-y-0.5 inline-flex items-center gap-2">
                     <CreditCard size={14} /> 정산
                   </Link>
-                  <Link href={`/groups/${id}/wiki`} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-paper border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all hover:-translate-y-0.5 inline-flex items-center gap-2">
-                    <Sparkles size={14} /> 성장하는 소셜링
+                  <Link href={`/groups/${id}/wiki`} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-pink text-white no-underline hover:bg-nu-pink/90 shadow-lg shadow-nu-pink/20 transition-all hover:-translate-y-0.5 inline-flex items-center gap-2">
+                    <Sparkles size={14} /> 위키
                   </Link>
                   <Link href={`/groups/${id}/best-practices`} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-paper border-[2px] border-nu-pink/30 text-nu-pink no-underline hover:bg-nu-pink hover:text-white transition-all hover:-translate-y-0.5 inline-flex items-center gap-2">
                     <Sparkles size={14} /> 베스트 프랙티스
