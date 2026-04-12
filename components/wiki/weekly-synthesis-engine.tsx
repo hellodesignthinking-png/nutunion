@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import {
   Brain, Sparkles, Loader2, CheckCircle2,
   ArrowRight, Save, BookOpen, ChevronDown, ChevronUp,
   Zap, TrendingUp, AlertCircle, Link as LinkIcon,
-  FileText, RefreshCw, Plus,
+  FileText, RefreshCw, Plus, History, Clock,
 } from "lucide-react";
 
 interface WikiPageSuggestion {
@@ -50,12 +50,39 @@ interface SynthesisResult {
   };
 }
 
+interface SynthesisLog {
+  id: string;
+  weekStart: string;
+  weekEnd: string;
+  theme: string | null;
+  pagesCreated: number;
+  compactionNote: string | null;
+  createdBy: string;
+  createdAt: string;
+  inputSummary: { newResourceCount?: number; newMeetingCount?: number; newNoteCount?: number };
+}
+
 export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; isHost: boolean }) {
   const [phase, setPhase] = useState<"idle" | "synthesizing" | "reviewing" | "applying" | "done">("idle");
   const [result, setResult] = useState<SynthesisResult | null>(null);
   const [selectedPages, setSelectedPages] = useState<Set<number>>(new Set());
   const [expandedPage, setExpandedPage] = useState<number | null>(null);
   const [applyingIndex, setApplyingIndex] = useState<number | null>(null);
+  const [history, setHistory] = useState<SynthesisLog[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  useEffect(() => {
+    async function loadHistory() {
+      try {
+        const res = await fetch(`/api/wiki/synthesis?groupId=${groupId}&limit=5`);
+        if (res.ok) {
+          const data = await res.json();
+          setHistory(data.logs || []);
+        }
+      } catch { /* silent */ }
+    }
+    loadHistory();
+  }, [groupId, phase]);
 
   async function runSynthesis() {
     setPhase("synthesizing");
@@ -219,6 +246,45 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
           >
             <Zap size={14} /> 지식 통합 시작
           </button>
+
+          {/* Synthesis History */}
+          {history.length > 0 && (
+            <div className="mt-6 border-t border-nu-ink/5 pt-4">
+              <button
+                onClick={() => setShowHistory(!showHistory)}
+                className="font-mono-nu text-[9px] text-nu-muted hover:text-nu-ink flex items-center gap-1 mx-auto transition-colors"
+              >
+                <History size={11} /> 이전 통합 기록 ({history.length})
+                {showHistory ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+              </button>
+              {showHistory && (
+                <div className="mt-3 space-y-2">
+                  {history.map(log => (
+                    <div key={log.id} className="flex items-start gap-3 p-3 bg-nu-paper/50 border border-nu-ink/[0.06] text-left">
+                      <Clock size={12} className="text-nu-muted shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-nu-ink truncate">
+                          {log.theme || "통합 완료"}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1 font-mono-nu text-[8px] text-nu-muted flex-wrap">
+                          <span>{new Date(log.createdAt).toLocaleDateString("ko", { month: "short", day: "numeric" })}</span>
+                          <span>·</span>
+                          <span>{log.inputSummary?.newResourceCount || 0} 리소스</span>
+                          <span>·</span>
+                          <span>{log.pagesCreated} 페이지 제안</span>
+                          <span>·</span>
+                          <span>{log.createdBy}</span>
+                        </div>
+                        {log.compactionNote && (
+                          <p className="text-[10px] text-nu-muted/70 mt-1 line-clamp-1">{log.compactionNote}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

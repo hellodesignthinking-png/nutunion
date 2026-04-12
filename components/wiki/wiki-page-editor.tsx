@@ -53,8 +53,38 @@ export function WikiPageEditor({
   const [preview, setPreview] = useState(false);
   const [saving, setSaving] = useState(false);
   const [changeSummary, setChangeSummary] = useState("");
+  const [draftRestored, setDraftRestored] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Auto-save drafts to localStorage ──
+  const draftKey = `wiki-draft-${mode}-${pageId || topicId}`;
+
+  useEffect(() => {
+    if (mode === "create" && !initialContent) {
+      const saved = localStorage.getItem(draftKey);
+      if (saved) {
+        try {
+          const draft = JSON.parse(saved);
+          if (draft.title || draft.content) {
+            setTitle(draft.title || "");
+            setContent(draft.content || "");
+            setDraftRestored(true);
+          }
+        } catch { /* ignore corrupt drafts */ }
+      }
+    }
+  }, [draftKey, mode, initialContent]);
+
+  useEffect(() => {
+    if (!title.trim() && !content.trim()) return;
+    const timer = setTimeout(() => {
+      localStorage.setItem(draftKey, JSON.stringify({ title, content, savedAt: Date.now() }));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [title, content, draftKey]);
+
+  const clearDraft = () => localStorage.removeItem(draftKey);
 
   // Load existing tags for this group (auto-complete)
   useEffect(() => {
@@ -151,6 +181,7 @@ export function WikiPageEditor({
         });
 
         toast.success("위키 페이지가 생성되었습니다!");
+        clearDraft();
 
         // Save tags
         await saveTagsForPage(supabase, page.id, user.id);
@@ -197,6 +228,7 @@ export function WikiPageEditor({
         });
 
         toast.success("위키 페이지가 업데이트되었습니다!");
+        clearDraft();
 
         // Sync tags
         await saveTagsForPage(supabase, pageId!, user.id);
@@ -337,13 +369,29 @@ export function WikiPageEditor({
         )}
       </div>
 
+      {/* Draft restored banner */}
+      {draftRestored && (
+        <div className="flex items-center justify-between bg-nu-blue/5 border border-nu-blue/20 px-4 py-2 animate-in fade-in">
+          <span className="font-mono-nu text-[10px] text-nu-blue">
+            💾 이전에 저장된 초안이 복원되었습니다
+          </span>
+          <button
+            onClick={() => { setTitle(initialTitle); setContent(initialContent); clearDraft(); setDraftRestored(false); }}
+            className="font-mono-nu text-[9px] text-nu-muted hover:text-red-500 transition-colors"
+          >
+            초안 삭제
+          </button>
+        </div>
+      )}
+
       {/* Toolbar */}
-      <div className="flex items-center gap-1 bg-nu-cream/50 border-[2px] border-nu-ink/10 p-2">
+      <div className="flex items-center gap-1 bg-nu-cream/50 border-[2px] border-nu-ink/10 p-2 flex-wrap">
         {TOOLBAR_ACTIONS.map(action => (
           <button
             key={action.label}
             onClick={() => insertMarkdown(action)}
             title={action.label}
+            aria-label={action.label}
             className="p-2 hover:bg-nu-ink/10 transition-colors text-nu-graphite hover:text-nu-ink"
           >
             <action.icon size={16} />
@@ -405,7 +453,7 @@ export function WikiPageEditor({
       {/* Save */}
       <div className="flex items-center justify-between">
         <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest flex items-center gap-1">
-          <Clock size={10} /> Markdown 지원 · 자동 버전 관리
+          <Clock size={10} /> Markdown · 자동 버전 관리 · 초안 자동 저장
         </p>
         <button
           onClick={handleSave}

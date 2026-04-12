@@ -43,6 +43,16 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Validate: topic must have at least 1 page
+  const { count: pageCount } = await supabase
+    .from("wiki_pages")
+    .select("id", { count: "exact", head: true })
+    .eq("topic_id", topicId);
+
+  if (!pageCount || pageCount === 0) {
+    return NextResponse.json({ error: "공개하려면 최소 1개 이상의 위키 페이지가 필요합니다" }, { status: 400 });
+  }
+
   const slug = generateSlug(topic.name);
 
   const { error } = await supabase

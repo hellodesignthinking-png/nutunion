@@ -101,6 +101,25 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ id: data.id, resourceType: detectedType });
 }
 
+// PATCH: Link a resource to a wiki page
+export async function PATCH(request: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "로그인 필요" }, { status: 401 });
+
+  const { resourceId, wikiPageId } = await request.json();
+  if (!resourceId) return NextResponse.json({ error: "resourceId 필요" }, { status: 400 });
+
+  const { error } = await supabase
+    .from("wiki_weekly_resources")
+    .update({ linked_wiki_page_id: wikiPageId || null })
+    .eq("id", resourceId);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  return NextResponse.json({ success: true });
+}
+
 // DELETE: Remove a resource (only the sharer or group host can delete)
 export async function DELETE(request: NextRequest) {
   const supabase = await createClient();

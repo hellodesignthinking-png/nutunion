@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
   Link2, Plus, Loader2, FileText, CirclePlay, Globe,
   BookOpen, ExternalLink, Trash2, ChevronDown, ChevronUp,
-  Sparkles, Calendar,
+  Sparkles, Calendar, Brain,
 } from "lucide-react";
 
 interface Resource {
@@ -48,6 +48,7 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState<string>(getWeekStart());
+  const [summarizingId, setSummarizingId] = useState<string | null>(null);
 
   const loadResources = useCallback(async () => {
     setLoading(true);
@@ -103,6 +104,25 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
       toast.success("삭제되었습니다");
     } catch (e: any) {
       toast.error(e.message);
+    }
+  }
+
+  async function handleSummarize(id: string) {
+    setSummarizingId(id);
+    try {
+      const res = await fetch("/api/ai/resource-summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resourceId: id }),
+      });
+      if (!res.ok) throw new Error("요약 생성 실패");
+      const { summary } = await res.json();
+      setResources(prev => prev.map(r => r.id === id ? { ...r, auto_summary: summary } : r));
+      toast.success("AI 요약이 생성되었습니다");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSummarizingId(null);
     }
   }
 
@@ -284,15 +304,28 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
                             )}
                           </div>
                         </div>
-                        {/* Delete */}
-                        {r.sharer?.id === userId && (
-                          <button
-                            onClick={() => handleDelete(r.id)}
-                            className="text-nu-muted/30 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        )}
+                        {/* Actions */}
+                        <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                          {!r.auto_summary && (
+                            <button
+                              onClick={() => handleSummarize(r.id)}
+                              disabled={summarizingId === r.id}
+                              className="text-nu-muted/40 hover:text-nu-blue transition-colors p-1"
+                              title="AI 요약 생성"
+                            >
+                              {summarizingId === r.id ? <Loader2 size={13} className="animate-spin" /> : <Brain size={13} />}
+                            </button>
+                          )}
+                          {r.sharer?.id === userId && (
+                            <button
+                              onClick={() => handleDelete(r.id)}
+                              className="text-nu-muted/30 hover:text-red-500 transition-colors p-1"
+                              title="삭제"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

@@ -157,7 +157,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
         <div className="absolute -left-32 -bottom-32 w-96 h-96 bg-nu-blue/[0.03] rounded-full blur-3xl" />
         <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: "radial-gradient(circle, #0d0d0d 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
 
-        <div className="max-w-7xl mx-auto px-8 py-12 relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-10 md:py-12 relative z-10">
           <div className="flex items-center gap-2 font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest mb-6">
             <Link href={`/groups/${id}`} className="hover:text-nu-ink no-underline transition-colors">{group.name}</Link>
             <ChevronRight size={12} />
@@ -211,7 +211,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
       </div>
 
       {/* ── Main Content ────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-8 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 py-10 md:py-12">
 
         {/* Knowledge Graph Section */}
         <section className="mb-16">
@@ -232,9 +232,14 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
           <div className="lg:col-span-8 space-y-16">
 
             {/* Weekly Resource Feed + AI Synthesis */}
-            <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <WeeklyResourceFeed groupId={id} userId={user.id} />
-              <WeeklySynthesisEngine groupId={id} isHost={isHost} />
+            <section>
+              <h2 className="font-head text-2xl font-extrabold text-nu-ink mb-6 flex items-center gap-3">
+                <Sparkles size={24} className="text-nu-blue" /> 지식 수집 & 통합
+              </h2>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <WeeklyResourceFeed groupId={id} userId={user.id} />
+                <WeeklySynthesisEngine groupId={id} isHost={isHost} />
+              </div>
             </section>
 
             {/* Topic Explorer */}
