@@ -1,76 +1,52 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/server";
 import { GroupSubNav } from "@/components/groups/group-sub-nav";
 
-export default function GroupLayout({
+export default async function GroupLayout({
   children,
+  params,
 }: {
   children: React.ReactNode;
+  params: Promise<{ id: string }>;
 }) {
-  const params = useParams();
-  const groupId = params?.id as string;
-  const [groupInfo, setGroupInfo] = useState<{
-    name: string;
-    isHost: boolean;
-    isManager: boolean;
-  } | null>(null);
+  const { id: groupId } = await params;
+  const supabase = await createClient();
 
-  useEffect(() => {
-    if (!groupId) return;
-    async function load() {
-      try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+  let groupName = "소모임";
+  let isHost = false;
+  let isManager = false;
 
-        const { data: group } = await supabase
-          .from("groups")
-          .select("name, host_id")
-          .eq("id", groupId)
-          .single();
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: group } = await supabase
+      .from("groups")
+      .select("name, host_id")
+      .eq("id", groupId)
+      .single();
 
-        if (!group) {
-          // Even if group not found, show nav with fallback name
-          setGroupInfo({ name: "소모임", isHost: false, isManager: false });
-          return;
-        }
-
-        if (!user) {
-          // Not logged in - still show nav with group name
-          setGroupInfo({ name: group.name, isHost: false, isManager: false });
-          return;
-        }
-
+    if (group) {
+      groupName = group.name;
+      if (user) {
+        isHost = group.host_id === user.id;
         const { data: membership } = await supabase
           .from("group_members")
           .select("role")
           .eq("group_id", groupId)
           .eq("user_id", user.id)
           .maybeSingle();
-
-        setGroupInfo({
-          name: group.name,
-          isHost: group.host_id === user.id,
-          isManager: group.host_id === user.id || membership?.role === "manager",
-        });
-      } catch {
-        // On error, show nav with fallback
-        setGroupInfo({ name: "소모임", isHost: false, isManager: false });
+        isManager = isHost || membership?.role === "manager";
       }
     }
-    load();
-  }, [groupId]);
+  } catch {
+    // fallback to defaults
+  }
 
   return (
     <>
-      {/* Always show nav — loading state uses fallback name */}
       <GroupSubNav
         groupId={groupId}
-        groupName={groupInfo?.name || "로딩 중..."}
-        isHost={groupInfo?.isHost || false}
-        isManager={groupInfo?.isManager || false}
+        groupName={groupName}
+        isHost={isHost}
+        isManager={isManager}
       />
       {children}
     </>
