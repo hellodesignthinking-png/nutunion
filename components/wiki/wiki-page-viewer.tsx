@@ -261,18 +261,34 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
   // Render markdown with TOC anchor IDs on headings
   const renderMarkdownWithIds = (md: string) => {
     let headingIndex = 0;
-    return escapeHtml(md)
+    let html = escapeHtml(md);
+    // Code blocks (``` ... ```) — must run before other transforms
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) =>
+      `<pre class="bg-nu-ink text-white p-4 my-4 overflow-x-auto font-mono-nu text-xs leading-relaxed border-l-4 border-nu-pink"><code>${code.trim()}</code></pre>`
+    );
+    // Blockquotes
+    html = html.replace(/^&gt; (.+)/gm, '<blockquote class="border-l-4 border-nu-blue/30 pl-4 my-3 text-nu-muted italic text-sm">$1</blockquote>');
+    // Horizontal rules
+    html = html.replace(/^---$/gm, '<hr class="my-6 border-nu-ink/10" />');
+    // Headers with TOC IDs
+    html = html
       .replace(/### (.+)/g, (_m, p1) => { const id = `toc-${headingIndex++}`; return `<h3 id="${id}" class="font-head text-base font-bold mt-5 mb-2 text-nu-ink scroll-mt-20">${p1}</h3>`; })
       .replace(/## (.+)/g, (_m, p1) => { const id = `toc-${headingIndex++}`; return `<h2 id="${id}" class="font-head text-lg font-extrabold mt-7 mb-3 text-nu-ink border-b border-nu-ink/10 pb-2 scroll-mt-20">${p1}</h2>`; })
-      .replace(/# (.+)/g, (_m, p1) => { const id = `toc-${headingIndex++}`; return `<h1 id="${id}" class="font-head text-2xl font-extrabold mt-8 mb-4 text-nu-ink scroll-mt-20">${p1}</h1>`; })
+      .replace(/# (.+)/g, (_m, p1) => { const id = `toc-${headingIndex++}`; return `<h1 id="${id}" class="font-head text-2xl font-extrabold mt-8 mb-4 text-nu-ink scroll-mt-20">${p1}</h1>`; });
+    // Inline formatting
+    html = html
       .replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold text-nu-ink">$1</strong>')
       .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/`(.+?)`/g, '<code class="bg-nu-cream/50 px-1.5 py-0.5 text-nu-pink font-mono-nu text-xs border border-nu-ink/10 rounded">$1</code>')
+      .replace(/`(.+?)`/g, '<code class="bg-nu-cream/50 px-1.5 py-0.5 text-nu-pink font-mono-nu text-xs border border-nu-ink/10 rounded">$1</code>');
+    // Lists
+    html = html
       .replace(/^- (.+)/gm, '<li class="ml-4 list-disc text-sm text-nu-graphite leading-relaxed">$1</li>')
-      .replace(/^\d+\. (.+)/gm, '<li class="ml-4 list-decimal text-sm text-nu-graphite leading-relaxed">$1</li>')
-      .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" class="text-nu-blue hover:text-nu-pink underline" target="_blank" rel="noopener noreferrer">$1</a>')
-      .replace(/\n\n/g, '<div class="h-3"></div>')
-      .replace(/\n/g, '<br/>');
+      .replace(/^\d+\. (.+)/gm, '<li class="ml-4 list-decimal text-sm text-nu-graphite leading-relaxed">$1</li>');
+    // Links
+    html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" class="text-nu-blue hover:text-nu-pink underline" target="_blank" rel="noopener noreferrer">$1</a>');
+    // Line breaks
+    html = html.replace(/\n\n/g, '<div class="h-3"></div>').replace(/\n/g, '<br/>');
+    return html;
   };
 
   if (isEditing) {

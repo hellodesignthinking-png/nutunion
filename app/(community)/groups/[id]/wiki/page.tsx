@@ -25,25 +25,25 @@ function WikiSkeleton({ h = "h-64" }: { h?: string }) {
   return <div className={`${h} bg-nu-ink/[0.03] animate-pulse border-[2px] border-nu-ink/[0.08]`} />;
 }
 
-const KnowledgeGraph = lazyLoad(() => import("@/components/wiki/knowledge-graph").then(m => ({ default: m.KnowledgeGraph })), {
+const KnowledgeGraph = lazyLoad(() => import("@/components/wiki/knowledge-graph").then(m => m.KnowledgeGraph), {
   loading: () => <WikiSkeleton h="h-80" />,
 });
-const WeeklyResourceFeed = lazyLoad(() => import("@/components/wiki/weekly-resource-feed").then(m => ({ default: m.WeeklyResourceFeed })), {
+const WeeklyResourceFeed = lazyLoad(() => import("@/components/wiki/weekly-resource-feed").then(m => m.WeeklyResourceFeed), {
   loading: () => <WikiSkeleton />,
 });
-const WeeklySynthesisEngine = lazyLoad(() => import("@/components/wiki/weekly-synthesis-engine").then(m => ({ default: m.WeeklySynthesisEngine })), {
+const WeeklySynthesisEngine = lazyLoad(() => import("@/components/wiki/weekly-synthesis-engine").then(m => m.WeeklySynthesisEngine), {
   loading: () => <WikiSkeleton />,
 });
-const ContributionLeaderboard = lazyLoad(() => import("@/components/wiki/contribution-leaderboard").then(m => ({ default: m.ContributionLeaderboard })), {
+const ContributionLeaderboard = lazyLoad(() => import("@/components/wiki/contribution-leaderboard").then(m => m.ContributionLeaderboard), {
   loading: () => <WikiSkeleton h="h-48" />,
 });
-const HumanCapitalVisual = lazyLoad(() => import("@/components/wiki/human-capital-visual").then(m => ({ default: m.HumanCapitalVisual })), {
+const HumanCapitalVisual = lazyLoad(() => import("@/components/wiki/human-capital-visual").then(m => m.HumanCapitalVisual), {
   loading: () => <WikiSkeleton h="h-48" />,
 });
-const WeeklyInsightNewsletter = lazyLoad(() => import("@/components/wiki/weekly-insight-newsletter").then(m => ({ default: m.WeeklyInsightNewsletter })), {
+const WeeklyInsightNewsletter = lazyLoad(() => import("@/components/wiki/weekly-insight-newsletter").then(m => m.WeeklyInsightNewsletter), {
   loading: () => <WikiSkeleton h="h-72" />,
 });
-const MonthlyEvolutionAnalysis = lazyLoad(() => import("@/components/wiki/monthly-evolution-analysis").then(m => ({ default: m.MonthlyEvolutionAnalysis })), {
+const MonthlyEvolutionAnalysis = lazyLoad(() => import("@/components/wiki/monthly-evolution-analysis").then(m => m.MonthlyEvolutionAnalysis), {
   loading: () => <WikiSkeleton h="h-72" />,
 });
 
