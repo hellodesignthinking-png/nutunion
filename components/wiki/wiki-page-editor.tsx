@@ -23,15 +23,15 @@ interface WikiPageEditorProps {
 }
 
 const TOOLBAR_ACTIONS = [
-  { icon: Bold, label: "Bold", markdown: "**", wrap: true },
-  { icon: Italic, label: "Italic", markdown: "*", wrap: true },
+  { icon: Bold, label: "Bold", markdown: "**", wrap: true, shortcut: "⌘B" },
+  { icon: Italic, label: "Italic", markdown: "*", wrap: true, shortcut: "⌘I" },
   { icon: Heading1, label: "H1", markdown: "# ", prefix: true },
   { icon: Heading2, label: "H2", markdown: "## ", prefix: true },
   { icon: Heading3, label: "H3", markdown: "### ", prefix: true },
   { icon: List, label: "List", markdown: "- ", prefix: true },
   { icon: ListOrdered, label: "Ordered List", markdown: "1. ", prefix: true },
   { icon: Code, label: "Code", markdown: "`", wrap: true },
-  { icon: Link2, label: "Link", markdown: "[link](url)", insert: true },
+  { icon: Link2, label: "Link", markdown: "[link](url)", insert: true, shortcut: "⌘K" },
 ];
 
 export function WikiPageEditor({
@@ -116,6 +116,22 @@ export function WikiPageEditor({
     }
     loadPageTags();
   }, [mode, pageId]);
+
+  // Keyboard shortcuts (Cmd/Ctrl + B, I, K, S)
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (!(e.metaKey || e.ctrlKey) || preview) return;
+      const key = e.key.toLowerCase();
+      let action: typeof TOOLBAR_ACTIONS[0] | undefined;
+      if (key === "b") action = TOOLBAR_ACTIONS.find(a => a.label === "Bold");
+      else if (key === "i") action = TOOLBAR_ACTIONS.find(a => a.label === "Italic");
+      else if (key === "k") action = TOOLBAR_ACTIONS.find(a => a.label === "Link");
+      else if (key === "s") { e.preventDefault(); handleSave(); return; }
+      if (action) { e.preventDefault(); insertMarkdown(action); }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }); // intentionally no deps — uses latest refs via closures
 
   const insertMarkdown = useCallback((action: typeof TOOLBAR_ACTIONS[0]) => {
     const textarea = textareaRef.current;
@@ -390,7 +406,7 @@ export function WikiPageEditor({
           <button
             key={action.label}
             onClick={() => insertMarkdown(action)}
-            title={action.label}
+            title={action.shortcut ? `${action.label} (${action.shortcut})` : action.label}
             aria-label={action.label}
             className="p-2 hover:bg-nu-ink/10 transition-colors text-nu-graphite hover:text-nu-ink"
           >

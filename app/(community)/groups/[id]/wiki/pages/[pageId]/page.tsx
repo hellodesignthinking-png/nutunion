@@ -3,8 +3,23 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { WikiPageViewer } from "@/components/wiki/wiki-page-viewer";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string; pageId: string }> }): Promise<Metadata> {
+  const { id: groupId, pageId } = await params;
+  const supabase = await createClient();
+  const { data: page } = await supabase.from("wiki_pages").select("title, content, updated_at, topic:wiki_topics(name)").eq("id", pageId).single();
+  if (!page) return { title: "위키 페이지" };
+  const desc = (page.content || "").replace(/[#*`\[\]]/g, "").slice(0, 160);
+  const topicName = (page as any).topic?.name;
+  return {
+    title: `${page.title}${topicName ? ` — ${topicName}` : ""} | Wiki`,
+    description: desc || page.title,
+    openGraph: { title: page.title, description: desc, type: "article", modifiedTime: page.updated_at },
+  };
+}
 
 export default async function WikiPageDetailPage({ params }: { params: Promise<{ id: string; pageId: string }> }) {
   const { id: groupId, pageId } = await params;

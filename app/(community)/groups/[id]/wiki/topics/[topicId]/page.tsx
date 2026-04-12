@@ -5,8 +5,22 @@ import {
   ChevronRight, Brain, BookOpen, GitBranch, Plus
 } from "lucide-react";
 import { TopicDetailClient } from "@/components/wiki/topic-detail-client";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string; topicId: string }> }): Promise<Metadata> {
+  const { topicId } = await params;
+  const supabase = await createClient();
+  const { data: topic } = await supabase.from("wiki_topics").select("name, description").eq("id", topicId).single();
+  if (!topic) return { title: "위키 토픽" };
+  const { count } = await supabase.from("wiki_pages").select("id", { count: "exact", head: true }).eq("topic_id", topicId);
+  return {
+    title: `${topic.name} | Wiki`,
+    description: topic.description || `${topic.name} — ${count || 0}개 문서`,
+    openGraph: { title: topic.name, description: topic.description || `${count || 0}개 문서가 있는 위키 토픽` },
+  };
+}
 
 export default async function TopicDetailPage({ params }: { params: Promise<{ id: string; topicId: string }> }) {
   const { id: groupId, topicId } = await params;

@@ -373,6 +373,85 @@ export function KnowledgeGraph({ groupId }: { groupId: string }) {
     setZoom(z => Math.max(0.3, Math.min(3, z + delta)));
   };
 
+  // Touch support for mobile
+  const lastTouchDist = useRef<number | null>(null);
+  const lastTouchCenter = useRef<{ x: number; y: number } | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const mx = (t.clientX - rect.left - pan.x) / zoom;
+      const my = (t.clientY - rect.top - pan.y) / zoom;
+      const hit = nodes.find(n => Math.hypot(n.x - mx, n.y - my) < n.radius + 8);
+      if (hit) {
+        setDragging(hit.id);
+        dragStartPos.current = { x: mx, y: my };
+      } else {
+        setIsPanning(true);
+        setPanStart({ x: t.clientX - pan.x, y: t.clientY - pan.y });
+      }
+    } else if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      lastTouchDist.current = Math.hypot(dx, dy);
+      lastTouchCenter.current = {
+        x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+        y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+      };
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      if (isPanning) {
+        setPan({ x: t.clientX - panStart.x, y: t.clientY - panStart.y });
+      } else if (dragging) {
+        const mx = (t.clientX - rect.left - pan.x) / zoom;
+        const my = (t.clientY - rect.top - pan.y) / zoom;
+        const node = nodesRef.current.find(n => n.id === dragging);
+        if (node) { node.x = mx; node.y = my; node.vx = 0; node.vy = 0; }
+      }
+    } else if (e.touches.length === 2 && lastTouchDist.current) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      const scale = dist / lastTouchDist.current;
+      setZoom(z => Math.max(0.3, Math.min(3, z * scale)));
+      lastTouchDist.current = dist;
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (dragging && dragStartPos.current) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (rect && e.changedTouches.length > 0) {
+        const t = e.changedTouches[0];
+        const mx = (t.clientX - rect.left - pan.x) / zoom;
+        const my = (t.clientY - rect.top - pan.y) / zoom;
+        const dist = Math.hypot(mx - dragStartPos.current.x, my - dragStartPos.current.y);
+        if (dist < 8) {
+          const clickedNode = nodes.find(n => n.id === dragging);
+          if (clickedNode) {
+            if (clickedNode.type === "topic") router.push(`/groups/${groupId}/wiki/topics/${clickedNode.id}`);
+            else router.push(`/groups/${groupId}/wiki/pages/${clickedNode.id}`);
+          }
+        }
+      }
+    }
+    setDragging(null);
+    setIsPanning(false);
+    dragStartPos.current = null;
+    lastTouchDist.current = null;
+    lastTouchCenter.current = null;
+  };
+
   if (nodes.length === 0) {
     return (
       <div className="border-[2px] border-dashed border-nu-ink/15 p-12 text-center bg-white/50">
@@ -415,7 +494,16 @@ export function KnowledgeGraph({ groupId }: { groupId: string }) {
 
       {/* Legend */}
       <div className="absolute bottom-4 left-4 z-10 bg-white/90 backdrop-blur-sm border border-nu-ink/10 p-3 space-y-1.5">
-        <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted font-bold mb-2">Link Types</p>
+        <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted font-bold mb-2">Nodes</p>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full bg-nu-pink" />
+          <span className="font-mono-nu text-[7px] text-nu-muted uppercase">Topic</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-white border border-nu-ink/30" />
+          <span className="font-mono-nu text-[7px] text-nu-muted uppercase">Page</span>
+        </div>
+        <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted font-bold mt-2 mb-1">Links</p>
         {Object.entries(LINK_COLORS).map(([type, color]) => (
           <div key={type} className="flex items-center gap-2">
             <div className="w-8 h-0.5" style={{ backgroundColor: color }} />
@@ -440,13 +528,16 @@ export function KnowledgeGraph({ groupId }: { groupId: string }) {
 
       <canvas
         ref={canvasRef}
-        className={`w-full ${hoveredNode ? "cursor-pointer" : isPanning ? "cursor-grabbing" : "cursor-grab"}`}
+        className={`w-full touch-none ${hoveredNode ? "cursor-pointer" : isPanning ? "cursor-grabbing" : "cursor-grab"}`}
         style={{ height: 500 }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={() => { setDragging(null); setIsPanning(false); }}
         onWheel={handleWheel}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       />
     </div>
   );

@@ -53,6 +53,29 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
   const [diffVersion, setDiffVersion] = useState<{ version: number; content: string; title: string } | null>(null);
   const linkSearchTimer = useRef<NodeJS.Timeout | null>(null);
   const linkSearchAbort = useRef<AbortController | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Add copy buttons to code blocks after render
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    el.querySelectorAll("pre").forEach(pre => {
+      if (pre.querySelector(".copy-btn")) return;
+      pre.style.position = "relative";
+      const btn = document.createElement("button");
+      btn.className = "copy-btn";
+      btn.textContent = "Copy";
+      btn.style.cssText = "position:absolute;top:8px;right:8px;padding:2px 8px;font-size:10px;font-family:monospace;background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.2);cursor:pointer;letter-spacing:0.05em;text-transform:uppercase;";
+      btn.addEventListener("click", () => {
+        const code = pre.querySelector("code")?.textContent || pre.textContent || "";
+        navigator.clipboard.writeText(code).then(() => {
+          btn.textContent = "Copied!";
+          setTimeout(() => { btn.textContent = "Copy"; }, 1500);
+        });
+      });
+      pre.appendChild(btn);
+    });
+  }, [page.content, isEditing]);
 
   // Reading time (Korean ~500 chars/min, English ~200 words/min)
   const readingStats = useMemo(() => {
@@ -357,6 +380,7 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
 
       {/* Content */}
       <div
+        ref={contentRef}
         className="bg-white border-[2px] border-nu-ink/[0.08] p-8 md:p-12 text-sm text-nu-graphite leading-relaxed min-h-[300px]"
         dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderMarkdownWithIds(page.content || "")) }}
       />
