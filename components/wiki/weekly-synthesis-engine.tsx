@@ -326,7 +326,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
 
           {/* Growth Metrics */}
           {result.growthMetrics && (
-            <div className="p-5 flex items-center gap-6">
+            <div className="p-5 flex items-center gap-4 sm:gap-6 flex-wrap">
               <div className="flex items-center gap-2">
                 <Plus size={12} className="text-green-500" />
                 <span className="font-mono-nu text-[10px]">

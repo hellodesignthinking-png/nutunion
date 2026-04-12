@@ -17,15 +17,35 @@ import {
   Zap,
   Target
 } from "lucide-react";
-import { HumanCapitalVisual } from "@/components/wiki/human-capital-visual";
-import { KnowledgeGraph } from "@/components/wiki/knowledge-graph";
-import { ContributionLeaderboard } from "@/components/wiki/contribution-leaderboard";
-import { WeeklyInsightNewsletter } from "@/components/wiki/weekly-insight-newsletter";
-import { MonthlyEvolutionAnalysis } from "@/components/wiki/monthly-evolution-analysis";
+import lazyLoad from "next/dynamic";
 import { WikiTopicCreator } from "@/components/wiki/wiki-topic-creator";
 import { WikiSearchBar } from "@/components/wiki/wiki-search-bar";
-import { WeeklyResourceFeed } from "@/components/wiki/weekly-resource-feed";
-import { WeeklySynthesisEngine } from "@/components/wiki/weekly-synthesis-engine";
+
+function WikiSkeleton({ h = "h-64" }: { h?: string }) {
+  return <div className={`${h} bg-nu-ink/[0.03] animate-pulse border-[2px] border-nu-ink/[0.08]`} />;
+}
+
+const KnowledgeGraph = lazyLoad(() => import("@/components/wiki/knowledge-graph").then(m => ({ default: m.KnowledgeGraph })), {
+  loading: () => <WikiSkeleton h="h-80" />,
+});
+const WeeklyResourceFeed = lazyLoad(() => import("@/components/wiki/weekly-resource-feed").then(m => ({ default: m.WeeklyResourceFeed })), {
+  loading: () => <WikiSkeleton />,
+});
+const WeeklySynthesisEngine = lazyLoad(() => import("@/components/wiki/weekly-synthesis-engine").then(m => ({ default: m.WeeklySynthesisEngine })), {
+  loading: () => <WikiSkeleton />,
+});
+const ContributionLeaderboard = lazyLoad(() => import("@/components/wiki/contribution-leaderboard").then(m => ({ default: m.ContributionLeaderboard })), {
+  loading: () => <WikiSkeleton h="h-48" />,
+});
+const HumanCapitalVisual = lazyLoad(() => import("@/components/wiki/human-capital-visual").then(m => ({ default: m.HumanCapitalVisual })), {
+  loading: () => <WikiSkeleton h="h-48" />,
+});
+const WeeklyInsightNewsletter = lazyLoad(() => import("@/components/wiki/weekly-insight-newsletter").then(m => ({ default: m.WeeklyInsightNewsletter })), {
+  loading: () => <WikiSkeleton h="h-72" />,
+});
+const MonthlyEvolutionAnalysis = lazyLoad(() => import("@/components/wiki/monthly-evolution-analysis").then(m => ({ default: m.MonthlyEvolutionAnalysis })), {
+  loading: () => <WikiSkeleton h="h-72" />,
+});
 
 export const dynamic = "force-dynamic";
 

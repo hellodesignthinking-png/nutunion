@@ -261,9 +261,12 @@ export function MonthlyEvolutionAnalysis({ groupId }: { groupId: string }) {
           </div>
         </div>
         <h3 className="font-head text-2xl font-extrabold mb-3">월간 지식 진화 분석</h3>
-        <p className="text-sm text-white/50 max-w-lg mx-auto mb-8 leading-relaxed">
-          지난 한 달간 축적된 모든 회의록과 위키 데이터를 AI가 교차 분석하여,
+        <p className="text-sm text-white/50 max-w-lg mx-auto mb-3 leading-relaxed">
+          지난 한 달간 축적된 모든 회의록과 위키 데이터를 교차 분석하여,
           각 주제의 관점 변화와 지식 성장 패턴을 시각화합니다.
+        </p>
+        <p className="font-mono-nu text-[9px] text-white/25 uppercase tracking-widest mb-8">
+          최소 1개 이상의 토픽과 문서가 필요합니다
         </p>
         <button
           onClick={runAnalysis}
@@ -299,7 +302,7 @@ export function MonthlyEvolutionAnalysis({ groupId }: { groupId: string }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {([
             { label: "Breadth", value: analysis.overallHealth.breadth, desc: "주제 다양성" },
             { label: "Depth", value: analysis.overallHealth.depth, desc: "깊이" },

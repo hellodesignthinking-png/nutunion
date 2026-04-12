@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import {
   Link2, Plus, Loader2, FileText, CirclePlay, Globe,
@@ -64,6 +65,28 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
   }, [groupId, selectedWeek]);
 
   useEffect(() => { loadResources(); }, [loadResources]);
+
+  // Realtime subscription for live updates
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`wiki-resources-${groupId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "wiki_weekly_resources", filter: `group_id=eq.${groupId}` },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            loadResources();
+            toast.info("새 리소스가 공유되었습니다");
+          } else if (payload.eventType === "DELETE") {
+            setResources(prev => prev.filter(r => r.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [groupId, loadResources]);
 
   async function handleSubmit() {
     if (!url.trim()) return;
@@ -241,8 +264,14 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
         ) : resources.length === 0 ? (
           <div className="text-center py-10">
             <Link2 size={32} className="mx-auto mb-3 text-nu-ink/10" />
-            <p className="text-sm text-nu-muted font-medium">이번 주에 공유된 리소스가 없습니다</p>
-            <p className="text-xs text-nu-muted/60 mt-1">YouTube, PDF, 블로그 등 학습 자료를 공유해보세요</p>
+            <p className="text-sm text-nu-muted font-medium mb-1">이번 주에 공유된 리소스가 없습니다</p>
+            <p className="text-xs text-nu-muted/60 mb-4">YouTube, PDF, 블로그 등 학습 자료를 공유해보세요</p>
+            <button
+              onClick={() => setShowForm(true)}
+              className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-2.5 bg-nu-blue text-white hover:bg-nu-blue/90 transition-colors inline-flex items-center gap-1.5 mx-auto"
+            >
+              <Plus size={12} /> 첫 번째 리소스 공유하기
+            </button>
           </div>
         ) : (
           <div className="space-y-4">

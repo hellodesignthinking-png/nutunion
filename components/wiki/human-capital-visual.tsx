@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Brain, Sparkles, TrendingUp, Award, Star, Zap, ChevronDown, ChevronUp } from "lucide-react";
+import { Brain, Sparkles, TrendingUp, Award, Star, Zap, ChevronDown, ChevronUp, Users } from "lucide-react";
 
 interface MemberData {
   userId: string;
@@ -250,7 +250,9 @@ export function HumanCapitalVisual({ groupId }: { groupId: string }) {
 
       {members.length === 0 && (
         <div className="border-[2px] border-dashed border-nu-ink/15 p-8 text-center">
-          <p className="text-xs text-nu-muted">멤버 데이터를 불러올 수 없습니다.</p>
+          <Users size={28} className="mx-auto mb-3 text-nu-ink/10" />
+          <p className="text-sm text-nu-muted font-medium mb-1">멤버 데이터가 없습니다</p>
+          <p className="text-xs text-nu-muted/60">위키에 기여하면 여기에 표시됩니다</p>
         </div>
       )}
     </div>
