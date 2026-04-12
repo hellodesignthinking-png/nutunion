@@ -24,6 +24,8 @@ import { WeeklyInsightNewsletter } from "@/components/wiki/weekly-insight-newsle
 import { MonthlyEvolutionAnalysis } from "@/components/wiki/monthly-evolution-analysis";
 import { WikiTopicCreator } from "@/components/wiki/wiki-topic-creator";
 import { WikiSearchBar } from "@/components/wiki/wiki-search-bar";
+import { WeeklyResourceFeed } from "@/components/wiki/weekly-resource-feed";
+import { WeeklySynthesisEngine } from "@/components/wiki/weekly-synthesis-engine";
 
 export const dynamic = "force-dynamic";
 
@@ -76,7 +78,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
         .limit(8),
       supabase
         .from("wiki_pages")
-        .select("id, topic_id")
+        .select("id, topic_id", { count: "exact" })
         .in("topic_id", topicIds),
       supabase
         .from("group_members")
@@ -228,6 +230,12 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
 
           {/* ── Left Column (8 cols) ─────────────────── */}
           <div className="lg:col-span-8 space-y-16">
+
+            {/* Weekly Resource Feed + AI Synthesis */}
+            <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <WeeklyResourceFeed groupId={id} userId={user.id} />
+              <WeeklySynthesisEngine groupId={id} isHost={isHost} />
+            </section>
 
             {/* Topic Explorer */}
             <section>

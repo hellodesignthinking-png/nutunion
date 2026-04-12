@@ -19,7 +19,7 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ id
 
   const { data: topic } = await supabase
     .from("wiki_topics")
-    .select("id, name, description")
+    .select("id, name, description, is_public, public_slug")
     .eq("id", topicId)
     .single();
 
@@ -121,6 +121,8 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ id
           topicDescription={topic.description || ""}
           initialPages={(pages || []) as any}
           isHost={isHost}
+          isPublic={topic.is_public || false}
+          publicSlug={topic.public_slug || null}
         />
       </div>
     </div>

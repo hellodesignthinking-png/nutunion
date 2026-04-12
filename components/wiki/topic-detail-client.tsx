@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import {
   Plus, Search, Edit3, GitBranch, FileText,
   BookOpen, Trash2, ChevronRight, Settings,
-  Loader2, Save, X, AlertTriangle
+  Loader2, Save, X, AlertTriangle, Globe, Lock, Copy, ExternalLink
 } from "lucide-react";
 import { WikiPageEditor } from "@/components/wiki/wiki-page-editor";
 
@@ -32,6 +32,8 @@ interface TopicDetailClientProps {
   topicDescription: string;
   initialPages: WikiPage[];
   isHost: boolean;
+  isPublic?: boolean;
+  publicSlug?: string | null;
 }
 
 export function TopicDetailClient({
@@ -41,12 +43,19 @@ export function TopicDetailClient({
   topicDescription,
   initialPages,
   isHost,
+  isPublic: initialIsPublic = false,
+  publicSlug: initialSlug = null,
 }: TopicDetailClientProps) {
   const router = useRouter();
   const [pages, setPages] = useState<WikiPage[]>(initialPages);
   const [searchQuery, setSearchQuery] = useState("");
   const [showEditor, setShowEditor] = useState(false);
   const [sortBy, setSortBy] = useState<"newest" | "alpha" | "version">("newest");
+
+  // Publish state
+  const [isPublished, setIsPublished] = useState(initialIsPublic);
+  const [publishSlug, setPublishSlug] = useState<string | null>(initialSlug);
+  const [publishing, setPublishing] = useState(false);
 
   // Topic editing
   const [editingTopic, setEditingTopic] = useState(false);
@@ -123,6 +132,46 @@ export function TopicDetailClient({
     }
   };
 
+  // ── Publish/Unpublish ──
+  const handleTogglePublish = async () => {
+    setPublishing(true);
+    try {
+      if (isPublished) {
+        const res = await fetch("/api/wiki/publish", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ topicId }),
+        });
+        if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
+        setIsPublished(false);
+        setPublishSlug(null);
+        toast.success("위키가 비공개로 전환되었습니다");
+      } else {
+        const res = await fetch("/api/wiki/publish", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ topicId }),
+        });
+        if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
+        const data = await res.json();
+        setIsPublished(true);
+        setPublishSlug(data.slug);
+        toast.success("위키가 공개되었습니다!");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "공개 설정 실패");
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const copyPublicUrl = () => {
+    if (!publishSlug) return;
+    const url = `${window.location.origin}/wiki/${publishSlug}`;
+    navigator.clipboard.writeText(url);
+    toast.success("공개 URL이 복사되었습니다");
+  };
+
   const handlePageCreated = () => {
     setShowEditor(false);
     router.refresh();
@@ -149,13 +198,41 @@ export function TopicDetailClient({
     <div className="space-y-8">
       {/* Topic Settings (host only) */}
       {isHost && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setEditingTopic(!editingTopic)}
             className="font-mono-nu text-[10px] text-nu-muted hover:text-nu-ink flex items-center gap-1 uppercase tracking-widest transition-colors"
           >
             <Settings size={12} /> 주제 관리
           </button>
+          <button
+            onClick={handleTogglePublish}
+            disabled={publishing}
+            className={`font-mono-nu text-[10px] flex items-center gap-1 uppercase tracking-widest transition-colors ${
+              isPublished ? "text-green-600 hover:text-nu-ink" : "text-nu-muted hover:text-nu-blue"
+            }`}
+          >
+            {publishing ? <Loader2 size={12} className="animate-spin" /> : isPublished ? <Globe size={12} /> : <Lock size={12} />}
+            {isPublished ? "공개 중" : "공개하기"}
+          </button>
+          {isPublished && publishSlug && (
+            <>
+              <button
+                onClick={copyPublicUrl}
+                className="font-mono-nu text-[10px] text-nu-blue hover:text-nu-pink flex items-center gap-1 uppercase tracking-widest transition-colors"
+              >
+                <Copy size={12} /> URL 복사
+              </button>
+              <a
+                href={`/wiki/${publishSlug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono-nu text-[10px] text-nu-blue hover:text-nu-pink flex items-center gap-1 uppercase tracking-widest transition-colors no-underline"
+              >
+                <ExternalLink size={12} /> 공개 페이지
+              </a>
+            </>
+          )}
           <button
             onClick={() => setDeletingTopicConfirm(true)}
             className="font-mono-nu text-[10px] text-red-400 hover:text-red-600 flex items-center gap-1 uppercase tracking-widest transition-colors"
