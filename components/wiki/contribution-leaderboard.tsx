@@ -155,8 +155,12 @@ export function ContributionLeaderboard({ groupId }: { groupId: string }) {
       // Calculate real streaks, XP, and badges
       Object.values(contribMap).forEach(c => {
         c.xp = c.totalEdits * 10 + c.totalPages * 25;
-        c.level = LEVELS.findIndex(l => l.min > c.xp) - 1;
-        if (c.level < 0) c.level = LEVELS.length - 1;
+        // Find the highest level whose min XP the user has reached
+        let levelIdx = 0;
+        for (let i = LEVELS.length - 1; i >= 0; i--) {
+          if (c.xp >= LEVELS[i].min) { levelIdx = i; break; }
+        }
+        c.level = levelIdx;
 
         // Real streak calculation
         const dates = Array.from(userDates[c.userId] || []).sort().reverse();

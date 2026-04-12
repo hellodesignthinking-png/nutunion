@@ -72,30 +72,34 @@ export function WeeklyInsightNewsletter({ groupId }: { groupId: string }) {
         .in("topic_id", topicIds);
 
       const pageIds = (allPages || []).map(p => p.id);
-      const safePageIds = pageIds.length > 0 ? pageIds : ["00000000-0000-0000-0000-000000000000"];
+      if (pageIds.length === 0) {
+        toast.info("분석할 위키 페이지가 아직 없습니다.");
+        setGenerating(false);
+        return;
+      }
 
       // ── Parallelized queries for performance ──
       const [contribsResult, prevContribsResult, viewsResult, prevViewsResult] = await Promise.all([
         supabase
           .from("wiki_contributions")
           .select("id, user_id, page_id, created_at")
-          .in("page_id", safePageIds)
+          .in("page_id", pageIds)
           .gte("created_at", weekStartISO),
         supabase
           .from("wiki_contributions")
           .select("id, user_id")
-          .in("page_id", safePageIds)
+          .in("page_id", pageIds)
           .gte("created_at", prevWeekStartISO)
           .lt("created_at", weekStartISO),
         supabase
           .from("wiki_page_views")
           .select("id, page_id, user_id, viewed_at")
-          .in("page_id", safePageIds)
+          .in("page_id", pageIds)
           .gte("viewed_at", weekStartISO),
         supabase
           .from("wiki_page_views")
           .select("id")
-          .in("page_id", safePageIds)
+          .in("page_id", pageIds)
           .gte("viewed_at", prevWeekStartISO)
           .lt("viewed_at", weekStartISO),
       ]);

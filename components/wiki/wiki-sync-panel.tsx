@@ -30,6 +30,7 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [selectedUpdates, setSelectedUpdates] = useState<Set<number>>(new Set());
   const [phase, setPhase] = useState<"idle" | "extracting" | "reviewing" | "syncing" | "done">("idle");
+  const [extractionSource, setExtractionSource] = useState<"ai" | "heuristic" | null>(null);
 
   const handleExtract = async () => {
     setPhase("extracting");
@@ -75,6 +76,7 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
             wikiUpdates: aiResult.wikiUpdates || [],
             suggestedTags: aiResult.suggestedTags || [],
           };
+          setExtractionSource("ai");
           toast.success("🤖 Gemini AI가 지식을 추출했습니다!");
         }
       } catch (aiErr) {
@@ -160,6 +162,7 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
           suggestedTags: suggestedTags.length > 0 ? suggestedTags : ["미팅"],
         };
 
+        setExtractionSource("heuristic");
         toast.info("⚙️ 휴리스틱 모드로 지식을 추출했습니다. (AI API 미연결)");
       }
 
@@ -249,12 +252,43 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
             if (!pageError && newPage) {
               createdPageIds.push(newPage.id);
 
-              // Record contribution, version, and meeting link in parallel
+              // Record contribution, version, meeting link, and auto-apply tags in parallel
+              const tagInserts: Promise<any>[] = [];
+              if (extractedData?.suggestedTags && extractedData.suggestedTags.length > 0) {
+                tagInserts.push(
+                  (async () => {
+                    for (const tagName of extractedData.suggestedTags) {
+                      // Ensure tag exists
+                      const { data: existing } = await supabase
+                        .from("wiki_tags")
+                        .select("id")
+                        .eq("group_id", groupId)
+                        .eq("name", tagName)
+                        .limit(1);
+                      let tagId = existing?.[0]?.id;
+                      if (!tagId) {
+                        const { data: created } = await supabase
+                          .from("wiki_tags")
+                          .insert({ group_id: groupId, name: tagName })
+                          .select("id")
+                          .single();
+                        tagId = created?.id;
+                      }
+                      if (tagId) {
+                        await supabase.from("wiki_page_tags").insert({ page_id: newPage.id, tag_id: tagId });
+                      }
+                    }
+                  })()
+                );
+              }
+
               await Promise.all([
                 supabase.from("wiki_contributions").insert({
                   page_id: newPage.id,
                   user_id: user.id,
                   change_summary: "미팅 AI 동기화로 페이지 생성",
+                  source_type: "meeting_sync",
+                  source_id: meetingId,
                 }),
                 supabase.from("wiki_page_versions").insert({
                   page_id: newPage.id,
@@ -269,6 +303,7 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
                   meeting_id: meetingId,
                   description: `AI 추출: ${update.suggestion.slice(0, 100)}`,
                 }),
+                ...tagInserts,
               ]);
 
               toast.success(`"${update.pageTitle}" 페이지가 생성되었습니다!`);
@@ -385,6 +420,18 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
+      {/* Extraction Source Badge */}
+      {extractionSource && (
+        <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 font-mono-nu text-[9px] font-bold uppercase tracking-widest ${
+          extractionSource === "ai"
+            ? "bg-nu-pink/10 text-nu-pink border border-nu-pink/20"
+            : "bg-nu-amber/10 text-nu-amber border border-nu-amber/20"
+        }`}>
+          {extractionSource === "ai" ? <Sparkles size={10} /> : <GitBranch size={10} />}
+          {extractionSource === "ai" ? "Gemini AI 추출" : "휴리스틱 추출 (추정)"}
+        </div>
+      )}
+
       {/* Entities & Tags */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white border-[2px] border-nu-ink p-6">

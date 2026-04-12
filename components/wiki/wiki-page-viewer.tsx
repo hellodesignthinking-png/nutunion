@@ -52,6 +52,7 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
   const [showTOC, setShowTOC] = useState(false);
   const [diffVersion, setDiffVersion] = useState<{ version: number; content: string; title: string } | null>(null);
   const linkSearchTimer = useRef<NodeJS.Timeout | null>(null);
+  const linkSearchAbort = useRef<AbortController | null>(null);
 
   // Reading time (Korean ~500 chars/min, English ~200 words/min)
   const readingStats = useMemo(() => {
@@ -79,23 +80,31 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
   const handleLinkSearch = useCallback((q: string) => {
     setLinkSearch(q);
     if (linkSearchTimer.current) clearTimeout(linkSearchTimer.current);
+    linkSearchAbort.current?.abort();
     if (!q.trim()) { setLinkSearchResults([]); return; }
     setSearchingLinks(true);
     linkSearchTimer.current = setTimeout(async () => {
-      const supabase = createClient();
-      const { data: topics } = await supabase.from("wiki_topics").select("id").eq("group_id", groupId);
-      const topicIds = (topics || []).map(t => t.id);
-      if (topicIds.length > 0) {
-        const { data: results } = await supabase
-          .from("wiki_pages")
-          .select("id, title")
-          .in("topic_id", topicIds)
-          .neq("id", page.id)
-          .ilike("title", `%${q}%`)
-          .limit(6);
-        setLinkSearchResults((results || []).filter(r => !linkedPages.some(l => l.id === r.id)));
-      }
-      setSearchingLinks(false);
+      const controller = new AbortController();
+      linkSearchAbort.current = controller;
+      try {
+        const supabase = createClient();
+        const { data: topics } = await supabase.from("wiki_topics").select("id").eq("group_id", groupId).abortSignal(controller.signal);
+        const topicIds = (topics || []).map(t => t.id);
+        if (topicIds.length > 0 && !controller.signal.aborted) {
+          const { data: results } = await supabase
+            .from("wiki_pages")
+            .select("id, title")
+            .in("topic_id", topicIds)
+            .neq("id", page.id)
+            .ilike("title", `%${q}%`)
+            .limit(6)
+            .abortSignal(controller.signal);
+          if (!controller.signal.aborted) {
+            setLinkSearchResults((results || []).filter(r => !linkedPages.some(l => l.id === r.id)));
+          }
+        }
+      } catch { /* aborted */ }
+      if (!controller.signal.aborted) setSearchingLinks(false);
     }, 300);
   }, [groupId, page.id, linkedPages]);
 
@@ -196,18 +205,34 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
     str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
   const renderMarkdown = (md: string) => {
-    return escapeHtml(md)
+    let html = escapeHtml(md);
+    // Code blocks (``` ... ```)
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) =>
+      `<pre class="bg-nu-ink text-white p-4 my-4 overflow-x-auto font-mono-nu text-xs leading-relaxed border-l-4 border-nu-pink"><code>${code.trim()}</code></pre>`
+    );
+    // Blockquotes (> ...)
+    html = html.replace(/^&gt; (.+)/gm, '<blockquote class="border-l-4 border-nu-blue/30 pl-4 my-3 text-nu-muted italic text-sm">$1</blockquote>');
+    // Horizontal rules
+    html = html.replace(/^---$/gm, '<hr class="my-6 border-nu-ink/10" />');
+    // Headers
+    html = html
       .replace(/### (.+)/g, '<h3 class="font-head text-base font-bold mt-5 mb-2 text-nu-ink">$1</h3>')
       .replace(/## (.+)/g, '<h2 class="font-head text-lg font-extrabold mt-7 mb-3 text-nu-ink border-b border-nu-ink/10 pb-2">$1</h2>')
-      .replace(/# (.+)/g, '<h1 class="font-head text-2xl font-extrabold mt-8 mb-4 text-nu-ink">$1</h1>')
+      .replace(/# (.+)/g, '<h1 class="font-head text-2xl font-extrabold mt-8 mb-4 text-nu-ink">$1</h1>');
+    // Inline formatting
+    html = html
       .replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold text-nu-ink">$1</strong>')
       .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/`(.+?)`/g, '<code class="bg-nu-cream/50 px-1.5 py-0.5 text-nu-pink font-mono-nu text-xs border border-nu-ink/10 rounded">$1</code>')
+      .replace(/`(.+?)`/g, '<code class="bg-nu-cream/50 px-1.5 py-0.5 text-nu-pink font-mono-nu text-xs border border-nu-ink/10">$1</code>');
+    // Lists
+    html = html
       .replace(/^- (.+)/gm, '<li class="ml-4 list-disc text-sm text-nu-graphite leading-relaxed">$1</li>')
-      .replace(/^\d+\. (.+)/gm, '<li class="ml-4 list-decimal text-sm text-nu-graphite leading-relaxed">$1</li>')
-      .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" class="text-nu-blue hover:text-nu-pink underline" target="_blank" rel="noopener noreferrer">$1</a>')
-      .replace(/\n\n/g, '<div class="h-3"></div>')
-      .replace(/\n/g, '<br/>');
+      .replace(/^\d+\. (.+)/gm, '<li class="ml-4 list-decimal text-sm text-nu-graphite leading-relaxed">$1</li>');
+    // Links
+    html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" class="text-nu-blue hover:text-nu-pink underline" target="_blank" rel="noopener noreferrer">$1</a>');
+    // Line breaks
+    html = html.replace(/\n\n/g, '<div class="h-3"></div>').replace(/\n/g, '<br/>');
+    return html;
   };
 
   // Render markdown with TOC anchor IDs on headings
@@ -347,6 +372,8 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
               key={r}
               onClick={() => toggleReaction(r)}
               disabled={loadingReaction}
+              aria-label={`${isActive ? "Remove" : "Add"} ${r} reaction${count > 0 ? ` (${count})` : ""}`}
+              aria-pressed={isActive}
               className={`px-3 py-1.5 border text-sm transition-all hover:scale-110 active:scale-95 flex items-center gap-1.5 disabled:opacity-50 ${
                 isActive
                   ? "border-nu-pink bg-nu-pink/10 shadow-sm"

@@ -176,16 +176,21 @@ export function KnowledgeGraph({ groupId }: { groupId: string }) {
       t.vy -= fy;
     });
 
+    let totalMotion = 0;
     ns.forEach(n => {
       if (n.id === dragging) return;
       n.vx *= DAMPING;
       n.vy *= DAMPING;
       n.x += n.vx;
       n.y += n.vy;
+      totalMotion += Math.abs(n.vx) + Math.abs(n.vy);
     });
 
     nodesRef.current = [...ns];
-    setNodes([...ns]);
+    // Only trigger re-render if there's meaningful motion
+    if (totalMotion > 0.1) {
+      setNodes([...ns]);
+    }
   }, [edges, dragging]);
 
   useEffect(() => {

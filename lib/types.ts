@@ -374,3 +374,65 @@ export interface ProjectActionItem {
   completed_at?: string;
   assignee?: { nickname: string | null; avatar_url: string | null };
 }
+
+// ── Wiki ──────────────────────────────────────
+
+export type WikiResourceType = "pdf" | "youtube" | "article" | "notion" | "link" | "other";
+export type WikiSynthesisType = "weekly_consolidation" | "resource_digest" | "meeting_synthesis";
+export type WikiContributionSource = "manual" | "meeting_sync" | "resource_link" | "ai_synthesis";
+
+export interface WikiTopic {
+  id: string;
+  name: string;
+  description: string | null;
+  group_id: string;
+  is_public: boolean;
+  public_slug: string | null;
+  public_description: string | null;
+  published_at: string | null;
+  created_at: string;
+}
+
+export interface WikiPage {
+  id: string;
+  topic_id: string;
+  title: string;
+  content: string;
+  version: number;
+  created_by: string;
+  last_updated_by: string;
+  created_at: string;
+  updated_at: string;
+  topic?: { id: string; name: string };
+  author?: { nickname: string };
+  updater?: { nickname: string };
+}
+
+export interface WikiResource {
+  id: string;
+  group_id: string;
+  week_start: string;
+  shared_by: string;
+  title: string;
+  url: string;
+  resource_type: WikiResourceType;
+  description: string | null;
+  auto_summary: string | null;
+  metadata: Record<string, string>;
+  linked_wiki_page_id: string | null;
+  created_at: string;
+  sharer?: { id: string; nickname: string | null; avatar_url: string | null };
+  linked_page?: { id: string; title: string };
+}
+
+export interface WikiContribution {
+  id: string;
+  page_id: string;
+  user_id: string;
+  change_summary: string | null;
+  source_type: WikiContributionSource;
+  source_id: string | null;
+  created_at: string;
+  contributor?: { nickname: string };
+  page?: { id: string; title: string };
+}
