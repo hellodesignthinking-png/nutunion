@@ -10,6 +10,7 @@ import {
   Trophy,
   Settings,
   Home,
+  Briefcase,
 } from "lucide-react";
 
 interface GroupSubNavProps {
@@ -34,25 +35,25 @@ export function GroupSubNav({ groupId, groupName, isHost = false, isManager = fa
 
   function isActive(href: string) {
     if (href === "") {
-      // Home: exact match only
       return pathname === basePath || pathname === `${basePath}/`;
     }
     return pathname.startsWith(`${basePath}${href}`);
   }
 
   return (
-    <nav className="bg-nu-white border-b border-nu-ink/[0.08] sticky top-[60px] z-30">
-      <div className="max-w-[1200px] mx-auto px-4">
-        <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
+    <nav className="bg-nu-white border-b-[2px] border-nu-ink/10 sticky top-[60px] z-40 shadow-sm">
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
+        <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide -mb-[2px]">
           {/* Group name */}
           <Link
             href={basePath}
-            className="shrink-0 font-head text-sm font-bold text-nu-ink no-underline mr-3 py-3 hover:text-nu-pink transition-colors"
+            className="shrink-0 font-head text-sm font-bold text-nu-ink no-underline mr-2 py-3.5 hover:text-nu-pink transition-colors truncate max-w-[120px] sm:max-w-[200px]"
+            title={groupName}
           >
             {groupName}
           </Link>
 
-          <div className="w-px h-5 bg-nu-ink/10 mr-1" />
+          <div className="w-px h-6 bg-nu-ink/15 mr-1 shrink-0" />
 
           {/* Nav items */}
           {NAV_ITEMS.map((item) => {
@@ -62,13 +63,13 @@ export function GroupSubNav({ groupId, groupName, isHost = false, isManager = fa
               <Link
                 key={item.key}
                 href={`${basePath}${item.href}`}
-                className={`shrink-0 flex items-center gap-1.5 px-3 py-3 font-mono-nu text-[10px] uppercase tracking-widest no-underline transition-all border-b-2 ${
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-3.5 font-mono-nu text-[10px] uppercase tracking-widest no-underline transition-all border-b-[3px] ${
                   active
-                    ? "text-nu-pink border-nu-pink font-bold"
-                    : "text-nu-muted border-transparent hover:text-nu-ink hover:border-nu-ink/20"
+                    ? "text-nu-pink border-nu-pink font-bold bg-nu-pink/5"
+                    : "text-nu-muted border-transparent hover:text-nu-ink hover:border-nu-ink/20 hover:bg-nu-cream/30"
                 }`}
               >
-                <Icon size={12} />
+                <Icon size={13} />
                 {item.label}
               </Link>
             );
@@ -78,16 +79,26 @@ export function GroupSubNav({ groupId, groupName, isHost = false, isManager = fa
           {(isHost || isManager) && (
             <Link
               href={`${basePath}/settings`}
-              className={`shrink-0 flex items-center gap-1.5 px-3 py-3 font-mono-nu text-[10px] uppercase tracking-widest no-underline transition-all border-b-2 ${
+              className={`shrink-0 flex items-center gap-1.5 px-3 py-3.5 font-mono-nu text-[10px] uppercase tracking-widest no-underline transition-all border-b-[3px] ${
                 isActive("/settings")
-                  ? "text-nu-pink border-nu-pink font-bold"
-                  : "text-nu-muted border-transparent hover:text-nu-ink hover:border-nu-ink/20"
+                  ? "text-nu-pink border-nu-pink font-bold bg-nu-pink/5"
+                  : "text-nu-muted border-transparent hover:text-nu-ink hover:border-nu-ink/20 hover:bg-nu-cream/30"
               }`}
             >
-              <Settings size={12} />
+              <Settings size={13} />
               설정
             </Link>
           )}
+
+          {/* Projects link */}
+          <div className="w-px h-6 bg-nu-ink/15 mx-1 shrink-0" />
+          <Link
+            href="/projects"
+            className="shrink-0 flex items-center gap-1.5 px-3 py-3.5 font-mono-nu text-[10px] uppercase tracking-widest no-underline text-nu-muted border-b-[3px] border-transparent hover:text-nu-ink hover:border-nu-ink/20 hover:bg-nu-cream/30 transition-all"
+          >
+            <Briefcase size={13} />
+            프로젝트
+          </Link>
         </div>
       </div>
     </nav>
