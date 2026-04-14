@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Menu, X, Home, FolderOpen, CheckSquare, FileText, Calendar } from "lucide-react";
+import { Menu, X, Home, FolderOpen, CheckSquare, FileText, Calendar, Search, Bell } from "lucide-react";
 
 interface StaffNavClientProps {
   navItems: { label: string; href: string }[];
@@ -30,6 +30,10 @@ export function StaffNavClient({ navItems, staffName }: StaffNavClientProps) {
   function isActive(href: string) {
     if (href === "/staff") return pathname === "/staff";
     return pathname === href || pathname.startsWith(href + "/");
+  }
+
+  function openCommandPalette() {
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
   }
 
   return (
@@ -63,7 +67,17 @@ export function StaffNavClient({ navItems, staffName }: StaffNavClientProps) {
           ))}
         </div>
 
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden md:flex items-center gap-3">
+          {/* Command palette trigger */}
+          <button
+            onClick={openCommandPalette}
+            className="flex items-center gap-2 px-3 py-1.5 border border-nu-ink/10 bg-transparent cursor-pointer hover:border-indigo-300 hover:bg-indigo-50/30 transition-colors group"
+            aria-label="검색 (Ctrl+K)"
+          >
+            <Search size={12} className="text-nu-muted group-hover:text-indigo-600" />
+            <span className="font-mono-nu text-[9px] text-nu-muted/50 tracking-wider">Ctrl+K</span>
+          </button>
+
           <span className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
             {staffName}
           </span>

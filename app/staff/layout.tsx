@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { StaffNavClient } from "./staff-nav-client";
+import { ChatPanel } from "./chat-panel";
+import { CommandPalette } from "./command-palette";
 
 export default async function StaffLayout({
   children,
@@ -35,6 +37,9 @@ export default async function StaffLayout({
     <div className="min-h-screen bg-nu-paper">
       <StaffNavClient navItems={navItems} staffName={staffName} />
       <div className="pt-[60px]">{children}</div>
+      {/* Global floating components */}
+      <ChatPanel />
+      <CommandPalette />
     </div>
   );
 }

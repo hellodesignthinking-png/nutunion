@@ -5,6 +5,7 @@ import { TodayCalendarWidget } from "./today-calendar-widget";
 import { AICommandBar } from "./ai-command-bar";
 import { MonitorWidget } from "./monitor-widget";
 import { TeamActivityWidget } from "./team-activity-widget";
+import { PinnedItems } from "./pinned-items";
 
 export const dynamic = "force-dynamic";
 
@@ -326,6 +327,9 @@ export default async function StaffDashboardPage() {
               </Link>
             ))}
           </div>
+
+          {/* Pinned Items */}
+          <PinnedItems />
 
           {/* Team Activity */}
           <TeamActivityWidget />
