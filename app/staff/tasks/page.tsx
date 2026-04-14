@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { CheckSquare, Clock, Plus, AlertTriangle, X } from "lucide-react";
+import { CheckSquare, Clock, Plus, AlertTriangle, X, Square, CheckCircle2, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
@@ -154,7 +154,45 @@ export default function StaffTasksPage() {
     done: filteredTasks.filter(t => t.status === "done"),
   }), [filteredTasks]);
 
-  const statusIcon: Record<string, string> = { todo: "○", in_progress: "◐", done: "●" };
+  function StatusCheckbox({ status, taskId }: { status: string; taskId: string }) {
+    const isChecking = false;
+    if (status === "done") {
+      return (
+        <button
+          onClick={() => toggleStatus(taskId, status)}
+          className="flex-shrink-0 bg-transparent border-none cursor-pointer p-0 group/check"
+          aria-label="완료 해제"
+        >
+          <CheckCircle2 size={20} className="text-green-500 group-hover/check:text-green-300 transition-colors" />
+        </button>
+      );
+    }
+    if (status === "in_progress") {
+      return (
+        <button
+          onClick={() => toggleStatus(taskId, status)}
+          className="flex-shrink-0 bg-transparent border-none cursor-pointer p-0 group/check"
+          aria-label="완료로 변경"
+        >
+          <div className="relative">
+            <Circle size={20} className="text-indigo-400 group-hover/check:text-green-400 transition-colors" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-2 h-2 rounded-full bg-indigo-400 group-hover/check:bg-green-400 transition-colors" />
+            </div>
+          </div>
+        </button>
+      );
+    }
+    return (
+      <button
+        onClick={() => toggleStatus(taskId, status)}
+        className="flex-shrink-0 bg-transparent border-none cursor-pointer p-0 group/check"
+        aria-label="진행중으로 변경"
+      >
+        <Circle size={20} className="text-nu-muted/40 group-hover/check:text-indigo-400 transition-colors" />
+      </button>
+    );
+  }
   const priorityColor: Record<string, string> = {
     urgent: "bg-red-100 text-red-700",
     high: "bg-orange-100 text-orange-700",
@@ -319,13 +357,7 @@ export default function StaffTasksPage() {
                       dueStatus === "today" ? "border-orange-200 bg-orange-50/20" :
                       "border-nu-ink/[0.06] hover:border-indigo-200"
                     }`}>
-                      <button
-                        onClick={() => toggleStatus(t.id, t.status)}
-                        className="text-lg bg-transparent border-none cursor-pointer p-0"
-                        aria-label="상태 변경"
-                      >
-                        {statusIcon[t.status] || "○"}
-                      </button>
+                      <StatusCheckbox status={t.status} taskId={t.id} />
                       <div className="flex-1 min-w-0">
                         <p className={`font-head text-sm font-bold truncate ${t.status === "done" ? "line-through text-nu-muted" : "text-nu-ink"}`}>{t.title}</p>
                         <div className="flex items-center gap-2 mt-0.5">
