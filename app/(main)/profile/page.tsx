@@ -15,6 +15,7 @@ import {
   BookOpen, ExternalLink, Edit3, Check, X,
   Star, Crown, Award, Shield, Link2, ChevronRight,
   Layers, FileText, MessageSquare, Calendar, Zap, DollarSign, Plus,
+  Unplug, RefreshCw, AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 import type { Profile } from "@/lib/types";
@@ -189,6 +190,8 @@ export default function ProfilePage() {
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
   const [tab, setTab] = useState<"archive"|"crews"|"projects"|"badges"|"portfolios"|"history">("archive");
+  const [googleStatus, setGoogleStatus] = useState<{ connected: boolean; tokenExpired?: boolean; loading: boolean }>({ connected: false, loading: true });
+  const [disconnecting, setDisconnecting] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -249,6 +252,15 @@ export default function ProfilePage() {
         ...resources.map((r: any) => ({ ...r, _type: "resource" })),
       ].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10);
       setRecentActivity(combined);
+
+      // Google 연결 상태 확인
+      try {
+        const res = await fetch("/api/google/status");
+        const gStatus = await res.json();
+        setGoogleStatus({ connected: gStatus.connected, tokenExpired: gStatus.tokenExpired, loading: false });
+      } catch {
+        setGoogleStatus({ connected: false, loading: false });
+      }
     }
     load();
   }, []);
@@ -321,6 +333,23 @@ export default function ProfilePage() {
     setProfile({ ...profile, avatar_url: urlData.publicUrl });
     toast.success("프로필 사진이 변경되었습니다");
     setUploading(false);
+  }
+
+  async function handleGoogleDisconnect() {
+    setDisconnecting(true);
+    try {
+      const res = await fetch("/api/google/status", { method: "DELETE" });
+      const data = await res.json();
+      if (data.disconnected) {
+        setGoogleStatus({ connected: false, loading: false });
+        toast.success("Google 계정 연결이 해제되었습니다");
+      } else {
+        toast.error("연결 해제에 실패했습니다");
+      }
+    } catch {
+      toast.error("연결 해제 중 오류가 발생했습니다");
+    }
+    setDisconnecting(false);
   }
 
   function formatDate(d: string) {
@@ -485,6 +514,57 @@ export default function ProfilePage() {
                 <div className="flex gap-2"><span className="text-nu-muted w-14 shrink-0">이름</span><span>{profile.name || "-"}</span></div>
                 <div className="flex gap-2"><span className="text-nu-muted w-14 shrink-0">전화</span><span>{profile.phone || "-"}</span></div>
                 <div className="flex gap-2"><span className="text-nu-muted w-14 shrink-0">분야</span><span>{CAT_LABELS[profile.specialty] || profile.specialty || "-"}</span></div>
+              </div>
+            )}
+          </div>
+
+          {/* Google Workspace 연결 */}
+          <div className="bg-nu-white border border-nu-ink/[0.08] p-5">
+            <h3 className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-4">Google Workspace 연결</h3>
+            {googleStatus.loading ? (
+              <div className="flex items-center gap-2 text-sm text-nu-muted">
+                <Loader2 size={14} className="animate-spin" /> 연결 상태 확인 중...
+              </div>
+            ) : googleStatus.connected ? (
+              <div className="space-y-3">
+                {googleStatus.tokenExpired ? (
+                  <>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 text-amber-700 text-[11px]">
+                      <AlertTriangle size={13} className="shrink-0" />
+                      <span>토큰이 만료되었습니다. 다시 연결해 주세요.</span>
+                    </div>
+                    <a href="/api/auth/google"
+                      className="flex items-center justify-center gap-2 w-full font-mono-nu text-[10px] uppercase tracking-widest py-2.5 bg-amber-500 text-white hover:bg-amber-600 transition-colors no-underline">
+                      <RefreshCw size={12} /> 다시 연결하기
+                    </a>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 text-green-700 text-[11px]">
+                    <Check size={13} className="shrink-0" />
+                    <span>Google 계정이 연결되어 있습니다</span>
+                  </div>
+                )}
+                <p className="text-[10px] text-nu-muted">Drive, Docs, Calendar, Chat 등 Google 서비스를 이용할 수 있습니다.</p>
+                <button onClick={handleGoogleDisconnect} disabled={disconnecting}
+                  className="flex items-center justify-center gap-2 w-full font-mono-nu text-[10px] uppercase tracking-widest py-2.5 border border-red-200 text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50">
+                  <Unplug size={12} /> {disconnecting ? "해제 중..." : "연결 해제"}
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-[11px] text-nu-gray leading-relaxed">
+                  Google 계정을 연결하면 Drive, Docs, Sheets, Calendar, Chat 등을 너트유니온에서 바로 사용할 수 있습니다.
+                </p>
+                <a href="/api/auth/google"
+                  className="flex items-center justify-center gap-2 w-full font-mono-nu text-[10px] uppercase tracking-widest py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors no-underline">
+                  <svg width="14" height="14" viewBox="0 0 24 24" className="shrink-0">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                  </svg>
+                  Google 계정 연결
+                </a>
               </div>
             )}
           </div>
