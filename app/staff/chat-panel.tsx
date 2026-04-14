@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { MessageCircle, X, Send, Hash, Users, Search, ChevronDown, ExternalLink, Loader2, Plus } from "lucide-react";
+import { MessageCircle, X, Send, Hash, Users, Search, ChevronLeft, ExternalLink, Loader2, Plus, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 
 interface ChatRoom {
   id: string;
@@ -10,7 +11,6 @@ interface ChatRoom {
   type: "team" | "project" | "dm" | "gchat";
   lastMessage?: string;
   lastAt?: string;
-  unread?: number;
   gchatSpaceId?: string;
 }
 
@@ -20,7 +20,6 @@ interface Message {
   sender_id: string;
   sender_name: string;
   created_at: string;
-  room_id: string;
   source?: "internal" | "gchat";
 }
 
@@ -37,12 +36,13 @@ export function ChatPanel() {
   const [staffMembers, setStaffMembers] = useState<{ id: string; nickname: string }[]>([]);
   const [search, setSearch] = useState("");
   const [showNewDM, setShowNewDM] = useState(false);
+  const [tableReady, setTableReady] = useState<boolean | null>(null);
   const [gchatSpaces, setGchatSpaces] = useState<any[]>([]);
   const [gchatLoaded, setGchatLoaded] = useState(false);
+  const [gchatError, setGchatError] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Load initial data
+  // Check table exists & load initial data
   useEffect(() => {
     async function init() {
       const supabase = createClient();
@@ -57,7 +57,7 @@ export function ChatPanel() {
         .single();
       setUserName(profile?.nickname || "Staff");
 
-      // Load staff members for DM
+      // Staff members for DM
       const { data: staff } = await supabase
         .from("profiles")
         .select("id, nickname")
@@ -65,7 +65,20 @@ export function ChatPanel() {
         .neq("id", user.id);
       setStaffMembers(staff || []);
 
-      // Build room list from staff projects
+      // Check if staff_chat_messages table exists by trying a select
+      const { error: tableErr } = await supabase
+        .from("staff_chat_messages")
+        .select("id")
+        .limit(1);
+
+      if (tableErr) {
+        console.warn("staff_chat_messages table not found:", tableErr.message);
+        setTableReady(false);
+      } else {
+        setTableReady(true);
+      }
+
+      // Build rooms from staff projects
       const { data: myProjects } = await supabase
         .from("staff_project_members")
         .select("project:staff_projects(id, title)")
@@ -79,37 +92,35 @@ export function ChatPanel() {
           type: "project" as const,
         }));
 
-      // Team general room
       const generalRoom: ChatRoom = {
         id: "team-general",
         name: "전체 스태프",
         type: "team",
       };
 
-      setRooms([generalRoom, ...projectRooms]);
+      const allRooms = [generalRoom, ...projectRooms];
+      setRooms(allRooms);
 
-      // Load last messages for each room
-      loadRoomPreviews([generalRoom, ...projectRooms], supabase);
+      // Load previews
+      if (!tableErr) {
+        for (const room of allRooms) {
+          const { data } = await supabase
+            .from("staff_chat_messages")
+            .select("content, created_at")
+            .eq("room_id", room.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (data) {
+            setRooms(prev => prev.map(r =>
+              r.id === room.id ? { ...r, lastMessage: data.content?.slice(0, 40), lastAt: data.created_at } : r
+            ));
+          }
+        }
+      }
     }
     init();
   }, []);
-
-  async function loadRoomPreviews(roomList: ChatRoom[], supabase: any) {
-    for (const room of roomList) {
-      const { data } = await supabase
-        .from("staff_chat_messages")
-        .select("content, created_at")
-        .eq("room_id", room.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (data) {
-        setRooms(prev => prev.map(r =>
-          r.id === room.id ? { ...r, lastMessage: data.content?.slice(0, 40), lastAt: data.created_at } : r
-        ));
-      }
-    }
-  }
 
   // Load Google Chat spaces
   async function loadGchatSpaces() {
@@ -120,23 +131,27 @@ export function ChatPanel() {
         const data = await res.json();
         const gchatRooms: ChatRoom[] = (data.spaces || []).map((s: any) => ({
           id: `gchat-${s.id}`,
-          name: s.displayName,
+          name: s.displayName || "Google Chat",
           type: "gchat" as const,
           gchatSpaceId: s.id,
         }));
         setGchatSpaces(data.spaces || []);
         setRooms(prev => [...prev, ...gchatRooms]);
+      } else {
+        setGchatError(true);
       }
-    } catch { /* Google Chat not connected */ }
+    } catch {
+      setGchatError(true);
+    }
     setGchatLoaded(true);
   }
 
-  // Load messages for active room
+  // Load messages
   const loadMessages = useCallback(async (room: ChatRoom) => {
     setLoading(true);
+    setMessages([]);
 
     if (room.type === "gchat" && room.gchatSpaceId) {
-      // Load from Google Chat
       try {
         const res = await fetch(`/api/google/chat?spaceId=${encodeURIComponent(room.gchatSpaceId)}&limit=30`);
         if (res.ok) {
@@ -147,75 +162,68 @@ export function ChatPanel() {
             sender_id: "",
             sender_name: m.sender,
             created_at: m.createTime,
-            room_id: room.id,
             source: "gchat" as const,
           })));
         }
       } catch { /* */ }
-    } else {
-      // Load from Supabase
+    } else if (tableReady) {
       const supabase = createClient();
       const { data } = await supabase
         .from("staff_chat_messages")
-        .select("id, content, sender_id, created_at, metadata")
+        .select("id, content, sender_id, metadata, created_at")
         .eq("room_id", room.id)
         .order("created_at", { ascending: true })
         .limit(50);
 
-      const msgs: Message[] = (data || []).map((m: any) => ({
-        id: m.id,
-        content: m.content,
-        sender_id: m.sender_id,
-        sender_name: m.metadata?.sender_name || "",
-        created_at: m.created_at,
-        room_id: room.id,
-        source: "internal" as const,
-      }));
-
-      // Resolve sender names
-      if (msgs.length > 0) {
-        const senderIds = [...new Set(msgs.map(m => m.sender_id).filter(Boolean))];
+      if (data) {
+        // Resolve sender names
+        const senderIds = [...new Set(data.map(m => m.sender_id).filter(Boolean))];
+        let nameMap: Record<string, string> = {};
         if (senderIds.length > 0) {
-          const supabase2 = createClient();
-          const { data: profiles } = await supabase2
+          const { data: profiles } = await supabase
             .from("profiles")
             .select("id, nickname")
             .in("id", senderIds);
-          const nameMap: Record<string, string> = {};
           (profiles || []).forEach(p => { nameMap[p.id] = p.nickname || "Unknown"; });
-          msgs.forEach(m => { m.sender_name = nameMap[m.sender_id] || m.sender_name || "Unknown"; });
         }
+
+        setMessages(data.map(m => ({
+          id: m.id,
+          content: m.content,
+          sender_id: m.sender_id,
+          sender_name: nameMap[m.sender_id] || (m.metadata as any)?.sender_name || "Unknown",
+          created_at: m.created_at,
+          source: "internal" as const,
+        })));
       }
-      setMessages(msgs);
     }
 
     setLoading(false);
     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-  }, []);
+  }, [tableReady]);
 
-  // Real-time subscription
+  // Realtime subscription
   useEffect(() => {
-    if (!activeRoom || activeRoom.type === "gchat") return;
+    if (!activeRoom || activeRoom.type === "gchat" || !tableReady) return;
     const supabase = createClient();
     const channel = supabase
-      .channel(`chat-${activeRoom.id}`)
+      .channel(`staff-chat-${activeRoom.id}`)
       .on("postgres_changes", {
         event: "INSERT",
         schema: "public",
         table: "staff_chat_messages",
         filter: `room_id=eq.${activeRoom.id}`,
       }, (payload: any) => {
-        const newMsg = payload.new;
-        // Resolve sender name from cache or use metadata
-        const senderName = staffMembers.find(s => s.id === newMsg.sender_id)?.nickname
-          || (newMsg.sender_id === userId ? userName : newMsg.metadata?.sender_name || "Unknown");
+        const n = payload.new;
+        if (n.sender_id === userId) return; // Skip own (already added optimistically)
+        const senderName = staffMembers.find(s => s.id === n.sender_id)?.nickname
+          || (n.metadata as any)?.sender_name || "Unknown";
         setMessages(prev => [...prev, {
-          id: newMsg.id,
-          content: newMsg.content,
-          sender_id: newMsg.sender_id,
+          id: n.id,
+          content: n.content,
+          sender_id: n.sender_id,
           sender_name: senderName,
-          created_at: newMsg.created_at,
-          room_id: newMsg.room_id,
+          created_at: n.created_at,
           source: "internal",
         }]);
         setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
@@ -223,36 +231,73 @@ export function ChatPanel() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [activeRoom, staffMembers, userId, userName]);
+  }, [activeRoom, staffMembers, userId, tableReady]);
 
+  // Send message
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
     if (!input.trim() || !activeRoom) return;
+    const text = input.trim();
     setSending(true);
 
     if (activeRoom.type === "gchat" && activeRoom.gchatSpaceId) {
-      // Send to Google Chat
       try {
-        await fetch("/api/google/chat", {
+        const res = await fetch("/api/google/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ spaceId: activeRoom.gchatSpaceId, text: input.trim() }),
+          body: JSON.stringify({ spaceId: activeRoom.gchatSpaceId, text }),
         });
-        setInput("");
-        await loadMessages(activeRoom);
-      } catch { /* */ }
-    } else {
-      // Send to Supabase
+        if (res.ok) {
+          setInput("");
+          await loadMessages(activeRoom);
+        } else {
+          toast.error("Google Chat 전송 실패");
+        }
+      } catch {
+        toast.error("Google Chat 연결 오류");
+      }
+    } else if (tableReady) {
+      // Optimistic update
+      const tempId = `temp-${Date.now()}`;
+      const optimisticMsg: Message = {
+        id: tempId,
+        content: text,
+        sender_id: userId,
+        sender_name: userName,
+        created_at: new Date().toISOString(),
+        source: "internal",
+      };
+      setMessages(prev => [...prev, optimisticMsg]);
+      setInput("");
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+
       const supabase = createClient();
-      const { error } = await supabase.from("staff_chat_messages").insert({
+      const { data, error } = await supabase.from("staff_chat_messages").insert({
         room_id: activeRoom.id,
         room_type: activeRoom.type === "dm" ? "dm" : activeRoom.type === "project" ? "project" : "team",
         sender_id: userId,
-        content: input.trim(),
+        content: text,
         metadata: { sender_name: userName },
-      });
-      if (!error) setInput("");
+      }).select("id").single();
+
+      if (error) {
+        // Remove optimistic message on failure
+        setMessages(prev => prev.filter(m => m.id !== tempId));
+        setInput(text); // Restore input
+        toast.error(`메시지 전송 실패: ${error.message}`);
+        console.error("Chat insert error:", error);
+      } else if (data) {
+        // Replace temp id with real id
+        setMessages(prev => prev.map(m => m.id === tempId ? { ...m, id: data.id } : m));
+        // Update room preview
+        setRooms(prev => prev.map(r =>
+          r.id === activeRoom.id ? { ...r, lastMessage: text.slice(0, 40), lastAt: new Date().toISOString() } : r
+        ));
+      }
+    } else {
+      toast.error("채팅 테이블이 준비되지 않았습니다. SQL 마이그레이션을 실행해주세요.");
     }
+
     setSending(false);
   }
 
@@ -262,18 +307,10 @@ export function ChatPanel() {
     setShowNewDM(false);
   }
 
-  async function startDM(memberId: string, memberName: string) {
-    const roomId = [userId, memberId].sort().join("-");
-    const dmRoom: ChatRoom = {
-      id: `dm-${roomId}`,
-      name: memberName,
-      type: "dm",
-    };
-    // Add to rooms if not exists
-    setRooms(prev => {
-      if (prev.some(r => r.id === dmRoom.id)) return prev;
-      return [...prev, dmRoom];
-    });
+  function startDM(memberId: string, memberName: string) {
+    const roomId = `dm-${[userId, memberId].sort().join("-")}`;
+    const dmRoom: ChatRoom = { id: roomId, name: memberName, type: "dm" };
+    setRooms(prev => prev.some(r => r.id === roomId) ? prev : [...prev, dmRoom]);
     openRoom(dmRoom);
   }
 
@@ -281,7 +318,7 @@ export function ChatPanel() {
     ? rooms.filter(r => r.name.toLowerCase().includes(search.toLowerCase()))
     : rooms;
 
-  const groupedRooms = {
+  const grouped = {
     team: filteredRooms.filter(r => r.type === "team"),
     project: filteredRooms.filter(r => r.type === "project"),
     dm: filteredRooms.filter(r => r.type === "dm"),
@@ -290,40 +327,44 @@ export function ChatPanel() {
 
   return (
     <>
-      {/* Floating chat button */}
+      {/* Floating button */}
       <button
         onClick={() => { setIsOpen(!isOpen); if (!gchatLoaded) loadGchatSpaces(); }}
         className={`fixed bottom-6 right-6 z-[450] w-14 h-14 rounded-full flex items-center justify-center cursor-pointer border-none shadow-lg transition-all ${
-          isOpen
-            ? "bg-nu-ink text-white rotate-0"
-            : "bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105"
+          isOpen ? "bg-nu-ink text-white" : "bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105"
         }`}
-        aria-label="채팅 열기"
+        aria-label="채팅"
       >
         {isOpen ? <X size={22} /> : <MessageCircle size={22} />}
       </button>
 
-      {/* Chat panel */}
+      {/* Panel */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-[449] w-[380px] max-h-[600px] bg-white border border-nu-ink/15 shadow-2xl flex flex-col overflow-hidden">
+        <div className="fixed bottom-24 right-6 z-[449] w-[380px] h-[560px] bg-white border border-nu-ink/15 shadow-2xl flex flex-col overflow-hidden">
           {!activeRoom ? (
             /* ── Room List ── */
-            <div className="flex flex-col h-full max-h-[600px]">
-              <div className="px-4 py-3 border-b border-nu-ink/[0.08] bg-indigo-600 text-white flex items-center justify-between">
+            <>
+              <div className="px-4 py-3 border-b border-nu-ink/[0.08] bg-indigo-600 text-white flex items-center justify-between shrink-0">
                 <h3 className="font-head text-sm font-bold flex items-center gap-2">
                   <MessageCircle size={16} /> 스태프 채팅
                 </h3>
-                <button
-                  onClick={() => setShowNewDM(!showNewDM)}
-                  className="p-1 bg-transparent border-none cursor-pointer text-white/80 hover:text-white"
-                  aria-label="새 대화"
-                >
+                <button onClick={() => setShowNewDM(!showNewDM)} className="p-1 bg-transparent border-none cursor-pointer text-white/80 hover:text-white" aria-label="새 대화">
                   <Plus size={16} />
                 </button>
               </div>
 
+              {/* Table not ready warning */}
+              {tableReady === false && (
+                <div className="px-4 py-2 bg-red-50 border-b border-red-200 flex items-center gap-2">
+                  <AlertCircle size={12} className="text-red-500 shrink-0" />
+                  <p className="font-mono-nu text-[8px] text-red-600">
+                    DB 테이블 미생성. Supabase SQL Editor에서 031_staff_chat.sql 실행 필요
+                  </p>
+                </div>
+              )}
+
               {/* Search */}
-              <div className="px-3 py-2 border-b border-nu-ink/5">
+              <div className="px-3 py-2 border-b border-nu-ink/5 shrink-0">
                 <div className="relative">
                   <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-nu-muted" />
                   <input
@@ -337,14 +378,11 @@ export function ChatPanel() {
 
               {/* New DM picker */}
               {showNewDM && (
-                <div className="border-b border-nu-ink/[0.08] bg-indigo-50/50 px-3 py-2 max-h-32 overflow-y-auto">
+                <div className="border-b border-nu-ink/[0.08] bg-indigo-50/50 px-3 py-2 max-h-32 overflow-y-auto shrink-0">
                   <p className="font-mono-nu text-[8px] uppercase tracking-widest text-indigo-600 font-bold mb-1">다이렉트 메시지</p>
                   {staffMembers.map(s => (
-                    <button
-                      key={s.id}
-                      onClick={() => startDM(s.id, s.nickname || "Unknown")}
-                      className="flex items-center gap-2 w-full px-2 py-1.5 text-left hover:bg-indigo-100 transition-colors bg-transparent border-none cursor-pointer"
-                    >
+                    <button key={s.id} onClick={() => startDM(s.id, s.nickname || "Unknown")}
+                      className="flex items-center gap-2 w-full px-2 py-1.5 text-left hover:bg-indigo-100 transition-colors bg-transparent border-none cursor-pointer">
                       <div className="w-5 h-5 rounded-full bg-indigo-200 flex items-center justify-center font-head text-[8px] font-bold text-indigo-600">
                         {(s.nickname || "U").charAt(0)}
                       </div>
@@ -356,64 +394,37 @@ export function ChatPanel() {
 
               {/* Room list */}
               <div className="flex-1 overflow-y-auto">
-                {/* Team */}
-                {groupedRooms.team.length > 0 && (
-                  <div>
-                    <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted px-4 pt-3 pb-1 font-bold">팀</p>
-                    {groupedRooms.team.map(r => (
-                      <RoomItem key={r.id} room={r} onClick={() => openRoom(r)} icon={<Users size={14} className="text-indigo-500" />} />
-                    ))}
-                  </div>
+                {grouped.team.length > 0 && (
+                  <RoomGroup label="팀" rooms={grouped.team} onSelect={openRoom}
+                    icon={(r) => <Users size={14} className="text-indigo-500" />} />
                 )}
-
-                {/* Projects */}
-                {groupedRooms.project.length > 0 && (
-                  <div>
-                    <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted px-4 pt-3 pb-1 font-bold">프로젝트</p>
-                    {groupedRooms.project.map(r => (
-                      <RoomItem key={r.id} room={r} onClick={() => openRoom(r)} icon={<Hash size={14} className="text-green-500" />} />
-                    ))}
-                  </div>
+                {grouped.project.length > 0 && (
+                  <RoomGroup label="프로젝트" rooms={grouped.project} onSelect={openRoom}
+                    icon={(r) => <Hash size={14} className="text-green-500" />} />
                 )}
-
-                {/* DMs */}
-                {groupedRooms.dm.length > 0 && (
-                  <div>
-                    <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted px-4 pt-3 pb-1 font-bold">다이렉트</p>
-                    {groupedRooms.dm.map(r => (
-                      <RoomItem key={r.id} room={r} onClick={() => openRoom(r)} icon={
-                        <div className="w-4 h-4 rounded-full bg-amber-200 flex items-center justify-center font-head text-[7px] font-bold text-amber-700">
-                          {r.name.charAt(0)}
-                        </div>
-                      } />
-                    ))}
-                  </div>
+                {grouped.dm.length > 0 && (
+                  <RoomGroup label="다이렉트" rooms={grouped.dm} onSelect={openRoom}
+                    icon={(r) => <div className="w-4 h-4 rounded-full bg-amber-200 flex items-center justify-center font-head text-[7px] font-bold text-amber-700">{r.name.charAt(0)}</div>} />
                 )}
-
-                {/* Google Chat */}
-                {groupedRooms.gchat.length > 0 && (
-                  <div>
-                    <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted px-4 pt-3 pb-1 font-bold flex items-center gap-1">
-                      <ExternalLink size={8} /> Google Chat
-                    </p>
-                    {groupedRooms.gchat.map(r => (
-                      <RoomItem key={r.id} room={r} onClick={() => openRoom(r)} icon={<MessageCircle size={14} className="text-blue-500" />} />
-                    ))}
+                {grouped.gchat.length > 0 && (
+                  <RoomGroup label="Google Chat" rooms={grouped.gchat} onSelect={openRoom}
+                    icon={(r) => <MessageCircle size={14} className="text-blue-500" />} />
+                )}
+                {gchatError && (
+                  <div className="px-4 py-3">
+                    <p className="font-mono-nu text-[8px] text-nu-muted">Google Chat 미연결</p>
                   </div>
                 )}
               </div>
-            </div>
+            </>
           ) : (
             /* ── Chat View ── */
-            <div className="flex flex-col h-[600px]">
+            <>
               {/* Header */}
               <div className="px-4 py-3 border-b border-nu-ink/[0.08] bg-indigo-600 text-white flex items-center gap-3 shrink-0">
-                <button
-                  onClick={() => { setActiveRoom(null); setMessages([]); }}
-                  className="p-1 bg-transparent border-none cursor-pointer text-white/80 hover:text-white"
-                  aria-label="뒤로"
-                >
-                  <ChevronDown size={16} className="rotate-90" />
+                <button onClick={() => { setActiveRoom(null); setMessages([]); }}
+                  className="p-1 bg-transparent border-none cursor-pointer text-white/80 hover:text-white" aria-label="뒤로">
+                  <ChevronLeft size={16} />
                 </button>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-head text-sm font-bold truncate">{activeRoom.name}</h3>
@@ -442,7 +453,7 @@ export function ChatPanel() {
                     const isMe = msg.sender_id === userId;
                     return (
                       <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
-                        <div className={`max-w-[75%] ${isMe ? "order-2" : "order-1"}`}>
+                        <div className={`max-w-[75%]`}>
                           {!isMe && (
                             <p className="font-mono-nu text-[8px] text-nu-muted mb-0.5 flex items-center gap-1">
                               {msg.source === "gchat" && <ExternalLink size={7} className="text-blue-400" />}
@@ -473,24 +484,24 @@ export function ChatPanel() {
               <form onSubmit={handleSend} className="px-3 py-2 border-t border-nu-ink/[0.08] bg-white shrink-0">
                 <div className="flex gap-2">
                   <textarea
-                    ref={inputRef}
                     value={input}
                     onChange={e => setInput(e.target.value)}
                     onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(e); } }}
-                    placeholder="메시지 입력... (Enter로 전송)"
+                    placeholder={tableReady === false ? "DB 테이블 미생성..." : "메시지 입력... (Enter 전송)"}
+                    disabled={tableReady === false && activeRoom.type !== "gchat"}
                     rows={1}
-                    className="flex-1 px-3 py-2 text-sm border border-nu-ink/10 bg-transparent outline-none resize-none focus:border-indigo-300"
+                    className="flex-1 px-3 py-2 text-sm border border-nu-ink/10 bg-transparent outline-none resize-none focus:border-indigo-300 disabled:opacity-50"
                   />
                   <button
                     type="submit"
-                    disabled={sending || !input.trim()}
+                    disabled={sending || !input.trim() || (tableReady === false && activeRoom.type !== "gchat")}
                     className="px-3 bg-indigo-600 text-white border-none cursor-pointer hover:bg-indigo-700 disabled:opacity-50 transition-colors shrink-0"
                   >
                     <Send size={14} />
                   </button>
                 </div>
               </form>
-            </div>
+            </>
           )}
         </div>
       )}
@@ -498,24 +509,35 @@ export function ChatPanel() {
   );
 }
 
-function RoomItem({ room, onClick, icon }: { room: ChatRoom; onClick: () => void; icon: React.ReactNode }) {
+function RoomGroup({ label, rooms, onSelect, icon }: {
+  label: string;
+  rooms: ChatRoom[];
+  onSelect: (r: ChatRoom) => void;
+  icon: (r: ChatRoom) => React.ReactNode;
+}) {
   return (
-    <button
-      onClick={onClick}
-      className="flex items-center gap-3 w-full px-4 py-2.5 text-left hover:bg-indigo-50/50 transition-colors bg-transparent border-none cursor-pointer"
-    >
-      {icon}
-      <div className="flex-1 min-w-0">
-        <p className="font-head text-xs font-bold text-nu-ink truncate">{room.name}</p>
-        {room.lastMessage && (
-          <p className="font-mono-nu text-[8px] text-nu-muted truncate">{room.lastMessage}</p>
-        )}
-      </div>
-      {room.lastAt && (
-        <span className="font-mono-nu text-[7px] text-nu-muted/50 shrink-0">
-          {new Date(room.lastAt).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}
-        </span>
-      )}
-    </button>
+    <div>
+      <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted px-4 pt-3 pb-1 font-bold">{label}</p>
+      {rooms.map(r => (
+        <button
+          key={r.id}
+          onClick={() => onSelect(r)}
+          className="flex items-center gap-3 w-full px-4 py-2.5 text-left hover:bg-indigo-50/50 transition-colors bg-transparent border-none cursor-pointer"
+        >
+          {icon(r)}
+          <div className="flex-1 min-w-0">
+            <p className="font-head text-xs font-bold text-nu-ink truncate">{r.name}</p>
+            {r.lastMessage && (
+              <p className="font-mono-nu text-[8px] text-nu-muted truncate">{r.lastMessage}</p>
+            )}
+          </div>
+          {r.lastAt && (
+            <span className="font-mono-nu text-[7px] text-nu-muted/50 shrink-0">
+              {new Date(r.lastAt).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
   );
 }
