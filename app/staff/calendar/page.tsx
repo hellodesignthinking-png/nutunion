@@ -75,12 +75,19 @@ export default function StaffCalendarPage() {
     setCreating(false);
   }
 
-  const groupedByDate = events.reduce<Record<string, CalendarEvent[]>>((acc, ev) => {
-    const date = new Date(ev.start).toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "short" });
-    if (!acc[date]) acc[date] = [];
-    acc[date].push(ev);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const groupedByDate = events.reduce<Record<string, { events: CalendarEvent[]; dateObj: Date }>>((acc, ev) => {
+    const dateObj = new Date(ev.start);
+    const dateKey = dateObj.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "short" });
+    if (!acc[dateKey]) acc[dateKey] = { events: [], dateObj };
+    acc[dateKey].events.push(ev);
     return acc;
   }, {});
+
+  const upcomingCount = events.filter(ev => new Date(ev.start) >= today).length;
+  const pastCount = events.filter(ev => new Date(ev.start) < today).length;
 
   if (loading) {
     return (
@@ -96,7 +103,9 @@ export default function StaffCalendarPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-head text-3xl font-extrabold text-nu-ink">캘린더</h1>
-          <p className="font-mono-nu text-[11px] text-nu-muted mt-1 uppercase tracking-widest">Google Calendar</p>
+          <p className="font-mono-nu text-[11px] text-nu-muted mt-1 uppercase tracking-widest">
+            Google Calendar{events.length > 0 && ` · ${upcomingCount}개 예정`}{pastCount > 0 && ` · ${pastCount}개 지남`}
+          </p>
         </div>
         {!error && (
           <Button
@@ -161,10 +170,18 @@ export default function StaffCalendarPage() {
         </div>
       ) : (
         <div className="space-y-8">
-          {Object.entries(groupedByDate).map(([date, dayEvents]) => (
+          {Object.entries(groupedByDate).map(([date, { events: dayEvents, dateObj }]) => {
+            const dayStart = new Date(dateObj); dayStart.setHours(0, 0, 0, 0);
+            const isToday = dayStart.getTime() === today.getTime();
+            const isPast = dayStart < today;
+            return (
             <div key={date}>
-              <h2 className="font-mono-nu text-[11px] uppercase tracking-widest font-bold text-indigo-600 mb-3 sticky top-[60px] bg-nu-paper py-2 z-10">
+              <h2 className={`font-mono-nu text-[11px] uppercase tracking-widest font-bold mb-3 sticky top-[60px] py-2 z-10 flex items-center gap-2 ${
+                isToday ? "text-indigo-600 bg-indigo-50/50" : isPast ? "text-nu-muted bg-nu-paper" : "text-indigo-600 bg-nu-paper"
+              }`}>
+                {isToday && <span className="w-2 h-2 rounded-full bg-indigo-600 inline-block" />}
                 {date}
+                {isToday && <span className="text-[9px] font-normal ml-1">오늘</span>}
               </h2>
               <div className="space-y-2">
                 {dayEvents.map(ev => (
@@ -201,7 +218,8 @@ export default function StaffCalendarPage() {
                 ))}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

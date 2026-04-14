@@ -438,6 +438,19 @@ export default function StaffProjectDetailPage() {
           </div>
           <h1 className="font-head text-2xl font-extrabold text-nu-ink">{project.title}</h1>
           {project.description && <p className="text-sm text-nu-muted mt-1">{project.description}</p>}
+          {/* Progress bar */}
+          {tasks.length > 0 && (() => {
+            const doneCount = tasks.filter(t => t.status === "done").length;
+            const progress = Math.round((doneCount / tasks.length) * 100);
+            return (
+              <div className="mt-3 max-w-xs">
+                <div className="h-1.5 bg-nu-ink/5 w-full">
+                  <div className="h-1.5 bg-indigo-600 transition-all" style={{ width: `${progress}%` }} />
+                </div>
+                <p className="font-mono-nu text-[8px] text-nu-muted mt-1">{progress}% 완료 · {doneCount}/{tasks.length} 태스크</p>
+              </div>
+            );
+          })()}
         </div>
         <div className="flex items-center gap-2">
           {project.drive_folder_url && (

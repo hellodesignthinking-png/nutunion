@@ -15,6 +15,7 @@ export default function StaffTasksPage() {
   const [filter, setFilter] = useState<"all" | "mine">("mine");
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("active");
   const [userId, setUserId] = useState("");
 
   // Quick-add task
@@ -130,8 +131,10 @@ export default function StaffTasksPage() {
     if (filter === "mine") result = result.filter(t => t.assigned_to === userId);
     if (projectFilter !== "all") result = result.filter(t => t.project_id === projectFilter);
     if (priorityFilter !== "all") result = result.filter(t => t.priority === priorityFilter);
+    if (statusFilter === "active") result = result.filter(t => t.status !== "done");
+    else if (statusFilter === "done") result = result.filter(t => t.status === "done");
     return result;
-  }, [tasks, filter, userId, projectFilter, priorityFilter]);
+  }, [tasks, filter, userId, projectFilter, priorityFilter, statusFilter]);
 
   const grouped = useMemo(() => ({
     inProgress: filteredTasks.filter(t => t.status === "in_progress"),
@@ -256,9 +259,20 @@ export default function StaffTasksPage() {
           <option value="low">낮음</option>
         </select>
 
-        {(projectFilter !== "all" || priorityFilter !== "all") && (
+        {/* Status filter */}
+        <select
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}
+          className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 border border-nu-ink/15 bg-transparent cursor-pointer"
+        >
+          <option value="active">미완료</option>
+          <option value="all">전체</option>
+          <option value="done">완료만</option>
+        </select>
+
+        {(projectFilter !== "all" || priorityFilter !== "all" || statusFilter !== "active") && (
           <button
-            onClick={() => { setProjectFilter("all"); setPriorityFilter("all"); }}
+            onClick={() => { setProjectFilter("all"); setPriorityFilter("all"); setStatusFilter("active"); }}
             className="font-mono-nu text-[10px] text-nu-muted hover:text-nu-ink bg-transparent border-none cursor-pointer underline"
           >
             필터 초기화

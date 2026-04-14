@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { FolderOpen, CheckSquare, FileText, Calendar, Plus, ArrowRight, Clock } from "lucide-react";
+import { FolderOpen, CheckSquare, FileText, Calendar, Plus, ArrowRight, Clock, Activity } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 export default async function StaffDashboardPage() {
   const supabase = await createClient();
@@ -61,10 +63,29 @@ export default async function StaffDashboardPage() {
         </div>
         <Link
           href="/staff/workspace/create"
-          className="hidden sm:inline-flex items-center gap-2 font-mono-nu text-[11px] uppercase tracking-widest px-5 py-2.5 bg-indigo-600 text-white no-underline hover:bg-indigo-700 transition-colors"
+          className="inline-flex items-center gap-2 font-mono-nu text-[11px] uppercase tracking-widest px-5 py-2.5 bg-indigo-600 text-white no-underline hover:bg-indigo-700 transition-colors"
         >
-          <Plus size={14} /> 새 프로젝트
+          <Plus size={14} /> <span className="hidden sm:inline">새 프로젝트</span><span className="sm:hidden">추가</span>
         </Link>
+      </div>
+
+      {/* Quick Links */}
+      <div className="grid grid-cols-4 gap-3 mb-8">
+        {[
+          { label: "프로젝트", href: "/staff/workspace", icon: <FolderOpen size={16} /> },
+          { label: "할일", href: "/staff/tasks", icon: <CheckSquare size={16} /> },
+          { label: "파일", href: "/staff/files", icon: <FileText size={16} /> },
+          { label: "캘린더", href: "/staff/calendar", icon: <Calendar size={16} /> },
+        ].map((q) => (
+          <Link
+            key={q.href}
+            href={q.href}
+            className="flex flex-col items-center gap-2 py-4 bg-white border border-nu-ink/[0.06] hover:border-indigo-200 hover:bg-indigo-50/30 transition-all no-underline group"
+          >
+            <span className="text-nu-muted group-hover:text-indigo-600 transition-colors">{q.icon}</span>
+            <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-graphite group-hover:text-indigo-600">{q.label}</span>
+          </Link>
+        ))}
       </div>
 
       {/* Stats Cards */}
@@ -238,7 +259,7 @@ export default async function StaffDashboardPage() {
           <section className="bg-white border border-nu-ink/[0.06]">
             <div className="p-4 border-b border-nu-ink/5">
               <h3 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
-                <Calendar size={14} className="text-indigo-600" /> 최근 활동
+                <Activity size={14} className="text-indigo-600" /> 최근 활동
               </h3>
             </div>
             {recentActivity && recentActivity.length > 0 ? (

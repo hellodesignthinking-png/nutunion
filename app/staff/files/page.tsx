@@ -12,6 +12,7 @@ export default function StaffFilesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [projectFilter, setProjectFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"newest" | "name" | "size">("newest");
 
   useEffect(() => {
     async function load() {
@@ -42,8 +43,10 @@ export default function StaffFilesPage() {
         f.ai_summary?.toLowerCase().includes(q)
       );
     }
+    if (sortBy === "name") result = [...result].sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+    else if (sortBy === "size") result = [...result].sort((a, b) => (b.file_size || 0) - (a.file_size || 0));
     return result;
-  }, [files, projectFilter, search]);
+  }, [files, projectFilter, search, sortBy]);
 
   const mimeIcon = (mime: string | null) => {
     if (!mime) return "📄";
@@ -106,6 +109,15 @@ export default function StaffFilesPage() {
           {projects.map(p => (
             <option key={p.id} value={p.id}>{p.title}</option>
           ))}
+        </select>
+        <select
+          value={sortBy}
+          onChange={e => setSortBy(e.target.value as any)}
+          className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-2 border border-nu-ink/15 bg-transparent cursor-pointer"
+        >
+          <option value="newest">최신순</option>
+          <option value="name">이름순</option>
+          <option value="size">크기순</option>
         </select>
       </div>
 
