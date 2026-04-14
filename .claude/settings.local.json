@@ -110,7 +110,8 @@
       "Bash(xargs -I {} basename {})",
       "Bash(grep -r \"google_\" /Users/TaiNa0/Desktop/nutunion/supabase/migrations/*.sql)",
       "Bash(find \"app/\\(staff\\)/workspace\" -name \"*.tsx\" -exec grep -l \"staff/projects\" {} \\\\;)",
-      "Bash(grep -n \"staff_files_created_by_fkey\\\\|staff_tasks_assigned_to_fkey\\\\|staff_project_members_user_id_fkey\\\\|staff_comments_author_id_fkey\\\\|staff_activity_user_id_fkey\" /Users/TaiNa0/Desktop/nutunion/app/\\\\\\(staff\\\\\\)/**/*.tsx)"
+      "Bash(grep -n \"staff_files_created_by_fkey\\\\|staff_tasks_assigned_to_fkey\\\\|staff_project_members_user_id_fkey\\\\|staff_comments_author_id_fkey\\\\|staff_activity_user_id_fkey\" /Users/TaiNa0/Desktop/nutunion/app/\\\\\\(staff\\\\\\)/**/*.tsx)",
+      "Bash(npx supabase:*)"
     ]
   }
 }
