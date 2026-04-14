@@ -786,59 +786,16 @@ export default function StaffProjectDetailPage() {
 
       {/* ═══ ACTIVITY / DISCUSSION TAB ═══ */}
       {activeTab === "activity" && (
-        <div>
-          {/* Comment input */}
-          <form onSubmit={handleAddComment} className="mb-6">
-            <div className="flex gap-2">
-              <Textarea
-                value={newComment}
-                onChange={e => setNewComment(e.target.value)}
-                placeholder="팀에게 메시지를 남겨주세요..."
-                rows={2}
-                className="flex-1 border-nu-ink/15 bg-white resize-none"
-              />
-              <Button type="submit" disabled={submittingComment || !newComment.trim()} className="bg-indigo-600 text-white hover:bg-indigo-700 self-end px-3">
-                <Send size={14} />
-              </Button>
-            </div>
-          </form>
-
-          {comments.length > 0 ? (
-            <div className="space-y-3">
-              {comments.map(c => (
-                <div key={c.id} className="px-4 py-3 bg-white border border-nu-ink/[0.06]">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center font-head text-[10px] font-bold text-indigo-600">
-                      {((c.author as any)?.nickname || "U").charAt(0)}
-                    </div>
-                    <span className="font-head text-xs font-bold text-nu-ink">{(c.author as any)?.nickname || "Unknown"}</span>
-                    <span className="font-mono-nu text-[8px] text-nu-muted">
-                      {new Date(c.created_at).toLocaleDateString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                    </span>
-                  </div>
-                  <div className="flex items-start justify-between">
-                    <p className="text-sm text-nu-ink whitespace-pre-wrap pl-8 flex-1">{c.content}</p>
-                    {c.author_id === userId && (
-                      <button
-                        onClick={() => handleDeleteComment(c.id)}
-                        className="text-nu-muted hover:text-red-500 transition-colors bg-transparent border-none cursor-pointer p-1 shrink-0 ml-2"
-                        aria-label="댓글 삭제"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="border-2 border-dashed border-nu-ink/10 p-12 text-center bg-white/50">
-              <MessageSquare size={32} className="mx-auto mb-3 text-nu-ink/15" />
-              <p className="text-sm text-nu-muted">아직 토론이 없습니다</p>
-              <p className="text-xs text-nu-muted mt-1">팀원들과 의견을 나눠보세요</p>
-            </div>
-          )}
-        </div>
+        <DiscussionTab
+          projectId={id}
+          userId={userId}
+          comments={comments}
+          newComment={newComment}
+          setNewComment={setNewComment}
+          submittingComment={submittingComment}
+          handleAddComment={handleAddComment}
+          handleDeleteComment={handleDeleteComment}
+        />
       )}
 
       {/* ═══ SETTINGS TAB ═══ */}
@@ -903,6 +860,276 @@ export default function StaffProjectDetailPage() {
               <Trash2 size={12} /> 프로젝트 삭제
             </Button>
           </section>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Discussion Tab with Google Chat integration ─────────
+
+interface ChatSpace {
+  id: string;
+  displayName: string;
+  type: string;
+}
+
+interface ChatMessage {
+  id: string;
+  text: string;
+  sender: string;
+  senderType: string;
+  createTime: string;
+}
+
+function DiscussionTab({
+  projectId,
+  userId,
+  comments,
+  newComment,
+  setNewComment,
+  submittingComment,
+  handleAddComment,
+  handleDeleteComment,
+}: {
+  projectId: string;
+  userId: string;
+  comments: any[];
+  newComment: string;
+  setNewComment: (v: string) => void;
+  submittingComment: boolean;
+  handleAddComment: (e: React.FormEvent) => void;
+  handleDeleteComment: (id: string) => void;
+}) {
+  const [chatSpaces, setChatSpaces] = useState<ChatSpace[]>([]);
+  const [selectedSpace, setSelectedSpace] = useState<string>("");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatConnected, setChatConnected] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [sendingChat, setSendingChat] = useState(false);
+  const [showChatPanel, setShowChatPanel] = useState(false);
+
+  async function loadSpaces() {
+    setChatLoading(true);
+    try {
+      const res = await fetch("/api/google/chat");
+      if (!res.ok) { setChatError(true); setChatLoading(false); return; }
+      const data = await res.json();
+      setChatSpaces(data.spaces || []);
+      setChatConnected(true);
+    } catch {
+      setChatError(true);
+    }
+    setChatLoading(false);
+  }
+
+  async function loadMessages(spaceId: string) {
+    setChatLoading(true);
+    try {
+      const res = await fetch(`/api/google/chat?spaceId=${encodeURIComponent(spaceId)}&limit=20`);
+      if (!res.ok) { setChatLoading(false); return; }
+      const data = await res.json();
+      setChatMessages(data.messages || []);
+    } catch {
+      // silent fail
+    }
+    setChatLoading(false);
+  }
+
+  async function handleSendChat(e: React.FormEvent) {
+    e.preventDefault();
+    if (!chatInput.trim() || !selectedSpace) return;
+    setSendingChat(true);
+    try {
+      const res = await fetch("/api/google/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          spaceId: selectedSpace,
+          text: chatInput.trim(),
+        }),
+      });
+      if (res.ok) {
+        setChatInput("");
+        await loadMessages(selectedSpace);
+      }
+    } catch {
+      // silent fail
+    }
+    setSendingChat(false);
+  }
+
+  return (
+    <div>
+      {/* Toggle between internal & Google Chat */}
+      <div className="flex gap-1 mb-4">
+        <button
+          onClick={() => setShowChatPanel(false)}
+          className={`font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 border cursor-pointer transition-colors ${
+            !showChatPanel ? "bg-indigo-600 text-white border-indigo-600" : "bg-transparent text-nu-muted border-nu-ink/15 hover:border-indigo-300"
+          }`}
+        >
+          <MessageSquare size={12} className="inline mr-1" /> 내부 토론
+        </button>
+        <button
+          onClick={() => { setShowChatPanel(true); if (!chatConnected && !chatError) loadSpaces(); }}
+          className={`font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 border cursor-pointer transition-colors ${
+            showChatPanel ? "bg-indigo-600 text-white border-indigo-600" : "bg-transparent text-nu-muted border-nu-ink/15 hover:border-indigo-300"
+          }`}
+        >
+          <ExternalLink size={12} className="inline mr-1" /> Google Chat
+        </button>
+      </div>
+
+      {!showChatPanel ? (
+        /* Internal Discussion */
+        <div>
+          <form onSubmit={handleAddComment} className="mb-6">
+            <div className="flex gap-2">
+              <Textarea
+                value={newComment}
+                onChange={e => setNewComment(e.target.value)}
+                placeholder="팀에게 메시지를 남겨주세요..."
+                rows={2}
+                className="flex-1 border-nu-ink/15 bg-white resize-none"
+              />
+              <Button type="submit" disabled={submittingComment || !newComment.trim()} className="bg-indigo-600 text-white hover:bg-indigo-700 self-end px-3">
+                <Send size={14} />
+              </Button>
+            </div>
+          </form>
+
+          {comments.length > 0 ? (
+            <div className="space-y-3">
+              {comments.map((c: any) => (
+                <div key={c.id} className="px-4 py-3 bg-white border border-nu-ink/[0.06]">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center font-head text-[10px] font-bold text-indigo-600">
+                      {((c.author as any)?.nickname || "U").charAt(0)}
+                    </div>
+                    <span className="font-head text-xs font-bold text-nu-ink">{(c.author as any)?.nickname || "Unknown"}</span>
+                    <span className="font-mono-nu text-[8px] text-nu-muted">
+                      {new Date(c.created_at).toLocaleDateString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                  <div className="flex items-start justify-between">
+                    <p className="text-sm text-nu-ink whitespace-pre-wrap pl-8 flex-1">{c.content}</p>
+                    {c.author_id === userId && (
+                      <button
+                        onClick={() => handleDeleteComment(c.id)}
+                        className="text-nu-muted hover:text-red-500 transition-colors bg-transparent border-none cursor-pointer p-1 shrink-0 ml-2"
+                        aria-label="댓글 삭제"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="border-2 border-dashed border-nu-ink/10 p-12 text-center bg-white/50">
+              <MessageSquare size={32} className="mx-auto mb-3 text-nu-ink/15" />
+              <p className="text-sm text-nu-muted">아직 토론이 없습니다</p>
+              <p className="text-xs text-nu-muted mt-1">팀원들과 의견을 나눠보세요</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Google Chat Panel */
+        <div>
+          {chatError ? (
+            <div className="border-2 border-dashed border-nu-ink/10 p-12 text-center bg-white/50">
+              <MessageSquare size={32} className="mx-auto mb-3 text-nu-ink/15" />
+              <p className="text-sm text-nu-muted mb-2">Google Chat 연결이 필요합니다</p>
+              <p className="text-xs text-nu-muted">Google 계정을 연결한 후 Chat 권한을 허용해주세요</p>
+              <a
+                href="/profile"
+                className="inline-block mt-3 font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 bg-indigo-600 text-white no-underline hover:bg-indigo-700"
+              >
+                Google 계정 연결
+              </a>
+            </div>
+          ) : chatLoading && chatSpaces.length === 0 ? (
+            <div className="p-8 text-center">
+              <div className="h-8 w-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+              <p className="font-mono-nu text-[10px] text-nu-muted">Google Chat 로딩 중...</p>
+            </div>
+          ) : (
+            <div>
+              {/* Space selector */}
+              <div className="mb-4">
+                <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-gray block mb-1">채팅 스페이스 선택</label>
+                <select
+                  value={selectedSpace}
+                  onChange={e => {
+                    setSelectedSpace(e.target.value);
+                    if (e.target.value) loadMessages(e.target.value);
+                  }}
+                  className="w-full px-3 py-2 border border-nu-ink/15 bg-transparent text-sm"
+                >
+                  <option value="">스페이스를 선택하세요</option>
+                  {chatSpaces.map(s => (
+                    <option key={s.id} value={s.id}>{s.displayName}</option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedSpace && (
+                <>
+                  {/* Messages */}
+                  <div className="border border-nu-ink/[0.06] bg-white mb-3 max-h-[400px] overflow-y-auto">
+                    {chatMessages.length > 0 ? (
+                      <div className="divide-y divide-nu-ink/5">
+                        {[...chatMessages].reverse().map(msg => (
+                          <div key={msg.id} className="px-4 py-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center font-head text-[8px] font-bold text-green-600">
+                                {msg.sender.charAt(0)}
+                              </div>
+                              <span className="font-head text-xs font-bold text-nu-ink">{msg.sender}</span>
+                              <span className="font-mono-nu text-[8px] text-nu-muted">
+                                {new Date(msg.createTime).toLocaleDateString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                              <span className="font-mono-nu text-[7px] px-1 py-px bg-green-50 text-green-600 uppercase">Chat</span>
+                            </div>
+                            <p className="text-sm text-nu-ink whitespace-pre-wrap pl-7">{msg.text}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-8 text-center">
+                        <p className="font-mono-nu text-[10px] text-nu-muted">메시지가 없습니다</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Send message */}
+                  <form onSubmit={handleSendChat} className="flex gap-2">
+                    <Textarea
+                      value={chatInput}
+                      onChange={e => setChatInput(e.target.value)}
+                      placeholder="Google Chat으로 메시지 보내기..."
+                      rows={2}
+                      className="flex-1 border-nu-ink/15 bg-white resize-none"
+                    />
+                    <Button type="submit" disabled={sendingChat || !chatInput.trim()} className="bg-green-600 text-white hover:bg-green-700 self-end px-3">
+                      <Send size={14} />
+                    </Button>
+                  </form>
+                </>
+              )}
+
+              {!selectedSpace && chatSpaces.length === 0 && !chatLoading && (
+                <div className="border-2 border-dashed border-nu-ink/10 p-8 text-center bg-white/50">
+                  <p className="font-mono-nu text-[10px] text-nu-muted">Google Chat 스페이스가 없습니다</p>
+                  <p className="font-mono-nu text-[9px] text-nu-muted/60 mt-1">Google Chat에서 먼저 스페이스를 만들어주세요</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

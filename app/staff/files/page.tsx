@@ -2,35 +2,132 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { FileText, ExternalLink, Search, X } from "lucide-react";
+import { FileText, ExternalLink, Search, X, Plus, Upload, FolderOpen } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import Link from "next/link";
 
 export default function StaffFilesPage() {
   const [files, setFiles] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
+  const [boltProjects, setBoltProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"newest" | "name" | "size">("newest");
+  const [userId, setUserId] = useState("");
+
+  // Create file states
+  const [showCreate, setShowCreate] = useState(false);
+  const [createMode, setCreateMode] = useState<"doc" | "sheet" | "link">("doc");
+  const [newTitle, setNewTitle] = useState("");
+  const [newProjectId, setNewProjectId] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     async function load() {
       const supabase = createClient();
-      const [{ data: fileData }, { data: projData }] = await Promise.all([
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) setUserId(user.id);
+
+      const [{ data: fileData }, { data: projData }, { data: boltData }] = await Promise.all([
         supabase
           .from("staff_files")
           .select("*, project:staff_projects(id, title), creator:profiles!staff_files_created_by_fkey(nickname)")
           .order("created_at", { ascending: false })
           .limit(200),
         supabase.from("staff_projects").select("id, title").order("title"),
+        supabase.from("projects").select("id, title").eq("status", "active").order("title"),
       ]);
       setFiles(fileData || []);
       setProjects(projData || []);
+      setBoltProjects(boltData || []);
       setLoading(false);
     }
     load();
   }, []);
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newTitle.trim()) return;
+    setCreating(true);
+
+    try {
+      if (createMode === "link") {
+        // Drive URL 연결
+        if (!linkUrl.trim()) { toast.error("URL을 입력하세요"); setCreating(false); return; }
+        const match = linkUrl.match(/(?:\/d\/|\/folders\/|id=)([a-zA-Z0-9_-]+)/);
+        if (!match) { toast.error("올바른 Google Drive URL이 아닙니다"); setCreating(false); return; }
+        const driveFileId = match[1];
+
+        const res = await fetch(`/api/google/drive?fileId=${driveFileId}`);
+        if (!res.ok) { toast.error("파일 정보를 가져올 수 없습니다"); setCreating(false); return; }
+        const { file: fileInfo } = await res.json();
+
+        const supabase = createClient();
+        const { error } = await supabase.from("staff_files").insert({
+          project_id: newProjectId || null,
+          drive_file_id: driveFileId,
+          title: fileInfo?.name || newTitle.trim(),
+          mime_type: fileInfo?.mimeType || null,
+          drive_url: fileInfo?.webViewLink || linkUrl,
+          file_size: fileInfo?.size ? parseInt(fileInfo.size) : null,
+          thumbnail_url: fileInfo?.thumbnailLink || null,
+          created_by: userId,
+        });
+        if (error) { toast.error("파일 연결 실패"); setCreating(false); return; }
+        toast.success("파일이 연결되었습니다");
+      } else {
+        // Google Docs/Sheets 생성
+        const endpoint = createMode === "doc" ? "/api/google/docs/create" : "/api/google/docs/create";
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: `[Staff] ${newTitle.trim()}`,
+          }),
+        });
+        if (!res.ok) { toast.error("문서 생성 실패. Google 계정 연결을 확인해주세요."); setCreating(false); return; }
+        const doc = await res.json();
+
+        const supabase = createClient();
+        const mimeType = createMode === "doc"
+          ? "application/vnd.google-apps.document"
+          : "application/vnd.google-apps.spreadsheet";
+        const driveUrl = createMode === "doc"
+          ? `https://docs.google.com/document/d/${doc.documentId}/edit`
+          : `https://docs.google.com/spreadsheets/d/${doc.documentId}/edit`;
+
+        const { error } = await supabase.from("staff_files").insert({
+          project_id: newProjectId || null,
+          drive_file_id: doc.documentId,
+          title: newTitle.trim(),
+          mime_type: mimeType,
+          drive_url: driveUrl,
+          created_by: userId,
+        });
+        if (error) { toast.error("파일 등록 실패"); setCreating(false); return; }
+        toast.success(`${createMode === "doc" ? "문서" : "스프레드시트"}가 생성되었습니다`);
+      }
+
+      // Reload
+      setNewTitle("");
+      setLinkUrl("");
+      setShowCreate(false);
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("staff_files")
+        .select("*, project:staff_projects(id, title), creator:profiles!staff_files_created_by_fkey(nickname)")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      setFiles(data || []);
+    } catch {
+      toast.error("파일 작업 중 오류가 발생했습니다");
+    }
+    setCreating(false);
+  }
 
   const filtered = useMemo(() => {
     let result = files;
@@ -49,14 +146,14 @@ export default function StaffFilesPage() {
   }, [files, projectFilter, search, sortBy]);
 
   const mimeIcon = (mime: string | null) => {
-    if (!mime) return "📄";
-    if (mime.includes("document")) return "📝";
-    if (mime.includes("spreadsheet")) return "📊";
-    if (mime.includes("presentation")) return "📽️";
-    if (mime.includes("pdf")) return "📕";
-    if (mime.includes("image")) return "🖼️";
-    if (mime.includes("folder")) return "📁";
-    return "📄";
+    if (!mime) return "\uD83D\uDCC4";
+    if (mime.includes("document")) return "\uD83D\uDCDD";
+    if (mime.includes("spreadsheet")) return "\uD83D\uDCCA";
+    if (mime.includes("presentation")) return "\uD83D\uDCBD";
+    if (mime.includes("pdf")) return "\uD83D\uDCD5";
+    if (mime.includes("image")) return "\uD83D\uDDBC\uFE0F";
+    if (mime.includes("folder")) return "\uD83D\uDCC1";
+    return "\uD83D\uDCC4";
   };
 
   const formatSize = (bytes: number | null) => {
@@ -77,12 +174,96 @@ export default function StaffFilesPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-8 py-10">
-      <div className="mb-6">
-        <h1 className="font-head text-3xl font-extrabold text-nu-ink">파일</h1>
-        <p className="font-mono-nu text-[11px] text-nu-muted mt-1 uppercase tracking-widest">
-          All Workspace Files · {filtered.length}개
-        </p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="font-head text-3xl font-extrabold text-nu-ink">파일</h1>
+          <p className="font-mono-nu text-[11px] text-nu-muted mt-1 uppercase tracking-widest">
+            All Workspace Files · {filtered.length}개
+          </p>
+        </div>
+        <Button
+          onClick={() => setShowCreate(!showCreate)}
+          className="bg-indigo-600 text-white hover:bg-indigo-700 font-mono-nu text-[10px] uppercase tracking-widest gap-1.5"
+        >
+          {showCreate ? <X size={12} /> : <Plus size={12} />}
+          {showCreate ? "닫기" : "새 파일"}
+        </Button>
       </div>
+
+      {/* Create file form */}
+      {showCreate && (
+        <form onSubmit={handleCreate} className="bg-white border border-indigo-200 p-5 mb-6 space-y-3">
+          {/* Mode tabs */}
+          <div className="flex gap-1 mb-3">
+            {([
+              { key: "doc", label: "문서", icon: "\uD83D\uDCDD" },
+              { key: "sheet", label: "스프레드시트", icon: "\uD83D\uDCCA" },
+              { key: "link", label: "URL 연결", icon: "\uD83D\uDD17" },
+            ] as const).map(m => (
+              <button
+                key={m.key}
+                type="button"
+                onClick={() => setCreateMode(m.key)}
+                className={`font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 border cursor-pointer transition-colors ${
+                  createMode === m.key
+                    ? "bg-indigo-600 text-white border-indigo-600"
+                    : "bg-transparent text-nu-muted border-nu-ink/15 hover:border-indigo-300"
+                }`}
+              >
+                {m.icon} {m.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className={createMode === "link" ? "" : "sm:col-span-2"}>
+              <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-gray block mb-1">
+                {createMode === "link" ? "파일명" : "제목"}
+              </label>
+              <Input
+                value={newTitle}
+                onChange={e => setNewTitle(e.target.value)}
+                placeholder={createMode === "doc" ? "문서 제목..." : createMode === "sheet" ? "시트 제목..." : "파일명..."}
+                className="border-nu-ink/15 bg-transparent"
+              />
+            </div>
+            {createMode === "link" && (
+              <div>
+                <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-gray block mb-1">Google Drive URL</label>
+                <Input
+                  value={linkUrl}
+                  onChange={e => setLinkUrl(e.target.value)}
+                  placeholder="https://drive.google.com/..."
+                  className="border-nu-ink/15 bg-transparent"
+                />
+              </div>
+            )}
+            <div>
+              <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-gray block mb-1">프로젝트 (선택)</label>
+              <select
+                value={newProjectId}
+                onChange={e => setNewProjectId(e.target.value)}
+                className="w-full px-3 py-2 border border-nu-ink/15 bg-transparent text-sm"
+              >
+                <option value="">프로젝트 미연결</option>
+                <optgroup label="스태프">
+                  {projects.map(p => (
+                    <option key={p.id} value={p.id}>{p.title}</option>
+                  ))}
+                </optgroup>
+              </select>
+            </div>
+          </div>
+
+          <Button
+            type="submit"
+            disabled={creating || !newTitle.trim() || (createMode === "link" && !linkUrl.trim())}
+            className="bg-indigo-600 text-white hover:bg-indigo-700 font-mono-nu text-[10px] uppercase tracking-widest"
+          >
+            {creating ? "처리 중..." : createMode === "link" ? "연결" : "생성"}
+          </Button>
+        </form>
+      )}
 
       {/* Search & Filter */}
       <div className="flex flex-wrap gap-2 mb-6">
@@ -125,7 +306,6 @@ export default function StaffFilesPage() {
         <div className="space-y-2">
           {filtered.map((f: any) => (
             <div key={f.id} className="flex items-center gap-3 px-4 py-3 bg-white border border-nu-ink/[0.06] hover:border-indigo-200 transition-colors group">
-              {/* Thumbnail or icon */}
               {f.thumbnail_url ? (
                 <img src={f.thumbnail_url} alt="" className="w-8 h-8 object-cover rounded" />
               ) : (
@@ -190,7 +370,7 @@ export default function StaffFilesPage() {
           ) : (
             <>
               <p className="text-sm text-nu-muted">아직 파일이 없습니다</p>
-              <p className="text-xs text-nu-muted mt-1">프로젝트에서 Google Drive 파일을 연결하세요</p>
+              <p className="text-xs text-nu-muted mt-1">새 문서를 생성하거나 Google Drive 파일을 연결하세요</p>
             </>
           )}
         </div>

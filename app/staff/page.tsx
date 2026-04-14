@@ -3,6 +3,8 @@ import Link from "next/link";
 import { FolderOpen, CheckSquare, FileText, Calendar, Plus, ArrowRight, Clock, Activity, Zap, ExternalLink, Circle, CheckCircle2 } from "lucide-react";
 import { TodayCalendarWidget } from "./today-calendar-widget";
 import { AICommandBar } from "./ai-command-bar";
+import { MonitorWidget } from "./monitor-widget";
+import { TeamActivityWidget } from "./team-activity-widget";
 
 export const dynamic = "force-dynamic";
 
@@ -241,6 +243,9 @@ export default async function StaffDashboardPage() {
             </section>
           )}
 
+          {/* 프로젝트 모니터링 */}
+          <MonitorWidget />
+
           {/* 프로젝트 */}
           <section>
             <div className="flex items-center justify-between mb-4">
@@ -321,6 +326,9 @@ export default async function StaffDashboardPage() {
               </Link>
             ))}
           </div>
+
+          {/* Team Activity */}
+          <TeamActivityWidget />
 
           {/* Today's Calendar */}
           <TodayCalendarWidget />
