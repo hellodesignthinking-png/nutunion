@@ -7,7 +7,7 @@ import {
   Bold, Italic, Heading1, Heading2, Heading3,
   List, ListOrdered, Code, Link2, Image,
   Eye, Edit3, Save, History, Clock,
-  Tag, Users, GitBranch, ChevronRight, Loader2
+  Tag, Users, GitBranch, ChevronRight, Loader2, ExternalLink
 } from "lucide-react";
 import DOMPurify from "isomorphic-dompurify";
 
@@ -54,6 +54,8 @@ export function WikiPageEditor({
   const [saving, setSaving] = useState(false);
   const [changeSummary, setChangeSummary] = useState("");
   const [draftRestored, setDraftRestored] = useState(false);
+  const [syncingToDrive, setSyncingToDrive] = useState(false);
+  const [driveDocUrl, setDriveDocUrl] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
 
@@ -196,7 +198,7 @@ export function WikiPageEditor({
           change_summary: "초기 버전",
         });
 
-        toast.success("위키 페이지가 생성되었습니다!");
+        toast.success("탭 페이지가 생성되었습니다!");
         clearDraft();
 
         // Save tags
@@ -243,7 +245,7 @@ export function WikiPageEditor({
           change_summary: changeSummary || "페이지 수정",
         });
 
-        toast.success("위키 페이지가 업데이트되었습니다!");
+        toast.success("탭 페이지가 업데이트되었습니다!");
         clearDraft();
 
         // Sync tags
@@ -257,6 +259,41 @@ export function WikiPageEditor({
       setSaving(false);
     }
   };
+
+  async function handleSyncToDrive() {
+    if (!title.trim() || !content.trim()) {
+      toast.error("제목과 내용을 먼저 입력해주세요");
+      return;
+    }
+    setSyncingToDrive(true);
+    try {
+      const res = await fetch("/api/wiki/sync-to-drive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pageId: pageId || null,
+          groupId,
+          title: title.trim(),
+          content: content.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.code === "NOT_CONNECTED") {
+          toast.error("Google 계정을 먼저 연결해주세요. 너트 설정에서 연결할 수 있습니다.");
+        } else {
+          toast.error(data.error || "Google Docs 동기화에 실패했습니다");
+        }
+        return;
+      }
+      setDriveDocUrl(data.webViewLink);
+      toast.success(data.isUpdate ? "Google Docs가 업데이트되었습니다" : "Google Docs로 저장되었습니다");
+    } catch {
+      toast.error("Google Docs 동기화 중 오류가 발생했습니다");
+    } finally {
+      setSyncingToDrive(false);
+    }
+  }
 
   const addTag = () => {
     const tagName = newTag.trim();
@@ -342,7 +379,7 @@ export function WikiPageEditor({
         type="text"
         value={title}
         onChange={e => setTitle(e.target.value)}
-        placeholder="위키 페이지 제목..."
+        placeholder="탭 페이지 제목..."
         className="w-full font-head text-3xl font-extrabold text-nu-ink bg-transparent border-0 border-b-[2px] border-nu-ink/10 focus:border-nu-pink focus:outline-none pb-3 placeholder:text-nu-ink/20 transition-colors"
       />
 
@@ -471,14 +508,35 @@ export function WikiPageEditor({
         <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest flex items-center gap-1">
           <Clock size={10} /> Markdown · 자동 버전 관리 · 초안 자동 저장
         </p>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="px-8 py-3 bg-nu-ink text-white font-mono-nu text-xs font-bold uppercase tracking-widest hover:bg-nu-pink transition-all shadow-[4px_4px_0px_rgba(233,30,99,0.3)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] flex items-center gap-2 disabled:opacity-50"
-        >
-          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-          {mode === "create" ? "페이지 생성" : "수정 저장"}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleSyncToDrive}
+            disabled={syncingToDrive || !title.trim() || !content.trim()}
+            className="flex items-center gap-2 font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2.5 bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
+            title="Google Docs로 저장"
+          >
+            {syncingToDrive ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />}
+            Google Docs
+          </button>
+          {driveDocUrl && (
+            <a
+              href={driveDocUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 font-mono-nu text-[10px] text-green-600 hover:underline"
+            >
+              <ExternalLink size={10} /> 문서 열기
+            </a>
+          )}
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-8 py-3 bg-nu-ink text-white font-mono-nu text-xs font-bold uppercase tracking-widest hover:bg-nu-pink transition-all shadow-[4px_4px_0px_rgba(233,30,99,0.3)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] flex items-center gap-2 disabled:opacity-50"
+          >
+            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            {mode === "create" ? "페이지 생성" : "수정 저장"}
+          </button>
+        </div>
       </div>
     </div>
   );

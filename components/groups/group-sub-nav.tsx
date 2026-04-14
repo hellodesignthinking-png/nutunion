@@ -10,7 +10,7 @@ import {
   Trophy,
   Settings,
   Home,
-  Briefcase,
+  Calendar,
 } from "lucide-react";
 
 interface GroupSubNavProps {
@@ -22,8 +22,8 @@ interface GroupSubNavProps {
 
 const NAV_ITEMS = [
   { key: "home", label: "홈", href: "", icon: Home },
-  { key: "meetings", label: "미팅", href: "/meetings", icon: BookOpen },
-  { key: "wiki", label: "위키", href: "/wiki", icon: Sparkles },
+  { key: "schedule", label: "일정", href: "/schedule", icon: Calendar },
+  { key: "wiki", label: "탭", href: "/wiki", icon: Sparkles },
   { key: "resources", label: "자료실", href: "/resources", icon: FolderOpen },
   { key: "finance", label: "정산", href: "/finance", icon: CreditCard },
   { key: "best-practices", label: "베스트", href: "/best-practices", icon: Trophy },
@@ -36,6 +36,10 @@ export function GroupSubNav({ groupId, groupName, isHost = false, isManager = fa
   function isActive(href: string) {
     if (href === "") {
       return pathname === basePath || pathname === `${basePath}/`;
+    }
+    // "일정" tab also covers meetings routes
+    if (href === "/schedule") {
+      return pathname.startsWith(`${basePath}/schedule`) || pathname.startsWith(`${basePath}/meetings`);
     }
     return pathname.startsWith(`${basePath}${href}`);
   }
@@ -63,7 +67,7 @@ export function GroupSubNav({ groupId, groupName, isHost = false, isManager = fa
               <Link
                 key={item.key}
                 href={`${basePath}${item.href}`}
-                className={`shrink-0 flex items-center gap-1.5 px-3 py-3.5 font-mono-nu text-[10px] uppercase tracking-widest no-underline transition-all border-b-[3px] ${
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-4 sm:py-3.5 font-mono-nu text-[10px] uppercase tracking-widest no-underline transition-all border-b-[3px] ${
                   active
                     ? "text-nu-pink border-nu-pink font-bold bg-nu-pink/5"
                     : "text-nu-muted border-transparent hover:text-nu-ink hover:border-nu-ink/20 hover:bg-nu-cream/30"
@@ -79,7 +83,7 @@ export function GroupSubNav({ groupId, groupName, isHost = false, isManager = fa
           {(isHost || isManager) && (
             <Link
               href={`${basePath}/settings`}
-              className={`shrink-0 flex items-center gap-1.5 px-3 py-3.5 font-mono-nu text-[10px] uppercase tracking-widest no-underline transition-all border-b-[3px] ${
+              className={`shrink-0 flex items-center gap-1.5 px-3 py-4 sm:py-3.5 font-mono-nu text-[10px] uppercase tracking-widest no-underline transition-all border-b-[3px] ${
                 isActive("/settings")
                   ? "text-nu-pink border-nu-pink font-bold bg-nu-pink/5"
                   : "text-nu-muted border-transparent hover:text-nu-ink hover:border-nu-ink/20 hover:bg-nu-cream/30"
@@ -90,15 +94,8 @@ export function GroupSubNav({ groupId, groupName, isHost = false, isManager = fa
             </Link>
           )}
 
-          {/* Projects link */}
-          <div className="w-px h-6 bg-nu-ink/15 mx-1 shrink-0" />
-          <Link
-            href="/projects"
-            className="shrink-0 flex items-center gap-1.5 px-3 py-3.5 font-mono-nu text-[10px] uppercase tracking-widest no-underline text-nu-muted border-b-[3px] border-transparent hover:text-nu-ink hover:border-nu-ink/20 hover:bg-nu-cream/30 transition-all"
-          >
-            <Briefcase size={13} />
-            프로젝트
-          </Link>
+          {/* Mobile scroll fade indicator */}
+          <div className="md:hidden shrink-0 w-4 h-full bg-gradient-to-l from-white to-transparent pointer-events-none" />
         </div>
       </div>
     </nav>

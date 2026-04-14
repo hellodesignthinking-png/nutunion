@@ -33,15 +33,15 @@ export default function ProjectApplicationsPage() {
       setUserId(user.id);
 
       // Fetch project
-      const { data: proj } = await supabase
+      const { data: proj, error: projError } = await supabase
         .from("projects")
         .select("*")
         .eq("id", projectId)
         .single();
 
-      if (!proj) {
-        toast.error("프로젝트를 찾을 수 없습니다");
-        router.push("/dashboard");
+      if (projError || !proj) {
+        toast.error("볼트를 찾을 수 없습니다");
+        router.push("/projects");
         return;
       }
 
@@ -55,14 +55,14 @@ export default function ProjectApplicationsPage() {
         .eq("user_id", user.id)
         .maybeSingle();
 
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", user.id)
         .single();
 
       const hasAccess =
-        membership?.role === "lead" || profile?.role === "admin";
+        !profileError && (membership?.role === "lead" || profile?.role === "admin");
 
       if (!hasAccess) {
         toast.error("지원서를 관리할 권한이 없습니다");

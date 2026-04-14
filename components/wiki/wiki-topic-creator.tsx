@@ -53,7 +53,7 @@ export function WikiTopicCreator({ groupId }: { groupId: string }) {
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b-[2px] border-nu-ink/10">
               <h3 className="font-head text-xl font-extrabold text-nu-ink flex items-center gap-2">
-                <Brain size={20} className="text-nu-pink" /> 새 위키 주제 만들기
+                <Brain size={20} className="text-nu-pink" /> 새 탭 주제 만들기
               </h3>
               <button onClick={() => setOpen(false)} className="p-1 text-nu-muted hover:text-nu-ink transition-colors">
                 <X size={18} />

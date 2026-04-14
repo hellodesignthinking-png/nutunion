@@ -38,7 +38,7 @@ import { EndorsementPanel } from "@/components/shared/endorsement-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-const tabs = [
+const baseTabs = [
   { key: "overview", label: "개요", icon: Target },
   { key: "milestones", label: "마일스톤", icon: Layers },
   { key: "meetings", label: "회의록", icon: FileText },
@@ -49,7 +49,7 @@ const tabs = [
 
 const roleLabels: Record<string, string> = {
   lead: "리드",
-  member: "멤버",
+  member: "와셔",
   observer: "옵저버",
 };
 
@@ -104,6 +104,20 @@ export function TabsInner({
   const events      = JSON.parse(eventsData);
   const project     = projectData ? JSON.parse(projectData) : null;
 
+  // Build tabs with item counts
+  const tabCounts: Record<string, number | null> = {
+    overview: null,
+    milestones: milestones?.length || null,
+    meetings: events?.length || null,
+    resources: null,
+    finance: null,
+    activity: updates?.length || null,
+  };
+  const tabs = baseTabs.map((t) => ({
+    ...t,
+    count: tabCounts[t.key] ?? null,
+  }));
+
   // Calculate milestone progress
   const totalMilestones = milestones?.length || 0;
   const completedMilestones = milestones?.filter((m: any) => m.status === "completed")?.length || 0;
@@ -156,12 +170,21 @@ export function TabsInner({
             onClick={() => setActiveTab(tab.key)}
             className={`font-mono-nu text-[11px] uppercase tracking-widest px-5 py-3.5 border-b-[3px] transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 ${
               activeTab === tab.key
-                ? "border-nu-pink text-nu-ink font-bold"
+                ? "border-nu-pink text-nu-ink font-black bg-nu-pink/[0.04]"
                 : "border-transparent text-nu-muted hover:text-nu-graphite"
             }`}
           >
             <tab.icon size={14} />
             {tab.label}
+            {tab.count != null && tab.count > 0 && (
+              <span className={`text-[9px] font-bold px-1.5 py-0.5 ${
+                activeTab === tab.key
+                  ? "bg-nu-pink/15 text-nu-pink"
+                  : "bg-nu-ink/5 text-nu-muted"
+              }`}>
+                {tab.count}
+              </span>
+            )}
           </button>
         ))}
         {canEdit && (
@@ -183,7 +206,7 @@ export function TabsInner({
             {project?.description && (
               <div className="bg-nu-white border border-nu-ink/[0.08] p-6">
                 <h3 className="font-head text-lg font-extrabold mb-3 flex items-center gap-2">
-                  <FileText size={18} /> 프로젝트 소개
+                  <FileText size={18} /> 볼트 소개
                 </h3>
                 <div className="text-sm text-nu-graphite leading-relaxed whitespace-pre-wrap">
                   {project.description}
@@ -296,7 +319,7 @@ export function TabsInner({
             {(project as any)?.snapshot_content && (
               <div className="bg-nu-white border border-nu-ink/[0.08] p-6">
                 <h3 className="font-head text-lg font-extrabold mb-4 flex items-center gap-2">
-                  <FileText size={18} className="text-nu-muted" /> 프로젝트 아카이브 스냅샷
+                  <FileText size={18} className="text-nu-muted" /> 볼트 아카이브 스냅샷
                 </h3>
                 <div className="prose prose-sm max-w-none whitespace-pre-wrap text-nu-gray leading-relaxed text-sm bg-nu-cream/10 p-4 border border-nu-ink/5">
                    {(project as any).snapshot_content}
@@ -338,12 +361,12 @@ export function TabsInner({
                     <div className="flex-1">
                       <span className="bg-nu-pink text-white text-[9px] font-bold uppercase tracking-widest px-2 py-0.5">ZeroSite</span>
                       <h3 className="font-head text-lg font-extrabold text-nu-ink mt-2 mb-1">오프라인 프로그램 출시 제안</h3>
-                      <p className="text-xs text-nu-gray leading-relaxed max-w-lg">이 프로젝트의 결과물을 제로싸이트 공간의 정규 프로그램으로 출시해보세요.</p>
+                      <p className="text-xs text-nu-gray leading-relaxed max-w-lg">이 볼트의 결과물을 제로싸이트 공간의 정규 프로그램으로 출시해보세요.</p>
                     </div>
                     {!(project as any)?.zerosite_launch_status || (project as any)?.zerosite_launch_status === "idle" ? (
                       <Button
                         onClick={async () => {
-                          if (!confirm("제로싸이트 운영팀에 이 프로젝트를 오프라인 프로그램으로 제안하시겠습니까?")) return;
+                          if (!confirm("제로싸이트 운영팀에 이 볼트를 오프라인 프로그램으로 제안하시겠습니까?")) return;
                           const supabase = createClient();
                           const { error } = await supabase.from("projects").update({ zerosite_launch_status: "pending" }).eq("id", projectId);
                           if (error) toast.error("제안 발송 실패: " + error.message);
@@ -434,7 +457,7 @@ export function TabsInner({
             {/* User Members */}
             <div className="bg-nu-white border border-nu-ink/[0.08] p-5">
               <h3 className="font-head text-base font-extrabold flex items-center gap-2 mb-4">
-                <Users size={16} /> 멤버 ({userMembers.length})
+                <Users size={16} /> 와셔 ({userMembers.length})
               </h3>
               <div className="space-y-3">
                 {userMembers.map((m: any) => (
@@ -448,7 +471,7 @@ export function TabsInner({
                     </div>
                   </div>
                 ))}
-                {userMembers.length === 0 && <p className="text-nu-gray text-xs">멤버가 없습니다</p>}
+                {userMembers.length === 0 && <p className="text-nu-gray text-xs">와셔가 없습니다</p>}
               </div>
             </div>
 
@@ -624,7 +647,7 @@ function ProjectRewardsTab({ project, members, canEdit }: any) {
         {/* Member distribution */}
         <div className="bg-nu-white border border-nu-ink/[0.08] p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-head text-lg font-extrabold flex items-center gap-2"><Users size={18} /> 멤버별 배분</h3>
+            <h3 className="font-head text-lg font-extrabold flex items-center gap-2"><Users size={18} /> 와셔별 배분</h3>
             <span className={`font-mono-nu text-[11px] font-bold px-2 py-1 border ${totalRatio === 100 ? "text-green-600 bg-green-50 border-green-200" : totalRatio > 100 ? "text-red-600 bg-red-50 border-red-200" : "text-nu-amber bg-nu-amber/10 border-nu-amber/20"}`}>
               합계: {totalRatio}%
             </span>
@@ -662,7 +685,7 @@ function ProjectRewardsTab({ project, members, canEdit }: any) {
                 </div>
                );
              })}
-             {members.length === 0 && <p className="text-xs text-nu-muted">참여 멤버가 없습니다.</p>}
+             {members.length === 0 && <p className="text-xs text-nu-muted">참여 와셔가 없습니다.</p>}
           </div>
           {canEdit && (
             <Button onClick={saveRewards} disabled={saving}
@@ -690,7 +713,7 @@ function ProjectRewardsTab({ project, members, canEdit }: any) {
                <CheckCircle2 size={16} className="text-green-600 mt-0.5" />
                <div>
                  <p className="text-sm font-medium">최종 결과물(포트폴리오) 등록</p>
-                 <p className="text-[11px] text-nu-muted mt-0.5 leading-relaxed">프로젝트 완료 보고서 및 분야별 산출물이 플랫폼 아카이브에 등록되어야 합니다.</p>
+                 <p className="text-[11px] text-nu-muted mt-0.5 leading-relaxed">볼트 완료 보고서 및 분야별 산출물이 플랫폼 아카이브에 등록되어야 합니다.</p>
                </div>
              </div>
            </div>
@@ -701,7 +724,7 @@ function ProjectRewardsTab({ project, members, canEdit }: any) {
              <Zap size={16} /> PM 권한 알림
            </h3>
            <p className="text-[11px] text-nu-pink/80 leading-relaxed font-medium">
-             보상금 배분율은 프로젝트 리드(PM)가 멤버들의 기여도를 평가하여 결정합니다.
+             보상금 배분율은 볼트 리드(PM)가 와셔들의 기여도를 평가하여 결정합니다.
              최종 지급은 플랫폼 관리자의 검토를 거쳐 실행되며, 기한 내 산출물 미등록 시 보상이 제한될 수 있습니다.
            </p>
         </div>

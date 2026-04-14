@@ -55,7 +55,7 @@ export function ProjectBurndownChart({
 
         if (projectError) throw projectError;
         if (!project) {
-          setError("프로젝트를 찾을 수 없습니다");
+          setError("볼트를 찾을 수 없습니다");
           return;
         }
 

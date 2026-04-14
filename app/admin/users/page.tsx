@@ -10,8 +10,8 @@ const GRADE_GUIDE = [
     iconColor: "text-amber-500",
     badgeColor: "bg-amber-100 text-amber-700",
     desc: "가입 시 기본 부여 등급",
-    perms: ["커뮤니티 참여", "소모임 가입 신청", "프로젝트 지원"],
-    noperms: ["소모임 개설", "프로젝트 개설"],
+    perms: ["커뮤니티 참여", "너트 가입 신청", "볼트 지원"],
+    noperms: ["너트 개설", "볼트 개설"],
   },
   {
     grade: "실버",
@@ -20,8 +20,8 @@ const GRADE_GUIDE = [
     iconColor: "text-slate-500",
     badgeColor: "bg-slate-100 text-slate-600",
     desc: "활성 멤버에게 부여되는 등급",
-    perms: ["커뮤니티 참여", "소모임 가입 신청", "프로젝트 지원", "소모임 개설"],
-    noperms: ["프로젝트 개설"],
+    perms: ["커뮤니티 참여", "너트 가입 신청", "볼트 지원", "너트 개설"],
+    noperms: ["볼트 개설"],
   },
   {
     grade: "골드",
@@ -30,7 +30,7 @@ const GRADE_GUIDE = [
     iconColor: "text-yellow-500",
     badgeColor: "bg-yellow-100 text-yellow-700",
     desc: "핵심 기여자 등급",
-    perms: ["커뮤니티 참여", "소모임 가입 신청", "프로젝트 지원", "소모임 개설", "프로젝트 개설"],
+    perms: ["커뮤니티 참여", "너트 가입 신청", "볼트 지원", "너트 개설", "볼트 개설"],
     noperms: [],
   },
   {
@@ -50,7 +50,7 @@ const GRADE_GUIDE = [
     iconColor: "text-nu-pink",
     badgeColor: "bg-nu-pink text-white",
     desc: "플랫폼 전체 관리 권한",
-    perms: ["모든 멤버 권한", "회원 등급 조정", "소모임 강제 관리", "프로젝트 강제 관리", "콘텐츠 관리"],
+    perms: ["모든 와셔 권한", "회원 등급 조정", "너트 강제 관리", "볼트 강제 관리", "콘텐츠 관리"],
     noperms: [],
   },
 ];
@@ -58,16 +58,16 @@ const GRADE_GUIDE = [
 export default async function AdminUsersPage() {
   const supabase = await createClient();
 
-  const { data: users } = await supabase
-    .from("profiles")
-    .select("*")
-    .order("created_at", { ascending: false });
-
-  // Fetch crew memberships
-  const { data: memberships } = await supabase
-    .from("group_members")
-    .select("user_id, group_id, role, group:groups!group_members_group_id_fkey(name)")
-    .eq("status", "active");
+  const [{ data: users }, { data: memberships }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, nickname, avatar_url, bio, grade, interests, created_at, updated_at")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("group_members")
+      .select("user_id, group_id, role, group:groups!group_members_group_id_fkey(name)")
+      .eq("status", "active"),
+  ]);
 
   const crewMap: Record<string, { group_id: string; group_name: string; role: string }[]> = {};
   (memberships || []).forEach((m: any) => {
@@ -119,7 +119,7 @@ export default async function AdminUsersPage() {
               </p>
               <p className="text-sm text-nu-gray mb-3">
                 Supabase SQL Editor에서 아래 SQL을 실행하면 등급이 영구 저장됩니다.
-                실행 전까지 <strong>소모임/프로젝트 권한(can_create_crew)</strong>은 정상 저장되나,
+                실행 전까지 <strong>너트/볼트 권한(can_create_crew)</strong>은 정상 저장되나,
                 등급 선택은 새로고침 시 초기화됩니다.
               </p>
               <details className="cursor-pointer">

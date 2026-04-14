@@ -9,16 +9,18 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, LogOut, User, Shield, Menu, Settings, Star, Crown, Award } from "lucide-react";
+import { Bell, LogOut, User, Shield, Menu, Settings, Briefcase } from "lucide-react";
+import { getGrade } from "@/lib/constants";
 import { GlobalSearch } from "@/components/shared/global-search";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 // Unified with Nav component appLinks
 const appLinks = [
-  { label: "Dashboard", href: "/dashboard" },
-  { label: "소모임", href: "/groups" },
-  { label: "프로젝트", href: "/projects" },
-  { label: "인재", href: "/talents" },
+  { label: "대시보드", href: "/dashboard" },
+  { label: "너트", href: "/groups" },
+  { label: "볼트", href: "/projects" },
+  { label: "탭", href: "/wiki" },
+  { label: "와셔", href: "/members" },
   { label: "의뢰", href: "/challenges" },
 ];
 
@@ -28,6 +30,7 @@ export function AuthNav({ profile }: { profile: Profile }) {
   const [open, setOpen]       = useState(false);
   const [notifCount, setNotifCount] = useState(0);
   const isAdmin = profile.role === "admin";
+  const isStaff = profile.role === "staff" || isAdmin;
 
   // 알림 카운트 (Realtime 구독)
   useEffect(() => {
@@ -56,17 +59,8 @@ export function AuthNav({ profile }: { profile: Profile }) {
   }, [profile.id]);
 
   // 등급 정보
-  const p = profile as any;
-  const gradeRaw = p.grade || (isAdmin ? "vip" : p.can_create_crew ? "silver" : "bronze");
-  const GRADE_BADGE: Record<string, { label: string; cls: string; Icon: any }> = {
-    admin:  { label: "관리자", cls: "bg-nu-pink text-white",             Icon: Shield },
-    vip:    { label: "VIP",   cls: "bg-nu-pink/10 text-nu-pink",        Icon: Crown  },
-    gold:   { label: "골드",  cls: "bg-yellow-50 text-yellow-600",      Icon: Star   },
-    silver: { label: "실버",  cls: "bg-slate-100 text-slate-500",       Icon: Star   },
-    bronze: { label: "브론즈",cls: "bg-amber-50 text-amber-600",        Icon: Award  },
-  };
-  const grade = GRADE_BADGE[isAdmin ? "admin" : gradeRaw] || GRADE_BADGE.bronze;
-  const GIcon = grade.Icon;
+  const grade = getGrade(profile as any);
+  const GIcon = grade.icon;
 
   async function handleLogout() {
     const supabase = createClient();
@@ -92,14 +86,30 @@ export function AuthNav({ profile }: { profile: Profile }) {
             key={l.href}
             href={l.href}
             prefetch={true}
-            className={`font-mono-nu text-[11px] text-nu-graphite no-underline tracking-[0.08em] uppercase transition-opacity ${
-              pathname === l.href ? "opacity-100 font-bold" : "opacity-70 hover:opacity-100"
+            className={`font-mono-nu text-[11px] text-nu-graphite no-underline tracking-[0.08em] uppercase transition-opacity relative ${
+              (pathname === l.href || (l.href !== "/" && pathname.startsWith(l.href) && l.href.length > 1)) ? "text-nu-ink font-bold" : "opacity-70 hover:opacity-100"
             }`}
           >
             {l.label}
+            {(pathname === l.href || (l.href !== "/" && pathname.startsWith(l.href) && l.href.length > 1)) && (
+              <span className="absolute -bottom-[20px] left-0 right-0 h-[3px] bg-nu-pink" />
+            )}
           </Link>
         ))}
         {/* Admin link - always visible for admin users */}
+        {isStaff && (
+          <Link
+            href="/staff"
+            prefetch={true}
+            className={`font-mono-nu text-[11px] no-underline tracking-[0.08em] uppercase transition-colors inline-flex items-center gap-1.5 px-3 py-1.5 ${
+              pathname.startsWith("/staff")
+                ? "bg-indigo-600 text-white"
+                : "text-indigo-600 hover:bg-indigo-50"
+            }`}
+          >
+            <Briefcase size={12} /> 스태프
+          </Link>
+        )}
         {isAdmin && (
           <Link
             href="/admin"
@@ -118,7 +128,7 @@ export function AuthNav({ profile }: { profile: Profile }) {
       {/* Right side */}
       <div className="hidden md:flex gap-2 items-center">
         <GlobalSearch />
-        <Link href="/notifications" prefetch={true} className="relative p-2 text-nu-graphite hover:text-nu-ink transition-colors">
+        <Link href="/notifications" prefetch={true} className="relative p-2 text-nu-graphite hover:text-nu-ink transition-colors" aria-label="알림">
           <Bell size={18} />
           {notifCount > 0 && (
             <span className="absolute top-1 right-1 w-4 h-4 bg-nu-pink text-white text-[8px] font-bold rounded-full flex items-center justify-center">
@@ -128,7 +138,7 @@ export function AuthNav({ profile }: { profile: Profile }) {
         </Link>
 
         <DropdownMenu>
-          <DropdownMenuTrigger className="w-8 h-8 rounded-full bg-nu-pink text-white flex items-center justify-center font-head text-sm font-bold cursor-pointer">
+          <DropdownMenuTrigger className="w-8 h-8 rounded-full bg-nu-pink text-white flex items-center justify-center font-head text-sm font-bold cursor-pointer" aria-label="내 메뉴">
             {initial}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
@@ -148,6 +158,14 @@ export function AuthNav({ profile }: { profile: Profile }) {
             <DropdownMenuItem className="flex items-center gap-2" onClick={() => router.push("/dashboard")}>
               <Settings size={14} /> 대시보드
             </DropdownMenuItem>
+            {isStaff && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="flex items-center gap-2 text-indigo-600" onClick={() => router.push("/staff")}>
+                  <Briefcase size={14} /> 스태프 워크스페이스
+                </DropdownMenuItem>
+              </>
+            )}
             {isAdmin && (
               <>
                 <DropdownMenuSeparator />
@@ -176,7 +194,7 @@ export function AuthNav({ profile }: { profile: Profile }) {
       {/* Mobile */}
       <div className="md:hidden">
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger className="p-2">
+          <SheetTrigger className="p-2" aria-label="메뉴 열기">
             <Menu size={20} />
           </SheetTrigger>
           <SheetContent side="right" className="bg-nu-paper w-[280px]">
@@ -202,10 +220,39 @@ export function AuthNav({ profile }: { profile: Profile }) {
                     {l.label}
                   </Link>
                 ))}
+                <Link href="/notifications" onClick={() => setOpen(false)} prefetch={true}
+                  className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-graphite no-underline flex items-center justify-between">
+                  알림
+                  {notifCount > 0 && (
+                    <span className="w-5 h-5 bg-nu-pink text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                      {notifCount > 9 ? "9+" : notifCount}
+                    </span>
+                  )}
+                </Link>
                 <Link href="/profile" onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-graphite no-underline">
                   프로필
                 </Link>
               </div>
+              {isStaff && (
+                <div className="border-t border-indigo-200 pt-4 flex flex-col gap-3">
+                  <span className="font-mono-nu text-[9px] uppercase tracking-widest text-indigo-600 font-bold">스태프</span>
+                  <Link href="/staff" onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[12px] uppercase tracking-widest text-indigo-600 no-underline">
+                    스태프 대시보드
+                  </Link>
+                  <Link href="/staff/workspace" onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
+                    프로젝트
+                  </Link>
+                  <Link href="/staff/tasks" onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
+                    할일
+                  </Link>
+                  <Link href="/staff/files" onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
+                    파일
+                  </Link>
+                  <Link href="/staff/calendar" onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
+                    캘린더
+                  </Link>
+                </div>
+              )}
               {isAdmin && (
                 <div className="border-t border-nu-pink/20 pt-4 flex flex-col gap-3">
                   <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-pink font-bold">관리자</span>
@@ -222,10 +269,10 @@ export function AuthNav({ profile }: { profile: Profile }) {
                     회원 관리
                   </Link>
                   <Link href="/admin/groups" onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
-                    소모임 관리
+                    너트 관리
                   </Link>
                   <Link href="/admin/projects" onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
-                    프로젝트 관리
+                    볼트 관리
                   </Link>
                 </div>
               )}

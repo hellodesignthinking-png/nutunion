@@ -43,6 +43,7 @@ export default async function AdminDashboard() {
     { count: projectCount },
     { count: pendingMembersCount },
     { count: proposalCount },
+    { data: gradeData },
   ] = await Promise.all([
     supabase.from("profiles").select("*", { count: "exact", head: true }),
     supabase.from("groups").select("*", { count: "exact", head: true }).eq("is_active", true),
@@ -51,12 +52,10 @@ export default async function AdminDashboard() {
     supabase.from("projects").select("*", { count: "exact", head: true }).eq("status", "active"),
     supabase.from("group_members").select("*", { count: "exact", head: true }).eq("status", "pending"),
     supabase.from("challenge_proposals").select("*", { count: "exact", head: true }).eq("status", "submitted"),
+    supabase.from("profiles").select("grade, role, can_create_crew"),
   ]);
 
   // ── 등급 분포 ─────────────────────────────────────────────────────
-  const { data: gradeData } = await supabase
-    .from("profiles")
-    .select("grade, role, can_create_crew");
 
   const gradeCounts: Record<string, number> = { admin: 0, vip: 0, gold: 0, silver: 0, bronze: 0 };
   (gradeData || []).forEach((p: any) => {
@@ -95,16 +94,16 @@ export default async function AdminDashboard() {
 
   const stats = [
     { label: "총 회원",     count: userCount    || 0, icon: Users,    color: "bg-nu-blue/10 text-nu-blue",        href: "/admin/users" },
-    { label: "활성 소모임", count: groupCount   || 0, icon: Layers,   color: "bg-nu-pink/10 text-nu-pink",        href: "/admin/groups" },
+    { label: "활성 너트", count: groupCount   || 0, icon: Layers,   color: "bg-nu-pink/10 text-nu-pink",        href: "/admin/groups" },
     { label: "예정 일정",   count: eventCount   || 0, icon: Calendar, color: "bg-nu-amber/10 text-nu-amber",      href: "/admin" },
-    { label: "활성 프로젝트",count: projectCount || 0, icon: Briefcase,color: "bg-green-50 text-green-600",       href: "/admin/projects" },
+    { label: "활성 볼트",count: projectCount || 0, icon: Briefcase,color: "bg-green-50 text-green-600",       href: "/admin/projects" },
     { label: "가입 대기",   count: pendingMembersCount || 0, icon: Clock, color: "bg-orange-50 text-orange-500", href: "/admin/groups", urgent: (pendingMembersCount || 0) > 0 },
     { label: "새 의뢰",    count: proposalCount || 0, icon: Send, color: "bg-nu-pink/10 text-nu-pink",   href: "/admin/proposals", urgent: (proposalCount || 0) > 0 },
   ];
 
   const updateTypeLabels: Record<string, string> = {
     post: "게시글", milestone_update: "마일스톤", status_change: "상태변경",
-    member_joined: "멤버합류", announcement: "공지", event_recap: "일정정리",
+    member_joined: "와셔합류", announcement: "공지", event_recap: "일정정리",
   };
 
   return (
@@ -238,8 +237,8 @@ export default async function AdminDashboard() {
           <div className="space-y-1">
             {[
               { label: "회원 등급 관리", href: "/admin/users",    icon: UserCog,    color: "text-nu-pink" },
-              { label: "소모임 관리",   href: "/admin/groups",   icon: Layers,     color: "text-nu-blue" },
-              { label: "프로젝트 관리", href: "/admin/projects", icon: Briefcase,  color: "text-green-600" },
+              { label: "너트 관리",   href: "/admin/groups",   icon: Layers,     color: "text-nu-blue" },
+              { label: "볼트 관리", href: "/admin/projects", icon: Briefcase,  color: "text-green-600" },
               { label: "의뢰 관리",   href: "/admin/proposals",icon: Send,      color: "text-nu-pink" },
               { label: "콘텐츠 수정",  href: "/admin/content",  icon: Pencil,     color: "text-nu-amber" },
               { label: "미디어 업로드",href: "/admin/media",    icon: Upload,     color: "text-nu-graphite" },
@@ -296,15 +295,15 @@ export default async function AdminDashboard() {
           </Link>
         </div>
 
-        {/* 최근 프로젝트 */}
+        {/* 최근 볼트 */}
         <div className="bg-nu-white border border-nu-ink/[0.08]">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-nu-ink/[0.06]">
             <FolderGit2 size={15} className="text-green-600" />
-            <h2 className="font-head text-sm font-bold text-nu-ink">프로젝트 활동</h2>
+            <h2 className="font-head text-sm font-bold text-nu-ink">볼트 활동</h2>
           </div>
           <div className="divide-y divide-nu-ink/[0.04]">
             {(recentProjectUpdates || []).length === 0 && (
-              <p className="p-6 text-center text-nu-muted text-sm">프로젝트 활동이 없습니다</p>
+              <p className="p-6 text-center text-nu-muted text-sm">볼트 활동이 없습니다</p>
             )}
             {(recentProjectUpdates || []).map((u: any) => {
               const au = Array.isArray(u.author) ? u.author[0] : u.author;
@@ -331,15 +330,15 @@ export default async function AdminDashboard() {
           </Link>
         </div>
 
-        {/* 최근 크루 */}
+        {/* 최근 너트 */}
         <div className="bg-nu-white border border-nu-ink/[0.08]">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-nu-ink/[0.06]">
             <MessageSquare size={15} className="text-nu-pink" />
-            <h2 className="font-head text-sm font-bold text-nu-ink">크루 활동</h2>
+            <h2 className="font-head text-sm font-bold text-nu-ink">너트 활동</h2>
           </div>
           <div className="divide-y divide-nu-ink/[0.04]">
             {(recentCrewPosts || []).length === 0 && (
-              <p className="p-6 text-center text-nu-muted text-sm">크루 활동이 없습니다</p>
+              <p className="p-6 text-center text-nu-muted text-sm">너트 활동이 없습니다</p>
             )}
             {(recentCrewPosts || []).map((p: any) => {
               const au = Array.isArray(p.author) ? p.author[0] : p.author;

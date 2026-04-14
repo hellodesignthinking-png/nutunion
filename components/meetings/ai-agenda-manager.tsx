@@ -85,7 +85,7 @@ export function AiAgendaManager({ groupId, onAccept }: { groupId: string; onAcce
           items.push({
             type: "milestone",
             title: "프로젝트 마일스톤 진행 현황 공유",
-            reason: `소모임원이 참여 중인 ${projects.length}개 프로젝트 상태 점검`,
+            reason: `너트원이 참여 중인 ${projects.length}개 프로젝트 상태 점검`,
             priority: "medium",
           });
         }

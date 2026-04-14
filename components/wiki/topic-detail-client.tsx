@@ -145,7 +145,7 @@ export function TopicDetailClient({
         if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
         setIsPublished(false);
         setPublishSlug(null);
-        toast.success("위키가 비공개로 전환되었습니다");
+        toast.success("탭이 비공개로 전환되었습니다");
       } else {
         const res = await fetch("/api/wiki/publish", {
           method: "POST",
@@ -156,7 +156,7 @@ export function TopicDetailClient({
         const data = await res.json();
         setIsPublished(true);
         setPublishSlug(data.slug);
-        toast.success("위키가 공개되었습니다!");
+        toast.success("탭이 공개되었습니다!");
       }
     } catch (e: any) {
       toast.error(e.message || "공개 설정 실패");

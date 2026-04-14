@@ -10,10 +10,10 @@ export default function WikiNotFound() {
         </div>
         <h1 className="font-head text-4xl font-extrabold text-nu-ink mb-3">404</h1>
         <p className="text-sm text-nu-graphite mb-2 font-medium">
-          요청하신 위키를 찾을 수 없습니다
+          요청하신 탭을 찾을 수 없습니다
         </p>
         <p className="text-xs text-nu-muted mb-8">
-          비공개이거나 삭제된 위키일 수 있습니다
+          비공개이거나 삭제된 탭일 수 있습니다
         </p>
         <Link
           href="/"

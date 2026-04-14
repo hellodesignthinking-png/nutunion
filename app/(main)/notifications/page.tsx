@@ -15,12 +15,12 @@ import type { Notification } from "@/lib/types";
 const TYPE_CONFIG: Record<string, {
   icon: any; color: string; bg: string; label: string; getLink?: (meta: any) => string
 }> = {
-  group_invite:       { icon: Users,        color: "text-nu-blue",   bg: "bg-nu-blue/10",   label: "소모임 초대",   getLink: (m) => m?.group_id ? `/groups/${m.group_id}` : "/groups" },
+  group_invite:       { icon: Users,        color: "text-nu-blue",   bg: "bg-nu-blue/10",   label: "너트 초대",   getLink: (m) => m?.group_id ? `/groups/${m.group_id}` : "/groups" },
   group_accepted:     { icon: UserPlus,     color: "text-green-600", bg: "bg-green-50",     label: "가입 승인",    getLink: (m) => m?.group_id ? `/groups/${m.group_id}` : "/groups" },
   group_rejected:     { icon: AlertCircle,  color: "text-nu-red",    bg: "bg-red-50",       label: "가입 거절",    getLink: (_) => "/groups" },
   event_reminder:     { icon: Calendar,     color: "text-nu-amber",  bg: "bg-nu-amber/10",  label: "일정 알림",    getLink: (m) => m?.group_id && m?.event_id ? `/groups/${m.group_id}/events/${m.event_id}` : "/dashboard" },
   waitlist_promoted:  { icon: Star,         color: "text-nu-pink",   bg: "bg-nu-pink/10",   label: "대기 → 승인",  getLink: (m) => m?.group_id ? `/groups/${m.group_id}` : "/groups" },
-  project_invite:     { icon: Briefcase,    color: "text-green-600", bg: "bg-green-50",     label: "프로젝트 초대", getLink: (m) => m?.project_id ? `/projects/${m.project_id}` : "/projects" },
+  project_invite:     { icon: Briefcase,    color: "text-green-600", bg: "bg-green-50",     label: "볼트 초대", getLink: (m) => m?.project_id ? `/projects/${m.project_id}` : "/projects" },
   post_reply:         { icon: MessageSquare,color: "text-nu-pink",   bg: "bg-nu-pink/10",   label: "답글",        getLink: (m) => m?.group_id ? `/groups/${m.group_id}` : "/dashboard" },
   mention:            { icon: MessageSquare,color: "text-nu-blue",   bg: "bg-nu-blue/10",   label: "멘션",        getLink: (_) => "/dashboard" },
 };
@@ -191,7 +191,7 @@ export default function NotificationsPage() {
         <div className="bg-nu-white border border-nu-ink/[0.08] p-16 text-center">
           <Bell size={32} className="mx-auto text-nu-muted/30 mb-4" />
           <p className="text-nu-gray text-sm font-medium">알림이 없습니다</p>
-          <p className="text-nu-muted text-xs mt-1">소모임이나 프로젝트에서 활동이 있으면 여기에 표시됩니다</p>
+          <p className="text-nu-muted text-xs mt-1">너트나 볼트에서 활동이 있으면 여기에 표시됩니다</p>
         </div>
       ) : displayed.length === 0 ? (
         <div className="bg-nu-white border border-nu-ink/[0.08] p-16 text-center">

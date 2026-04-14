@@ -112,7 +112,7 @@ export default function ProjectSettingsPage() {
       .single();
 
     if (!project) {
-      toast.error("프로젝트를 찾을 수 없습니다");
+      toast.error("볼트를 찾을 수 없습니다");
       router.push("/projects");
       return;
     }
@@ -225,7 +225,7 @@ export default function ProjectSettingsPage() {
         .eq("id", projectId);
 
       if (error) throw error;
-      toast.success("프로젝트가 업데이트되었습니다");
+      toast.success("볼트가 업데이트되었습니다");
       router.refresh();
     } catch (err: any) {
       toast.error(err.message || "업데이트 실패");
@@ -249,10 +249,10 @@ export default function ProjectSettingsPage() {
     await supabase.from("notifications").insert({
       user_id: userId,
       type: "role_changed",
-      title: isCurrentlyManager ? "매니저 권한 해제" : "프로젝트 매니저로 임명",
+      title: isCurrentlyManager ? "매니저 권한 해제" : "볼트 매니저로 임명",
       body: isCurrentlyManager
-        ? "프로젝트 매니저 권한이 해제되었습니다."
-        : "프로젝트 매니저로 임명되었습니다. 멤버 관리와 프로젝트 설정 일부를 제어할 수 있습니다.",
+        ? "볼트 매니저 권한이 해제되었습니다."
+        : "볼트 매니저로 임명되었습니다. 와셔 관리와 볼트 설정 일부를 제어할 수 있습니다.",
       metadata: { project_id: projectId },
       is_read: false,
     });
@@ -261,6 +261,7 @@ export default function ProjectSettingsPage() {
   }
 
   async function removeMember(memberId: string) {
+    if (!confirm("이 멤버를 정말 제거하시겠습니까?")) return;
     const supabase = createClient();
     const { error } = await supabase
       .from("project_members")
@@ -292,7 +293,7 @@ export default function ProjectSettingsPage() {
 
     // Check if already a member
     if (members.some((m) => m.user_id === foundUser.id)) {
-      toast.error("이미 프로젝트 멤버입니다");
+      toast.error("이미 이 볼트의 와셔입니다");
       return;
     }
 
@@ -323,7 +324,7 @@ export default function ProjectSettingsPage() {
     const supabase = createClient();
 
     if (members.some((m) => m.crew_id === selectedCrewId)) {
-      toast.error("이미 참여 중인 크루입니다");
+      toast.error("이미 참여 중인 너트입니다");
       return;
     }
 
@@ -346,11 +347,11 @@ export default function ProjectSettingsPage() {
 
     setMembers((prev) => [...prev, newMember]);
     setSelectedCrewId("");
-    toast.success("크루가 추가되었습니다");
+    toast.success("너트가 추가되었습니다");
   }
 
   async function handleSnapshot() {
-    if (!confirm("현재 프로젝트 상태를 스냅샷으로 박제하시겠습니까? 외부 링크가 사라져도 넛유니온 내에서 영구히 조회 가능해집니다.")) return;
+    if (!confirm("현재 볼트 상태를 스냅샷으로 박제하시겠습니까? 외부 링크가 사라져도 넛유니온 내에서 영구히 조회 가능해집니다.")) return;
     setSaving(true);
     try {
       const supabase = createClient();
@@ -376,7 +377,7 @@ Generated at: ${new Date().toLocaleString()}
 
       const { error } = await supabase.from("projects").update({ snapshot_content: snapshot }).eq("id", projectId);
       if (error) throw error;
-      toast.success("프로젝트 스냅샷이 서버에 보관되었습니다");
+      toast.success("볼트 스냅샷이 서버에 보관되었습니다");
     } catch (err: any) {
       toast.error("스냅샷 생성 실패: " + err.message);
     } finally {
@@ -385,7 +386,7 @@ Generated at: ${new Date().toLocaleString()}
   }
 
   async function handleArchive() {
-    if (!confirm("프로젝트를 보관하시겠습니까?")) return;
+    if (!confirm("볼트를 보관하시겠습니까?")) return;
     const supabase = createClient();
     const { error } = await supabase
       .from("projects")
@@ -396,14 +397,14 @@ Generated at: ${new Date().toLocaleString()}
       toast.error(error.message);
       return;
     }
-    toast.success("프로젝트가 보관되었습니다");
+    toast.success("볼트가 보관되었습니다");
     router.push("/projects");
   }
 
   async function handleDelete() {
     if (
       !confirm(
-        "정말로 이 프로젝트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+        "정말로 이 볼트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
       )
     )
       return;
@@ -436,7 +437,7 @@ Generated at: ${new Date().toLocaleString()}
       toast.error(error.message);
       return;
     }
-    toast.success("프로젝트가 삭제되었습니다");
+    toast.success("볼트가 삭제되었습니다");
     router.push("/projects");
   }
 
@@ -451,7 +452,7 @@ Generated at: ${new Date().toLocaleString()}
   return (
     <div className="max-w-3xl mx-auto px-8 py-12">
       <h1 className="font-head text-3xl font-extrabold text-nu-ink mb-2">
-        프로젝트 설정
+        볼트 설정
       </h1>
       <p className="text-nu-gray text-sm mb-8">{title}</p>
 
@@ -628,10 +629,10 @@ Generated at: ${new Date().toLocaleString()}
           <div className="flex flex-col gap-4 mt-6">
             <div>
               <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink block mb-1.5 flex items-center gap-2">
-                <Layers size={13} /> 실시간 프로젝트 대시보드 URL (외부)
+                <Layers size={13} /> 실시간 볼트 대시보드 URL (외부)
               </label>
               <input value={dashUrl} onChange={(e) => setDashUrl(e.target.value)} placeholder="https://databox.com/board/..." className="w-full border border-nu-ink/15 bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-nu-pink" />
-              <p className="font-mono-nu text-[9px] text-nu-muted mt-1">프로젝트 대시보드 탭에 대시보드를 연동하여 팀원들과 공유합니다</p>
+              <p className="font-mono-nu text-[9px] text-nu-muted mt-1">볼트 대시보드 탭에 대시보드를 연동하여 팀원들과 공유합니다</p>
             </div>
           </div>
         </div>
@@ -691,7 +692,7 @@ Generated at: ${new Date().toLocaleString()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{m.crew.name}</p>
-                    <p className="text-[10px] text-nu-muted capitalize">크루 · {m.crew.category}</p>
+                    <p className="text-[10px] text-nu-muted capitalize">너트 · {m.crew.category}</p>
                   </div>
                 </>
               ) : null}
@@ -753,7 +754,7 @@ Generated at: ${new Date().toLocaleString()}
         {/* Add crew */}
         <div className="border-t border-nu-ink/[0.06] pt-4">
           <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-3">
-            크루 추가
+            너트 추가
           </p>
           <div className="flex gap-2">
             <select
@@ -761,7 +762,7 @@ Generated at: ${new Date().toLocaleString()}
               onChange={(e) => setSelectedCrewId(e.target.value)}
               className="flex-1 px-4 py-2.5 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink transition-colors"
             >
-              <option value="">크루 선택...</option>
+              <option value="">너트 선택...</option>
               {crews.map((c) => (
                 <option key={c.id} value={c.id}>
                   [{c.category}] {c.name}
@@ -796,13 +797,13 @@ Generated at: ${new Date().toLocaleString()}
             onClick={handleArchive}
             className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-3 border border-nu-amber text-nu-amber hover:bg-nu-amber hover:text-white transition-colors"
           >
-            프로젝트 보관
+            볼트 보관
           </button>
           <button
             onClick={handleDelete}
             className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-3 border border-nu-red text-nu-red hover:bg-nu-red hover:text-white transition-colors flex items-center justify-center gap-1"
           >
-            <Trash2 size={12} /> 프로젝트 삭제
+            <Trash2 size={12} /> 볼트 삭제
           </button>
         </div>
       </div>

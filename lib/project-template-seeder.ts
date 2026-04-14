@@ -16,6 +16,10 @@ export async function seedProjectTemplate(
 ) {
   const supabase = await createClient();
 
+  // Verify the caller is the actual leadId
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || user.id !== leadId) return;
+
   try {
     if (templateId === "local-branding") {
       await seedLocalBrandingTemplate(supabase, projectId, leadId);

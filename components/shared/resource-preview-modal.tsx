@@ -68,9 +68,10 @@ export function ResourcePreviewModal({ isOpen, onClose, url, name }: ResourcePre
             >
               <ExternalLink size={12} /> <span className="hidden sm:inline">ORIGINAL</span>
             </a>
-            <button 
+            <button
               onClick={onClose}
               className="p-1.5 md:p-2 text-nu-muted hover:text-nu-ink transition-colors"
+              aria-label="닫기"
             >
               <X size={24} />
             </button>

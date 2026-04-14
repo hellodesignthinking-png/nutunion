@@ -27,6 +27,15 @@ import {
   Minimize2,
   X,
   Sparkles,
+  MessageCircle,
+  Send,
+  Tag,
+  BookOpen,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  Pencil,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { DrivePicker } from "@/components/integrations/drive-picker";
@@ -39,12 +48,31 @@ import { DriveUploader } from "@/components/integrations/drive-uploader";
 
 function getFileIcon(fileType: string | null) {
   if (!fileType) return <File size={20} />;
+  // Template document types
+  if (fileType === "meeting_notes") return <BookOpen size={20} className="text-nu-pink" />;
+  if (fileType === "spreadsheet" || fileType === "table_doc") return <FileText size={20} className="text-green-600" />;
+  if (fileType === "presentation") return <FileText size={20} className="text-nu-amber" />;
+  if (fileType === "checklist") return <FileText size={20} className="text-green-500" />;
+  if (fileType === "document") return <FileText size={20} className="text-nu-blue" />;
+  // Standard file types
   if (fileType.startsWith("image/")) return <Image size={20} className="text-nu-pink" />;
   if (fileType.startsWith("video/")) return <Film size={20} className="text-nu-blue" />;
   if (fileType.includes("pdf") || fileType.includes("document")) return <FileText size={20} className="text-nu-amber" />;
   if (fileType === "drive-link") return <HardDrive size={20} className="text-green-600" />;
   if (fileType === "url-link") return <Link2 size={20} className="text-nu-blue" />;
   return <File size={20} className="text-nu-graphite" />;
+}
+
+function getDocTypeLabel(fileType: string | null): string | null {
+  const labels: Record<string, string> = {
+    meeting_notes: "회의록",
+    spreadsheet: "시트",
+    presentation: "슬라이드",
+    checklist: "체크리스트",
+    table_doc: "테이블",
+    document: "문서",
+  };
+  return fileType ? labels[fileType] || null : null;
 }
 
 function formatFileSize(bytes: number | null): string {
@@ -60,18 +88,52 @@ interface MeetingResource {
   meetingTitle: string;
 }
 
+interface ResourceComment {
+  id: string;
+  content: string;
+  created_at: string;
+  user_id: string;
+  author: { nickname: string; avatar_url: string | null } | null;
+}
+
+interface ResourceTag {
+  id: string;
+  tag: string;
+  user_id: string;
+}
+
+const TAG_OPTIONS = [
+  { label: "유용함", emoji: "👍", color: "bg-green-100 text-green-700 border-green-200" },
+  { label: "참고", emoji: "📌", color: "bg-nu-amber/10 text-nu-amber border-nu-amber/20" },
+  { label: "필독", emoji: "🔥", color: "bg-red-100 text-red-700 border-red-200" },
+] as const;
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "방금 전";
+  if (mins < 60) return `${mins}분 전`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}시간 전`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}일 전`;
+  return new Date(dateStr).toLocaleDateString("ko");
+}
+
 export default function ResourcesPage() {
   const params = useParams();
   const groupId = params.id as string;
 
   const [files, setFiles] = useState<(FileAttachment & { uploader?: { nickname: string | null } })[]>([]);
   const [meetingResources, setMeetingResources] = useState<MeetingResource[]>([]);
+  const [wikiPages, setWikiPages] = useState<{id: string; title: string; content: string; updated_at: string; topic_name: string; google_doc_url?: string; author_nickname?: string}[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
   const [isManager, setIsManager] = useState(false);
-  const [activeTab, setActiveTab] = useState<"files" | "drive" | "links" | "meetings">("files");
+  const [hostId, setHostId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"all" | "files" | "drive" | "links" | "meetings" | "wiki">("all");
   const [groupName, setGroupName] = useState("");
   const [previewData, setPreviewData] = useState<{ url: string; name: string; id?: string; content?: string | null } | null>(null);
   const [isSplitView, setIsSplitView] = useState(true);
@@ -82,13 +144,19 @@ export default function ResourcesPage() {
   const [linkUrl, setLinkUrl] = useState("");
   const [addingLink, setAddingLink] = useState(false);
   const [showNewDocModal, setShowNewDocModal] = useState(false);
+  const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
+  const [commentsByResource, setCommentsByResource] = useState<Record<string, ResourceComment[]>>({});
+  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+  const [postingComment, setPostingComment] = useState<string | null>(null);
+  const [tagsByResource, setTagsByResource] = useState<Record<string, ResourceTag[]>>({});
+  const [addingWikiResource, setAddingWikiResource] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Mock AI summary generator
   const getAiSummary = (fileName: string) => {
-    if (fileName.includes("기획")) return ["본 문서는 프로젝트의 핵심 타겟과 시장 분석 데이터를 포함하고 있습니다.", "경쟁사 분석을 통해 도출된 3가지 차별화 전략이 명시되어 있습니다.", "Q3까지의 단계별 실행 로드맵과 예상 리소스를 요약하고 있습니다."];
+    if (fileName.includes("기획")) return ["본 문서는 볼트의 핵심 타겟과 시장 분석 데이터를 포함하고 있습니다.", "경쟁사 분석을 통해 도출된 3가지 차별화 전략이 명시되어 있습니다.", "Q3까지의 단계별 실행 로드맵과 예상 리소스를 요약하고 있습니다."];
     if (fileName.includes("커피") || fileName.includes("영수증")) return ["2026년 4월 6일 스타벅스에서 결제된 다과비 지출 내역입니다.", "팀 미팅 중 발생한 비용으로 총 8잔의 아메리카노가 포함되었습니다.", "정산 규정에 따라 운영비 카테고리로 분류되어 검토 대기 중입니다."];
-    return ["해당 문서는 소모임 활동 중 생성된 지식 자산입니다.", "핵심 키워드와 실행 액션 아이템이 상세히 기록되어 있습니다.", "전체 맥락을 파악하기 위해 문서 전문 확인을 권장합니다."];
+    return ["해당 문서는 너트 활동 중 생성된 지식 자산입니다.", "핵심 키워드와 실행 액션 아이템이 상세히 기록되어 있습니다.", "전체 맥락을 파악하기 위해 문서 전문 확인을 권장합니다."];
   };
 
   const loadData = useCallback(async () => {
@@ -102,8 +170,9 @@ export default function ResourcesPage() {
       supabase.from("group_members").select("role").eq("group_id", groupId).eq("user_id", user.id).maybeSingle(),
     ]);
     if (grp) {
-      setGroupName(grp.name || "소모임");
-      setIsManager(grp.host_id === user.id || membership?.role === "manager" || membership?.role === "host");
+      setGroupName(grp.name || "너트");
+      setHostId(grp.host_id || null);
+      setIsManager(grp.host_id === user.id || membership?.role === "moderator" || membership?.role === "host");
     }
 
     const { data: filesData } = await supabase
@@ -115,28 +184,214 @@ export default function ResourcesPage() {
 
     if (filesData) setFiles(filesData as any);
 
-    const { data: agendas } = await supabase
-      .from("meeting_agendas")
-      .select("resources, meeting:meetings!meeting_agendas_meeting_id_fkey(title, group_id)")
-      .not("resources", "eq", "[]");
+    // Fetch meeting resources from agendas AND meeting_resources table
+    const allMeetingResources: MeetingResource[] = [];
 
-    if (agendas) {
-      const resources: MeetingResource[] = [];
-      for (const agenda of agendas) {
-        const meeting = agenda.meeting as any;
-        if (meeting?.group_id !== groupId) continue;
-        if (!agenda.resources || !Array.isArray(agenda.resources)) continue;
-        for (const r of agenda.resources as { name: string; url: string }[]) {
-          resources.push({ name: r.name, url: r.url, meetingTitle: meeting.title });
+    try {
+      const { data: agendas } = await supabase
+        .from("meeting_agendas")
+        .select("resources, meeting:meetings!meeting_agendas_meeting_id_fkey(title, group_id)")
+        .not("resources", "eq", "[]");
+
+      if (agendas) {
+        for (const agenda of agendas) {
+          const meeting = agenda.meeting as any;
+          if (meeting?.group_id !== groupId) continue;
+          if (!agenda.resources || !Array.isArray(agenda.resources)) continue;
+          for (const r of agenda.resources as { name: string; url: string }[]) {
+            allMeetingResources.push({ name: r.name, url: r.url, meetingTitle: meeting.title });
+          }
         }
       }
-      setMeetingResources(resources);
+    } catch { /* agendas may not have resources */ }
+
+    try {
+      const { data: mtgRes } = await supabase
+        .from("meeting_resources")
+        .select("title, url, meeting:meetings!meeting_resources_meeting_id_fkey(title, group_id)")
+        .order("created_at", { ascending: false });
+
+      if (mtgRes) {
+        for (const r of mtgRes) {
+          const meeting = r.meeting as any;
+          if (meeting?.group_id !== groupId) continue;
+          // Avoid duplicates already in file_attachments
+          if (!allMeetingResources.some(m => m.url === r.url)) {
+            allMeetingResources.push({ name: r.title, url: r.url, meetingTitle: meeting.title });
+          }
+        }
+      }
+    } catch { /* meeting_resources table may not exist */ }
+
+    setMeetingResources(allMeetingResources);
+
+    // Fetch wiki pages
+    const { data: wikiData } = await supabase
+      .from("wiki_pages")
+      .select("id, title, content, updated_at, google_doc_id, google_doc_url, topic:wiki_topics!wiki_pages_topic_id_fkey(name, group_id), author:profiles!wiki_pages_created_by_fkey(nickname)")
+      .eq("topic.group_id", groupId)
+      .order("updated_at", { ascending: false });
+
+    if (wikiData) {
+      setWikiPages(
+        (wikiData as any[])
+          .filter((w: any) => w.topic?.group_id === groupId)
+          .map((w: any) => ({
+            id: w.id,
+            title: w.title,
+            content: w.content?.substring(0, 200) || "",
+            updated_at: w.updated_at,
+            topic_name: w.topic?.name || "",
+            google_doc_url: w.google_doc_url || null,
+            author_nickname: w.author?.nickname || "",
+          }))
+      );
     }
 
     setLoading(false);
   }, [groupId]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // ── Comments ──
+  const loadComments = useCallback(async (resourceId: string) => {
+    const supabase = createClient();
+    try {
+      const { data, error } = await supabase
+        .from("resource_comments")
+        .select("id, content, created_at, user_id, author:profiles!resource_comments_user_id_fkey(nickname, avatar_url)")
+        .eq("resource_id", resourceId)
+        .order("created_at", { ascending: true });
+      if (!error && data) {
+        setCommentsByResource((prev) => ({ ...prev, [resourceId]: data as any }));
+      }
+    } catch {
+      // resource_comments table may not exist yet
+      setCommentsByResource((prev) => ({ ...prev, [resourceId]: [] }));
+    }
+  }, []);
+
+  const postComment = useCallback(async (resourceId: string) => {
+    const content = (commentInputs[resourceId] || "").trim();
+    if (!content || !userId) return;
+    setPostingComment(resourceId);
+    const supabase = createClient();
+    try {
+      const { error } = await supabase.from("resource_comments").insert({
+        resource_id: resourceId,
+        resource_type: "file",
+        group_id: groupId,
+        user_id: userId,
+        content,
+      });
+      if (error) {
+        toast.error("댓글 등록에 실패했습니다");
+      } else {
+        setCommentInputs((prev) => ({ ...prev, [resourceId]: "" }));
+        await loadComments(resourceId);
+      }
+    } catch {
+      toast.error("댓글 기능을 사용할 수 없습니다");
+    }
+    setPostingComment(null);
+  }, [commentInputs, userId, loadComments]);
+
+  const deleteComment = useCallback(async (resourceId: string, commentId: string) => {
+    if (!confirm("댓글을 삭제하시겠습니까?")) return;
+    const supabase = createClient();
+    try {
+      const { error } = await supabase.from("resource_comments").delete().eq("id", commentId).eq("user_id", userId);
+      if (error) {
+        toast.error("댓글 삭제에 실패했습니다");
+      } else {
+        await loadComments(resourceId);
+        toast.success("댓글이 삭제되었습니다");
+      }
+    } catch {
+      toast.error("댓글 삭제에 실패했습니다");
+    }
+  }, [userId, loadComments]);
+
+  const toggleComments = useCallback((resourceId: string) => {
+    setExpandedComments((prev) => {
+      const next = { ...prev, [resourceId]: !prev[resourceId] };
+      if (next[resourceId] && !commentsByResource[resourceId]) {
+        loadComments(resourceId);
+      }
+      return next;
+    });
+  }, [commentsByResource, loadComments]);
+
+  // ── Tags ──
+  const loadTags = useCallback(async (resourceId: string) => {
+    const supabase = createClient();
+    try {
+      const { data, error } = await supabase
+        .from("resource_tags")
+        .select("id, tag, user_id")
+        .eq("resource_id", resourceId);
+      if (!error && data) {
+        setTagsByResource((prev) => ({ ...prev, [resourceId]: data }));
+      }
+    } catch {
+      // resource_tags table may not exist yet
+    }
+  }, []);
+
+  const toggleTag = useCallback(async (resourceId: string, tag: string) => {
+    if (!userId) return;
+    const supabase = createClient();
+    const existing = (tagsByResource[resourceId] || []).find(
+      (t) => t.tag === tag && t.user_id === userId
+    );
+    try {
+      if (existing) {
+        await supabase.from("resource_tags").delete().eq("id", existing.id);
+      } else {
+        await supabase.from("resource_tags").insert({ resource_id: resourceId, user_id: userId, tag });
+      }
+      await loadTags(resourceId);
+    } catch {
+      toast.error("태그 기능을 사용할 수 없습니다");
+    }
+  }, [userId, tagsByResource, loadTags]);
+
+  // Load tags for visible files
+  useEffect(() => {
+    for (const f of files) {
+      if (!tagsByResource[f.id]) {
+        loadTags(f.id);
+      }
+    }
+  }, [files, tagsByResource, loadTags]);
+
+  // ── Add to Wiki Resource Feed ──
+  const addToWikiResources = useCallback(async (file: { id: string; file_name: string; file_url: string; file_type: string | null }) => {
+    if (!userId) return;
+    setAddingWikiResource(file.id);
+    try {
+      const res = await fetch("/api/wiki/resources", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          groupId,
+          title: file.file_name,
+          url: file.file_url,
+          resourceType: undefined, // let auto-detection work
+          description: null,
+        }),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        toast.success("탭 주간 리소스 피드에 추가되었습니다!");
+      } else {
+        toast.error(result.error || "추가에 실패했습니다");
+      }
+    } catch {
+      toast.error("탭 리소스 추가에 실패했습니다");
+    }
+    setAddingWikiResource(null);
+  }, [groupId, userId]);
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -214,6 +469,17 @@ export default function ResourcesPage() {
     }
   }
 
+  async function handleRename(fileId: string, newName: string) {
+    const supabase = createClient();
+    const { error } = await supabase.from("file_attachments").update({ file_name: newName }).eq("id", fileId);
+    if (error) {
+      toast.error("이름 변경에 실패했습니다");
+    } else {
+      toast.success("이름이 변경되었습니다");
+      setFiles((prev) => prev.map((f) => f.id === fileId ? { ...f, file_name: newName } : f));
+    }
+  }
+
   const uploadedFiles = files.filter((f) => f.file_type !== "drive-link" && f.file_type !== "url-link");
   const driveFiles = files.filter((f) => f.file_type === "drive-link");
   const externalLinks = files.filter((f) => f.file_type === "url-link");
@@ -222,6 +488,7 @@ export default function ResourcesPage() {
   const filteredDriveFiles = driveFiles.filter((f) => f.file_name.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredExternalLinks = externalLinks.filter((f) => f.file_name.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredMeetingResources = meetingResources.filter((r) => r.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredWikiPages = wikiPages.filter((w) => w.title.toLowerCase().includes(searchQuery.toLowerCase()) || w.topic_name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   if (loading) {
     return (
@@ -246,7 +513,7 @@ export default function ResourcesPage() {
           <nav className="flex items-center gap-1.5 mb-6 font-mono-nu text-[11px] uppercase tracking-widest">
             <Link href={`/groups/${groupId}`}
               className="text-nu-muted hover:text-nu-ink no-underline flex items-center gap-1 transition-colors">
-              <ArrowLeft size={12} /> {groupName || "소모임"}
+              <ArrowLeft size={12} /> {groupName || "너트"}
             </Link>
             <ChevronRight size={12} className="text-nu-muted/40" />
             <span className="text-nu-ink">자료실</span>
@@ -316,10 +583,11 @@ export default function ResourcesPage() {
                 const { error: uploadErr } = await supabase.storage.from("media").upload(filePath, file);
                 if (uploadErr) { toast.error(`${file.name} 업로드 실패`); continue; }
                 const { data: { publicUrl } } = supabase.storage.from("media").getPublicUrl(filePath);
-                await supabase.from("file_attachments").insert({
+                const { error: insertErr } = await supabase.from("file_attachments").insert({
                   target_type: "group", target_id: groupId, uploaded_by: user.id,
                   file_name: file.name, file_url: publicUrl, file_size: file.size, file_type: file.type,
                 });
+                if (insertErr) { toast.error(`${file.name} 저장 실패`); continue; }
               }
               toast.success(`${droppedFiles.length}개 파일이 업로드되었습니다! 🎉`);
               setUploading(false);
@@ -428,6 +696,14 @@ export default function ResourcesPage() {
 
           {/* Tabs */}
           <div className="flex gap-0 border-b-[2px] border-nu-ink/[0.08] mb-6 overflow-x-auto whitespace-nowrap scrollbar-hide">
+            <button
+              onClick={() => setActiveTab("all")}
+              className={`font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-3 border-b-[3px] transition-all whitespace-nowrap ${
+                activeTab === "all" ? "border-nu-ink text-nu-ink" : "border-transparent text-nu-muted hover:text-nu-ink"
+              }`}
+            >
+              전체 ({files.length + wikiPages.length + meetingResources.length})
+            </button>
             {([
               { key: "files", label: "파일", icon: <Upload size={13} />, count: filteredUploadedFiles.length },
               { key: "drive", label: "드라이브", icon: <HardDrive size={13} />, count: filteredDriveFiles.length },
@@ -449,10 +725,221 @@ export default function ResourcesPage() {
                 </span>
               </button>
             ))}
+            <button
+              onClick={() => setActiveTab("wiki")}
+              className={`font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-3 border-b-[3px] transition-all whitespace-nowrap ${
+                activeTab === "wiki" ? "border-nu-pink text-nu-pink" : "border-transparent text-nu-muted hover:text-nu-ink"
+              }`}
+            >
+              <span className="flex items-center gap-1.5">탭 ({wikiPages.length})</span>
+            </button>
           </div>
 
           {/* Tab Content Area */}
           <div className="relative min-h-[400px]">
+            {activeTab === "all" && (
+              <div className="space-y-3">
+                {/* Wiki pages */}
+                {filteredWikiPages.slice(0, 5).map((page) => (
+                  <Link key={`wiki-${page.id}`} href={`/groups/${groupId}/wiki/pages/${page.id}`}
+                    className="bg-nu-white border-[2px] border-nu-ink/[0.08] hover:border-nu-pink/40 transition-all p-4 flex items-center gap-3 no-underline group">
+                    <div className="w-9 h-9 bg-nu-pink/10 flex items-center justify-center shrink-0">
+                      <Sparkles size={16} className="text-nu-pink" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono-nu text-[8px] uppercase tracking-widest px-1.5 py-0.5 bg-nu-pink/10 text-nu-pink">탭</span>
+                        <span className="text-sm font-medium text-nu-ink truncate group-hover:text-nu-pink transition-colors">{page.title}</span>
+                      </div>
+                      <span className="font-mono-nu text-[9px] text-nu-muted/60">{new Date(page.updated_at).toLocaleDateString("ko")}</span>
+                    </div>
+                  </Link>
+                ))}
+                {/* Recent files with source labels */}
+                {files.slice(0, 10).map((f) => (
+                  <div key={`file-${f.id}`} className="bg-nu-white border-[2px] border-nu-ink/[0.08] hover:border-nu-blue/40 transition-all group">
+                    <div className="p-4 flex items-center gap-3">
+                      <div className="w-9 h-9 bg-nu-blue/10 flex items-center justify-center shrink-0">
+                        {getFileIcon(f.file_type)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono-nu text-[8px] uppercase tracking-widest px-1.5 py-0.5 bg-nu-blue/10 text-nu-blue">
+                            {f.file_type === "drive-link" ? "드라이브" : f.file_type === "url-link" ? "링크" : "파일"}
+                          </span>
+                          {resolveTemplateContent(f.file_url, f.content) ? (
+                            <button
+                              onClick={() => setPreviewData({ url: f.file_url, name: f.file_name, id: f.id, content: resolveTemplateContent(f.file_url, f.content) })}
+                              className="text-sm font-medium text-nu-ink truncate hover:text-nu-pink transition-colors text-left bg-transparent border-none cursor-pointer p-0"
+                            >
+                              {f.file_name}
+                            </button>
+                          ) : (
+                            <a
+                              href={f.file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm font-medium text-nu-ink truncate hover:text-nu-pink transition-colors no-underline"
+                            >
+                              {f.file_name}
+                            </a>
+                          )}
+                          {/* Tag badges */}
+                          {(tagsByResource[f.id] || []).length > 0 && (
+                            <div className="flex items-center gap-1">
+                              {Array.from(new Set((tagsByResource[f.id] || []).map(t => t.tag))).map((tag) => {
+                                const opt = TAG_OPTIONS.find(o => o.label === tag);
+                                return opt ? (
+                                  <span key={tag} className={`font-mono-nu text-[7px] font-bold px-1.5 py-0.5 border rounded-sm ${opt.color}`}>
+                                    {opt.emoji} {opt.label}
+                                  </span>
+                                ) : null;
+                              })}
+                            </div>
+                          )}
+                        </div>
+                        <span className="font-mono-nu text-[9px] text-nu-muted/60">{f.uploader?.nickname || ""} · {timeAgo(f.created_at)}</span>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => toggleComments(f.id)}
+                          className="p-1.5 text-nu-muted hover:text-nu-blue transition-colors"
+                          title="댓글"
+                        >
+                          <MessageCircle size={14} />
+                        </button>
+                        <button
+                          onClick={() => addToWikiResources(f)}
+                          disabled={addingWikiResource === f.id}
+                          className="p-1.5 text-nu-muted hover:text-nu-pink transition-colors disabled:opacity-40"
+                          title="탭 리소스에 추가"
+                        >
+                          {addingWikiResource === f.id ? <Loader2 size={14} className="animate-spin" /> : <BookOpen size={14} />}
+                        </button>
+                        {f.file_url && !resolveTemplateContent(f.file_url, f.content) && (
+                          <a href={f.file_url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-nu-muted hover:text-nu-ink transition-colors" onClick={(e) => e.stopPropagation()}>
+                            <ExternalLink size={14} />
+                          </a>
+                        )}
+                        {resolveTemplateContent(f.file_url, f.content) && (
+                          <button
+                            onClick={() => setPreviewData({ url: f.file_url, name: f.file_name, id: f.id, content: resolveTemplateContent(f.file_url, f.content) })}
+                            className="p-1.5 text-nu-muted hover:text-nu-pink transition-colors"
+                            title="미리보기"
+                          >
+                            <Eye size={14} />
+                          </button>
+                        )}
+                        {(f.uploaded_by === userId || isManager || (hostId && userId === hostId)) && (
+                          <button
+                            onClick={() => {
+                              if (confirm("이 자료를 삭제하시겠습니까?")) {
+                                handleDelete(f.id, f.file_url, f.file_type);
+                              }
+                            }}
+                            className="p-1.5 text-nu-muted/40 hover:text-red-500 transition-colors"
+                            title="삭제"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    {/* Inline comments */}
+                    {expandedComments[f.id] && (
+                      <InlineComments
+                        resourceId={f.id}
+                        comments={commentsByResource[f.id] || []}
+                        commentInput={commentInputs[f.id] || ""}
+                        onInputChange={(val) => setCommentInputs(prev => ({ ...prev, [f.id]: val }))}
+                        onPost={() => postComment(f.id)}
+                        onDelete={(commentId) => deleteComment(f.id, commentId)}
+                        posting={postingComment === f.id}
+                        tags={tagsByResource[f.id] || []}
+                        userId={userId}
+                        onToggleTag={(tag) => toggleTag(f.id, tag)}
+                      />
+                    )}
+                  </div>
+                ))}
+                {/* Meeting resources */}
+                {filteredMeetingResources.slice(0, 5).map((r, i) => (
+                  <a key={`meeting-${i}`} href={r.url} target="_blank" rel="noopener noreferrer"
+                    className="bg-nu-white border-[2px] border-nu-ink/[0.08] hover:border-nu-amber/40 transition-all p-4 flex items-center gap-3 no-underline group">
+                    <div className="w-9 h-9 bg-nu-amber/10 flex items-center justify-center shrink-0">
+                      <FileText size={16} className="text-nu-amber" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono-nu text-[8px] uppercase tracking-widest px-1.5 py-0.5 bg-nu-amber/10 text-nu-amber">미팅</span>
+                        <span className="text-sm font-medium text-nu-ink truncate group-hover:text-nu-amber transition-colors">{r.name}</span>
+                      </div>
+                      <span className="font-mono-nu text-[9px] text-nu-muted/60">{r.meetingTitle}</span>
+                    </div>
+                  </a>
+                ))}
+                {files.length === 0 && wikiPages.length === 0 && meetingResources.length === 0 && (
+                  <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-12 text-center">
+                    <FolderOpen size={32} className="text-nu-muted/30 mx-auto mb-3" />
+                    <p className="text-nu-gray text-sm mb-2">아직 자료가 없습니다</p>
+                    <p className="text-nu-muted text-xs">파일을 업로드하거나, 탭을 작성하거나, 미팅을 기록해보세요</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === "wiki" && (
+              <div className="space-y-3">
+                {filteredWikiPages.length === 0 ? (
+                  <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-8 text-center">
+                    <FileText size={28} className="text-nu-muted/30 mx-auto mb-3" />
+                    <p className="text-nu-gray text-sm mb-2">아직 탭 페이지가 없습니다</p>
+                    <Link href={`/groups/${groupId}/wiki`}
+                      className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink hover:underline no-underline">
+                      탭에서 페이지 만들기 →
+                    </Link>
+                  </div>
+                ) : (
+                  filteredWikiPages.map((page) => (
+                    <div key={page.id} className="bg-nu-white border-[2px] border-nu-ink/[0.08] hover:border-nu-pink/40 transition-all group">
+                      <div className="p-5 flex items-start gap-4">
+                        <div className="w-12 h-12 bg-nu-pink/10 flex items-center justify-center shrink-0">
+                          <Sparkles size={20} className="text-nu-pink" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-mono-nu text-[8px] uppercase tracking-widest px-2 py-0.5 bg-nu-pink/10 text-nu-pink">탭</span>
+                            {page.topic_name && (
+                              <span className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted">{page.topic_name}</span>
+                            )}
+                          </div>
+                          <Link href={`/groups/${groupId}/wiki/pages/${page.id}`}
+                            className="font-head text-sm font-bold text-nu-ink group-hover:text-nu-pink transition-colors no-underline block truncate">
+                            {page.title}
+                          </Link>
+                          <p className="text-xs text-nu-muted mt-1 line-clamp-2">{page.content}</p>
+                          <div className="flex items-center gap-3 mt-2">
+                            {page.author_nickname && (
+                              <span className="font-mono-nu text-[9px] text-nu-muted">by {page.author_nickname}</span>
+                            )}
+                            <span className="font-mono-nu text-[9px] text-nu-muted/60">
+                              {new Date(page.updated_at).toLocaleDateString("ko")}
+                            </span>
+                            {page.google_doc_url && (
+                              <a href={page.google_doc_url} target="_blank" rel="noopener noreferrer"
+                                className="font-mono-nu text-[9px] text-green-600 hover:underline flex items-center gap-1 no-underline">
+                                <HardDrive size={10} /> Google Docs
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
             {activeTab === "files" && (
               <section className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                 {filteredUploadedFiles.length === 0 ? (
@@ -466,14 +953,29 @@ export default function ResourcesPage() {
                 ) : (
                   <div className="grid grid-cols-1 gap-4">
                     {filteredUploadedFiles.map((file) => (
-                      <FileCard 
-                        key={file.id} 
-                        file={file} 
-                        userId={userId} 
-                        onDelete={handleDelete} 
+                      <FileCard
+                        key={file.id}
+                        file={file}
+                        userId={userId}
+                        hostId={hostId}
+                        isManager={isManager}
+                        onDelete={handleDelete}
+                        onRename={handleRename}
                         onPreview={(url, name) => setPreviewData({ url, name, id: file.id, content: resolveTemplateContent(url, file.content) })}
                         showAiSummary={showAiSummary}
                         aiSummary={getAiSummary(file.file_name)}
+                        onToggleComments={() => toggleComments(file.id)}
+                        commentsExpanded={!!expandedComments[file.id]}
+                        comments={commentsByResource[file.id] || []}
+                        commentInput={commentInputs[file.id] || ""}
+                        onCommentInputChange={(val) => setCommentInputs(prev => ({ ...prev, [file.id]: val }))}
+                        onPostComment={() => postComment(file.id)}
+                        onDeleteComment={(commentId) => deleteComment(file.id, commentId)}
+                        postingComment={postingComment === file.id}
+                        tags={tagsByResource[file.id] || []}
+                        onToggleTag={(tag) => toggleTag(file.id, tag)}
+                        onAddToWiki={() => addToWikiResources(file)}
+                        addingWiki={addingWikiResource === file.id}
                       />
                     ))}
                   </div>
@@ -491,7 +993,22 @@ export default function ResourcesPage() {
                 ) : (
                   <div className="grid grid-cols-1 gap-4">
                     {filteredDriveFiles.map((file) => (
-                      <FileCard key={file.id} file={file} userId={userId} onDelete={handleDelete} isDrive onPreview={(url, name) => setPreviewData({ url, name, id: file.id, content: resolveTemplateContent(url, file.content) })} />
+                      <FileCard
+                        key={file.id} file={file} userId={userId} hostId={hostId} isManager={isManager} onDelete={handleDelete} onRename={handleRename} isDrive
+                        onPreview={(url, name) => setPreviewData({ url, name, id: file.id, content: resolveTemplateContent(url, file.content) })}
+                        onToggleComments={() => toggleComments(file.id)}
+                        commentsExpanded={!!expandedComments[file.id]}
+                        comments={commentsByResource[file.id] || []}
+                        commentInput={commentInputs[file.id] || ""}
+                        onCommentInputChange={(val) => setCommentInputs(prev => ({ ...prev, [file.id]: val }))}
+                        onPostComment={() => postComment(file.id)}
+                        onDeleteComment={(commentId) => deleteComment(file.id, commentId)}
+                        postingComment={postingComment === file.id}
+                        tags={tagsByResource[file.id] || []}
+                        onToggleTag={(tag) => toggleTag(file.id, tag)}
+                        onAddToWiki={() => addToWikiResources(file)}
+                        addingWiki={addingWikiResource === file.id}
+                      />
                     ))}
                   </div>
                 )}
@@ -508,7 +1025,22 @@ export default function ResourcesPage() {
                 ) : (
                   <div className="grid grid-cols-1 gap-4">
                     {filteredExternalLinks.map((file) => (
-                      <FileCard key={file.id} file={file} userId={userId} onDelete={handleDelete} isLink onPreview={(url, name) => setPreviewData({ url, name, id: file.id, content: resolveTemplateContent(url, file.content) })} />
+                      <FileCard
+                        key={file.id} file={file} userId={userId} hostId={hostId} isManager={isManager} onDelete={handleDelete} onRename={handleRename} isLink
+                        onPreview={(url, name) => setPreviewData({ url, name, id: file.id, content: resolveTemplateContent(url, file.content) })}
+                        onToggleComments={() => toggleComments(file.id)}
+                        commentsExpanded={!!expandedComments[file.id]}
+                        comments={commentsByResource[file.id] || []}
+                        commentInput={commentInputs[file.id] || ""}
+                        onCommentInputChange={(val) => setCommentInputs(prev => ({ ...prev, [file.id]: val }))}
+                        onPostComment={() => postComment(file.id)}
+                        onDeleteComment={(commentId) => deleteComment(file.id, commentId)}
+                        postingComment={postingComment === file.id}
+                        tags={tagsByResource[file.id] || []}
+                        onToggleTag={(tag) => toggleTag(file.id, tag)}
+                        onAddToWiki={() => addToWikiResources(file)}
+                        addingWiki={addingWikiResource === file.id}
+                      />
                     ))}
                   </div>
                 )}
@@ -682,20 +1214,140 @@ export default function ResourcesPage() {
   );
 }
 
+function InlineComments({
+  resourceId,
+  comments,
+  commentInput,
+  onInputChange,
+  onPost,
+  onDelete,
+  posting,
+  tags,
+  userId,
+  onToggleTag,
+}: {
+  resourceId: string;
+  comments: ResourceComment[];
+  commentInput: string;
+  onInputChange: (val: string) => void;
+  onPost: () => void;
+  onDelete?: (commentId: string) => void;
+  posting: boolean;
+  tags: ResourceTag[];
+  userId: string | null;
+  onToggleTag: (tag: string) => void;
+}) {
+  return (
+    <div className="px-4 pb-4 border-t border-nu-ink/[0.06] animate-in fade-in slide-in-from-top-2 duration-200">
+      {/* Tag buttons */}
+      <div className="flex items-center gap-2 py-3 border-b border-nu-ink/[0.04]">
+        <Tag size={12} className="text-nu-muted" />
+        <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mr-1">리뷰:</span>
+        {TAG_OPTIONS.map((opt) => {
+          const count = tags.filter(t => t.tag === opt.label).length;
+          const isActive = userId ? tags.some(t => t.tag === opt.label && t.user_id === userId) : false;
+          return (
+            <button
+              key={opt.label}
+              onClick={() => onToggleTag(opt.label)}
+              className={`font-mono-nu text-[9px] font-bold px-2 py-1 border rounded-sm transition-all ${
+                isActive ? opt.color + " ring-1 ring-offset-1" : "border-nu-ink/10 text-nu-muted hover:border-nu-ink/30"
+              }`}
+            >
+              {opt.emoji} {opt.label} {count > 0 && <span className="ml-0.5 opacity-70">{count}</span>}
+            </button>
+          );
+        })}
+      </div>
+      {/* Comments */}
+      <div className="mt-3 space-y-2.5 max-h-[200px] overflow-y-auto">
+        {comments.length === 0 && (
+          <p className="text-[11px] text-nu-muted/50 text-center py-2">아직 댓글이 없습니다</p>
+        )}
+        {comments.map((c) => (
+          <div key={c.id} className="flex items-start gap-2">
+            <div className="w-6 h-6 bg-nu-cream rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold text-nu-muted">
+              {c.author?.avatar_url ? (
+                <img src={c.author.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" />
+              ) : (
+                (c.author?.nickname || "?")[0]
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-mono-nu text-[10px] font-bold text-nu-ink">{c.author?.nickname || "익명"}</span>
+                <span className="font-mono-nu text-[9px] text-nu-muted/50">{timeAgo(c.created_at)}</span>
+                {userId && c.user_id === userId && onDelete && (
+                  <button
+                    onClick={() => onDelete(c.id)}
+                    className="font-mono-nu text-[9px] text-nu-muted/40 hover:text-nu-red transition-colors"
+                    title="삭제"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              <p className="text-[12px] text-nu-graphite leading-relaxed mt-0.5">{c.content}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Comment input */}
+      <div className="flex items-center gap-2 mt-3">
+        <input
+          value={commentInput}
+          onChange={(e) => onInputChange(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onPost(); } }}
+          placeholder="댓글을 입력하세요..."
+          className="flex-1 h-8 text-[12px] bg-nu-cream/30 border border-nu-ink/10 px-3 focus:outline-none focus:border-nu-blue transition-colors"
+        />
+        <button
+          onClick={onPost}
+          disabled={posting || !commentInput.trim()}
+          className="p-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors disabled:opacity-30"
+        >
+          {posting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function FileCard({
-  file, userId, onDelete, isDrive, isLink, onPreview, showAiSummary, aiSummary
+  file, userId, hostId, isManager, onDelete, onRename, isDrive, isLink, onPreview, showAiSummary, aiSummary,
+  onToggleComments, commentsExpanded, comments, commentInput, onCommentInputChange, onPostComment, onDeleteComment, postingComment,
+  tags, onToggleTag, onAddToWiki, addingWiki,
 }: {
   file: FileAttachment & { uploader?: { nickname: string | null } };
   userId: string | null;
+  hostId?: string | null;
+  isManager?: boolean;
   onDelete: (id: string, url: string, type: string | null) => void;
+  onRename?: (id: string, newName: string) => void;
   isDrive?: boolean;
   isLink?: boolean;
   onPreview: (url: string, name: string) => void;
   showAiSummary?: boolean;
   aiSummary?: string[];
+  onToggleComments?: () => void;
+  commentsExpanded?: boolean;
+  comments?: ResourceComment[];
+  commentInput?: string;
+  onCommentInputChange?: (val: string) => void;
+  onPostComment?: () => void;
+  onDeleteComment?: (commentId: string) => void;
+  postingComment?: boolean;
+  tags?: ResourceTag[];
+  onToggleTag?: (tag: string) => void;
+  onAddToWiki?: () => void;
+  addingWiki?: boolean;
 }) {
   const [status, setStatus] = useState<"draft" | "review" | "asset">("draft");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(file.file_name);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isOwner = file.uploaded_by === userId;
+  const canManage = isOwner || isManager || (hostId != null && userId === hostId);
   
   const statusConfig = {
     draft: { label: "DRAFT", color: "bg-nu-muted/10 text-nu-muted border-nu-muted/20", icon: "✏️" },
@@ -755,20 +1407,75 @@ function FileCard({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
-            <a
-              href={file.file_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[13px] font-black text-nu-ink truncate hover:text-nu-pink transition-colors no-underline uppercase tracking-tight"
-            >
-              {file.file_name}
-            </a>
-            {resolveTemplateContent(file.file_url, file.content) && (
+            {isEditing ? (
+              <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                <input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      const trimmed = editName.trim();
+                      if (trimmed && trimmed !== file.file_name && onRename) {
+                        onRename(file.id, trimmed);
+                      }
+                      setIsEditing(false);
+                    }
+                    if (e.key === "Escape") { setEditName(file.file_name); setIsEditing(false); }
+                  }}
+                  autoFocus
+                  className="flex-1 h-7 text-[13px] font-black text-nu-ink uppercase tracking-tight bg-nu-cream/30 border-2 border-nu-pink px-2 outline-none font-mono-nu"
+                />
+                <button
+                  onClick={() => {
+                    const trimmed = editName.trim();
+                    if (trimmed && trimmed !== file.file_name && onRename) {
+                      onRename(file.id, trimmed);
+                    }
+                    setIsEditing(false);
+                  }}
+                  className="p-1 text-green-600 hover:bg-green-50 transition-colors"
+                >
+                  <Check size={14} />
+                </button>
+                <button
+                  onClick={() => { setEditName(file.file_name); setIsEditing(false); }}
+                  className="p-1 text-nu-muted hover:text-nu-ink transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <>
+                {resolveTemplateContent(file.file_url, file.content) ? (
+                  <button
+                    onClick={() => onPreview(file.file_url, file.file_name)}
+                    className="text-[13px] font-black text-nu-ink truncate hover:text-nu-pink transition-colors uppercase tracking-tight text-left bg-transparent border-none cursor-pointer p-0"
+                  >
+                    {file.file_name}
+                  </button>
+                ) : (
+                  <a
+                    href={file.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[13px] font-black text-nu-ink truncate hover:text-nu-pink transition-colors no-underline uppercase tracking-tight"
+                  >
+                    {file.file_name}
+                  </a>
+                )}
+              </>
+            )}
+            {!isEditing && getDocTypeLabel(file.file_type) && (
+              <span className="shrink-0 font-mono-nu text-[7px] font-bold uppercase tracking-widest px-1.5 py-0.5 bg-nu-ink/5 text-nu-graphite border border-nu-ink/10">
+                {getDocTypeLabel(file.file_type)}
+              </span>
+            )}
+            {!isEditing && resolveTemplateContent(file.file_url, file.content) && (
               <span className="shrink-0 font-mono-nu text-[7px] font-bold uppercase tracking-widest px-1.5 py-0.5 bg-nu-blue/10 text-nu-blue border border-nu-blue/20">편집</span>
             )}
-            {isNew && (
+            {!isEditing && isNew && (
               <span className="shrink-0 font-mono-nu text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 bg-nu-pink text-white animate-pulse">
-                🔥 NEW
+                NEW
               </span>
             )}
           </div>
@@ -787,24 +1494,98 @@ function FileCard({
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          <button 
+          {onToggleComments && (
+            <button
+              onClick={onToggleComments}
+              className={`p-2 transition-colors bg-nu-paper border border-nu-ink/10 ${commentsExpanded ? "text-nu-blue" : "text-nu-muted hover:text-nu-blue"}`}
+              title="댓글"
+            >
+              <MessageCircle size={16} />
+            </button>
+          )}
+          {onAddToWiki && (
+            <button
+              onClick={onAddToWiki}
+              disabled={addingWiki}
+              className="p-2 text-nu-muted hover:text-nu-pink transition-colors bg-nu-paper border border-nu-ink/10 disabled:opacity-40"
+              title="탭 리소스에 추가"
+            >
+              {addingWiki ? <Loader2 size={16} className="animate-spin" /> : <BookOpen size={16} />}
+            </button>
+          )}
+          <button
             onClick={() => onPreview(file.file_url, file.file_name)}
             className="p-2 text-nu-muted hover:text-nu-pink transition-colors bg-nu-paper border border-nu-ink/10"
             title="미리보기"
           >
             <Eye size={16} />
           </button>
-          <a href={file.file_url} target="_blank" rel="noopener noreferrer" className="p-2 text-nu-muted hover:text-nu-blue transition-colors bg-nu-paper border border-nu-ink/10">
-            <ExternalLink size={16} />
-          </a>
-          {file.uploaded_by === userId && (
-            <button onClick={() => onDelete(file.id, file.file_url, file.file_type)} className="p-2 text-nu-muted/40 hover:text-red-500 transition-colors">
+          {!resolveTemplateContent(file.file_url, file.content) && (
+            <a href={file.file_url} target="_blank" rel="noopener noreferrer" className="p-2 text-nu-muted hover:text-nu-blue transition-colors bg-nu-paper border border-nu-ink/10">
+              <ExternalLink size={16} />
+            </a>
+          )}
+          {canManage && (
+            <button
+              onClick={() => { setEditName(file.file_name); setIsEditing(true); }}
+              className="p-2 text-nu-muted hover:text-nu-blue transition-colors bg-nu-paper border border-nu-ink/10"
+              title="이름 수정"
+            >
+              <Pencil size={16} />
+            </button>
+          )}
+          {canManage && (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="p-2 text-nu-muted/40 hover:text-red-500 hover:bg-red-50 transition-colors bg-nu-paper border border-nu-ink/10"
+              title="삭제"
+            >
               <Trash2 size={16} />
             </button>
           )}
         </div>
       </div>
-      
+
+      {/* Delete Confirmation */}
+      {showDeleteConfirm && (
+        <div className="px-4 pb-3 border-t-2 border-red-200 bg-red-50/50 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center justify-between py-2.5">
+            <p className="font-mono-nu text-[11px] text-red-600 font-bold">
+              이 자료를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+            </p>
+            <div className="flex items-center gap-2 ml-4 shrink-0">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-ink/10 text-nu-muted hover:border-nu-ink transition-all"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => { setShowDeleteConfirm(false); onDelete(file.id, file.file_url, file.file_type); }}
+                className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 bg-red-500 text-white border-[2px] border-red-500 hover:bg-red-600 hover:border-red-600 transition-all"
+              >
+                삭제 확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tag badges row */}
+      {tags && tags.length > 0 && (
+        <div className="px-4 pb-2 flex items-center gap-1 flex-wrap">
+          {Array.from(new Set(tags.map(t => t.tag))).map((tag) => {
+            const opt = TAG_OPTIONS.find(o => o.label === tag);
+            const count = tags.filter(t => t.tag === tag).length;
+            return opt ? (
+              <span key={tag} className={`font-mono-nu text-[8px] font-bold px-1.5 py-0.5 border rounded-sm ${opt.color}`}>
+                {opt.emoji} {opt.label} ({count})
+              </span>
+            ) : null;
+          })}
+        </div>
+      )}
+
       {/* AI Summary Section */}
       {showAiSummary && aiSummary && (
         <div className="px-4 pb-4 animate-in fade-in slide-in-from-top-2 duration-500">
@@ -834,6 +1615,22 @@ function FileCard({
       <div className="px-4 pb-3 border-t border-nu-ink/[0.04]">
         <ResourceInteractions targetType="file_attachment" targetId={file.id} compact />
       </div>
+
+      {/* Expandable comments & tags */}
+      {commentsExpanded && onCommentInputChange && onPostComment && onToggleTag && (
+        <InlineComments
+          resourceId={file.id}
+          comments={comments || []}
+          commentInput={commentInput || ""}
+          onInputChange={onCommentInputChange}
+          onPost={onPostComment}
+          onDelete={onDeleteComment}
+          posting={!!postingComment}
+          tags={tags || []}
+          userId={userId}
+          onToggleTag={onToggleTag}
+        />
+      )}
     </div>
   );
 }

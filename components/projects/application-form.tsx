@@ -120,16 +120,16 @@ export default function ApplicationForm({
       <div>
         <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">
           <Users size={12} className="inline mr-1" />
-          소속 크루 (선택)
+          소속 너트 (선택)
         </label>
         {loadingCrews ? (
           <div className="flex items-center gap-2 text-sm text-nu-muted py-3">
             <Loader2 size={14} className="animate-spin" />
-            크루 목록 불러오는 중...
+            너트 목록 불러오는 중...
           </div>
         ) : crews.length === 0 ? (
           <p className="text-sm text-nu-gray py-3">
-            소속된 크루가 없습니다
+            소속된 너트가 없습니다
           </p>
         ) : (
           <select
@@ -137,7 +137,7 @@ export default function ApplicationForm({
             onChange={(e) => setCrewId(e.target.value)}
             className="w-full px-4 py-3 bg-nu-white border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink transition-colors"
           >
-            <option value="">크루를 선택하지 않음</option>
+            <option value="">너트를 선택하지 않음</option>
             {crews.map((crew) => (
               <option key={crew.id} value={crew.id}>
                 {crew.name}
@@ -146,7 +146,7 @@ export default function ApplicationForm({
           </select>
         )}
         <p className="mt-1 text-[11px] text-nu-muted">
-          어떤 크루를 대표하여 참여하는지 알려주세요
+          어떤 너트를 대표하여 참여하는지 알려주세요
         </p>
       </div>
 

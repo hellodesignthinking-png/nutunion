@@ -436,7 +436,7 @@ export function GroupRoadmap({ groupId, groupTopic: initialTopic, canEdit, userI
       <div className="flex items-center justify-between px-5 py-4 border-b border-nu-ink/[0.06]">
         <div className="flex items-center gap-2">
           <Target size={16} className="text-nu-pink" />
-          <h3 className="font-head text-base font-extrabold text-nu-ink">소모임 로드맵</h3>
+          <h3 className="font-head text-base font-extrabold text-nu-ink">너트 로드맵</h3>
           {phases.length > 0 && (
             <span className="font-mono-nu text-[10px] text-nu-muted">{doneCount}/{phases.length} 완료</span>
           )}
@@ -454,7 +454,7 @@ export function GroupRoadmap({ groupId, groupTopic: initialTopic, canEdit, userI
             {editingTopic ? (
               <div className="flex gap-2">
                 <input value={topic} onChange={(e) => setTopic(e.target.value)}
-                  placeholder="이 소모임의 핵심 주제나 목표를 입력하세요"
+                  placeholder="이 너트의 핵심 주제나 목표를 입력하세요"
                   className="flex-1 px-3 py-2 border border-nu-ink/15 bg-transparent text-sm focus:outline-none focus:border-nu-pink"
                   autoFocus onKeyDown={(e) => { if (e.key === "Enter") saveTopic(); }}
                 />

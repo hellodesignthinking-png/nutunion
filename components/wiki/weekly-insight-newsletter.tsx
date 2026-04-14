@@ -60,7 +60,7 @@ export function WeeklyInsightNewsletter({ groupId }: { groupId: string }) {
 
       const topicIds = (topics || []).map(t => t.id);
       if (topicIds.length === 0) {
-        toast.info("분석할 위키 데이터가 아직 없습니다. 먼저 주제와 문서를 추가하세요.");
+        toast.info("분석할 탭 데이터가 아직 없습니다. 먼저 주제와 문서를 추가하세요.");
         setGenerating(false);
         return;
       }
@@ -73,7 +73,7 @@ export function WeeklyInsightNewsletter({ groupId }: { groupId: string }) {
 
       const pageIds = (allPages || []).map(p => p.id);
       if (pageIds.length === 0) {
-        toast.info("분석할 위키 페이지가 아직 없습니다.");
+        toast.info("분석할 탭 페이지가 아직 없습니다.");
         setGenerating(false);
         return;
       }

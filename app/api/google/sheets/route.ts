@@ -48,9 +48,8 @@ export async function GET(req: NextRequest) {
     if (err.message === "GOOGLE_NOT_CONNECTED") {
       return NextResponse.json({ error: "Google 계정이 연결되지 않았습니다.", code: "NOT_CONNECTED" }, { status: 403 });
     }
-    // Return detailed error for debugging
     const detail = err?.errors?.[0]?.message || err?.message || "Unknown error";
     console.error("Sheets API error:", detail);
-    return NextResponse.json({ error: "Sheets API 오류", detail }, { status: 500 });
+    return NextResponse.json({ error: "Sheets API 오류" }, { status: 500 });
   }
 }

@@ -162,7 +162,7 @@ export function ProjectActivityFeed({
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="프로젝트에 대한 업데이트를 공유하세요..."
+            placeholder="볼트에 대한 업데이트를 공유하세요..."
             rows={3}
             className="w-full px-4 py-3 bg-nu-paper border border-nu-ink/[0.08] text-sm focus:outline-none focus:border-nu-pink transition-colors resize-none mb-3"
           />

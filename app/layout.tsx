@@ -42,18 +42,18 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "nutunion — protocol collective",
-  description: "공간, 문화, 플랫폼, 바이브를 잇는 protocol collective. Scene을 설계하는 커뮤니티.",
+  title: "너트유니온 — 너(You)와 너트(Nut)의 연합",
+  description: "너트(Nut) + 볼트(Bolt) = 변화를 만드는 힘. 시티체인저들의 자율적 연합체.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "nutunion",
+    title: "너트유니온",
   },
   openGraph: {
-    title: "nutunion — protocol collective",
-    description: "AI가 보증하고 공동체가 운영하는 자율형 커리어 생태계",
-    siteName: "nutunion",
+    title: "너트유니온 — 너(You)와 너트(Nut)의 연합",
+    description: "너트(Nut) + 볼트(Bolt) = 변화를 만드는 힘. 시티체인저들의 자율적 연합체.",
+    siteName: "너트유니온",
     type: "website",
   },
 };

@@ -7,7 +7,7 @@ const scenes = [
   {
     label: "SPACE",
     title: "Space Architects Seoul",
-    desc: "서울의 빈 공간을 재해석하는 건축·인테리어 크루. 로컬 크리에이터와 함께 도시에 새로운 의미를 부여합니다.",
+    desc: "서울의 빈 공간을 재해석하는 건축·인테리어 너트. 로컬 크리에이터와 함께 도시에 새로운 의미를 부여합니다.",
     color: "bg-nu-blue",
     accent: "#0055FF",
     halftone: "halftone-blue",
@@ -86,7 +86,7 @@ export function SceneGallery() {
           </span>
         </h2>
         <p className="text-nu-paper/40 mt-6 max-w-lg mx-auto text-sm leading-relaxed">
-          각 분야의 크루들이 만들어가는 실제 Scene을 살펴보세요
+          각 분야의 너트들이 만들어가는 실제 Scene을 살펴보세요
         </p>
       </div>
 

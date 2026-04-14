@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { rateLimit } from "@/lib/rate-limit";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = "gemini-2.5-flash";
@@ -45,6 +47,15 @@ export async function POST(request: NextRequest) {
 
   try {
     const startTime = Date.now();
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "로그인 필요" }, { status: 401 });
+
+    const { success } = rateLimit(`ai:${user.id}`, 20, 60_000);
+    if (!success) {
+      return NextResponse.json({ error: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." }, { status: 429 });
+    }
+
     const body = await request.json();
     const { notes, agendas, meetingTitle, audioBase64, audioMimeType, previousDigest } = body;
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef } from "react";
 import { useRevealOnScroll } from "@/lib/hooks/use-reveal-on-scroll";
 
@@ -22,10 +23,10 @@ export function Hero({ content }: HeroProps) {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const kicker = content?.kicker || "protocol collective";
-  const title = content?.title || "nutunion";
-  const subtitle = content?.subtitle || "scene을 설계하는 protocol collective — 공간, 문화, 플랫폼, 그리고 바이브를 잇는 유니온.";
-  const ctaPrimary = content?.cta_primary || "START SCENE";
+  const kicker = content?.kicker || "너(You)와 너트(Nut)의 연합";
+  const title = content?.title || "너트유니온";
+  const subtitle = content?.subtitle || "너트(Nut) + 볼트(Bolt) = 변화를 만드는 힘. 작은 결집이 도시를 바꿉니다.";
+  const ctaPrimary = content?.cta_primary || "시티체인저 되기";
   const ctaSecondary = content?.cta_secondary || "EXPLORE";
 
   return (
@@ -91,7 +92,7 @@ export function Hero({ content }: HeroProps) {
 
         <div className="reveal-item mt-6">
           <a href="#about" className="font-serif-nu text-sm italic text-nu-gray hover:text-nu-pink transition-colors no-underline inline-flex items-center gap-2">
-            nutunion에 대해 더 알아보기
+            너트유니온에 대해 더 알아보기
             <span aria-hidden="true" className="text-xs">&darr;</span>
           </a>
         </div>
@@ -109,8 +110,7 @@ export function Hero({ content }: HeroProps) {
       <div ref={rightPanelRef} className="relative z-10 overflow-hidden min-h-[50vh] lg:min-h-0 bg-nu-ink will-change-transform">
         {/* Risograph artwork background */}
         <div className="absolute inset-0 bg-nu-ink" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/hero-risograph.png" alt="" className="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-screen" aria-hidden="true" />
+        <Image src="/hero-risograph.png" alt="" fill className="object-cover opacity-40 mix-blend-screen" aria-hidden="true" priority />
 
         {/* Halftone dot pattern overlay */}
         <div className="absolute inset-0 halftone-pink opacity-[0.06]" />

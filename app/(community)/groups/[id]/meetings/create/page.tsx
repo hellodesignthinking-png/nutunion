@@ -134,12 +134,12 @@ export default function CreateMeetingPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-8 py-12">
+    <div className="max-w-2xl mx-auto px-4 md:px-8 py-12">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6">
         <Link href={`/groups/${groupId}`}
           className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted hover:text-nu-ink no-underline flex items-center gap-1.5 transition-colors">
-          <ArrowLeft size={13} /> 소모임으로
+          <ArrowLeft size={13} /> 너트로
         </Link>
         <span className="text-nu-muted/40">/</span>
         <Link href={`/groups/${groupId}/meetings`}

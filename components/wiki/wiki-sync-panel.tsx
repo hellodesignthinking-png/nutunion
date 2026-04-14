@@ -133,7 +133,7 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
         entities.filter(e => e.isNew).forEach(e => {
           wikiUpdates.push({
             pageTitle: e.name,
-            suggestion: `미팅에서 등장한 새로운 개념 "${e.name}"에 대한 위키 문서를 생성합니다.`,
+            suggestion: `미팅에서 등장한 새로운 개념 "${e.name}"에 대한 탭 문서를 생성합니다.`,
             action: "create",
           });
         });
@@ -158,7 +158,7 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
           entities: entities.length > 0 ? entities : [{ name: "미팅 내용", isNew: false }],
           decisions: decisions.length > 0 ? decisions : ["미팅 내용에서 명시적 결정 사항을 추출하지 못했습니다."],
           openQuestions: openQuestions.length > 0 ? openQuestions : ["미팅 내용에서 미결 질문을 추출하지 못했습니다."],
-          wikiUpdates: wikiUpdates.length > 0 ? wikiUpdates : [{ pageTitle: "미팅 요약", suggestion: "이번 미팅의 핵심 내용을 위키에 기록합니다.", action: "create" }],
+          wikiUpdates: wikiUpdates.length > 0 ? wikiUpdates : [{ pageTitle: "미팅 요약", suggestion: "이번 미팅의 핵심 내용을 탭에 기록합니다.", action: "create" }],
           suggestedTags: suggestedTags.length > 0 ? suggestedTags : ["미팅"],
         };
 
@@ -169,7 +169,7 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
       setExtractedData(data);
       setSelectedUpdates(new Set(data.wikiUpdates.map((_, i) => i)));
       setPhase("reviewing");
-      toast.success(`${data.entities.length}개 개념, ${data.wikiUpdates.length}개 위키 업데이트를 추출했습니다.`);
+      toast.success(`${data.entities.length}개 개념, ${data.wikiUpdates.length}개 탭 업데이트를 추출했습니다.`);
     } catch (err) {
       toast.error("AI 분석 중 오류가 발생했습니다.");
       setPhase("idle");
@@ -317,7 +317,7 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
       await new Promise(resolve => setTimeout(resolve, 500));
       setSynced(true);
       setPhase("done");
-      toast.success(`위키에 성공적으로 반영되었습니다! (${createdPageIds.length}개 페이지 생성)`);
+      toast.success(`탭에 성공적으로 반영되었습니다! (${createdPageIds.length}개 페이지 생성)`);
     } catch (err: any) {
       toast.error(err.message || "반영 중 오류가 발생했습니다.");
       setPhase("reviewing");
@@ -345,7 +345,7 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
           </div>
           <h3 className="font-head text-2xl font-extrabold text-nu-ink mb-3">살아있는 지식 저장소 동기화</h3>
           <p className="text-sm text-nu-muted max-w-md mx-auto mb-4 leading-relaxed">
-            오늘의 미팅 기록을 AI가 분석하여 위키에 등록할 핵심 개념, 확정 사항, 그리고 업데이트 제안을 추출합니다.
+            오늘의 미팅 기록을 AI가 분석하여 탭에 등록할 핵심 개념, 확정 사항, 그리고 업데이트 제안을 추출합니다.
           </p>
 
           {/* Pipeline visualization */}
@@ -363,7 +363,7 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
             onClick={handleExtract}
             className="bg-nu-ink text-white px-10 py-4 font-mono-nu text-xs font-bold uppercase tracking-widest hover:bg-nu-pink transition-all shadow-[4px_4px_0px_rgba(233,30,99,0.3)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] flex items-center gap-3 mx-auto"
           >
-            <Brain size={16} /> AI 위키 추출 시작
+            <Brain size={16} /> AI 탭 추출 시작
           </button>
         </div>
       </div>
@@ -377,7 +377,7 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
         <Loader2 size={40} className="mx-auto mb-6 animate-spin text-nu-pink" />
         <h3 className="font-head text-xl font-extrabold mb-3">AI가 미팅 콘텐츠를 분석 중...</h3>
         <div className="space-y-2 max-w-xs mx-auto">
-          {["핵심 개념 추출 중...", "확정 사항 식별 중...", "위키 업데이트 제안 생성 중..."].map((step, i) => (
+          {["핵심 개념 추출 중...", "확정 사항 식별 중...", "탭 업데이트 제안 생성 중..."].map((step, i) => (
             <div key={i} className="flex items-center gap-3 text-xs text-white/50 animate-pulse" style={{ animationDelay: `${i * 500}ms` }}>
               <div className="w-1.5 h-1.5 rounded-full bg-nu-pink animate-ping" />
               {step}
@@ -395,14 +395,14 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
         <CheckCircle2 size={48} className="mx-auto mb-4 text-green-500" />
         <h3 className="font-head text-2xl font-extrabold text-green-700 mb-3">동기화 완료!</h3>
         <p className="text-sm text-green-600 mb-6">
-          {selectedUpdates.size}개의 위키 업데이트가 반영되었습니다.
+          {selectedUpdates.size}개의 탭 업데이트가 반영되었습니다.
         </p>
         <div className="flex gap-3 justify-center">
           <a
             href={`/groups/${groupId}/wiki`}
             className="px-6 py-3 bg-green-600 text-white font-mono-nu text-[11px] font-bold uppercase tracking-widest hover:bg-green-700 transition-all no-underline flex items-center gap-2"
           >
-            <BookOpen size={14} /> 위키 보기
+            <BookOpen size={14} /> 탭 보기
           </a>
           <button
             onClick={() => { setPhase("idle"); setExtractedData(null); setSynced(false); }}
@@ -545,7 +545,7 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
           className="px-8 py-3 bg-nu-pink text-white font-mono-nu text-[11px] font-bold uppercase tracking-widest shadow-[4px_4px_0px_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center gap-2 disabled:opacity-50"
         >
           {syncing ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-          {selectedUpdates.size}개 항목 위키에 반영
+          {selectedUpdates.size}개 항목 탭에 반영
         </button>
       </div>
     </div>

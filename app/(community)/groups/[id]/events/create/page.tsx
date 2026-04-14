@@ -44,8 +44,8 @@ export default function CreateEventPage() {
       return;
     }
 
-    const startAt = new Date(`${date}T${startTime}`).toISOString();
-    const endAt = new Date(`${date}T${endTime}`).toISOString();
+    const startAt = new Date(`${date}T${startTime}:00+09:00`).toISOString();
+    const endAt = new Date(`${date}T${endTime}:00+09:00`).toISOString();
 
     let recurrenceRule: string | null = null;
     if (isRecurring) {
@@ -87,11 +87,11 @@ export default function CreateEventPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-8 py-12">
+    <div className="max-w-2xl mx-auto px-4 md:px-8 py-12">
       <h1 className="font-head text-3xl font-extrabold text-nu-ink mb-2">
         새 일정 만들기
       </h1>
-      <p className="text-nu-gray text-sm mb-8">소모임 일정을 추가하세요</p>
+      <p className="text-nu-gray text-sm mb-8">너트 일정을 추가하세요</p>
 
       <div className="bg-nu-white border border-nu-ink/[0.08] p-8">
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">

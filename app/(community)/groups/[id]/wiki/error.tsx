@@ -20,9 +20,9 @@ export default function WikiErrorPage({
         <div className="w-16 h-16 bg-nu-pink/10 flex items-center justify-center mx-auto mb-4 -rotate-3">
           <Brain size={28} className="text-nu-pink" />
         </div>
-        <h2 className="font-head text-xl font-extrabold text-nu-ink mb-2">위키 로드 오류</h2>
+        <h2 className="font-head text-xl font-extrabold text-nu-ink mb-2">탭 로드 오류</h2>
         <p className="text-sm text-nu-muted mb-4">
-          위키 페이지를 불러오는 중 문제가 발생했습니다.
+          탭 페이지를 불러오는 중 문제가 발생했습니다.
         </p>
         {error.digest && (
           <p className="font-mono-nu text-[9px] text-nu-muted bg-nu-cream/50 px-3 py-1 mb-4 break-all">

@@ -138,14 +138,14 @@ export default function GroupSettingsPage() {
 
     if (error) toast.error(error.message);
     else {
-      toast.success("소모임 정보가 업데이트되었습니다");
+      toast.success("너트 정보가 업데이트되었습니다");
       setGroup({ ...group, image_url: finalImageUrl });
     }
     setLoading(false);
   }
 
   async function handleRemoveMember(targetUserId: string) {
-    if (!confirm("이 멤버를 제거하시겠습니까?")) return;
+    if (!confirm("이 와셔를 제거하시겠습니까?")) return;
     const supabase = createClient();
     const { error } = await supabase
       .from("group_members")
@@ -154,11 +154,11 @@ export default function GroupSettingsPage() {
       .eq("user_id", targetUserId);
 
     if (error) {
-      toast.error("멤버 제거에 실패했습니다");
+      toast.error("와셔 제거에 실패했습니다");
       return;
     }
     setMembers(members.filter((m) => m.user_id !== targetUserId));
-    toast.success("멤버가 제거되었습니다");
+    toast.success("와셔가 제거되었습니다");
   }
 
   async function handleApproveMember(targetUserId: string, targetNickname: string) {
@@ -175,8 +175,8 @@ export default function GroupSettingsPage() {
     await supabase.from("notifications").insert({
       user_id: targetUserId,
       type: "group_accepted",
-      title: "소모임 가입 승인",
-      body: `${group?.name} 소모임에 가입이 승인되었습니다.`,
+      title: "너트 가입 승인",
+      body: `${group?.name} 너트에 가입이 승인되었습니다.`,
       metadata: { group_id: groupId },
       is_read: false,
     });
@@ -204,17 +204,17 @@ export default function GroupSettingsPage() {
       type: "role_changed",
       title: isCurrentlyModerator ? "매니저 권한 해제" : "매니저로 임명되었습니다",
       body: isCurrentlyModerator
-        ? `${group?.name} 소모임의 매니저 권한이 해제되었습니다.`
-        : `${group?.name} 소모임의 매니저로 임명되었습니다. 소모임의 일정, 파일, 멤버 관리를 할 수 있습니다.`,
+        ? `${group?.name} 너트의 매니저 권한이 해제되었습니다.`
+        : `${group?.name} 너트의 매니저로 임명되었습니다. 너트의 일정, 파일, 와셔 관리를 할 수 있습니다.`,
       metadata: { group_id: groupId },
       is_read: false,
     });
 
-    toast.success(isCurrentlyModerator ? "일반 멤버로 변경되었습니다" : "매니저로 임명되었습니다");
+    toast.success(isCurrentlyModerator ? "일반 와셔로 변경되었습니다" : "매니저로 임명되었습니다");
   }
 
   async function handleRejectMember(targetUserId: string, targetNickname: string) {
-    const reason = window.prompt(`${targetNickname}님의 가입 신청을 거절하시겠습니까? 거절 사유를 입력해주세요 (공백 시 기본 메시지 발송):`, "소모임 성격에 맞지 않아 거절되었습니다.");
+    const reason = window.prompt(`${targetNickname}님의 가입 신청을 거절하시겠습니까? 거절 사유를 입력해주세요 (공백 시 기본 메시지 발송):`, "너트 성격에 맞지 않아 거절되었습니다.");
     if (reason === null) return; // Cancelled
 
     const supabase = createClient();
@@ -237,8 +237,8 @@ export default function GroupSettingsPage() {
     await supabase.from("notifications").insert({
       user_id: targetUserId,
       type: "group_rejected",
-      title: "소모임 가입 거절",
-      body: `${group?.name} 소모임 가입 신청이 거절되었습니다.\n사유: ${reason}`,
+      title: "너트 가입 거절",
+      body: `${group?.name} 너트 가입 신청이 거절되었습니다.\n사유: ${reason}`,
       metadata: { group_id: groupId, reason },
       is_read: false,
     });
@@ -247,14 +247,14 @@ export default function GroupSettingsPage() {
 
 
   async function handleDelete() {
-    if (!confirm("정말로 이 소모임을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) return;
+    if (!confirm("정말로 이 너트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) return;
     const supabase = createClient();
     const { error } = await supabase.from("groups").update({ is_active: false }).eq("id", groupId);
     if (error) {
       toast.error("삭제에 실패했습니다");
       return;
     }
-    toast.success("소모임이 삭제되었습니다");
+    toast.success("너트가 삭제되었습니다");
     router.push("/groups");
   }
 
@@ -274,9 +274,9 @@ export default function GroupSettingsPage() {
   const pendingMembers = members.filter(m => m.status === "pending" || m.status === "waitlist");
 
   return (
-    <div className="max-w-2xl mx-auto px-8 py-12">
+    <div className="max-w-2xl mx-auto px-4 md:px-8 py-12">
       <h1 className="font-head text-3xl font-extrabold text-nu-ink mb-8">
-        소모임 설정
+        너트 설정
       </h1>
 
       {/* Basic info */}
@@ -370,8 +370,8 @@ export default function GroupSettingsPage() {
       {/* Active members */}
       <div className="bg-nu-white border border-nu-ink/[0.08] p-8 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-head text-lg font-extrabold">멤버 ({activeMembers.length})</h2>
-          <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">매니저는 일정·파일·멤버 관리 가능</p>
+          <h2 className="font-head text-lg font-extrabold">와셔 ({activeMembers.length})</h2>
+          <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">매니저는 일정·파일·와셔 관리 가능</p>
         </div>
         <div className="flex flex-col divide-y divide-nu-ink/5">
           {activeMembers.map((m) => {
@@ -394,7 +394,7 @@ export default function GroupSettingsPage() {
                       )}
                     </div>
                     <p className="text-[10px] text-nu-muted">
-                      {isCurrentHost ? "소모임 호스트" : isModerator ? "소모임 매니저 · 일정/파일/멤버 관리 가능" : "일반 멤버"}
+                      {isCurrentHost ? "너트 호스트" : isModerator ? "너트 매니저 · 일정/파일/와셔 관리 가능" : "일반 와셔"}
                       {m.profile?.email && ` · ${m.profile.email}`}
                     </p>
                   </div>
@@ -449,14 +449,14 @@ export default function GroupSettingsPage() {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => handleApproveMember(m.user_id, m.profile?.nickname || "멤버")}
+                    onClick={() => handleApproveMember(m.user_id, m.profile?.nickname || "와셔")}
                     className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 bg-nu-blue text-white hover:bg-nu-blue/90 transition-colors flex items-center gap-1"
                     id={`approve-${m.user_id}`}
                   >
                     <UserPlus size={12} /> 승인
                   </button>
                   <button
-                    onClick={() => handleRejectMember(m.user_id, m.profile?.nickname || "멤버")}
+                    onClick={() => handleRejectMember(m.user_id, m.profile?.nickname || "와셔")}
                     className="p-1.5 text-nu-muted hover:text-nu-red transition-colors"
                   >
                     <Trash2 size={14} />
@@ -471,12 +471,12 @@ export default function GroupSettingsPage() {
       {/* Danger zone */}
       <div className="border border-nu-red/30 p-8">
         <h2 className="font-head text-xl font-extrabold text-nu-red mb-2">위험 구역</h2>
-        <p className="text-sm text-nu-gray mb-4">소모임을 삭제하면 모든 일정과 멤버 데이터가 함께 삭제됩니다.</p>
+        <p className="text-sm text-nu-gray mb-4">너트를 삭제하면 모든 일정과 와셔 데이터가 함께 삭제됩니다.</p>
         <button
           onClick={handleDelete}
           className="font-mono-nu text-[11px] uppercase tracking-widest px-6 py-3 border border-nu-red text-nu-red hover:bg-nu-red hover:text-white transition-colors"
         >
-          소모임 삭제
+          너트 삭제
         </button>
       </div>
     </div>

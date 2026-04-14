@@ -209,7 +209,7 @@ export default function AdminMediaPage() {
           <li>이미지나 영상을 업로드합니다</li>
           <li>파일에 마우스를 올리고 <Copy size={10} className="inline" /> 버튼으로 URL을 복사합니다</li>
           <li><strong>콘텐츠 관리</strong> 페이지에서 해당 URL을 이미지/영상 필드에 붙여넣습니다</li>
-          <li>소모임 이미지에도 URL을 사용할 수 있습니다</li>
+          <li>너트 이미지에도 URL을 사용할 수 있습니다</li>
         </ol>
       </div>
     </div>

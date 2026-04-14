@@ -15,6 +15,10 @@ export async function seedGroupTemplate(
 ) {
   const supabase = await createClient();
 
+  // Verify the caller is the actual hostId
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || user.id !== hostId) return;
+
   try {
     if (templateId === "sprint") {
       await seedSprintTemplate(supabase, groupId, hostId);

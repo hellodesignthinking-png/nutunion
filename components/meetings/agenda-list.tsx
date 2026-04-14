@@ -312,7 +312,7 @@ export function AgendaList({ meetingId, groupId, projectId, canEdit, members }: 
             <div className="flex items-center gap-2">
               <FolderOpen size={18} className="text-nu-pink" />
               <h3 className="font-head text-base font-extrabold text-nu-ink">
-                {contextType === "group" ? "소모임" : "프로젝트"} 자료실
+                {contextType === "group" ? "너트" : "볼트"} 자료실
               </h3>
             </div>
             <button onClick={() => setShowLibrary(false)} className="text-nu-muted hover:text-nu-ink">

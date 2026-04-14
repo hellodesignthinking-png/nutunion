@@ -17,11 +17,11 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { title, content, targetType, targetId, meetingId } = body;
+    const { title, content, folderId, targetType, targetId, meetingId } = body;
 
-    if (!title || !content) {
+    if (!title) {
       return NextResponse.json(
-        { error: "제목과 내용이 필요합니다" },
+        { error: "제목이 필요합니다" },
         { status: 400 }
       );
     }
@@ -30,13 +30,15 @@ export async function POST(req: NextRequest) {
     const drive = google.drive({ version: "v3", auth });
 
     // Create Google Doc via Drive API (drive.file scope covers this)
+    const docContent = content || "";
     // Convert markdown-ish content to plain text for the doc
-    const plainContent = content
+    const plainContent = docContent
       .replace(/^#+\s*/gm, "")
       .replace(/\*\*(.*?)\*\*/g, "$1")
       .replace(/\*(.*?)\*/g, "$1");
 
     // Create the doc as a Google Docs file
+    const parents = folderId ? [folderId] : undefined;
     const buffer = Buffer.from(plainContent, "utf-8");
     const stream = new Readable();
     stream.push(buffer);
@@ -46,6 +48,7 @@ export async function POST(req: NextRequest) {
       requestBody: {
         name: title,
         mimeType: "application/vnd.google-apps.document",
+        ...(parents && { parents }),
       },
       media: {
         mimeType: "text/plain",
@@ -139,7 +142,7 @@ export async function POST(req: NextRequest) {
     }
     console.error("Google Docs create error:", err);
     return NextResponse.json(
-      { error: "Google Docs 생성 실패: " + (err.message || "알 수 없는 오류") },
+      { error: "Google Docs 생성 실패" },
       { status: 500 }
     );
   }

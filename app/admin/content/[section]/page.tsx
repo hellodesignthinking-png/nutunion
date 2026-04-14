@@ -24,7 +24,7 @@ interface ContentItem {
 const sectionLabels: Record<string, string> = {
   hero: "히어로 섹션",
   about: "소개 섹션",
-  groups: "소모임 섹션",
+  groups: "너트 섹션",
   join: "가입 섹션",
   footer: "푸터",
   ticker: "티커",

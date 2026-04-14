@@ -164,7 +164,7 @@ export function CrewActivityFeed({
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="크루에게 공유할 내용을 작성하세요..."
+            placeholder="너트 와셔에게 공유할 내용을 작성하세요..."
             rows={3}
             className="w-full px-4 py-3 bg-nu-paper border border-nu-ink/[0.08] text-sm focus:outline-none focus:border-nu-pink transition-colors resize-none mb-3"
           />

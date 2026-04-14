@@ -68,7 +68,7 @@ function fileToBase64(file: File): Promise<string> {
     reader.onload = () => {
       const result = reader.result as string;
       // Remove data:audio/...;base64, prefix
-      const base64 = result.split(",")[1];
+      const base64 = result.split(",")[1] || result;
       resolve(base64);
     };
     reader.onerror = reject;
@@ -199,6 +199,23 @@ export function AiMeetingAssistant({
     const { data: { publicUrl } } = supabase.storage.from("media").getPublicUrl(filePath);
     setAudioUrl(publicUrl);
     setAudioFile(file);
+
+    // Register in file_attachments so it appears in 자료실
+    try {
+      const { data: mtg } = await supabase.from("meetings").select("group_id, title").eq("id", meetingId).single();
+      if (mtg?.group_id) {
+        await supabase.from("file_attachments").insert({
+          target_type: "group",
+          target_id: mtg.group_id,
+          uploaded_by: user.id,
+          file_name: `[녹음] ${mtg.title || "미팅"} - ${file.name}`,
+          file_url: publicUrl,
+          file_type: file.type || "audio/mpeg",
+          file_size: file.size,
+        });
+      }
+    } catch { /* non-critical */ }
+
     toast.success(`"${file.name}" 업로드 완료`);
     setUploading(false);
   }
@@ -834,7 +851,7 @@ export function AiMeetingAssistant({
                   onClick={() => onNavigateTab("wiki-sync")}
                   className="px-3 py-1.5 bg-nu-pink/20 text-nu-pink font-mono-nu text-[8px] uppercase tracking-widest hover:bg-nu-pink/30 transition-colors"
                 >
-                  위키 동기화
+                  탭 동기화
                 </button>
                 <button
                   onClick={() => onNavigateTab("digest")}

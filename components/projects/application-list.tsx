@@ -11,6 +11,9 @@ import {
   ExternalLink,
   Users,
   Filter,
+  ClipboardList,
+  Check,
+  X,
 } from "lucide-react";
 import type { ProjectApplication, ApplicationStatus } from "@/lib/types";
 import { MemberActivityReport } from "@/components/community/member-activity-report";
@@ -23,29 +26,51 @@ interface ApplicationListProps {
 
 const statusFilters: { value: string; label: string }[] = [
   { value: "all", label: "전체" },
-  { value: "pending", label: "대기 중" },
+  { value: "pending", label: "검토 대기" },
   { value: "approved", label: "승인됨" },
   { value: "rejected", label: "거절됨" },
 ];
 
-const statusBadge: Record<string, { label: string; className: string }> = {
+const statusBadge: Record<
+  string,
+  { label: string; className: string; icon?: typeof Clock }
+> = {
   pending: {
-    label: "대기 중",
-    className: "bg-nu-amber/10 text-nu-amber border-nu-amber/20",
+    label: "검토 대기",
+    className: "bg-amber-50 text-amber-700 border-amber-300",
+    icon: Clock,
   },
   approved: {
     label: "승인됨",
-    className: "bg-green-50 text-green-700 border-green-200",
+    className: "bg-green-50 text-green-700 border-green-300",
+    icon: CheckCircle,
   },
   rejected: {
     label: "거절됨",
-    className: "bg-nu-red/10 text-nu-red border-nu-red/20",
+    className: "bg-red-50 text-red-700 border-red-300",
+    icon: XCircle,
   },
   withdrawn: {
     label: "취소됨",
     className: "bg-nu-gray/10 text-nu-gray border-nu-gray/20",
   },
 };
+
+function formatRelativeTime(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diffMs = now - then;
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHour = Math.floor(diffMs / 3600000);
+  const diffDay = Math.floor(diffMs / 86400000);
+
+  if (diffMin < 1) return "방금 전";
+  if (diffMin < 60) return `${diffMin}분 전`;
+  if (diffHour < 24) return `${diffHour}시간 전`;
+  if (diffDay < 30) return `${diffDay}일 전`;
+  if (diffDay < 365) return `${Math.floor(diffDay / 30)}개월 전`;
+  return `${Math.floor(diffDay / 365)}년 전`;
+}
 
 export default function ApplicationList({
   projectId,
@@ -55,6 +80,8 @@ export default function ApplicationList({
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
 
   const fetchApplications = useCallback(async () => {
     const supabase = createClient();
@@ -97,7 +124,8 @@ export default function ApplicationList({
   async function handleAction(
     applicationId: string,
     action: "approved" | "rejected",
-    applicantId: string
+    applicantId: string,
+    reason?: string
   ) {
     setProcessing(applicationId);
 
@@ -110,13 +138,19 @@ export default function ApplicationList({
       if (!user) throw new Error("로그인이 필요합니다");
 
       // Update application status
+      const updatePayload: Record<string, unknown> = {
+        status: action,
+        reviewed_by: user.id,
+        reviewed_at: new Date().toISOString(),
+      };
+
+      if (action === "rejected" && reason) {
+        updatePayload.rejection_reason = reason;
+      }
+
       const { error: updateError } = await supabase
         .from("project_applications")
-        .update({
-          status: action,
-          reviewed_by: user.id,
-          reviewed_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq("id", applicationId);
 
       if (updateError) throw updateError;
@@ -145,6 +179,8 @@ export default function ApplicationList({
           : "지원서가 거절되었습니다"
       );
 
+      setRejectingId(null);
+      setRejectionReason("");
       fetchApplications();
     } catch (err: any) {
       toast.error(err.message || "처리 실패");
@@ -185,21 +221,32 @@ export default function ApplicationList({
 
       {/* Application cards */}
       {applications.length === 0 ? (
-        <div className="text-center py-16 border border-dashed border-nu-ink/[0.12]">
-          <Clock size={32} className="mx-auto text-nu-muted mb-3" />
-          <p className="text-sm text-nu-gray">지원서가 없습니다</p>
+        <div className="text-center py-20 border-[2px] border-dashed border-nu-ink/[0.12] bg-nu-cream/10">
+          <ClipboardList
+            size={40}
+            className="mx-auto text-nu-muted/50 mb-4"
+            strokeWidth={1.5}
+          />
+          <p className="font-head text-sm font-bold text-nu-ink mb-1">
+            아직 지원서가 없습니다
+          </p>
+          <p className="text-xs text-nu-muted max-w-xs mx-auto leading-relaxed">
+            프로젝트에 관심있는 멤버들의 지원서가 여기에 표시됩니다
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
           {applications.map((app) => {
             const badge = statusBadge[app.status] ?? statusBadge.pending;
+            const BadgeIcon = badge.icon;
             const applicant = app.applicant;
             const crew = app.crew;
+            const isRejecting = rejectingId === app.id;
 
             return (
               <div
                 key={app.id}
-                className="border border-nu-ink/[0.12] bg-nu-paper p-6 space-y-4"
+                className="border-[2px] border-nu-ink/[0.12] bg-nu-paper p-6 space-y-4"
               >
                 {/* Header */}
                 <div className="flex items-start justify-between gap-4">
@@ -212,7 +259,9 @@ export default function ApplicationList({
                       />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-nu-pink/10 flex items-center justify-center text-nu-pink font-head font-bold text-sm">
-                        {(applicant?.nickname ?? applicant?.name ?? "?").charAt(0)}
+                        {(applicant?.nickname ?? applicant?.name ?? "?").charAt(
+                          0
+                        )}
                       </div>
                     )}
                     <div>
@@ -226,8 +275,9 @@ export default function ApplicationList({
                   </div>
 
                   <span
-                    className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 border ${badge.className}`}
+                    className={`font-mono-nu text-[10px] uppercase tracking-widest px-2.5 py-1 border-[2px] flex items-center gap-1 ${badge.className}`}
                   >
+                    {BadgeIcon && <BadgeIcon size={10} />}
                     {badge.label}
                   </span>
                 </div>
@@ -238,6 +288,19 @@ export default function ApplicationList({
                     {app.message}
                   </p>
                 )}
+
+                {/* Rejection reason display */}
+                {app.status === "rejected" &&
+                  (app as any).rejection_reason && (
+                    <div className="bg-red-50/50 border border-red-200/50 px-4 py-3">
+                      <p className="font-mono-nu text-[9px] uppercase tracking-widest text-red-400 mb-1">
+                        거절 사유
+                      </p>
+                      <p className="text-xs text-red-700 leading-relaxed">
+                        {(app as any).rejection_reason}
+                      </p>
+                    </div>
+                  )}
 
                 {/* Meta */}
                 <div className="flex flex-wrap items-center gap-4 text-[11px] text-nu-muted">
@@ -258,12 +321,9 @@ export default function ApplicationList({
                       {crew.name}
                     </span>
                   )}
-                  <span>
-                    {new Date(app.created_at).toLocaleDateString("ko-KR", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
+                  <span className="flex items-center gap-1">
+                    <Clock size={10} />
+                    {formatRelativeTime(app.created_at)}
                   </span>
                 </div>
 
@@ -276,35 +336,81 @@ export default function ApplicationList({
 
                 {/* Actions */}
                 {isLead && app.status === "pending" && (
-                  <div className="flex gap-2 pt-2 border-t border-nu-ink/[0.06]">
-                    <button
-                      onClick={() =>
-                        handleAction(app.id, "approved", app.applicant_id)
-                      }
-                      disabled={processing === app.id}
-                      className="flex items-center gap-1.5 font-mono-nu text-[10px] font-bold uppercase tracking-[0.1em] px-4 py-2 bg-nu-ink text-nu-paper hover:bg-nu-ink/90 transition-colors disabled:opacity-50"
-                    >
-                      {processing === app.id ? (
-                        <Loader2 size={12} className="animate-spin" />
-                      ) : (
-                        <CheckCircle size={12} />
-                      )}
-                      승인
-                    </button>
-                    <button
-                      onClick={() =>
-                        handleAction(app.id, "rejected", app.applicant_id)
-                      }
-                      disabled={processing === app.id}
-                      className="flex items-center gap-1.5 font-mono-nu text-[10px] font-bold uppercase tracking-[0.1em] px-4 py-2 border border-nu-red/30 text-nu-red hover:bg-nu-red/5 transition-colors disabled:opacity-50"
-                    >
-                      {processing === app.id ? (
-                        <Loader2 size={12} className="animate-spin" />
-                      ) : (
-                        <XCircle size={12} />
-                      )}
-                      거절
-                    </button>
+                  <div className="pt-2 border-t border-nu-ink/[0.06] space-y-3">
+                    {/* Rejection reason inline form */}
+                    {isRejecting && (
+                      <div className="bg-red-50/30 border border-red-200/40 p-4 space-y-3">
+                        <label className="font-mono-nu text-[10px] uppercase tracking-widest text-red-500 block">
+                          거절 사유 입력 (선택)
+                        </label>
+                        <textarea
+                          value={rejectionReason}
+                          onChange={(e) => setRejectionReason(e.target.value)}
+                          placeholder="거절 사유를 입력해주세요. 지원자에게 전달됩니다..."
+                          rows={3}
+                          className="w-full border-[2px] border-red-200/50 bg-nu-paper text-sm text-nu-ink p-3 resize-none focus:outline-none focus:border-red-400 placeholder:text-nu-muted/50"
+                        />
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() =>
+                              handleAction(
+                                app.id,
+                                "rejected",
+                                app.applicant_id,
+                                rejectionReason.trim() || undefined
+                              )
+                            }
+                            disabled={processing === app.id}
+                            className="flex items-center gap-1.5 font-mono-nu text-[10px] font-bold uppercase tracking-[0.1em] px-4 py-2 bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+                          >
+                            {processing === app.id ? (
+                              <Loader2 size={12} className="animate-spin" />
+                            ) : (
+                              <XCircle size={12} />
+                            )}
+                            거절 확인
+                          </button>
+                          <button
+                            onClick={() => {
+                              setRejectingId(null);
+                              setRejectionReason("");
+                            }}
+                            className="flex items-center gap-1.5 font-mono-nu text-[10px] font-bold uppercase tracking-[0.1em] px-4 py-2 border border-nu-ink/[0.12] text-nu-gray hover:bg-nu-cream/30 transition-colors"
+                          >
+                            <X size={12} />
+                            취소
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Main action buttons */}
+                    {!isRejecting && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() =>
+                            handleAction(app.id, "approved", app.applicant_id)
+                          }
+                          disabled={processing === app.id}
+                          className="flex items-center gap-1.5 font-mono-nu text-[10px] font-bold uppercase tracking-[0.1em] px-4 py-2 bg-nu-ink text-nu-paper hover:bg-nu-ink/90 transition-colors disabled:opacity-50"
+                        >
+                          {processing === app.id ? (
+                            <Loader2 size={12} className="animate-spin" />
+                          ) : (
+                            <CheckCircle size={12} />
+                          )}
+                          승인
+                        </button>
+                        <button
+                          onClick={() => setRejectingId(app.id)}
+                          disabled={processing === app.id}
+                          className="flex items-center gap-1.5 font-mono-nu text-[10px] font-bold uppercase tracking-[0.1em] px-4 py-2 border-[2px] border-nu-red/30 text-nu-red hover:bg-nu-red/5 transition-colors disabled:opacity-50"
+                        >
+                          <XCircle size={12} />
+                          거절
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

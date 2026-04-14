@@ -5,9 +5,9 @@ interface JoinSectionProps {
 }
 
 export function JoinSection({ content }: JoinSectionProps) {
-  const title = content?.title || "Union에 합류하세요";
+  const title = content?.title || "시티체인저가 되어보세요";
   const subtitle =
-    content?.subtitle || "당신의 전문성이 새로운 Scene의 시작입니다";
+    content?.subtitle || "당신이 곧 와셔입니다 — 너트를 단단하게 만드는 힘";
 
   return (
     <section id="join" className="grid grid-cols-1 lg:grid-cols-2 min-h-[60vh] border-t-[3px] border-nu-ink">
@@ -57,7 +57,7 @@ export function JoinSection({ content }: JoinSectionProps) {
 
         <div className="absolute inset-0 flex flex-col justify-end p-12">
           <span className="font-mono-nu text-[10px] uppercase tracking-[0.3em] text-nu-paper/25">
-            become a member
+            become a city changer
           </span>
         </div>
 
@@ -76,7 +76,7 @@ export function JoinSection({ content }: JoinSectionProps) {
           {title.split("").map((char, i) => char === " " ? " " : char)}
         </h2>
         <p className="text-nu-gray mt-4 max-w-md leading-relaxed border-l-[3px] border-nu-ink/20 pl-4">
-          {subtitle}. 공간, 문화, 플랫폼, 바이브 — 어떤 분야든 함께 만들어갑니다.
+          {subtitle}. 너트에 합류하고, 볼트를 조립하고, 탭에 지식을 새기세요.
         </p>
         <div className="flex flex-wrap items-center gap-3 mt-8">
           <Link

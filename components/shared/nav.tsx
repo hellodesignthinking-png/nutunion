@@ -3,34 +3,28 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Menu, LogOut, Bell, Shield, Star, Crown, Award, Search, Command } from "lucide-react";
+import { Menu, LogOut, Bell, Shield, Search, Command } from "lucide-react";
+import { getGrade, GRADE_CONFIG } from "@/lib/constants";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { createClient } from "@/lib/supabase/client";
 import { NotificationCenter } from "@/components/shared/notification-center";
 
 // ── 랜딩 전용 링크 (비로그인) ──────────────────────────────────────
 const landingLinks = [
-  { label: "About",    href: "/#about"  },
-  { label: "Groups",   href: "/groups"  },
-  { label: "Projects", href: "/projects" },
+  { label: "About",    href: "/#about"   },
+  { label: "너트",     href: "/groups"   },
+  { label: "볼트",     href: "/projects" },
   { label: "Scenes",   href: "/#scenes"  },
 ];
 
 const appLinks = [
-  { label: "Dashboard", href: "/dashboard"    },
-  { label: "소모임",    href: "/groups"       },
-  { label: "프로젝트",  href: "/projects"     },
-  { label: "인재",      href: "/talents"      },
+  { label: "대시보드",  href: "/dashboard"    },
+  { label: "너트",      href: "/groups"       },
+  { label: "볼트",      href: "/projects"     },
+  { label: "탭",        href: "/wiki"         },
+  { label: "와셔",      href: "/members"      },
   { label: "의뢰",      href: "/challenges"   },
 ];
-
-const GRADE_BADGE: Record<string, { label: string; cls: string; Icon: any }> = {
-  admin:  { label: "관리자", cls: "bg-nu-pink text-white",        Icon: Shield },
-  vip:    { label: "VIP",   cls: "bg-nu-pink/10 text-nu-pink",   Icon: Crown  },
-  gold:   { label: "골드",  cls: "bg-yellow-50 text-yellow-600", Icon: Star   },
-  silver: { label: "실버",  cls: "bg-slate-100 text-slate-500",  Icon: Star   },
-  bronze: { label: "브론즈",cls: "bg-amber-50 text-amber-600",   Icon: Award  },
-};
 
 export function Nav() {
   const [user,       setUser]       = useState<any>(null);
@@ -106,9 +100,8 @@ export function Nav() {
 
   const links      = user ? appLinks : landingLinks;
   const isAdmin    = profile?.role === "admin";
-  const gradeKey   = isAdmin ? "admin" : (profile?.grade || (profile?.can_create_crew ? "silver" : "bronze"));
-  const grade      = GRADE_BADGE[gradeKey] || GRADE_BADGE.bronze;
-  const GIcon      = grade.Icon;
+  const grade      = profile ? getGrade(profile) : GRADE_CONFIG.bronze;
+  const GIcon      = grade.icon;
   const initial    = (profile?.nickname || "U").charAt(0).toUpperCase();
 
   function getHref(href: string) {
@@ -169,6 +162,7 @@ export function Nav() {
               onClick={() => { const e = new KeyboardEvent('keydown', { key: 'k', metaKey: true }); window.dispatchEvent(e); }}
               className="flex items-center gap-1.5 px-3 py-1.5 text-nu-muted hover:text-nu-ink bg-nu-cream/30 border border-nu-ink/10 transition-colors"
               title="검색 (⌘K)"
+              aria-label="검색"
             >
               <Search size={13} />
               <kbd className="font-mono-nu text-[8px] text-nu-muted">⌘K</kbd>
@@ -181,6 +175,7 @@ export function Nav() {
               prefetch={true}
               className="w-8 h-8 rounded-full bg-nu-pink text-white flex items-center justify-center font-head text-sm font-bold cursor-pointer hover:bg-nu-pink/80 transition-colors no-underline"
               title={profile?.nickname}
+              aria-label="내 프로필"
             >
               {initial}
             </Link>
@@ -213,7 +208,7 @@ export function Nav() {
       {/* Mobile menu */}
       <div className="md:hidden">
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger className="p-2 border-[2px] border-nu-ink">
+          <SheetTrigger className="p-2 border-[2px] border-nu-ink" aria-label="메뉴 열기">
             <Menu size={20} />
           </SheetTrigger>
           <SheetContent side="right" className="bg-nu-paper w-[280px] border-l-[3px] border-nu-ink">
@@ -249,9 +244,25 @@ export function Nav() {
                   </Link>
                 ))}
                 {user && (
-                  <Link href="/profile" onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-graphite no-underline border-b border-nu-ink/10 pb-2">
-                    프로필
-                  </Link>
+                  <>
+                    <Link
+                      key="notifications"
+                      href="/notifications"
+                      onClick={() => setOpen(false)}
+                      prefetch={true}
+                      className={`font-mono-nu text-[12px] uppercase tracking-widest no-underline border-b border-nu-ink/10 pb-2 text-nu-graphite flex items-center justify-between`}
+                    >
+                      알림
+                      {notifCount > 0 && (
+                        <span className="w-5 h-5 bg-nu-pink text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                          {notifCount > 9 ? "9+" : notifCount}
+                        </span>
+                      )}
+                    </Link>
+                    <Link href="/profile" onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-graphite no-underline border-b border-nu-ink/10 pb-2">
+                      프로필
+                    </Link>
+                  </>
                 )}
               </div>
 
@@ -261,8 +272,8 @@ export function Nav() {
                   {[
                     { href: "/admin", label: "관리자 대시보드" },
                     { href: "/admin/users", label: "회원 관리" },
-                    { href: "/admin/groups", label: "소모임 관리" },
-                    { href: "/admin/projects", label: "프로젝트 관리" },
+                    { href: "/admin/groups", label: "너트 관리" },
+                    { href: "/admin/projects", label: "볼트 관리" },
                     { href: "/admin/content", label: "콘텐츠 관리" },
                   ].map(a => (
                     <Link key={a.href} href={a.href} onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[11px] text-nu-graphite no-underline">

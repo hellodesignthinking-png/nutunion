@@ -1,5 +1,3 @@
-"use client";
-
 import { Plus } from "lucide-react";
 import Link from "next/link";
 
@@ -27,20 +25,20 @@ export function PageHero({ category, title, description, action, className = "" 
       <div className="relative max-w-7xl mx-auto px-8 pt-20 pb-12 md:pt-28 md:pb-16 flex flex-col md:flex-row md:items-end justify-between gap-8">
         <div className="flex-1">
           {category && (
-            <span className="font-mono-nu text-[10px] uppercase tracking-[0.4em] text-nu-blue font-bold block mb-4 animate-fade-in-down">
+            <span className="font-mono-nu text-[10px] uppercase tracking-[0.4em] text-nu-blue font-bold block mb-4">
               {category}
             </span>
           )}
-          <h1 className="font-head text-[clamp(40px,6vw,68px)] font-extrabold text-nu-paper leading-none tracking-tighter mb-5 animate-slide-up-fade">
+          <h1 className="font-head text-[clamp(40px,6vw,68px)] font-extrabold text-nu-paper leading-none tracking-tighter mb-5">
              {title}
           </h1>
-          <p className="text-nu-paper/50 max-w-xl text-[13px] md:text-sm leading-relaxed animate-fade-in">
+          <p className="text-nu-paper/50 max-w-xl text-[13px] md:text-sm leading-relaxed">
              {description}
           </p>
         </div>
         
         {action && (
-          <div className="animate-fade-in-scale">
+          <div>
             <Link
               href={action.href}
               className="font-mono-nu text-[11px] font-bold tracking-[0.1em] uppercase px-8 py-4 bg-nu-pink text-nu-paper hover:bg-nu-pink/90 transition-all no-underline inline-flex items-center gap-2.5 shadow-xl shadow-nu-pink/10 active:scale-95"

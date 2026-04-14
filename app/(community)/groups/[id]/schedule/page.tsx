@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, Calendar, BookOpen, Download } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Clock, MapPin, Calendar, BookOpen, Download } from "lucide-react";
 import { GoogleCalendarButton } from "@/components/integrations/google-calendar-button";
 import { EventRsvpButton } from "@/components/groups/event-rsvp-button";
 
@@ -27,6 +27,8 @@ export default function SchedulePage() {
   const [isHost, setIsHost] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [view, setView] = useState<"month" | "list">("month");
+  const [groupName, setGroupName] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadAll() {
@@ -54,8 +56,9 @@ export default function SchedulePage() {
         .lte("scheduled_at", end.toISOString())
         .order("scheduled_at");
 
-      const { data: group } = await supabase.from("groups").select("host_id").eq("id", groupId).single();
+      const { data: group } = await supabase.from("groups").select("host_id, name").eq("id", groupId).single();
       setIsHost(group?.host_id === user.id);
+      setGroupName(group?.name || "너트");
 
       const combined: EventItem[] = [
         ...(eventsData || []).map((e: any) => ({ ...e, itemType: "event" as const })),
@@ -72,6 +75,7 @@ export default function SchedulePage() {
       ].sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
 
       setEvents(combined);
+      setLoading(false);
     }
     loadAll();
   }, [groupId, currentDate]);
@@ -123,8 +127,33 @@ export default function SchedulePage() {
     URL.revokeObjectURL(url);
   }
 
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto px-8 py-12">
+        <div className="flex items-center gap-1.5 mb-6">
+          <div className="h-4 w-16 bg-nu-ink/5 animate-pulse" />
+          <div className="h-4 w-4 bg-nu-ink/5 animate-pulse" />
+          <div className="h-4 w-12 bg-nu-ink/5 animate-pulse" />
+        </div>
+        <div className="h-10 w-40 bg-nu-ink/5 animate-pulse mb-8" />
+        <div className="h-8 w-48 bg-nu-ink/5 animate-pulse mb-6" />
+        <div className="bg-white border-[2px] border-nu-ink/[0.08] h-[400px] animate-pulse bg-nu-ink/[0.02]" />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto px-8 py-12">
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-1.5 mb-6 font-mono-nu text-[11px] uppercase tracking-widest">
+        <Link href={`/groups/${groupId}`}
+          className="text-nu-muted hover:text-nu-ink no-underline flex items-center gap-1 transition-colors">
+          <ArrowLeft size={12} /> {groupName}
+        </Link>
+        <ChevronRight size={12} className="text-nu-muted/40" />
+        <span className="text-nu-ink">캘린더</span>
+      </nav>
+
       <div className="flex items-center justify-between mb-8">
         <h1 className="font-head text-3xl font-extrabold text-nu-ink flex items-center gap-2">
           <Calendar size={24} className="text-nu-pink" /> 캘린더
@@ -136,12 +165,18 @@ export default function SchedulePage() {
           >
             <Download size={13} /> .ics 구독
           </button>
+          <Link
+            href={`/groups/${groupId}/meetings/create`}
+            className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-2.5 border-[2px] border-nu-blue text-nu-blue no-underline hover:bg-nu-blue hover:text-nu-paper transition-colors inline-flex items-center gap-2"
+          >
+            <Plus size={13} /> 미팅 만들기
+          </Link>
           {isHost && (
             <Link
               href={`/groups/${groupId}/events/create`}
               className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-2.5 bg-nu-pink text-nu-paper no-underline hover:bg-nu-pink/90 transition-colors inline-flex items-center gap-2"
             >
-              <Plus size={13} /> 일정 추가
+              <Plus size={13} /> 이벤트 추가
             </Link>
           )}
         </div>
@@ -245,7 +280,20 @@ export default function SchedulePage() {
       ) : (
         <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-12 text-center">
           <Calendar size={32} className="text-nu-muted mx-auto mb-3" />
-          <p className="text-nu-gray">이번 달 일정이 없습니다</p>
+          <p className="text-nu-gray text-sm">이번 달 등록된 일정이 없습니다</p>
+          <p className="text-nu-muted text-xs mt-1">미팅이나 이벤트를 추가하면 여기에 표시됩니다</p>
+          <div className="mt-4 flex items-center justify-center gap-4">
+            <Link href={`/groups/${groupId}/meetings/create`}
+              className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-blue no-underline hover:underline">
+              + 미팅 만들기
+            </Link>
+            {isHost && (
+              <Link href={`/groups/${groupId}/events/create`}
+                className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink no-underline hover:underline">
+                + 이벤트 추가하기
+              </Link>
+            )}
+          </div>
         </div>
       )}
     </div>

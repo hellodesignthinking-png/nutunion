@@ -62,7 +62,7 @@ export const TEMPLATE_CONTENT: Record<string, string> = {
 ## 4. 필수 도구
 - 소통: 카카오톡/슬랙 그룹챗
 - 문서: Google Docs 공유 폴더
-- 일정: NutUnion 소모임 캘린더
+- 일정: NutUnion 너트 캘린더
 - 칸반: 마일스톤 & 태스크 보드
 
 ## 5. 성과 측정
@@ -143,7 +143,7 @@ export const TEMPLATE_CONTENT: Record<string, string> = {
 ### 필수 조건
 - 최근 3년 이내 발표된 논문 우선
 - 팀원 전원이 읽을 수 있는 분량 (15페이지 이내 권장)
-- 주제가 소모임 목표와 관련 있을 것
+- 주제가 너트 목표와 관련 있을 것
 
 ### 우선 선정 기준
 - 인용 수 50회 이상

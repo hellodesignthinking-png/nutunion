@@ -30,6 +30,10 @@ export async function checkAndAwardBadges(userId: string) {
   try {
     const supabase = await createClient();
 
+    // Verify caller matches the target userId
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || user.id !== userId) return;
+
     // 1. Query activity counts — each wrapped individually for resilience
     let meetingCount = 0;
     let resourceCount = 0;

@@ -1,4 +1,4 @@
-// 소모임 목록 — 스켈레톤 로딩
+// 너트 목록 — 스켈레톤 로딩
 export default function GroupsLoading() {
   return (
     <div className="max-w-7xl mx-auto px-8 py-12">

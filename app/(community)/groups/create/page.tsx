@@ -81,7 +81,7 @@ const TEMPLATES: Record<string, TemplateInfo> = {
   "paper-review": {
     id: "paper-review",
     title: "Weekly Paper Review",
-    subtitle: "지식 기반 소모임",
+    subtitle: "지식 기반 너트",
     description:
       "매주 선정된 논문이나 보고서를 함께 읽고, 핵심 내용을 정리하고, 인사이트를 나누는 정기적인 모임을 운영할 수 있습니다.",
     icon: <BookOpen size={22} />,
@@ -172,10 +172,10 @@ export default function CreateGroupPage() {
     return (
       <div className="max-w-2xl mx-auto px-8 py-12 text-center">
         <h1 className="font-head text-2xl font-extrabold text-nu-ink mb-4">
-          소모임 개설 권한이 없습니다
+          너트 개설 권한이 없습니다
         </h1>
         <p className="text-nu-gray mb-2">
-          소모임을 개설하려면 <strong>실버 등급 이상</strong>이 필요합니다.
+          너트를 개설하려면 <strong>실버 등급 이상</strong>이 필요합니다.
         </p>
         <p className="text-nu-muted text-sm mb-6">
           현재 등급이 부족하다면 관리자에게 등급 상향을 요청하세요.
@@ -184,7 +184,7 @@ export default function CreateGroupPage() {
           href="/groups"
           className="font-mono-nu text-[11px] uppercase tracking-widest bg-nu-ink text-nu-paper px-6 py-3 no-underline hover:bg-nu-pink transition-colors inline-block"
         >
-          소모임 목록으로 돌아가기
+          너트 목록으로 돌아가기
         </Link>
       </div>
     );
@@ -238,7 +238,7 @@ export default function CreateGroupPage() {
     });
 
     if (memberError) {
-      toast.error("소모임은 생성되었으나 호스트 등록에 실패했습니다.");
+      toast.error("너트는 생성되었으나 호스트 등록에 실패했습니다.");
       setLoading(false);
       return;
     }
@@ -254,10 +254,24 @@ export default function CreateGroupPage() {
       }
     }
 
+    // Auto-create Google Drive folder (non-blocking)
+    try {
+      const driveRes = await fetch("/api/google/drive/folder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ groupId: group.id, folderName: name }),
+      });
+      if (driveRes.ok) {
+        toast.success("Google Drive 폴더가 생성되었습니다");
+      }
+    } catch {
+      // Drive folder creation is optional
+    }
+
     toast.success(
       template
-        ? `${template.title} 템플릿으로 소모임이 생성되었습니다!`
-        : "소모임이 생성되었습니다!"
+        ? `${template.title} 템플릿으로 너트가 생성되었습니다!`
+        : "너트가 생성되었습니다!"
     );
     router.push(`/groups/${group.id}`);
   }
@@ -287,7 +301,7 @@ export default function CreateGroupPage() {
               className="inline-flex items-center gap-1.5 font-mono-nu text-[10px] uppercase tracking-widest text-white/50 hover:text-white/80 transition-colors no-underline mb-8"
             >
               <ArrowLeft size={12} />
-              소모임 탐색
+              너트 탐색
             </Link>
 
             <div className="flex items-center gap-2 mb-5">
@@ -297,7 +311,7 @@ export default function CreateGroupPage() {
               </span>
               <ChevronRight size={12} className="text-white/30" />
               <span className="font-mono-nu text-[8px] font-black uppercase tracking-[0.2em] text-white/50">
-                새 소모임 만들기
+                새 너트 만들기
               </span>
             </div>
 
@@ -338,7 +352,7 @@ export default function CreateGroupPage() {
             <div className="lg:col-span-3">
               <div className="bg-nu-white border-2 border-nu-ink/[0.06] p-8">
                 <h2 className="font-head text-lg font-bold text-nu-ink mb-1">
-                  소모임 정보 입력
+                  너트 정보 입력
                 </h2>
                 <p className="text-[11px] text-nu-muted mb-6">
                   템플릿 구조가 자동 적용됩니다. 기본 정보만 입력하세요.
@@ -347,7 +361,7 @@ export default function CreateGroupPage() {
                 <form onSubmit={handleSubmit} className="flex flex-col gap-5">
                   <div>
                     <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
-                      소모임 이름 *
+                      너트 이름 *
                     </Label>
                     <Input
                       name="name"
@@ -388,7 +402,7 @@ export default function CreateGroupPage() {
                       name="description"
                       rows={4}
                       defaultValue={template.description}
-                      placeholder="소모임에 대해 소개해주세요"
+                      placeholder="너트에 대해 소개해주세요"
                       className="mt-1.5 border-nu-ink/15 bg-transparent resize-none"
                     />
                   </div>
@@ -422,7 +436,7 @@ export default function CreateGroupPage() {
                       <span className="relative z-10">
                         {loading
                           ? "생성 중..."
-                          : "템플릿으로 소모임 만들기"}
+                          : "템플릿으로 너트 만들기"}
                       </span>
                     </button>
                     <Button
@@ -496,7 +510,7 @@ export default function CreateGroupPage() {
                       </p>
                     </div>
                     <p className="text-[10px] text-white/35 leading-relaxed">
-                      소모임 생성 시 위 기능들이 자동으로 구성됩니다.
+                      너트 생성 시 위 기능들이 자동으로 구성됩니다.
                       별도의 설정 없이 바로 운영을 시작할 수 있습니다.
                     </p>
                   </div>
@@ -517,11 +531,11 @@ export default function CreateGroupPage() {
         className="inline-flex items-center gap-1.5 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted hover:text-nu-ink transition-colors no-underline mb-6"
       >
         <ArrowLeft size={12} />
-        소모임 탐색
+        너트 탐색
       </Link>
 
       <h1 className="font-head text-3xl font-extrabold text-nu-ink mb-2">
-        새 소모임 만들기
+        새 너트 만들기
       </h1>
       <p className="text-nu-gray text-sm mb-8">새로운 Scene을 시작하세요</p>
 
@@ -529,7 +543,7 @@ export default function CreateGroupPage() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div>
             <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
-              소모임 이름
+              너트 이름
             </Label>
             <Input
               name="name"
@@ -567,7 +581,7 @@ export default function CreateGroupPage() {
             <Textarea
               name="description"
               rows={4}
-              placeholder="소모임에 대해 소개해주세요"
+              placeholder="너트에 대해 소개해주세요"
               className="mt-1.5 border-nu-ink/15 bg-transparent resize-none"
             />
           </div>
@@ -592,7 +606,7 @@ export default function CreateGroupPage() {
               disabled={loading}
               className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[11px] uppercase tracking-widest px-8"
             >
-              {loading ? "생성 중..." : "소모임 만들기"}
+              {loading ? "생성 중..." : "너트 만들기"}
             </Button>
             <Button
               type="button"

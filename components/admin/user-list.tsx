@@ -36,7 +36,7 @@ const GRADES = [
     color: "bg-slate-100 text-slate-600 border-slate-200",
     dot: "bg-slate-400",
     icon: Star,
-    desc: "소모임 개설 가능",
+    desc: "너트 개설 가능",
     canCreateCrew: true,
     canCreateProject: false,
   },
@@ -47,7 +47,7 @@ const GRADES = [
     color: "bg-yellow-100 text-yellow-700 border-yellow-200",
     dot: "bg-yellow-400",
     icon: Star,
-    desc: "소모임 + 프로젝트 개설",
+    desc: "너트 + 볼트 개설",
     canCreateCrew: true,
     canCreateProject: true,
   },
@@ -155,7 +155,7 @@ export function AdminUserList({ users, migrationDone = false }: { users: UserWit
       if (data.gradeSaved) {
         toast.success("회원 정보가 저장되었습니다 ✓");
       } else {
-        toast.success("역할/소모임 권한이 저장되었습니다");
+        toast.success("역할/너트 권한이 저장되었습니다");
         toast("등급 저장을 위해 Supabase SQL 마이그레이션이 필요합니다", {
           description: "grade 컬럼이 없어 등급은 저장되지 않았습니다",
           duration: 6000,
@@ -219,7 +219,7 @@ export function AdminUserList({ users, migrationDone = false }: { users: UserWit
       <div className="bg-nu-white border border-nu-ink/[0.08]">
         {/* Header */}
         <div className="hidden md:grid grid-cols-[2fr_2fr_1fr_1fr_1fr_auto] gap-0 border-b border-nu-ink/[0.08]">
-          {["회원", "이메일", "등급", "소모임", "프로젝트", "관리"].map(h => (
+          {["회원", "이메일", "등급", "너트", "볼트", "관리"].map(h => (
             <div key={h} className="px-4 py-3 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">{h}</div>
           ))}
         </div>
@@ -250,7 +250,7 @@ export function AdminUserList({ users, migrationDone = false }: { users: UserWit
               {/* 등급 */}
               <div className="px-4 py-3"><GradeBadge grade={u.grade} role={u.role} /></div>
 
-              {/* 소모임 */}
+              {/* 너트 */}
               <div className="px-4 py-3">
                 {u.can_create_crew
                   ? <span className="text-green-600"><Check size={14} /></span>
@@ -342,7 +342,7 @@ export function AdminUserList({ users, migrationDone = false }: { users: UserWit
                         </div>
                         {!migrationDone && (
                           <p className="text-[10px] text-nu-amber mt-1.5">
-                            소모임/프로젝트 권한 토글은 즉시 저장됩니다. 등급은 SQL 실행 후 영구 저장됩니다.
+                            너트/볼트 권한 토글은 즉시 저장됩니다. 등급은 SQL 실행 후 영구 저장됩니다.
                           </p>
                         )}
                       </div>
@@ -354,7 +354,7 @@ export function AdminUserList({ users, migrationDone = false }: { users: UserWit
                         <button type="button" onClick={() => setEditCrewPerm(!editCrewPerm)}
                           className={`flex items-center gap-2 px-3 py-2 border-[2px] transition-all text-sm ${editCrewPerm ? "border-nu-blue bg-nu-blue/5 text-nu-blue" : "border-nu-ink/10 text-nu-muted"}`}>
                           <Layers size={13} />
-                          소모임 개설 {editCrewPerm ? "허용" : "불가"}
+                          너트 개설 {editCrewPerm ? "허용" : "불가"}
                         </button>
                         <button type="button" onClick={() => setEditProjectPerm(!editProjectPerm)}
                           className={`flex items-center gap-2 px-3 py-2 border-[2px] transition-all text-sm ${editProjectPerm ? "border-green-500 bg-green-50 text-green-700" : "border-nu-ink/10 text-nu-muted"}`}>
@@ -391,7 +391,7 @@ export function AdminUserList({ users, migrationDone = false }: { users: UserWit
                       <div className="space-y-2 text-sm">
                         <div className="flex items-center gap-2">
                           <Layers size={13} className={u.can_create_crew ? "text-nu-blue" : "text-nu-muted/40"} />
-                          <span className={u.can_create_crew ? "text-nu-blue" : "text-nu-muted"}>소모임 개설 {u.can_create_crew ? "가능" : "불가"}</span>
+                          <span className={u.can_create_crew ? "text-nu-blue" : "text-nu-muted"}>너트 개설 {u.can_create_crew ? "가능" : "불가"}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Briefcase size={13} className={u.can_create_project ? "text-green-600" : "text-nu-muted/40"} />

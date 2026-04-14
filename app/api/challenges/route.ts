@@ -27,6 +27,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(contactEmail)) {
+      return NextResponse.json({ error: "올바른 이메일 형식이 아닙니다" }, { status: 400 });
+    }
+
     // Check if user is logged in (optional)
     const {
       data: { user },

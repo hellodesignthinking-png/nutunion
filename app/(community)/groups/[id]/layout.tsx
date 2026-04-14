@@ -11,7 +11,7 @@ export default async function GroupLayout({
   const { id: groupId } = await params;
   const supabase = await createClient();
 
-  let groupName = "소모임";
+  let groupName = "너트";
   let isHost = false;
   let isManager = false;
 
@@ -32,7 +32,7 @@ export default async function GroupLayout({
           .eq("group_id", groupId)
           .eq("user_id", user.id)
           .maybeSingle();
-        isManager = isHost || membership?.role === "manager";
+        isManager = isHost || membership?.role === "moderator";
       }
     }
   } catch {

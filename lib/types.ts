@@ -1,5 +1,5 @@
 export type Specialty = "space" | "culture" | "platform" | "vibe";
-export type MemberRole = "member" | "admin";
+export type MemberRole = "member" | "staff" | "admin";
 export type GroupMemberRole = "host" | "member" | "moderator";
 export type GroupMemberStatus = "active" | "pending" | "waitlist";
 export type AttendeeStatus = "registered" | "waitlist" | "cancelled" | "attended";
@@ -314,6 +314,99 @@ export interface Integration {
 }
 
 // === Chat ===
+
+// === Staff Platform ===
+
+export type StaffProjectStatus = "active" | "completed" | "archived";
+export type StaffTaskStatus = "todo" | "in_progress" | "done";
+export type StaffTaskPriority = "low" | "medium" | "high" | "urgent";
+
+export interface StaffProject {
+  id: string;
+  title: string;
+  description: string | null;
+  status: StaffProjectStatus;
+  category: string;
+  drive_folder_id: string | null;
+  drive_folder_url: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  member_count?: number;
+  task_count?: number;
+  file_count?: number;
+  creator?: { nickname: string | null; avatar_url: string | null };
+  members?: StaffProjectMember[];
+}
+
+export interface StaffProjectMember {
+  id: string;
+  project_id: string;
+  user_id: string;
+  role: "lead" | "member";
+  joined_at: string;
+  profile?: { id: string; nickname: string | null; avatar_url: string | null };
+}
+
+export interface StaffFile {
+  id: string;
+  project_id: string;
+  drive_file_id: string;
+  title: string;
+  mime_type: string | null;
+  drive_url: string | null;
+  thumbnail_url: string | null;
+  file_size: number | null;
+  created_by: string | null;
+  ai_summary: string | null;
+  ai_tags: string[];
+  last_synced_at: string;
+  created_at: string;
+  updated_at: string;
+  creator?: { nickname: string | null; avatar_url: string | null };
+}
+
+export interface StaffTask {
+  id: string;
+  project_id: string;
+  title: string;
+  description: string | null;
+  status: StaffTaskStatus;
+  priority: StaffTaskPriority;
+  assigned_to: string | null;
+  source_type: "manual" | "comment" | "meeting" | "ai";
+  source_file_id: string | null;
+  due_date: string | null;
+  completed_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  assignee?: { id: string; nickname: string | null; avatar_url: string | null };
+}
+
+export interface StaffActivity {
+  id: string;
+  project_id: string;
+  user_id: string | null;
+  action: string;
+  target_type: string | null;
+  target_id: string | null;
+  metadata: Record<string, any>;
+  created_at: string;
+  user?: { nickname: string | null; avatar_url: string | null };
+}
+
+export interface StaffComment {
+  id: string;
+  project_id: string;
+  target_type: "file" | "task" | "project";
+  target_id: string;
+  author_id: string | null;
+  content: string;
+  drive_comment_id: string | null;
+  created_at: string;
+  author?: { nickname: string | null; avatar_url: string | null };
+}
 
 export interface ChatMessage {
   id: string;

@@ -23,7 +23,7 @@ export function ReactionsBar({ targetType, targetId, userId }: ReactionsBarProps
 
   useEffect(() => {
     loadReactions();
-  }, [targetId]);
+  }, [targetId, targetType, userId]);
 
   async function loadReactions() {
     const supabase = createClient();
@@ -89,6 +89,7 @@ export function ReactionsBar({ targetType, targetId, userId }: ReactionsBarProps
         <button
           onClick={() => setShowPicker(!showPicker)}
           className="w-6 h-6 flex items-center justify-center text-nu-muted hover:text-nu-pink hover:bg-nu-pink/5 rounded-full transition-colors text-xs"
+          aria-label="이모지 추가"
         >
           +
         </button>

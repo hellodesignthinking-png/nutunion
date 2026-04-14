@@ -52,6 +52,13 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
   const [showTOC, setShowTOC] = useState(false);
   const [diffVersion, setDiffVersion] = useState<{ version: number; content: string; title: string } | null>(null);
   const linkSearchTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (linkSearchTimer.current) clearTimeout(linkSearchTimer.current);
+    };
+  }, []);
   const linkSearchAbort = useRef<AbortController | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 

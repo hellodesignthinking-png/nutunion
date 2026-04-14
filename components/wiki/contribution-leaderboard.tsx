@@ -31,7 +31,7 @@ const LEVELS = [
 ];
 
 const BADGE_DEFS: Record<string, { label: string; icon: string; description: string }> = {
-  first_page:    { label: "First Page", icon: "📄", description: "첫 번째 위키 페이지 작성" },
+  first_page:    { label: "First Page", icon: "📄", description: "첫 번째 탭 페이지 작성" },
   ten_edits:     { label: "Editor", icon: "✏️", description: "10개 이상의 편집" },
   streak_7:      { label: "7-Day Streak", icon: "🔥", description: "7일 연속 기여" },
   cross_topic:   { label: "Bridge Builder", icon: "🌉", description: "3개 이상 주제에 기여" },
@@ -357,7 +357,7 @@ export function ContributionLeaderboard({ groupId }: { groupId: string }) {
                         </div>
                       );
                     }) : (
-                      <p className="text-xs text-nu-muted italic">아직 획득한 배지가 없습니다. 위키에 기여하면 배지를 얻을 수 있어요!</p>
+                      <p className="text-xs text-nu-muted italic">아직 획득한 배지가 없습니다. 탭에 기여하면 배지를 얻을 수 있어요!</p>
                     )}
                   </div>
 

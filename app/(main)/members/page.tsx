@@ -2,8 +2,10 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Search, Users, Filter, Star, Crown, Award, Shield } from "lucide-react";
+import { Search, Users, Filter } from "lucide-react";
+import Image from "next/image";
 import { PageHero } from "@/components/shared/page-hero";
+import { getGrade, getCategory } from "@/lib/constants";
 
 interface MemberItem {
   id: string;
@@ -17,28 +19,6 @@ interface MemberItem {
   grade: string | null;
   can_create_crew: boolean;
   created_at: string;
-}
-
-const CAT_COLORS: Record<string, string> = {
-  space: "bg-nu-blue", culture: "bg-nu-amber", platform: "bg-nu-ink", vibe: "bg-nu-pink",
-};
-const CAT_LABELS: Record<string, string> = {
-  space: "공간", culture: "문화", platform: "플랫폼", vibe: "바이브",
-};
-
-const GRADE_INFO: Record<string, { label: string; color: string; icon: any }> = {
-  admin:  { label: "최고관리자", color: "bg-nu-pink text-white",             icon: Shield },
-  vip:    { label: "VIP",        color: "bg-nu-pink/10 text-nu-pink border border-nu-pink/20", icon: Crown },
-  gold:   { label: "골드",       color: "bg-yellow-50 text-yellow-700 border border-yellow-200", icon: Star },
-  silver: { label: "실버",       color: "bg-slate-50 text-slate-500 border border-slate-200",   icon: Star },
-  bronze: { label: "브론즈",     color: "bg-amber-50 text-amber-600 border border-amber-200",   icon: Award },
-};
-
-function getGradeInfo(m: MemberItem) {
-  if (m.role === "admin") return GRADE_INFO.admin;
-  if (m.grade && GRADE_INFO[m.grade]) return GRADE_INFO[m.grade];
-  if (m.can_create_crew) return GRADE_INFO.silver;
-  return GRADE_INFO.bronze;
 }
 
 export default function MembersPage() {
@@ -79,8 +59,8 @@ export default function MembersPage() {
     <div className="bg-nu-paper min-h-screen pb-20">
       <PageHero 
         category="Connect"
-        title="Members"
-        description="nutunion 커뮤니티의 동료들을 탐색하고 성장을 위한 연결을 시작하세요. 기획자, 개발자, 디렉터 등 다양한 Scene의 멤버들이 활동 중입니다."
+        title="와셔 (Washer)"
+        description="너트를 단단하게 지지하는 구성원들, 와셔를 탐색하세요. 기획자, 개발자, 디렉터 등 다양한 Scene의 와셔들이 활동 중입니다."
       />
 
       <div className="max-w-7xl mx-auto px-8 py-12">
@@ -138,13 +118,13 @@ export default function MembersPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((m) => {
-            const g = getGradeInfo(m);
+            const g = getGrade(m);
             const GIcon = g.icon;
             return (
               <div key={m.id} className="bg-nu-white border border-nu-ink/[0.06] p-5 hover:border-nu-pink/30 hover:shadow-sm transition-all">
                 <div className="flex items-start gap-4">
                   {m.avatar_url ? (
-                    <img src={m.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
+                    <Image src={m.avatar_url} alt={m.nickname || "프로필"} width={48} height={48} className="rounded-full object-cover shrink-0" />
                   ) : (
                     <div className="w-12 h-12 rounded-full bg-nu-cream flex items-center justify-center font-head text-lg font-bold text-nu-ink shrink-0">
                       {(m.nickname || "U").charAt(0).toUpperCase()}
@@ -153,14 +133,14 @@ export default function MembersPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <p className="font-head text-sm font-bold text-nu-ink truncate">{m.nickname}</p>
-                      <span className={`inline-flex items-center gap-0.5 font-mono-nu text-[7px] uppercase tracking-widest px-1.5 py-0.5 shrink-0 ${g.color}`}>
+                      <span className={`inline-flex items-center gap-0.5 font-mono-nu text-[7px] uppercase tracking-widest px-1.5 py-0.5 shrink-0 ${g.cls}`}>
                         <GIcon size={7} /> {g.label}
                       </span>
                     </div>
                     {m.name && <p className="text-xs text-nu-muted truncate">{m.name}</p>}
                     {m.specialty && (
-                      <span className={`inline-block font-mono-nu text-[8px] uppercase tracking-widest px-2 py-0.5 text-white mt-2 ${CAT_COLORS[m.specialty] || "bg-nu-gray"}`}>
-                        {CAT_LABELS[m.specialty] || m.specialty}
+                      <span className={`inline-block font-mono-nu text-[8px] uppercase tracking-widest px-2 py-0.5 text-white mt-2 ${getCategory(m.specialty).color}`}>
+                        {getCategory(m.specialty).label}
                       </span>
                     )}
                     {m.bio && <p className="text-xs text-nu-gray mt-2 line-clamp-2">{m.bio}</p>}

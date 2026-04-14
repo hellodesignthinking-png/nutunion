@@ -1,4 +1,4 @@
-// 소모임 상세 — 스켈레톤
+// 너트 상세 — 스켈레톤
 export default function GroupDetailLoading() {
   return (
     <div className="max-w-5xl mx-auto px-8 py-12">

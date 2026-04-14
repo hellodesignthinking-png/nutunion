@@ -53,7 +53,7 @@ export function GroupActions({
 
     if (error) {
       if (error.code === "23505") {
-        toast.error("이미 가입 신청한 소모임입니다");
+        toast.error("이미 가입 신청한 너트입니다");
       } else {
         toast.error(error.message);
       }
@@ -66,7 +66,7 @@ export function GroupActions({
       user_id: hostId,
       type: "join_request",
       title: "가입 신청이 도착했습니다",
-      body: `${groupName} 소모임에 새 가입 신청이 있습니다. 설정에서 승인해주세요.`,
+      body: `${groupName} 너트에 새 가입 신청이 있습니다. 설정에서 승인해주세요.`,
       metadata: { group_id: groupId },
       is_read: false,
     });
@@ -87,12 +87,45 @@ export function GroupActions({
     setLoading(false);
   }
 
+  async function handleLeave() {
+    if (!confirm("정말 이 너트를 탈퇴하시겠습니까?")) return;
+    setLoading(true);
+    const supabase = createClient();
+    const { error } = await supabase.from("group_members").delete()
+      .eq("user_id", userId).eq("group_id", groupId);
+    if (error) {
+      toast.error(error.message);
+      setLoading(false);
+      return;
+    }
+    toast.success("너트에서 탈퇴했습니다");
+    router.refresh();
+    setLoading(false);
+  }
+
   // ── 상태별 렌더 ──────────────────────────────────────────────────────
   if (membershipStatus === "active") {
+    // 호스트는 탈퇴 버튼 없음
+    if (userId === hostId) {
+      return (
+        <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-3 bg-green-600 text-white inline-flex items-center gap-2">
+          <CheckCircle2 size={14} /> 참여중
+        </span>
+      );
+    }
     return (
-      <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-3 bg-green-600 text-white inline-flex items-center gap-2">
-        <CheckCircle2 size={14} /> 참여중
-      </span>
+      <div className="flex items-center gap-2">
+        <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-3 bg-green-600 text-white inline-flex items-center gap-2">
+          <CheckCircle2 size={14} /> 참여중
+        </span>
+        <button
+          onClick={handleLeave}
+          disabled={loading}
+          className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-2.5 border border-nu-muted text-nu-muted hover:border-nu-red hover:text-nu-red transition-colors flex items-center gap-1"
+        >
+          {loading ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />} 너트 탈퇴
+        </button>
+      </div>
     );
   }
 

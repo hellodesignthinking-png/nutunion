@@ -87,7 +87,7 @@ export function GroupGrowthWidget({ groupId }: { groupId: string }) {
           </span>
         </div>
         <p className="text-[11px] text-nu-paper/60">
-          AI가 추적하는 소모임 성장 현황
+          AI가 추적하는 너트 성장 현황
         </p>
       </div>
 
@@ -96,7 +96,7 @@ export function GroupGrowthWidget({ groupId }: { groupId: string }) {
         {[
           { icon: Calendar, value: stats.totalMeetings, label: "미팅", color: "text-nu-blue" },
           { icon: BookOpen, value: stats.completedMeetings, label: "완료", color: "text-nu-pink" },
-          { icon: FileText, value: stats.totalWikiPages, label: "위키", color: "text-nu-amber" },
+          { icon: FileText, value: stats.totalWikiPages, label: "탭", color: "text-nu-amber" },
           { icon: Brain, value: stats.totalDigests, label: "다이제스트", color: "text-purple-600" },
         ].map((s, i) => (
           <div key={i} className={`text-center py-4 ${i < 3 ? "border-r border-nu-ink/[0.06]" : ""}`}>
@@ -150,7 +150,7 @@ export function GroupGrowthWidget({ groupId }: { groupId: string }) {
           className="flex items-center justify-between px-5 py-3 text-[11px] font-mono-nu uppercase tracking-widest text-nu-pink no-underline hover:bg-nu-pink/5 transition-colors"
         >
           <span className="flex items-center gap-1.5">
-            <Sparkles size={12} /> 위키에서 성장 기록 보기
+            <Sparkles size={12} /> 탭에서 성장 기록 보기
           </span>
           <ChevronRight size={14} />
         </Link>

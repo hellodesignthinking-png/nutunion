@@ -11,19 +11,31 @@ export default async function AdminGroupsPage() {
     .select("*, host:profiles!groups_host_id_fkey(nickname, email)")
     .order("created_at", { ascending: false });
 
-  // Count members and events separately
-  const formatted = await Promise.all((groups || []).map(async (g: any) => {
-    const [{ count: memberCount }, { count: eventCount }] = await Promise.all([
-      supabase.from("group_members").select("*", { count: "exact", head: true }).eq("group_id", g.id),
-      supabase.from("events").select("*", { count: "exact", head: true }).eq("group_id", g.id),
-    ]);
-    return {
-      ...g,
-      member_count: memberCount || 0,
-      event_count: eventCount || 0,
-      host_nickname: g.host?.nickname || "unknown",
-      host_email: g.host?.email || "",
-    };
+  // Bulk-fetch member and event counts in 2 queries instead of N*2
+  const groupIds = (groups || []).map((g: any) => g.id);
+  const [memberCountsRes, eventCountsRes] = groupIds.length
+    ? await Promise.all([
+        supabase.from("group_members").select("group_id", { count: "exact" }).in("group_id", groupIds),
+        supabase.from("events").select("group_id", { count: "exact" }).in("group_id", groupIds),
+      ])
+    : [{ data: [] }, { data: [] }];
+
+  // Build count maps in JS
+  const memberCountMap: Record<string, number> = {};
+  (memberCountsRes.data || []).forEach((row: any) => {
+    memberCountMap[row.group_id] = (memberCountMap[row.group_id] || 0) + 1;
+  });
+  const eventCountMap: Record<string, number> = {};
+  (eventCountsRes.data || []).forEach((row: any) => {
+    eventCountMap[row.group_id] = (eventCountMap[row.group_id] || 0) + 1;
+  });
+
+  const formatted = (groups || []).map((g: any) => ({
+    ...g,
+    member_count: memberCountMap[g.id] || 0,
+    event_count: eventCountMap[g.id] || 0,
+    host_nickname: g.host?.nickname || "unknown",
+    host_email: g.host?.email || "",
   }));
 
   // Category breakdown
@@ -50,10 +62,10 @@ export default async function AdminGroupsPage() {
   return (
     <div className="max-w-6xl mx-auto px-8 py-12">
       <h1 className="font-head text-3xl font-extrabold text-nu-ink mb-2">
-        소모임 관리
+        너트 관리
       </h1>
       <p className="text-nu-gray text-sm mb-6">
-        {formatted.length}개의 소모임이 등록되어 있습니다
+        {formatted.length}개의 너트가 등록되어 있습니다
       </p>
 
       {/* Stats summary */}

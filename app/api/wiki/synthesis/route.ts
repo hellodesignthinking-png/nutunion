@@ -15,6 +15,28 @@ export async function GET(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "로그인 필요" }, { status: 401 });
 
+  // Verify requester is a member of the group
+  const { data: membership } = await supabase
+    .from("group_members")
+    .select("status")
+    .eq("group_id", groupId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  // Also allow group host (check groups table)
+  const { data: groupRow } = await supabase
+    .from("groups")
+    .select("host_id")
+    .eq("id", groupId)
+    .single();
+
+  const isHost = groupRow?.host_id === user.id;
+  const isMember = membership?.status === "active";
+
+  if (!isHost && !isMember) {
+    return NextResponse.json({ error: "그룹 멤버만 접근할 수 있습니다" }, { status: 403 });
+  }
+
   const { data, error } = await supabase
     .from("wiki_synthesis_logs")
     .select("id, week_start, week_end, synthesis_type, input_summary, output_data, created_at, creator:profiles!wiki_synthesis_logs_created_by_fkey(nickname)")

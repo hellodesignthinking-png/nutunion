@@ -204,7 +204,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
 
     setApplyingIndex(null);
     setPhase("done");
-    toast.success(`${created}개 위키 페이지가 생성/업데이트 되었습니다${failed > 0 ? ` (${failed}개 실패)` : ""}`);
+    toast.success(`${created}개 탭 페이지가 생성/업데이트 되었습니다${failed > 0 ? ` (${failed}개 실패)` : ""}`);
   }
 
   function togglePage(idx: number) {
@@ -235,10 +235,10 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
             <Sparkles size={28} className="text-nu-pink" />
           </div>
           <p className="text-sm font-medium text-nu-ink mb-2">
-            새로 공유된 리소스와 회의 내용을 분석하여 위키를 고도화합니다
+            새로 공유된 리소스와 회의 내용을 분석하여 탭을 고도화합니다
           </p>
           <p className="text-xs text-nu-muted mb-6">
-            이미 위키로 정리된 자료는 다시 검토하지 않아 토큰을 절약합니다
+            이미 탭으로 정리된 자료는 다시 검토하지 않아 토큰을 절약합니다
           </p>
           <button
             onClick={runSynthesis}
@@ -355,7 +355,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
           <div className="p-5">
             <div className="flex items-center justify-between mb-4">
               <h4 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
-                <FileText size={13} /> 위키 페이지 제안 ({result.wikiPageSuggestions.length}건)
+                <FileText size={13} /> 탭 페이지 제안 ({result.wikiPageSuggestions.length}건)
               </h4>
               <div className="flex items-center gap-2">
                 <button
@@ -497,7 +497,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
                 disabled={selectedPages.size === 0}
                 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-2.5 bg-nu-pink text-white hover:bg-nu-pink/90 transition-colors disabled:opacity-50 flex items-center gap-1.5"
               >
-                <Save size={12} /> 위키에 적용 ({selectedPages.size})
+                <Save size={12} /> 탭에 적용 ({selectedPages.size})
               </button>
             </div>
           </div>
@@ -508,7 +508,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
       {phase === "applying" && (
         <div className="p-8 text-center">
           <Loader2 size={32} className="animate-spin text-nu-pink mx-auto mb-4" />
-          <p className="text-sm font-bold text-nu-ink mb-1">위키 페이지를 생성하고 있습니다...</p>
+          <p className="text-sm font-bold text-nu-ink mb-1">탭 페이지를 생성하고 있습니다...</p>
           {applyingIndex !== null && result && (
             <p className="font-mono-nu text-[9px] text-nu-muted">
               {applyingIndex + 1} / {selectedPages.size}: {result.wikiPageSuggestions[applyingIndex]?.title}

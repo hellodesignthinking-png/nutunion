@@ -26,6 +26,8 @@ interface DocTemplate {
   iconColor: string;
   description: string;
   content: string;
+  /** file_type stored in DB — determines icon & editing behavior */
+  fileType: string;
 }
 
 const DOC_TEMPLATES: DocTemplate[] = [
@@ -35,6 +37,7 @@ const DOC_TEMPLATES: DocTemplate[] = [
     icon: FileText,
     iconColor: "text-nu-blue",
     description: "빈 문서에서 자유롭게 작성합니다",
+    fileType: "document",
     content: "# 새 문서\n\n내용을 입력하세요...\n",
   },
   {
@@ -43,6 +46,7 @@ const DOC_TEMPLATES: DocTemplate[] = [
     icon: BookOpen,
     iconColor: "text-nu-pink",
     description: "회의 내용을 체계적으로 기록합니다",
+    fileType: "meeting_notes",
     content: `# 회의록
 
 ## 기본 정보
@@ -84,6 +88,7 @@ const DOC_TEMPLATES: DocTemplate[] = [
     icon: Sheet,
     iconColor: "text-green-600",
     description: "표 형식으로 데이터를 정리합니다",
+    fileType: "spreadsheet",
     content: `# 데이터 시트
 
 ## 현황표
@@ -119,6 +124,7 @@ const DOC_TEMPLATES: DocTemplate[] = [
     icon: Presentation,
     iconColor: "text-nu-amber",
     description: "발표 자료를 슬라이드 형식으로 작성합니다",
+    fileType: "presentation",
     content: `# 프레젠테이션
 
 ---
@@ -201,6 +207,7 @@ const DOC_TEMPLATES: DocTemplate[] = [
     icon: CheckSquare,
     iconColor: "text-green-500",
     description: "할 일 목록을 체크리스트로 관리합니다",
+    fileType: "checklist",
     content: `# 체크리스트
 
 ## 준비 사항
@@ -228,6 +235,7 @@ const DOC_TEMPLATES: DocTemplate[] = [
     icon: Table,
     iconColor: "text-purple-500",
     description: "표 중심의 정리 문서를 작성합니다",
+    fileType: "table_doc",
     content: `# 정리 문서
 
 ## 비교 분석표
@@ -286,32 +294,30 @@ export function NewDocumentModal({ targetType, targetId, stage, onCreated, onClo
     }
 
     try {
+      // Replace the default heading with user's document name
+      const finalContent = template.content
+        .replace(/^# .+$/m, `# ${docName.trim()}`);
+
       if (targetType === "group") {
-        // Insert into file_attachments
-        const { error } = await supabase.from("file_attachments").insert({
+        // Insert into file_attachments with proper type
+        const insertData: Record<string, any> = {
           target_type: "group",
           target_id: targetId,
           uploaded_by: user.id,
           file_name: docName.trim(),
           file_url: `/templates/${template.key}`,
           file_size: null,
-          file_type: "document",
-          content: template.content.replace("# 새 문서", `# ${docName.trim()}`).replace("# 회의록", `# ${docName.trim()}`).replace("# 데이터 시트", `# ${docName.trim()}`).replace("# 프레젠테이션", `# ${docName.trim()}`).replace("# 체크리스트", `# ${docName.trim()}`).replace("# 정리 문서", `# ${docName.trim()}`),
-        });
+          file_type: template.fileType,
+          content: finalContent,
+        };
+
+        const { error } = await supabase.from("file_attachments").insert(insertData);
 
         if (error) {
-          // If content column doesn't exist
-          if (error.code === "42703") {
-            // Try without content
-            const { error: e2 } = await supabase.from("file_attachments").insert({
-              target_type: "group",
-              target_id: targetId,
-              uploaded_by: user.id,
-              file_name: docName.trim(),
-              file_url: `/templates/${template.key}`,
-              file_size: null,
-              file_type: "document",
-            });
+          if (error.code === "42703" && error.message?.includes("content")) {
+            // content column missing — try without it
+            delete insertData.content;
+            const { error: e2 } = await supabase.from("file_attachments").insert(insertData);
             if (e2) throw e2;
           } else {
             throw error;
@@ -323,12 +329,12 @@ export function NewDocumentModal({ targetType, targetId, stage, onCreated, onClo
           "blank-doc": "google_doc",
           "meeting-notes": "google_doc",
           "spreadsheet": "google_sheet",
-          "slides": "google_slide",
+          "slides": "google_doc",
           "checklist": "google_doc",
           "table-doc": "google_sheet",
         };
 
-        const { error } = await supabase.from("project_resources").insert({
+        const insertData: Record<string, any> = {
           project_id: targetId,
           name: docName.trim(),
           url: `/templates/${template.key}`,
@@ -336,20 +342,15 @@ export function NewDocumentModal({ targetType, targetId, stage, onCreated, onClo
           stage: stage || "planning",
           description: template.description,
           uploaded_by: user.id,
-          content: template.content.replace("# 새 문서", `# ${docName.trim()}`).replace("# 회의록", `# ${docName.trim()}`).replace("# 데이터 시트", `# ${docName.trim()}`).replace("# 프레젠테이션", `# ${docName.trim()}`).replace("# 체크리스트", `# ${docName.trim()}`).replace("# 정리 문서", `# ${docName.trim()}`),
-        });
+          content: finalContent,
+        };
+
+        const { error } = await supabase.from("project_resources").insert(insertData);
 
         if (error) {
-          if (error.code === "42703") {
-            const { error: e2 } = await supabase.from("project_resources").insert({
-              project_id: targetId,
-              name: docName.trim(),
-              url: `/templates/${template.key}`,
-              type: typeMap[template.key] || "google_doc",
-              stage: stage || "planning",
-              description: template.description,
-              uploaded_by: user.id,
-            });
+          if (error.code === "42703" && error.message?.includes("content")) {
+            delete insertData.content;
+            const { error: e2 } = await supabase.from("project_resources").insert(insertData);
             if (e2) throw e2;
           } else {
             throw error;

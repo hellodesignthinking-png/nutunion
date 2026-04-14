@@ -6,7 +6,7 @@ const showcases = [
   {
     label: "NETWORK",
     num: "01",
-    title: "152개 크루가 만드는 Scene",
+    title: "152개 너트가 만드는 Scene",
     desc: "서울, 제주, 부산 — 전국의 크리에이터들이 각자의 도시에서 Scene을 만들고, nutunion 프로토콜로 연결됩니다.",
     stats: [
       { num: "152+", label: "Active Crews" },
@@ -21,7 +21,7 @@ const showcases = [
     label: "SCHEDULE",
     num: "02",
     title: "일정, 예약, 그리고 협업",
-    desc: "소모임 캘린더, 공간 예약, 이벤트 관리까지. nutunion은 Scene을 만드는 과정 전체를 지원합니다. 반복 일정, 대기자 관리, 자동 알림으로 운영 부담을 최소화합니다.",
+    desc: "너트 캘린더, 공간 예약, 이벤트 관리까지. nutunion은 Scene을 만드는 과정 전체를 지원합니다. 반복 일정, 대기자 관리, 자동 알림으로 운영 부담을 최소화합니다.",
     stats: [
       { num: "890+", label: "Events / Month" },
       { num: "95%", label: "참석률" },

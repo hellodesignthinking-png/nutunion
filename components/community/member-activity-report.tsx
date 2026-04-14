@@ -217,8 +217,8 @@ export function MemberActivityReport({ userId }: { userId: string }) {
       {/* Activity stats grid */}
       <div className="grid grid-cols-3 md:grid-cols-6 gap-px bg-nu-ink/[0.04] border-t border-b border-nu-ink/[0.06]">
         {[
-          { icon: Users, label: "크루", value: report.crewCount, color: "text-nu-blue" },
-          { icon: Briefcase, label: "프로젝트", value: report.projectCount, color: "text-green-600" },
+          { icon: Users, label: "너트", value: report.crewCount, color: "text-nu-blue" },
+          { icon: Briefcase, label: "볼트", value: report.projectCount, color: "text-green-600" },
           { icon: MessageSquare, label: "포스트", value: report.postCount, color: "text-nu-pink" },
           { icon: Calendar, label: "이벤트", value: report.eventCount, color: "text-nu-amber" },
           { icon: BookOpen, label: "미팅", value: report.meetingCount, color: "text-nu-blue" },
@@ -245,7 +245,7 @@ export function MemberActivityReport({ userId }: { userId: string }) {
           {/* Crews */}
           {report.crewNames.length > 0 && (
             <div>
-              <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-1">소속 크루</span>
+              <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-1">소속 너트</span>
               <div className="flex flex-wrap gap-1.5">
                 {report.crewNames.map((name) => (
                   <span key={name} className="text-[11px] bg-nu-cream px-2 py-0.5">{name}</span>

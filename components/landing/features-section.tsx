@@ -4,43 +4,53 @@ import { useRevealOnScroll } from "@/lib/hooks/use-reveal-on-scroll";
 
 const features = [
   {
-    label: "SPACE",
+    label: "NUT",
     num: "01",
-    title: "공간 기획",
-    desc: "건축, 인테리어, 부동산 — 물리적 공간에 새로운 의미를 부여합니다. 로컬 크리에이터와 함께 도시의 빈 공간을 재해석합니다.",
+    title: "너트 (Nut) — 변화를 만드는 최소 단위",
+    desc: "변화를 만드는 최소 단위의 결집체. 같은 관심사와 목표를 가진 시티체인저들이 모여 하나의 너트를 형성합니다. 작지만 단단한 연결의 시작점.",
+    borderColor: "border-l-nu-pink",
+    bgColor: "bg-nu-pink",
+    imagePath: "/space.png",
+    halftone: "halftone-pink",
+  },
+  {
+    label: "BOLT",
+    num: "02",
+    title: "볼트 — 프로젝트",
+    desc: "너트들이 결합하여 해결해야 할 과제. 여러 너트가 하나의 볼트에 체결되어 실질적인 변화를 만들어냅니다. 아이디어에서 실행으로.",
     borderColor: "border-l-nu-blue",
     bgColor: "bg-nu-blue",
-    imagePath: "/space.png",
+    imagePath: "/network.png",
     halftone: "halftone-blue",
   },
   {
-    label: "CULTURE",
-    num: "02",
-    title: "문화 큐레이션",
-    desc: "전시, 공연, 팝업 — 로컬 문화를 발굴하고 큐레이션합니다. 소외된 콘텐츠를 재조명하고, 새로운 관객과 연결합니다.",
+    label: "TAP",
+    num: "03",
+    title: "탭 (Tap) — 지식의 나사산을 새기는 공간",
+    desc: "지식의 나사산을 새기는 공간. 활동과 학습의 기록이 쌓여 커뮤니티의 집단 지성을 형성합니다. 경험이 지식이 되는 아카이브.",
     borderColor: "border-l-nu-amber",
     bgColor: "bg-nu-amber",
     imagePath: "/culture.png",
     halftone: "halftone-yellow",
   },
   {
-    label: "PLATFORM",
-    num: "03",
-    title: "플랫폼 빌딩",
-    desc: "커뮤니티, 서비스, 인프라 — 디지털과 물리적 플랫폼을 설계하고 구축합니다. 오픈소스와 시빅 테크로 도시를 연결합니다.",
+    label: "WASHER",
+    num: "04",
+    title: "와셔 (Washer) — 너트를 지지하는 구성원",
+    desc: "너트를 단단하게 지지하는 구성원들. 각자의 전문성과 경험으로 팀의 결합력을 높이는 시티체인저 한 사람 한 사람이 곧 와셔입니다.",
     borderColor: "border-l-nu-ink",
     bgColor: "bg-nu-ink",
-    imagePath: "/network.png",
+    imagePath: "/vibe.png",
     halftone: "halftone-ink",
   },
   {
-    label: "VIBE",
-    num: "04",
-    title: "바이브 메이킹",
-    desc: "분위기, 무드, 에너지 — 눈에 보이지 않지만 느껴지는 것들을 포착하고 증폭합니다. 도시의 바이브를 만들어갑니다.",
+    label: "STIFFNESS",
+    num: "05",
+    title: "강성 — 활동 척도",
+    desc: "얼마나 단단하게 결합하고 활동했는지의 척도. 참여도, 기여도, 성과를 종합하여 너트와 와셔의 강성을 측정합니다.",
     borderColor: "border-l-nu-pink",
     bgColor: "bg-nu-pink",
-    imagePath: "/vibe.png",
+    imagePath: "/space.png",
     halftone: "halftone-pink",
   },
 ];
@@ -52,18 +62,18 @@ export function FeaturesSection() {
     <section ref={ref} className="py-24 px-8 max-w-7xl mx-auto">
       <div className="text-center mb-16 reveal-item">
         <span className="font-mono-nu text-[10px] uppercase tracking-[0.3em] text-nu-pink mb-4 block">
-          What We Do
+          How It Works
         </span>
         <h2 className="font-head text-[clamp(36px,5vw,56px)] font-extrabold text-nu-ink tracking-tighter leading-[0.9]">
-          4개의 축으로
+          너트와 볼트로
           <br />
           <span className="relative inline-block">
-            Scene을 설계합니다
+            변화를 조립합니다
             <span className="absolute -bottom-2 left-0 w-full h-[4px] bg-nu-pink" aria-hidden="true" />
           </span>
         </h2>
         <p className="text-nu-gray mt-6 max-w-lg mx-auto text-sm leading-relaxed">
-          각자의 전문성이 하나의 프로토콜로 연결될 때, 새로운 Scene이 탄생합니다.
+          작은 결집(너트)이 과제(볼트)에 체결될 때, 도시를 바꾸는 힘이 생깁니다.
         </p>
       </div>
 

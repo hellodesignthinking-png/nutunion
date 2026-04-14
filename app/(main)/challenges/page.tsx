@@ -41,7 +41,7 @@ const STATUS_MAP: Record<string, { label: string; color: string; bg: string }> =
   reviewing: { label: "검토 중", color: "text-orange-600", bg: "bg-orange-50" },
   approved: { label: "승인됨", color: "text-green-600", bg: "bg-green-50" },
   rejected: { label: "반려됨", color: "text-red-500", bg: "bg-red-50" },
-  converted: { label: "프로젝트 전환됨", color: "text-nu-pink", bg: "bg-nu-pink/10" },
+  converted: { label: "볼트 전환됨", color: "text-nu-pink", bg: "bg-nu-pink/10" },
 };
 
 export default function ChallengesPage() {
@@ -118,7 +118,7 @@ export default function ChallengesPage() {
 
       setSubmittedId(data.proposal?.id);
       setSubmitted(true);
-      toast.success("프로젝트 의뢰가 접수되었습니다!");
+      toast.success("볼트 의뢰가 접수되었습니다!");
 
       // Refresh my proposals
       if (user) {
@@ -152,16 +152,16 @@ export default function ChallengesPage() {
       <PageHero
         category="Business"
         title="Challenge Portal"
-        description="넛유니온의 검증된 인재풀에 프로젝트를 의뢰하세요. 관리자가 검토 후 최적의 PM을 배정합니다."
+        description="넛유니온의 검증된 와셔풀에 볼트를 의뢰하세요. 관리자가 검토 후 최적의 PM을 배정합니다."
       />
 
       <div className="max-w-6xl mx-auto px-8 py-12">
         {/* Trust Metrics */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
           {[
-            { icon: Users, value: "150+", label: "검증된 인재", color: "text-nu-pink" },
+            { icon: Users, value: "150+", label: "검증된 와셔", color: "text-nu-pink" },
             { icon: Shield, value: "2,400+", label: "누적 동료 보증", color: "text-nu-blue" },
-            { icon: Briefcase, value: "45+", label: "완료된 프로젝트", color: "text-nu-amber" },
+            { icon: Briefcase, value: "45+", label: "완료된 볼트", color: "text-nu-amber" },
             { icon: Star, value: "4.8/5", label: "클라이언트 만족도", color: "text-green-600" },
           ].map(m => (
             <div key={m.label} className="bg-nu-white border-[2px] border-nu-ink/[0.08] p-5 text-center">
@@ -220,7 +220,7 @@ export default function ChallengesPage() {
                       New_Challenge
                     </span>
                   </div>
-                  <p className="text-[11px] text-nu-paper/60">프로젝트 정보를 입력하시면 관리자가 검토 후 최적의 PM을 배정합니다</p>
+                  <p className="text-[11px] text-nu-paper/60">볼트 정보를 입력하시면 관리자가 검토 후 최적의 PM을 배정합니다</p>
                 </div>
 
                 <div className="p-6 space-y-5">
@@ -251,7 +251,7 @@ export default function ChallengesPage() {
                   </div>
 
                   <div>
-                    <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-1.5">프로젝트 제목 *</label>
+                    <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-1.5">볼트 제목 *</label>
                     <input value={form.projectTitle} onChange={e => setForm(p => ({...p, projectTitle: e.target.value}))}
                       className="w-full h-10 border border-nu-ink/10 bg-nu-cream/10 px-3 text-sm focus:outline-none focus:border-nu-pink" placeholder="신림동 로컬 카페 브랜딩" />
                   </div>
@@ -260,7 +260,7 @@ export default function ChallengesPage() {
                     <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-1.5">상세 설명</label>
                     <textarea value={form.description} onChange={e => setForm(p => ({...p, description: e.target.value}))} rows={4}
                       className="w-full border border-nu-ink/10 bg-nu-cream/10 px-3 py-2 text-sm focus:outline-none focus:border-nu-pink resize-none"
-                      placeholder="프로젝트의 목표, 기대 결과물, 특별한 요구사항 등을 설명해주세요..." />
+                      placeholder="볼트의 목표, 기대 결과물, 특별한 요구사항 등을 설명해주세요..." />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -308,7 +308,7 @@ export default function ChallengesPage() {
                     {submitting ? (
                       <><Loader2 size={16} className="animate-spin" /> 제출 중...</>
                     ) : (
-                      <><Send size={16} /> 프로젝트 의뢰하기</>
+                      <><Send size={16} /> 볼트 의뢰하기</>
                     )}
                   </button>
                 </div>
@@ -335,7 +335,7 @@ export default function ChallengesPage() {
                       { step: "1", label: "의뢰 접수", desc: "완료", active: true, done: true },
                       { step: "2", label: "관리자 검토", desc: "대기 중", active: true, done: false },
                       { step: "3", label: "PM 배정", desc: "예정", active: false, done: false },
-                      { step: "4", label: "프로젝트 시작", desc: "예정", active: false, done: false },
+                      { step: "4", label: "볼트 시작", desc: "예정", active: false, done: false },
                     ].map(s => (
                       <div key={s.step} className={`text-center p-3 border ${s.done ? "border-green-300 bg-green-50" : s.active ? "border-orange-300 bg-orange-50" : "border-nu-ink/[0.06] bg-nu-ink/[0.02]"}`}>
                         <div className={`w-6 h-6 mx-auto mb-1 flex items-center justify-center text-[10px] font-bold ${
@@ -382,11 +382,11 @@ export default function ChallengesPage() {
               </h3>
               <div className="space-y-3">
                 {[
-                  { step: "01", title: "의뢰 제출", desc: "프로젝트 정보를 입력하고 제출합니다" },
+                  { step: "01", title: "의뢰 제출", desc: "볼트 정보를 입력하고 제출합니다" },
                   { step: "02", title: "관리자 검토", desc: "관리자가 의뢰를 검토하고 적합성을 판단합니다" },
-                  { step: "03", title: "프로젝트 등록", desc: "승인된 의뢰는 프로젝트로 전환됩니다" },
-                  { step: "04", title: "PM 배정", desc: "최적의 PM이 배정되어 프로젝트를 진행합니다" },
-                  { step: "05", title: "팀 구성 & 킥오프", desc: "PM이 팀을 구성하고 프로젝트를 시작합니다" },
+                  { step: "03", title: "볼트 등록", desc: "승인된 의뢰는 볼트로 전환됩니다" },
+                  { step: "04", title: "PM 배정", desc: "최적의 PM이 배정되어 볼트를 진행합니다" },
+                  { step: "05", title: "팀 구성 & 킥오프", desc: "PM이 팀을 구성하고 볼트를 시작합니다" },
                 ].map(s => (
                   <div key={s.step} className="flex gap-3">
                     <span className="font-mono-nu text-[10px] font-bold text-nu-pink shrink-0 mt-0.5">{s.step}</span>
@@ -405,7 +405,7 @@ export default function ChallengesPage() {
               <div className="space-y-2.5 text-[11px] text-nu-paper/70">
                 <div className="flex items-start gap-2">
                   <CheckCircle2 size={12} className="text-nu-pink shrink-0 mt-0.5" />
-                  <span>모든 인재의 역량이 <strong className="text-nu-paper">데이터로 검증</strong></span>
+                  <span>모든 와셔의 역량이 <strong className="text-nu-paper">데이터로 검증</strong></span>
                 </div>
                 <div className="flex items-start gap-2">
                   <CheckCircle2 size={12} className="text-nu-pink shrink-0 mt-0.5" />

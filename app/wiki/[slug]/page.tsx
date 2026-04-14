@@ -30,21 +30,21 @@ function renderMarkdown(md: string): string {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const supabase = await createClient();
-  const { data: topic } = await supabase
+  const { data: topic, error: topicError } = await supabase
     .from("wiki_topics")
     .select("name, public_description")
     .eq("public_slug", slug)
     .eq("is_public", true)
     .single();
 
-  if (!topic) return { title: "위키를 찾을 수 없습니다" };
+  if (topicError || !topic) return { title: "탭을 찾을 수 없습니다" };
 
   return {
     title: `${topic.name} — NutUnion Wiki`,
-    description: topic.public_description || `${topic.name}에 대한 공개 위키`,
+    description: topic.public_description || `${topic.name}에 대한 공개 탭`,
     openGraph: {
       title: `${topic.name} — NutUnion Wiki`,
-      description: topic.public_description || `${topic.name}에 대한 공개 위키`,
+      description: topic.public_description || `${topic.name}에 대한 공개 탭`,
       type: "article",
     },
   };
@@ -54,14 +54,14 @@ export default async function PublicWikiPage({ params }: { params: Promise<{ slu
   const { slug } = await params;
   const supabase = await createClient();
 
-  const { data: topic } = await supabase
+  const { data: topic, error: topicError } = await supabase
     .from("wiki_topics")
     .select("id, name, description, public_description, published_at, group_id")
     .eq("public_slug", slug)
     .eq("is_public", true)
     .single();
 
-  if (!topic) notFound();
+  if (topicError || !topic) notFound();
 
   // Parallel fetches
   const [groupRes, pagesRes, contribRes] = await Promise.all([

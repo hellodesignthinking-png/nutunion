@@ -252,7 +252,7 @@ export function HumanCapitalVisual({ groupId }: { groupId: string }) {
         <div className="border-[2px] border-dashed border-nu-ink/15 p-8 text-center">
           <Users size={28} className="mx-auto mb-3 text-nu-ink/10" />
           <p className="text-sm text-nu-muted font-medium mb-1">멤버 데이터가 없습니다</p>
-          <p className="text-xs text-nu-muted/60">위키에 기여하면 여기에 표시됩니다</p>
+          <p className="text-xs text-nu-muted/60">탭에 기여하면 여기에 표시됩니다</p>
         </div>
       )}
     </div>

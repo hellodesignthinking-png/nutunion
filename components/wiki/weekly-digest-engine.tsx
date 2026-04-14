@@ -228,7 +228,7 @@ export function WeeklyDigestEngine({
           "## 📚 지식 성장",
           ...(result.knowledgeGrowth.length > 0
             ? result.knowledgeGrowth.map(k => `- ${k}`)
-            : ["- 위키 업데이트 없음"]),
+            : ["- 탭 업데이트 없음"]),
           "",
           // Growth sections
           ...(result.memberGrowth?.length > 0 ? [
@@ -305,7 +305,7 @@ export function WeeklyDigestEngine({
         }
       }
 
-      toast.success("다이제스트가 위키에 저장되었습니다!");
+      toast.success("다이제스트가 탭에 저장되었습니다!");
       onDigestSaved?.(result.nextMeetingContext);
       setPhase("saved");
     } catch (err: any) {
@@ -331,7 +331,7 @@ export function WeeklyDigestEngine({
             주간 지식 다이제스트
           </h3>
           <p className="text-sm text-nu-muted max-w-md mx-auto mb-2 leading-relaxed">
-            이번 주 회의, 노트, 자료, 위키 업데이트를 AI가 압축하여
+            이번 주 회의, 노트, 자료, 탭 업데이트를 AI가 압축하여
             <strong className="text-purple-600"> 다음 회의의 시작 컨텍스트</strong>를 생성합니다.
           </p>
           <p className="text-[11px] text-nu-muted/60 mb-6">
@@ -346,7 +346,7 @@ export function WeeklyDigestEngine({
             <ArrowRight size={10} />
             <span className="px-2 py-1 border border-purple-200 bg-purple-50">자료</span>
             <ArrowRight size={10} />
-            <span className="px-2 py-1 border border-purple-200 bg-purple-50">위키</span>
+            <span className="px-2 py-1 border border-purple-200 bg-purple-50">탭</span>
             <ArrowRight size={10} />
             <span className="px-2 py-1.5 border-2 border-purple-500 bg-purple-100 text-purple-700 font-bold">AI 압축</span>
             <ArrowRight size={10} />
@@ -435,7 +435,7 @@ export function WeeklyDigestEngine({
             { label: "회의록 수집", done: phase !== "gathering" },
             { label: "노트 & 결정사항 분석", done: phase === "compressing" },
             { label: "공유 자료 정리", done: phase === "compressing" },
-            { label: "위키 업데이트 확인", done: phase === "compressing" },
+            { label: "탭 업데이트 확인", done: phase === "compressing" },
             { label: "AI 압축 다이제스트 생성", done: false },
           ].map((step, i) => (
             <div key={i} className={`flex items-center gap-3 text-xs transition-all ${step.done ? "text-green-400" : "text-white/40 animate-pulse"}`}
@@ -458,7 +458,7 @@ export function WeeklyDigestEngine({
         <CheckCircle2 size={48} className="mx-auto mb-4 text-green-500" />
         <h3 className="font-head text-2xl font-extrabold text-green-700 mb-2">다이제스트 완료!</h3>
         <p className="text-sm text-green-600 mb-4">
-          주간 다이제스트가 위키에 저장되었습니다.<br />
+          주간 다이제스트가 탭에 저장되었습니다.<br />
           다음 회의 시작 시 AI가 이 컨텍스트를 자동으로 참조합니다.
         </p>
         {result && (
@@ -469,7 +469,7 @@ export function WeeklyDigestEngine({
         )}
         <div className="flex gap-3 justify-center">
           <a href={`/groups/${groupId}/wiki`} className="px-5 py-2.5 bg-green-600 text-white font-mono-nu text-[10px] font-bold uppercase tracking-widest hover:bg-green-700 transition-all no-underline flex items-center gap-2">
-            <BookOpen size={13} /> 위키 보기
+            <BookOpen size={13} /> 탭 보기
           </a>
           <button onClick={() => { setPhase("idle"); setResult(null); }}
             className="px-5 py-2.5 border-[2px] border-green-600 text-green-700 font-mono-nu text-[10px] font-bold uppercase tracking-widest hover:bg-green-100 transition-colors">
@@ -495,7 +495,7 @@ export function WeeklyDigestEngine({
         </div>
         <p className="text-[11px] text-white/60">
           {new Date(result.periodStart).toLocaleDateString("ko")} ~ {new Date(result.periodEnd).toLocaleDateString("ko")}
-          {" · "}{result.meetingCount}개 회의 · {result.noteCount}개 노트 · {result.resourceCount}개 자료 · {result.wikiUpdateCount}개 위키
+          {" · "}{result.meetingCount}개 회의 · {result.noteCount}개 노트 · {result.resourceCount}개 자료 · {result.wikiUpdateCount}개 탭
         </p>
       </div>
 
@@ -505,7 +505,7 @@ export function WeeklyDigestEngine({
           { icon: <FileText size={14} />, value: result.meetingCount, label: "회의" },
           { icon: <ListChecks size={14} />, value: result.noteCount, label: "노트" },
           { icon: <BookOpen size={14} />, value: result.resourceCount, label: "자료" },
-          { icon: <TrendingUp size={14} />, value: result.wikiUpdateCount, label: "위키" },
+          { icon: <TrendingUp size={14} />, value: result.wikiUpdateCount, label: "탭" },
         ].map((stat, i) => (
           <div key={i} className="bg-nu-white border border-nu-ink/[0.08] p-3 text-center">
             <div className="flex items-center justify-center gap-1 text-nu-muted mb-1">{stat.icon}</div>
@@ -809,13 +809,13 @@ export function WeeklyDigestEngine({
           ) : phase === "saved" ? (
             <><CheckCircle2 size={14} /> 저장 완료</>
           ) : (
-            <><Save size={14} /> 다이제스트 저장 + 위키 자동 등록</>
+            <><Save size={14} /> 다이제스트 저장 + 탭 자동 등록</>
           )}
         </button>
         <p className="font-mono-nu text-[8px] text-nu-paper/40 uppercase tracking-widest text-center">
           {phase === "saved" 
-            ? "✅ 다이제스트가 위키에 등록되었습니다. 다음 회의 AI가 자동 참조합니다."
-            : "다이제스트가 위키에 저장되면 다음 회의 AI가 자동으로 참조합니다"}
+            ? "✅ 다이제스트가 탭에 등록되었습니다. 다음 회의 AI가 자동 참조합니다."
+            : "다이제스트가 탭에 저장되면 다음 회의 AI가 자동으로 참조합니다"}
         </p>
       </div>
     </div>

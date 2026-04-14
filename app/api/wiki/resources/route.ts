@@ -1,15 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-function getWeekStart(date: Date = new Date()): string {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday
-  d.setDate(diff);
-  return d.toISOString().split("T")[0];
+function getWeekStart(): string {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(now.setDate(diff)).toISOString().split("T")[0];
+}
+
+function detectResourceType(fileType: string | null, url: string): string {
+  if (!fileType && !url) return "other";
+  const lower = (url || "").toLowerCase();
+  if (lower.includes("youtube.com") || lower.includes("youtu.be")) return "youtube";
+  if (lower.endsWith(".pdf") || lower.includes("/pdf")) return "pdf";
+  if (lower.includes("docs.google.com/document")) return "docs";
+  if (lower.includes("docs.google.com/spreadsheets")) return "sheet";
+  if (lower.includes("docs.google.com/presentation")) return "slide";
+  if (lower.includes("drive.google.com")) return "drive";
+  if (lower.includes("notion.so") || lower.includes("notion.site")) return "notion";
+  if (fileType?.startsWith("image/")) return "other";
+  if (fileType?.includes("pdf")) return "pdf";
+
+  return "other";
 }
 
 // GET: Fetch resources for a group, optionally filtered by week
+// Merges wiki_weekly_resources AND file_attachments into one unified list
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const groupId = searchParams.get("groupId");
@@ -21,28 +37,81 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "로그인 필요" }, { status: 401 });
 
-  let query = supabase
-    .from("wiki_weekly_resources")
-    .select("*, sharer:profiles!wiki_weekly_resources_shared_by_fkey(id, nickname, avatar_url), linked_page:wiki_pages!wiki_weekly_resources_linked_wiki_page_id_fkey(id, title)")
-    .eq("group_id", groupId)
-    .order("created_at", { ascending: false })
-    .limit(limit);
+  // 1) Fetch wiki_weekly_resources (gracefully skip if table doesn't exist)
+  let weeklyResources: any[] = [];
+  try {
+    let query = supabase
+      .from("wiki_weekly_resources")
+      .select("*, sharer:profiles!wiki_weekly_resources_shared_by_fkey(id, nickname, avatar_url), linked_page:wiki_pages!wiki_weekly_resources_linked_wiki_page_id_fkey(id, title)")
+      .eq("group_id", groupId)
+      .order("created_at", { ascending: false })
+      .limit(limit);
 
-  if (weekStart) {
-    query = query.eq("week_start", weekStart);
+    if (weekStart) {
+      query = query.eq("week_start", weekStart);
+    }
+
+    const { data: weeklyData, error: weeklyError } = await query;
+
+    if (!weeklyError && weeklyData) {
+      weeklyResources = weeklyData.map((r: any) => ({
+        ...r,
+        source: "weekly" as const,
+      }));
+    }
+    // If table doesn't exist (42P01), just skip silently
+  } catch {
+    // wiki_weekly_resources table may not exist yet — silently skip
   }
 
-  const { data, error } = await query;
+  // 2) Fetch file_attachments for the same group
+  let fileAttachments: any[] = [];
+  try {
+    const { data: faData, error: faError } = await supabase
+      .from("file_attachments")
+      .select("*, uploader:profiles!file_attachments_uploaded_by_fkey(id, nickname, avatar_url)")
+      .eq("target_type", "group")
+      .eq("target_id", groupId)
+      .order("created_at", { ascending: false })
+      .limit(limit);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!faError && faData) {
+      fileAttachments = faData.map((fa: any) => ({
+        id: fa.id,
+        title: fa.file_name,
+        url: fa.file_url,
+        resource_type: detectResourceType(fa.file_type, fa.file_url),
+        description: null,
+        created_at: fa.created_at,
+        source: "resources" as const,
+        sharer: fa.uploader
+          ? { id: fa.uploader.id, nickname: fa.uploader.nickname, avatar_url: fa.uploader.avatar_url }
+          : null,
+        // Preserve original file_attachment fields for reference
+        _fa_file_type: fa.file_type,
+        _fa_file_size: fa.file_size,
+      }));
+    }
+  } catch {
+    // file_attachments table may not exist yet — silently skip
   }
 
-  return NextResponse.json({ resources: data || [] });
+  // 3) Merge & deduplicate (avoid showing the same URL from both tables)
+  const weeklyUrls = new Set(weeklyResources.map((r: any) => r.url));
+  const uniqueFileAttachments = fileAttachments.filter((fa) => !weeklyUrls.has(fa.url));
+
+  const merged = [...weeklyResources, ...uniqueFileAttachments].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
+  return NextResponse.json({ resources: merged.slice(0, limit) });
 }
 
 // POST: Share a new resource
+// Also registers it in file_attachments so it appears in 자료실
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -57,12 +126,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "groupId, url 필요" }, { status: 400 });
   }
 
+  try {
+    new URL(url);
+  } catch {
+    return NextResponse.json({ error: "올바른 URL 형식이 아닙니다" }, { status: 400 });
+  }
+
   // Auto-detect resource type from URL
   let detectedType = resourceType || "link";
   if (!resourceType) {
     const lowerUrl = url.toLowerCase();
     if (lowerUrl.includes("youtube.com") || lowerUrl.includes("youtu.be")) detectedType = "youtube";
     else if (lowerUrl.endsWith(".pdf") || lowerUrl.includes("/pdf")) detectedType = "pdf";
+    else if (lowerUrl.includes("docs.google.com/document")) detectedType = "docs";
+    else if (lowerUrl.includes("docs.google.com/spreadsheets")) detectedType = "sheet";
+    else if (lowerUrl.includes("docs.google.com/presentation")) detectedType = "slide";
+    else if (lowerUrl.includes("drive.google.com")) detectedType = "drive";
     else if (lowerUrl.includes("notion.so") || lowerUrl.includes("notion.site")) detectedType = "notion";
     else if (lowerUrl.includes("news") || lowerUrl.includes("blog") || lowerUrl.includes("medium.com") || lowerUrl.includes("velog.io")) detectedType = "article";
   }
@@ -79,26 +158,61 @@ export async function POST(request: NextRequest) {
 
   const weekStart = getWeekStart();
 
-  const { data, error } = await supabase
-    .from("wiki_weekly_resources")
-    .insert({
-      group_id: groupId,
-      week_start: weekStart,
-      shared_by: user.id,
-      title: title || url,
-      url,
-      resource_type: detectedType,
-      description: description || null,
-      metadata,
-    })
-    .select("id")
-    .single();
+  // Try inserting into wiki_weekly_resources (may not exist yet)
+  let weeklyResourceId: string | null = null;
+  try {
+    const { data, error } = await supabase
+      .from("wiki_weekly_resources")
+      .insert({
+        group_id: groupId,
+        week_start: weekStart,
+        shared_by: user.id,
+        title: title || url,
+        url,
+        resource_type: detectedType,
+        description: description || null,
+        metadata,
+      })
+      .select("id")
+      .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!error && data) {
+      weeklyResourceId = data.id;
+    }
+  } catch {
+    // wiki_weekly_resources table may not exist — continue with file_attachments
   }
 
-  return NextResponse.json({ id: data.id, resourceType: detectedType });
+  // Also register in file_attachments so it shows up in 자료실
+  let fileAttachmentId: string | null = null;
+  try {
+    let faFileType = "url-link";
+    const lowerUrl2 = url.toLowerCase();
+    if (lowerUrl2.includes("docs.google") || lowerUrl2.includes("sheets.google") || lowerUrl2.includes("slides.google") || lowerUrl2.includes("drive.google")) {
+      faFileType = "drive-link";
+    }
+
+    const { data: faData } = await supabase.from("file_attachments").insert({
+      target_type: "group",
+      target_id: groupId,
+      uploaded_by: user.id,
+      file_name: title || url,
+      file_url: url,
+      file_size: null,
+      file_type: faFileType,
+    }).select("id").single();
+
+    if (faData) fileAttachmentId = faData.id;
+  } catch {
+    // Non-critical
+  }
+
+  const resultId = weeklyResourceId || fileAttachmentId;
+  if (!resultId) {
+    return NextResponse.json({ error: "리소스 등록에 실패했습니다" }, { status: 500 });
+  }
+
+  return NextResponse.json({ id: resultId, resourceType: detectedType });
 }
 
 // PATCH: Link a resource to a wiki page
@@ -110,12 +224,16 @@ export async function PATCH(request: NextRequest) {
   const { resourceId, wikiPageId } = await request.json();
   if (!resourceId) return NextResponse.json({ error: "resourceId 필요" }, { status: 400 });
 
-  const { error } = await supabase
-    .from("wiki_weekly_resources")
-    .update({ linked_wiki_page_id: wikiPageId || null })
-    .eq("id", resourceId);
+  try {
+    const { error } = await supabase
+      .from("wiki_weekly_resources")
+      .update({ linked_wiki_page_id: wikiPageId || null })
+      .eq("id", resourceId);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "위키 리소스 테이블이 아직 생성되지 않았습니다" }, { status: 500 });
+  }
 
   return NextResponse.json({ success: true });
 }
@@ -133,23 +251,50 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "resourceId 필요" }, { status: 400 });
   }
 
-  // Fetch resource to check ownership
-  const { data: resource } = await supabase
-    .from("wiki_weekly_resources")
-    .select("id, shared_by, group_id")
+  // Try wiki_weekly_resources first
+  try {
+    const { data: resource } = await supabase
+      .from("wiki_weekly_resources")
+      .select("id, shared_by, group_id")
+      .eq("id", resourceId)
+      .single();
+
+    if (resource) {
+      if (resource.shared_by !== user.id) {
+        const { data: group } = await supabase
+          .from("groups")
+          .select("host_id")
+          .eq("id", resource.group_id)
+          .single();
+
+        if (!group || group.host_id !== user.id) {
+          return NextResponse.json({ error: "삭제 권한이 없습니다" }, { status: 403 });
+        }
+      }
+
+      await supabase.from("wiki_weekly_resources").delete().eq("id", resourceId);
+      return NextResponse.json({ success: true });
+    }
+  } catch {
+    // Table may not exist — try file_attachments instead
+  }
+
+  // Fallback: try file_attachments
+  const { data: fa } = await supabase
+    .from("file_attachments")
+    .select("id, uploaded_by, target_id")
     .eq("id", resourceId)
     .single();
 
-  if (!resource) {
+  if (!fa) {
     return NextResponse.json({ error: "리소스를 찾을 수 없습니다" }, { status: 404 });
   }
 
-  // Allow deletion only by sharer or group host
-  if (resource.shared_by !== user.id) {
+  if (fa.uploaded_by !== user.id) {
     const { data: group } = await supabase
       .from("groups")
       .select("host_id")
-      .eq("id", resource.group_id)
+      .eq("id", fa.target_id)
       .single();
 
     if (!group || group.host_id !== user.id) {
@@ -157,14 +302,8 @@ export async function DELETE(request: NextRequest) {
     }
   }
 
-  const { error } = await supabase
-    .from("wiki_weekly_resources")
-    .delete()
-    .eq("id", resourceId);
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  const { error } = await supabase.from("file_attachments").delete().eq("id", resourceId);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ success: true });
 }

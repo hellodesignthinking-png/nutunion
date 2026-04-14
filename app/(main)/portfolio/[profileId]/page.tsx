@@ -65,6 +65,7 @@ export default function PublicPortfolioPage() {
   const [profile, setProfile] = useState<any>(null);
   const [stats, setStats] = useState({ meetings: 0, posts: 0, projects: 0, resources: 0, groups: 0 });
   const [scores, setScores] = useState<number[]>([0,0,0,0,0,0]);
+  const [endorseCounts, setEndorseCounts] = useState<number[]>([0,0,0,0,0,0]);
   const [loading, setLoading] = useState(true);
   const [badges, setBadges] = useState<string[]>([]);
   const [portfolios, setPortfolios] = useState<any[]>([]);
@@ -74,7 +75,7 @@ export default function PublicPortfolioPage() {
     async function load() {
       const supabase = createClient();
 
-      const { data: prof } = await supabase.from("profiles").select("*").eq("id", profileId).single();
+      const { data: prof } = await supabase.from("profiles").select("id, nickname, avatar_url, bio, grade, interests, created_at, updated_at").eq("id", profileId).single();
       if (!prof) { setLoading(false); return; }
       setProfile(prof);
 
@@ -113,10 +114,10 @@ export default function PublicPortfolioPage() {
       const b: string[] = [];
       if (mc >= 10) b.push("🏆 미팅 마스터");
       if (pc >= 5) b.push("✍️ 활발한 소통가");
-      if (pj >= 2) b.push("🚀 프로젝트 리더");
+      if (pj >= 2) b.push("🚀 볼트 리더");
       if (rc >= 3) b.push("📚 지식 큐레이터");
-      if (s.some(v => v >= 80)) b.push("💎 전문가 인재");
-      if (b.length === 0) b.push("🌱 성장 중인 인재");
+      if (s.some(v => v >= 80)) b.push("💎 전문 와셔");
+      if (b.length === 0) b.push("🌱 성장 중인 와셔");
       setBadges(b);
 
       // Load portfolio items
@@ -129,9 +130,21 @@ export default function PublicPortfolioPage() {
           .order("started_at", { ascending: false, nullsFirst: false });
         setPortfolios(portfolioData || []);
       } catch (e) {
-        console.log("Portfolio table not available or error:", e);
         setPortfolios([]);
       }
+
+      // Load endorsement counts per dimension
+      try {
+        const dims = ["leadership", "communication", "knowledge", "execution", "collaboration", "reliability"];
+        const { data: endorseData } = await supabase
+          .from("endorsements")
+          .select("dimension")
+          .eq("target_user_id", profileId);
+        if (endorseData) {
+          const counts = dims.map(d => endorseData.filter((e: any) => e.dimension === d).length);
+          setEndorseCounts(counts);
+        }
+      } catch { /* endorsements table may not exist */ }
 
       // Load career timeline items
       try {
@@ -235,7 +248,6 @@ export default function PublicPortfolioPage() {
 
         setTimelineItems(sorted);
       } catch (e) {
-        console.log("Timeline error:", e);
         setTimelineItems([]);
       }
 
@@ -354,9 +366,9 @@ export default function PublicPortfolioPage() {
               {[
                 { icon: Calendar, value: stats.meetings, label: "미팅" },
                 { icon: MessageSquare, value: stats.posts, label: "게시글" },
-                { icon: Briefcase, value: stats.projects, label: "프로젝트" },
+                { icon: Briefcase, value: stats.projects, label: "볼트" },
                 { icon: FileText, value: stats.resources, label: "자료" },
-                { icon: Users, value: stats.groups, label: "소모임" },
+                { icon: Users, value: stats.groups, label: "너트" },
               ].map(s => (
                 <div key={s.label} className="text-center p-3 bg-nu-paper/5 border border-nu-paper/10">
                   <s.icon size={14} className="mx-auto text-nu-paper/40 mb-1" />
@@ -381,7 +393,7 @@ export default function PublicPortfolioPage() {
                 AVG {avgScore}pt
               </span>
             </div>
-            <FullRadar scores={scores} endorseCounts={[3, 2, 1, 4, 2, 3]} />
+            <FullRadar scores={scores} endorseCounts={endorseCounts} />
           </div>
 
           {/* Endorsement */}

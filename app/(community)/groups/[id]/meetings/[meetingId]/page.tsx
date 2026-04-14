@@ -152,7 +152,7 @@ export default function MeetingDetailPage() {
     setMeeting(meetingData);
     setNextTopic(meetingData.next_topic || "");
     setEditedSummary(meetingData.summary || "");
-    setGroupName(groupData?.name || "소모임");
+    setGroupName(groupData?.name || "너트");
 
     // Edit permission
     const { data: membership } = await supabase
@@ -280,14 +280,35 @@ export default function MeetingDetailPage() {
       .select("*, author:profiles!meeting_resources_created_by_fkey(nickname)")
       .single();
     if (error) { toast.error("자료 추가에 실패했습니다"); }
-    else { setResources(prev => [...prev, { ...data, replies: [] } as SharedResource]); setNewRes({ title: "", url: "", type: "link", description: "" }); setShowAdd(false); toast.success("자료가 추가되었습니다"); }
+    else {
+      setResources(prev => [...prev, { ...data, replies: [] } as SharedResource]);
+      setNewRes({ title: "", url: "", type: "link", description: "" });
+      setShowAdd(false);
+      toast.success("자료가 추가되었습니다");
+      // Also register in file_attachments so it appears in 자료실
+      try {
+        const groupId = (await supabase.from("meetings").select("group_id").eq("id", meetingId).single()).data?.group_id;
+        if (groupId) {
+          await supabase.from("file_attachments").insert({
+            target_type: "group",
+            target_id: groupId,
+            uploaded_by: userId,
+            file_name: `[미팅] ${newRes.title.trim()}`,
+            file_url: newRes.url.trim(),
+            file_type: newRes.url.includes("drive.google") ? "drive-link" : "url-link",
+            file_size: null,
+          });
+        }
+      } catch { /* non-critical */ }
+    }
     setAddingRes(false);
   }
 
   async function handleDeleteResource(id: string) {
     if (!confirm("이 자료를 삭제하시겠습니까?")) return;
     const supabase = createClient();
-    await supabase.from("meeting_resources").delete().eq("id", id);
+    const { error } = await supabase.from("meeting_resources").delete().eq("id", id);
+    if (error) { toast.error("삭제에 실패했습니다"); return; }
     setResources(prev => prev.filter(r => r.id !== id));
     toast.success("삭제되었습니다");
   }
@@ -327,14 +348,16 @@ export default function MeetingDetailPage() {
   async function handleToggleIssue(issue: LinkedIssue) {
     const next = issue.status === "open" ? "resolved" : "open";
     const supabase = createClient();
-    await supabase.from("meeting_issues").update({ status: next }).eq("id", issue.id);
+    const { error } = await supabase.from("meeting_issues").update({ status: next }).eq("id", issue.id);
+    if (error) { toast.error("상태 변경에 실패했습니다"); return; }
     setIssues(prev => prev.map(i => i.id === issue.id ? { ...i, status: next } : i));
   }
 
   async function handleDeleteIssue(id: string) {
     if (!confirm("이 이슈를 삭제하시겠습니까?")) return;
     const supabase = createClient();
-    await supabase.from("meeting_issues").delete().eq("id", id);
+    const { error } = await supabase.from("meeting_issues").delete().eq("id", id);
+    if (error) { toast.error("삭제에 실패했습니다"); return; }
     setIssues(prev => prev.filter(i => i.id !== id));
   }
 
@@ -652,7 +675,7 @@ export default function MeetingDetailPage() {
           <TabsTrigger value="next" className="font-mono-nu text-[11px] uppercase tracking-widest">다음 주제</TabsTrigger>
           <TabsTrigger value="attendance" className="font-mono-nu text-[11px] uppercase tracking-widest">출석</TabsTrigger>
           <TabsTrigger value="wiki-sync" className="font-mono-nu text-[11px] uppercase tracking-widest flex items-center gap-1 text-nu-pink font-bold">
-            <Sparkles size={11} /> 위키 동기화
+            <Sparkles size={11} /> 탭 동기화
           </TabsTrigger>
           <TabsTrigger value="digest" className="font-mono-nu text-[11px] uppercase tracking-widest flex items-center gap-1 text-purple-600 font-bold">
             <Zap size={11} /> 주간 다이제스트
@@ -815,7 +838,7 @@ export default function MeetingDetailPage() {
                         <Eye size={14} />
                       </button>
                       {(userId === r.created_by || canEdit) && (
-                        <button onClick={() => handleDeleteResource(r.id)} className="text-nu-muted hover:text-nu-red transition-colors">
+                        <button onClick={() => handleDeleteResource(r.id)} className="text-nu-muted hover:text-nu-red transition-colors" aria-label="자료 삭제">
                           <Trash2 size={14} />
                         </button>
                       )}
@@ -906,7 +929,7 @@ export default function MeetingDetailPage() {
                       {issue.status === "open" ? "오픈" : "해결됨"}
                     </span>
                     {canEdit && (
-                      <button onClick={() => handleDeleteIssue(issue.id)} className="text-nu-muted hover:text-nu-red transition-colors">
+                      <button onClick={() => handleDeleteIssue(issue.id)} className="text-nu-muted hover:text-nu-red transition-colors" aria-label="이슈 삭제">
                         <Trash2 size={13} />
                       </button>
                     )}
@@ -928,9 +951,9 @@ export default function MeetingDetailPage() {
           </div>
         </TabsContent>
 
-        {/* ── 위키 동기화 */}
+        {/* ── 탭 동기화 */}
         <TabsContent value="wiki-sync">
-          <AiErrorBoundary fallbackTitle="위키 동기화 오류">
+          <AiErrorBoundary fallbackTitle="탭 동기화 오류">
           <WikiSyncPanel 
             meetingId={meetingId} 
             groupId={groupId} 

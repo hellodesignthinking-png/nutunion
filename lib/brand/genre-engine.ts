@@ -47,7 +47,7 @@ export interface GenreConfig {
   };
   grain: number;
   description: string;
-  insightTemplate: string;   // "현재 {count}개의 {cat} 프로젝트가 로고를 만들고 있습니다"
+  insightTemplate: string;   // "현재 {count}개의 {cat} 볼트가 로고를 만들고 있습니다"
   animation: "drift" | "jelly" | "glitch" | "static" | "brush" | "flow" | "stamp" | "breathe";
 }
 
@@ -71,8 +71,8 @@ export const GENRES: Record<LogoGenre, GenreConfig> = {
       surface: "#0D2137",
     },
     grain: 0.2,
-    description: "CAD 설계도 스타일. 건축·인테리어 프로젝트가 오늘을 이끕니다.",
-    insightTemplate: "{count}개의 공간/건축 프로젝트가 너트의 설계도를 그리고 있습니다.",
+    description: "CAD 설계도 스타일. 건축·인테리어 볼트가 오늘을 이끕니다.",
+    insightTemplate: "{count}개의 공간/건축 볼트가 너트의 설계도를 그리고 있습니다.",
     animation: "drift",
   },
 
@@ -95,8 +95,8 @@ export const GENRES: Record<LogoGenre, GenreConfig> = {
       surface: "#1E003D",
     },
     grain: 0.6,
-    description: "젤리처럼 통통. 예술·문화 크루가 오늘 가장 생기 넘칩니다.",
-    insightTemplate: "{count}개의 예술/문화 소모임이 너트에 네온 광채를 불어넣고 있습니다.",
+    description: "젤리처럼 통통. 예술·문화 너트가 오늘 가장 생기 넘칩니다.",
+    insightTemplate: "{count}개의 예술/문화 너트가 너트에 네온 광채를 불어넣고 있습니다.",
     animation: "jelly",
   },
 
@@ -119,8 +119,8 @@ export const GENRES: Record<LogoGenre, GenreConfig> = {
       surface: "#001A0F",
     },
     grain: 0.1,
-    description: "8비트 레트로 글리치. 플랫폼·개발 프로젝트가 오늘 터미널을 점령했습니다.",
-    insightTemplate: "{count}개의 플랫폼/개발 프로젝트가 주파수를 올리며 신호를 보내고 있습니다.",
+    description: "8비트 레트로 글리치. 플랫폼·개발 볼트가 오늘 터미널을 점령했습니다.",
+    insightTemplate: "{count}개의 플랫폼/개발 볼트가 주파수를 올리며 신호를 보내고 있습니다.",
     animation: "glitch",
   },
 
@@ -143,8 +143,8 @@ export const GENRES: Record<LogoGenre, GenreConfig> = {
       surface: "#EBEBEB",
     },
     grain: 0.35,
-    description: "과감한 자름. 비즈니스·복합 프로젝트의 강렬한 에너지입니다.",
-    insightTemplate: "오늘 {count}개의 전략 프로젝트가 너트를 대담하게 재단하고 있습니다.",
+    description: "과감한 자름. 비즈니스·복합 볼트의 강렬한 에너지입니다.",
+    insightTemplate: "오늘 {count}개의 전략 볼트가 너트를 대담하게 재단하고 있습니다.",
     animation: "static",
   },
 
@@ -167,8 +167,8 @@ export const GENRES: Record<LogoGenre, GenreConfig> = {
       surface: "#FFF3E0",
     },
     grain: 0.85,
-    description: "크레파스 낙서. 동네 소모임의 따뜻한 손길이 느껴집니다.",
-    insightTemplate: "{count}개의 로컬/지역 소모임이 너트에 크레파스를 입히고 있습니다.",
+    description: "크레파스 낙서. 동네 너트의 따뜻한 손길이 느껴집니다.",
+    insightTemplate: "{count}개의 로컬/지역 너트가 너트에 크레파스를 입히고 있습니다.",
     animation: "brush",
   },
 
@@ -192,7 +192,7 @@ export const GENRES: Record<LogoGenre, GenreConfig> = {
     },
     grain: 0.5,
     description: "몽환적 메쉬 그라디언트. 여러 카테고리가 융합된 하이브리드 에너지.",
-    insightTemplate: "다양한 분야 {count}개 프로젝트가 혼재하며 새로운 스타일을 만들고 있습니다.",
+    insightTemplate: "다양한 분야 {count}개 볼트가 혼재하며 새로운 스타일을 만들고 있습니다.",
     animation: "flow",
   },
 
@@ -215,8 +215,8 @@ export const GENRES: Record<LogoGenre, GenreConfig> = {
       surface: "#251A0C",
     },
     grain: 0.7,
-    description: "스텐실 철강. 공간개발·시공 프로젝트의 단단한 에너지가 느껴집니다.",
-    insightTemplate: "{count}개의 공간개발/시공 프로젝트가 너트에 스텐실로 각인하고 있습니다.",
+    description: "스텐실 철강. 공간개발·시공 볼트의 단단한 에너지가 느껴집니다.",
+    insightTemplate: "{count}개의 공간개발/시공 볼트가 너트에 스텐실로 각인하고 있습니다.",
     animation: "stamp",
   },
 
@@ -239,8 +239,8 @@ export const GENRES: Record<LogoGenre, GenreConfig> = {
       surface: "#162718",
     },
     grain: 0.65,
-    description: "자연과 식물. 지역재생·환경 프로젝트가 오늘 가장 풍성하게 자랍니다.",
-    insightTemplate: "{count}개의 지역재생/환경 프로젝트가 너트에 초록 숨결을 불어넣고 있습니다.",
+    description: "자연과 식물. 지역재생·환경 볼트가 오늘 가장 풍성하게 자랍니다.",
+    insightTemplate: "{count}개의 지역재생/환경 볼트가 너트에 초록 숨결을 불어넣고 있습니다.",
     animation: "breathe",
   },
 };

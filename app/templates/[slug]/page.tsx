@@ -12,8 +12,8 @@ const templates: Record<string, {
   /* ====== Group Templates ====== */
   "sprint-guide": {
     title: "Sprint 운영 가이드",
-    category: "소모임",
-    description: "6주 스프린트 소모임을 효과적으로 운영하기 위한 가이드입니다.",
+    category: "너트",
+    description: "6주 스프린트 너트를 효과적으로 운영하기 위한 가이드입니다.",
     content: `# Sprint 운영 가이드
 
 ## 1. 스프린트 개요
@@ -71,7 +71,7 @@ const templates: Record<string, {
 ## 4. 필수 도구
 - 소통: 카카오톡/슬랙 그룹챗
 - 문서: Google Docs 공유 폴더
-- 일정: NutUnion 소모임 캘린더
+- 일정: NutUnion 너트 캘린더
 - 칸반: 마일스톤 & 태스크 보드
 
 ## 5. 성과 측정
@@ -83,8 +83,8 @@ const templates: Record<string, {
 
   "meeting-notes": {
     title: "회의록 양식",
-    category: "소모임",
-    description: "소모임/프로젝트 미팅 시 활용할 수 있는 표준 회의록 양식입니다.",
+    category: "너트",
+    description: "너트/볼트 미팅 시 활용할 수 있는 표준 회의록 양식입니다.",
     content: `# 회의록 양식
 
 ## 회의 정보
@@ -153,8 +153,8 @@ const templates: Record<string, {
 
   "paper-selection-guide": {
     title: "논문 선정 가이드",
-    category: "소모임",
-    description: "논문 리뷰 소모임에서 논문을 선정할 때 참고할 가이드입니다.",
+    category: "너트",
+    description: "논문 리뷰 너트에서 논문을 선정할 때 참고할 가이드입니다.",
     content: `# 논문 선정 가이드
 
 ## 1. 논문 선정 기준
@@ -162,7 +162,7 @@ const templates: Record<string, {
 ### 필수 조건
 - 최근 3년 이내 발표된 논문 우선
 - 팀원 전원이 읽을 수 있는 분량 (15페이지 이내 권장)
-- 주제가 소모임 목표와 관련 있을 것
+- 주제가 너트 목표와 관련 있을 것
 
 ### 우선 선정 기준
 - 인용 수 50회 이상
@@ -211,7 +211,7 @@ const templates: Record<string, {
 
   "business-model-canvas": {
     title: "Business Model Canvas 양식",
-    category: "소모임",
+    category: "너트",
     description: "비즈니스 모델을 체계적으로 정리할 수 있는 BMC 양식입니다.",
     content: `# Business Model Canvas
 
@@ -298,8 +298,8 @@ const templates: Record<string, {
 
   "market-research": {
     title: "시장조사 체크리스트",
-    category: "소모임",
-    description: "창업/벤처 소모임에서 시장조사를 체계적으로 진행하기 위한 체크리스트입니다.",
+    category: "너트",
+    description: "창업/벤처 너트에서 시장조사를 체계적으로 진행하기 위한 체크리스트입니다.",
     content: `# 시장조사 체크리스트
 
 ## 1. 시장 규모 (Market Size)

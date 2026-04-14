@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { rateLimit } from "@/lib/rate-limit";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = "gemini-2.5-flash";
@@ -16,7 +17,7 @@ const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GE
  * Flow: Meetings + Notes + Resources + Wiki → AI Compress → Digest
  * Next meeting: Digest (small) + new notes → AI = less tokens
  */
-const SYSTEM_PROMPT = `당신은 NutUnion 소모임의 **주간 지식 다이제스트 & 성장 촉진자** AI입니다.
+const SYSTEM_PROMPT = `당신은 NutUnion 너트의 **주간 지식 다이제스트 & 성장 촉진자** AI입니다.
 한 주간의 모든 회의 내용, 공유 자료, 결정 사항, 액션 아이템을 분석하여
 **다음 회의의 시작 컨텍스트**로 사용할 압축된 다이제스트를 생성하고,
 회원들의 성장을 돕는 인사이트를 제공합니다.
@@ -29,7 +30,7 @@ const SYSTEM_PROMPT = `당신은 NutUnion 소모임의 **주간 지식 다이제
   "resolvedItems": ["이번 주 완료된 사항"],
   "keyDecisions": ["이번 주 확정된 결정 사항"],
   "openQuestions": ["아직 해결되지 않은 질문/과제"],
-  "knowledgeGrowth": ["위키에 추가/업데이트된 지식 항목"],
+  "knowledgeGrowth": ["탭에 추가/업데이트된 지식 항목"],
   "nextMeetingContext": "다음 회의에서 AI가 참고할 압축 컨텍스트 (200자 이내)",
   "suggestedAgenda": ["다음 회의 안건 제안 3-5개"],
   "tokenSavings": "이 다이제스트로 대체된 원본 데이터의 대략적 크기",
@@ -76,6 +77,15 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await createClient();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "로그인 필요" }, { status: 401 });
+    }
+    const { success } = rateLimit(`ai:${user.id}`, 20, 60_000);
+    if (!success) {
+      return NextResponse.json({ error: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." }, { status: 429 });
+    }
 
     // ── 1. Gather period data ──────────────────────────────────────────
 
@@ -213,7 +223,7 @@ export async function POST(request: NextRequest) {
 
     // Wiki updates
     if (wikiUpdates.length > 0) {
-      userPrompt += `### 위키 업데이트 (${wikiUpdates.length}건)\n`;
+      userPrompt += `### 탭 업데이트 (${wikiUpdates.length}건)\n`;
       wikiUpdates.forEach(w => { userPrompt += `- ${w.page}: ${w.change}\n`; });
       userPrompt += "\n";
     }

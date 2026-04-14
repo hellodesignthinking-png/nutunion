@@ -26,19 +26,19 @@ export function GroupsPreview({ groups }: { groups?: GroupItem[] }) {
       <section id="groups" className="py-20 px-8 max-w-7xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="font-head text-4xl font-extrabold tracking-tighter text-nu-ink">
-            Scene을 만드는 크루들
+            Scene을 만드는 너트들
           </h2>
           <p className="font-body text-nu-gray mt-3 text-sm">
-            새로운 크루가 여러분을 기다리고 있습니다
+            새로운 너트가 여러분을 기다리고 있습니다
           </p>
         </div>
         <div className="text-center py-16 bg-nu-white border-[3px] border-nu-ink">
-          <p className="text-nu-gray mb-4">아직 등록된 크루가 없습니다</p>
+          <p className="text-nu-gray mb-4">아직 등록된 너트가 없습니다</p>
           <Link
             href="/signup"
             className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-pink text-nu-paper border-[3px] border-nu-pink no-underline hover:bg-nu-ink hover:border-nu-ink transition-colors inline-block"
           >
-            첫 번째 크루를 만들어보세요 &rarr;
+            첫 번째 너트를 만들어보세요 &rarr;
           </Link>
         </div>
       </section>
@@ -56,7 +56,7 @@ export function GroupsPreview({ groups }: { groups?: GroupItem[] }) {
             Scene을 만드는
             <br />
             <span className="relative inline-block">
-              크루들
+              너트들
               <span className="absolute -bottom-1 left-0 w-full h-[4px] bg-nu-pink" aria-hidden="true" />
             </span>
           </h2>
@@ -109,7 +109,7 @@ export function GroupsPreview({ groups }: { groups?: GroupItem[] }) {
                 </div>
                 <div className="flex items-center justify-between mt-1.5">
                   <span className="font-mono-nu text-[10px] text-nu-muted">
-                    {g.m}/{g.max} 멤버
+                    {g.m}/{g.max} 와셔
                   </span>
                   <span className="font-mono-nu text-[9px] text-nu-ink/20">
                     {String(i + 1).padStart(2, '0')}

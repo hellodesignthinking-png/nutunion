@@ -47,8 +47,8 @@ export default function ProjectApplyPage() {
         .single();
 
       if (projError || !proj) {
-        toast.error("프로젝트를 찾을 수 없습니다");
-        router.push("/dashboard");
+        toast.error("볼트를 찾을 수 없습니다");
+        router.push("/projects");
         return;
       }
 
@@ -63,7 +63,7 @@ export default function ProjectApplyPage() {
         .maybeSingle();
 
       if (membership) {
-        toast.info("이미 이 프로젝트의 멤버입니다");
+        toast.info("이미 이 볼트의 와셔입니다");
         router.push(`/projects/${projectId}`);
         return;
       }
@@ -130,7 +130,7 @@ export default function ProjectApplyPage() {
             onClick={() => router.push(`/projects/${projectId}`)}
             className="mt-4 font-mono-nu text-[11px] font-bold uppercase tracking-[0.1em] py-3 px-8 border border-nu-ink/[0.12] text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-colors"
           >
-            프로젝트로 돌아가기
+            볼트로 돌아가기
           </button>
         </div>
       </div>
@@ -140,7 +140,7 @@ export default function ProjectApplyPage() {
   return (
     <div className="max-w-2xl mx-auto px-8 py-12">
       <h1 className="font-head text-3xl font-extrabold text-nu-ink mb-2">
-        프로젝트 지원하기
+        볼트 지원하기
       </h1>
       <p className="text-nu-gray text-sm mb-8">{project?.title}</p>
 

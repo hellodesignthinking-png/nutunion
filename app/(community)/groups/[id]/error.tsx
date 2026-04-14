@@ -21,7 +21,7 @@ export default function GroupErrorPage({
         </div>
         <h2 className="font-head text-xl font-extrabold text-nu-ink mb-2">페이지 로드 오류</h2>
         <p className="text-sm text-nu-muted mb-4">
-          소모임 페이지를 불러오는 중 문제가 발생했습니다.
+          너트 페이지를 불러오는 중 문제가 발생했습니다.
         </p>
         {error.digest && (
           <p className="font-mono-nu text-[9px] text-nu-muted bg-nu-cream/50 px-3 py-1 mb-4 break-all">

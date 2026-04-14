@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import {
   Check,
   Clock,
   ChevronDown,
+  ChevronUp,
   Users,
   Target,
   TrendingUp,
@@ -15,6 +16,7 @@ import {
   Loader2,
   Calendar,
   CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 import type { ProjectMilestone, ProjectTask, TaskStatus } from "@/lib/types";
 
@@ -24,29 +26,49 @@ interface ProjectRoadmapProps {
   isLead: boolean;
 }
 
-const taskStatusIcons: Record<
-  string,
-  { icon: typeof Circle; color: string; next: TaskStatus; label: string }
-> = {
-  todo: {
-    icon: Circle,
-    color: "text-nu-gray",
-    next: "in_progress",
+const taskStatusOptions: {
+  value: TaskStatus;
+  label: string;
+  color: string;
+  bg: string;
+  icon: typeof Circle;
+}[] = [
+  {
+    value: "todo",
     label: "할 일",
+    color: "text-nu-gray",
+    bg: "bg-nu-gray/10",
+    icon: Circle,
   },
-  in_progress: {
-    icon: Clock,
-    color: "text-nu-amber",
-    next: "done",
+  {
+    value: "in_progress",
     label: "진행 중",
+    color: "text-nu-amber",
+    bg: "bg-nu-amber/10",
+    icon: Clock,
   },
-  done: {
-    icon: CheckCircle2,
-    color: "text-green-600",
-    next: "todo",
+  {
+    value: "done",
     label: "완료",
+    color: "text-green-600",
+    bg: "bg-green-50",
+    icon: CheckCircle2,
   },
+];
+
+const taskStatusMap: Record<
+  string,
+  { icon: typeof Circle; color: string; label: string }
+> = {
+  todo: { icon: Circle, color: "text-nu-gray", label: "할 일" },
+  in_progress: { icon: Clock, color: "text-nu-amber", label: "진행 중" },
+  done: { icon: CheckCircle2, color: "text-green-600", label: "완료" },
 };
+
+function isOverdue(dueDateStr: string | null | undefined, status: string): boolean {
+  if (!dueDateStr || status === "completed") return false;
+  return new Date(dueDateStr) < new Date();
+}
 
 export function ProjectRoadmap({
   projectId,
@@ -57,8 +79,18 @@ export function ProjectRoadmap({
     initialMilestones || []
   );
   const [loading, setLoading] = useState(!initialMilestones);
-  const [expandedMilestone, setExpandedMilestone] = useState<string | null>(null);
+  const [expandedMilestone, setExpandedMilestone] = useState<string | null>(
+    null
+  );
   const [togglingTaskId, setTogglingTaskId] = useState<string | null>(null);
+  const [statusDropdownTaskId, setStatusDropdownTaskId] = useState<
+    string | null
+  >(null);
+  const [expandedDescriptions, setExpandedDescriptions] = useState<
+    Set<string>
+  >(new Set());
+  const [animatedProgress, setAnimatedProgress] = useState(0);
+  const progressRef = useRef(false);
 
   // Fetch milestones and tasks if not provided
   useEffect(() => {
@@ -136,24 +168,41 @@ export function ProjectRoadmap({
     );
     if (totalTasks === 0) return 0;
     const completedTasks = milestones.reduce(
-      (sum, m) => sum + (m.tasks?.filter((t) => t.status === "done").length || 0),
+      (sum, m) =>
+        sum + (m.tasks?.filter((t) => t.status === "done").length || 0),
       0
     );
     return Math.round((completedTasks / totalTasks) * 100);
   };
 
-  async function toggleTaskStatus(task: ProjectTask) {
-    if (!isLead) return;
+  // Animate progress bar on mount
+  const totalProgress = getTotalProgress();
+  useEffect(() => {
+    if (progressRef.current) return;
+    progressRef.current = true;
+    const timer = setTimeout(() => {
+      setAnimatedProgress(totalProgress);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [totalProgress]);
 
-    const nextStatus: TaskStatus =
-      taskStatusIcons[task.status]?.next || "todo";
+  // Keep animated in sync after initial animation
+  useEffect(() => {
+    if (progressRef.current) {
+      setAnimatedProgress(totalProgress);
+    }
+  }, [totalProgress]);
+
+  async function setTaskStatus(task: ProjectTask, newStatus: TaskStatus) {
+    if (!isLead) return;
     setTogglingTaskId(task.id);
+    setStatusDropdownTaskId(null);
 
     try {
       const supabase = createClient();
       const { error } = await supabase
         .from("project_tasks")
-        .update({ status: nextStatus })
+        .update({ status: newStatus })
         .eq("id", task.id);
 
       if (error) throw error;
@@ -163,7 +212,7 @@ export function ProjectRoadmap({
         prev.map((ms) => ({
           ...ms,
           tasks: (ms.tasks || []).map((t) =>
-            t.id === task.id ? { ...t, status: nextStatus } : t
+            t.id === task.id ? { ...t, status: newStatus } : t
           ),
         }))
       );
@@ -174,6 +223,18 @@ export function ProjectRoadmap({
     } finally {
       setTogglingTaskId(null);
     }
+  }
+
+  function toggleDescription(msId: string) {
+    setExpandedDescriptions((prev) => {
+      const next = new Set(prev);
+      if (next.has(msId)) {
+        next.delete(msId);
+      } else {
+        next.add(msId);
+      }
+      return next;
+    });
   }
 
   if (loading) {
@@ -193,7 +254,6 @@ export function ProjectRoadmap({
     );
   }
 
-  const totalProgress = getTotalProgress();
   const completedMilestones = getCompletedMilestones();
 
   return (
@@ -224,10 +284,10 @@ export function ProjectRoadmap({
                 {totalProgress}%
               </span>
             </div>
-            <div className="h-3 bg-nu-paper/20 border border-nu-paper/30 overflow-hidden">
+            <div className="h-3 bg-nu-ink/50 border border-nu-paper/30 overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-nu-pink to-nu-pink/80 transition-all duration-300"
-                style={{ width: `${totalProgress}%` }}
+                className="h-full bg-gradient-to-r from-nu-pink to-nu-pink/80 transition-all duration-700 ease-out"
+                style={{ width: `${animatedProgress}%` }}
               />
             </div>
           </div>
@@ -248,18 +308,19 @@ export function ProjectRoadmap({
                   milestones[idx - 1].status === "completed" &&
                   ms.status === "pending");
               const isCompleted = ms.status === "completed";
+              const overdue = isOverdue(ms.due_date, ms.status);
 
               return (
                 <div key={ms.id} className="flex items-end gap-4">
                   {/* Phase Node */}
                   <div className="flex flex-col items-center">
                     <div
-                      className={`w-20 h-20 rounded-lg border-2 flex flex-col items-center justify-center transition-all cursor-pointer hover:shadow-lg ${
+                      className={`w-10 h-10 rounded-full border-[2px] flex items-center justify-center transition-all cursor-pointer hover:scale-110 ${
                         isCompleted
                           ? "bg-nu-pink border-nu-pink text-nu-paper"
                           : isActive
-                            ? "bg-nu-amber/10 border-nu-amber text-nu-amber animate-pulse"
-                            : "bg-nu-ink/5 border-nu-ink/10 text-nu-muted"
+                            ? "bg-nu-amber/10 border-nu-amber text-nu-amber"
+                            : "bg-nu-ink/5 border-nu-ink/20 text-nu-muted"
                       }`}
                       onClick={() =>
                         setExpandedMilestone(
@@ -268,24 +329,32 @@ export function ProjectRoadmap({
                       }
                     >
                       {isCompleted ? (
-                        <Check size={20} />
+                        <Check size={18} strokeWidth={3} />
                       ) : isActive ? (
-                        <TrendingUp size={20} />
+                        <>
+                          <TrendingUp size={18} />
+                          <span className="absolute w-10 h-10 rounded-full border-2 border-nu-amber animate-ping opacity-30" />
+                        </>
                       ) : (
-                        <Circle size={20} />
+                        <Circle size={18} />
                       )}
-                      <span className="font-mono-nu text-[7px] font-bold mt-1 text-center">
-                        {progress}%
-                      </span>
                     </div>
 
                     {/* Node Label */}
-                    <div className="mt-3 text-center max-w-20">
+                    <div className="mt-3 text-center max-w-24">
                       <p className="font-head text-xs font-bold text-nu-ink truncate">
                         {ms.title}
                       </p>
+                      {overdue && (
+                        <span className="inline-flex items-center gap-0.5 font-mono-nu text-[7px] font-bold uppercase tracking-widest px-1.5 py-0.5 bg-red-100 text-red-600 border border-red-200 mt-1">
+                          <AlertTriangle size={8} />
+                          지연
+                        </span>
+                      )}
                       {ms.due_date && (
-                        <p className="font-mono-nu text-[7px] text-nu-muted mt-1 flex items-center justify-center gap-0.5">
+                        <p
+                          className={`font-mono-nu text-[7px] mt-1 flex items-center justify-center gap-0.5 ${overdue ? "text-red-500 font-bold" : "text-nu-muted"}`}
+                        >
                           <Calendar size={8} />
                           {new Date(ms.due_date).toLocaleDateString("ko", {
                             month: "short",
@@ -320,131 +389,256 @@ export function ProjectRoadmap({
       {/* Expanded Milestone Details */}
       {expandedMilestone && (
         <div className="bg-nu-white border-2 border-nu-ink overflow-hidden">
-          <button
-            onClick={() => setExpandedMilestone(null)}
-            className="w-full flex items-center gap-3 p-5 bg-nu-cream/20 hover:bg-nu-cream/30 transition-colors"
-          >
-            <ChevronDown size={16} className="text-nu-pink" />
-            <span className="font-head text-sm font-bold text-nu-ink flex-1 text-left">
-              {milestones.find((m) => m.id === expandedMilestone)?.title}
-            </span>
-            <span className="font-mono-nu text-[9px] font-bold uppercase tracking-widest px-2 py-1 bg-nu-ink text-nu-paper">
-              {calculateProgress(
-                milestones.find((m) => m.id === expandedMilestone)?.tasks
-              )}
-              %
-            </span>
-          </button>
+          {(() => {
+            const expandedMs = milestones.find(
+              (m) => m.id === expandedMilestone
+            );
+            if (!expandedMs) return null;
+            const msProgress = calculateProgress(expandedMs.tasks);
+            const tasks = expandedMs.tasks || [];
+            const descExpanded = expandedDescriptions.has(expandedMs.id);
 
-          {/* Tasks List */}
-          <div className="border-t border-nu-ink/[0.06]">
-            {(() => {
-              const expandedMs = milestones.find((m) => m.id === expandedMilestone);
-              const tasks = expandedMs?.tasks || [];
+            return (
+              <>
+                <button
+                  onClick={() => setExpandedMilestone(null)}
+                  className="w-full flex items-center gap-3 p-5 bg-nu-cream/20 hover:bg-nu-cream/30 transition-colors"
+                >
+                  <ChevronDown size={16} className="text-nu-pink" />
+                  <span className="font-head text-sm font-bold text-nu-ink flex-1 text-left">
+                    {expandedMs.title}
+                  </span>
+                  {isOverdue(expandedMs.due_date, expandedMs.status) && (
+                    <span className="font-mono-nu text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 bg-red-100 text-red-600 border border-red-200 mr-2">
+                      지연
+                    </span>
+                  )}
+                  <span className="font-mono-nu text-[9px] font-bold uppercase tracking-widest px-2 py-1 bg-nu-ink text-nu-paper">
+                    {msProgress}%
+                  </span>
+                </button>
 
-              if (tasks.length === 0) {
-                return (
-                  <p className="px-5 py-4 text-nu-muted text-sm">
-                    아직 태스크가 없습니다
-                  </p>
-                );
-              }
+                {/* Milestone progress bar */}
+                <div className="px-5 pt-2 pb-0">
+                  <div className="h-1.5 bg-nu-ink/10 overflow-hidden">
+                    <div
+                      className="h-full bg-nu-pink transition-all duration-500 ease-out"
+                      style={{ width: `${msProgress}%` }}
+                    />
+                  </div>
+                </div>
 
-              return (
-                <>
-                  {tasks.map((task) => {
-                    const statusInfo = taskStatusIcons[task.status];
-                    const Icon = statusInfo.icon;
+                {/* Milestone description collapsible */}
+                {expandedMs.description && (
+                  <div className="px-5 pt-3">
+                    <button
+                      onClick={() => toggleDescription(expandedMs.id)}
+                      className="flex items-center gap-1.5 font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted hover:text-nu-ink transition-colors"
+                    >
+                      {descExpanded ? (
+                        <ChevronUp size={12} />
+                      ) : (
+                        <ChevronDown size={12} />
+                      )}
+                      설명 보기
+                    </button>
+                    {descExpanded && (
+                      <p className="text-sm text-nu-graphite leading-relaxed mt-2 pl-4 border-l-2 border-nu-pink/20">
+                        {expandedMs.description}
+                      </p>
+                    )}
+                  </div>
+                )}
 
-                    return (
-                      <div
-                        key={task.id}
-                        className="flex items-center gap-3 px-5 py-4 border-b border-nu-ink/[0.04] last:border-0 hover:bg-nu-cream/10 transition-colors"
-                      >
-                        {/* Status Toggle */}
-                        <button
-                          onClick={() => toggleTaskStatus(task)}
-                          disabled={!isLead || togglingTaskId === task.id}
-                          className={`shrink-0 transition-opacity ${
-                            statusInfo.color
-                          } ${isLead ? "cursor-pointer hover:opacity-70" : "cursor-default opacity-50"}`}
+                {/* Tasks List */}
+                <div className="border-t border-nu-ink/[0.06] mt-3">
+                  {tasks.length === 0 ? (
+                    <p className="px-5 py-4 text-nu-muted text-sm">
+                      아직 태스크가 없습니다
+                    </p>
+                  ) : (
+                    tasks.map((task) => {
+                      const statusInfo = taskStatusMap[task.status];
+                      const Icon = statusInfo?.icon ?? Circle;
+                      const isDropdownOpen = statusDropdownTaskId === task.id;
+                      const taskOverdue =
+                        task.status !== "done" &&
+                        task.due_date &&
+                        new Date(task.due_date) < new Date();
+
+                      return (
+                        <div
+                          key={task.id}
+                          className="flex items-center gap-3 px-5 py-4 border-b border-nu-ink/[0.04] last:border-0 hover:bg-nu-cream/10 transition-colors"
                         >
-                          {togglingTaskId === task.id ? (
-                            <Loader2 size={18} className="animate-spin" />
-                          ) : (
-                            <Icon size={18} />
-                          )}
-                        </button>
+                          {/* Status Toggle / Dropdown */}
+                          <div className="relative shrink-0">
+                            <button
+                              onClick={() => {
+                                if (!isLead) return;
+                                setStatusDropdownTaskId(
+                                  isDropdownOpen ? null : task.id
+                                );
+                              }}
+                              disabled={
+                                !isLead || togglingTaskId === task.id
+                              }
+                              className={`transition-opacity ${
+                                statusInfo?.color ?? "text-nu-gray"
+                              } ${isLead ? "cursor-pointer hover:opacity-70" : "cursor-default opacity-50"}`}
+                            >
+                              {togglingTaskId === task.id ? (
+                                <Loader2 size={18} className="animate-spin" />
+                              ) : (
+                                <Icon size={18} />
+                              )}
+                            </button>
 
-                        {/* Task Title */}
-                        <div className="flex-1 min-w-0">
-                          <p
-                            className={`text-sm font-medium ${
+                            {/* Status dropdown */}
+                            {isDropdownOpen && (
+                              <>
+                                <div
+                                  className="fixed inset-0 z-10"
+                                  onClick={() =>
+                                    setStatusDropdownTaskId(null)
+                                  }
+                                />
+                                <div className="absolute left-0 top-full mt-1 z-20 bg-nu-paper border-[2px] border-nu-ink/[0.15] shadow-lg min-w-[120px]">
+                                  {taskStatusOptions.map((opt) => {
+                                    const OptIcon = opt.icon;
+                                    return (
+                                      <button
+                                        key={opt.value}
+                                        onClick={() =>
+                                          setTaskStatus(task, opt.value)
+                                        }
+                                        className={`w-full flex items-center gap-2 px-3 py-2 text-left font-mono-nu text-[10px] uppercase tracking-widest hover:bg-nu-cream/30 transition-colors ${
+                                          task.status === opt.value
+                                            ? "bg-nu-cream/20 font-bold"
+                                            : ""
+                                        } ${opt.color}`}
+                                      >
+                                        <OptIcon size={12} />
+                                        {opt.label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </>
+                            )}
+                          </div>
+
+                          {/* Task Title */}
+                          <div className="flex-1 min-w-0">
+                            <p
+                              className={`text-sm font-medium ${
+                                task.status === "done"
+                                  ? "line-through text-nu-muted"
+                                  : "text-nu-ink"
+                              }`}
+                            >
+                              {task.title}
+                            </p>
+                            {task.description && (
+                              <p className="text-xs text-nu-muted mt-0.5">
+                                {task.description}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Priority badge */}
+                          {(task as any).priority && (
+                            <span
+                              className={`font-mono-nu text-[7px] font-bold uppercase tracking-widest px-1.5 py-0.5 border shrink-0 ${
+                                (task as any).priority === "high"
+                                  ? "bg-red-50 text-red-600 border-red-200"
+                                  : (task as any).priority === "medium"
+                                    ? "bg-nu-amber/10 text-nu-amber border-nu-amber/20"
+                                    : "bg-nu-gray/10 text-nu-gray border-nu-gray/20"
+                              }`}
+                            >
+                              {(task as any).priority === "high"
+                                ? "높음"
+                                : (task as any).priority === "medium"
+                                  ? "보통"
+                                  : "낮음"}
+                            </span>
+                          )}
+
+                          {/* Status Badge */}
+                          <span
+                            className={`font-mono-nu text-[8px] font-bold uppercase px-1.5 py-0.5 shrink-0 ${
                               task.status === "done"
-                                ? "line-through text-nu-muted"
-                                : "text-nu-ink"
+                                ? "bg-green-50 text-green-600"
+                                : task.status === "in_progress"
+                                  ? "bg-nu-amber/10 text-nu-amber"
+                                  : "bg-nu-gray/10 text-nu-gray"
                             }`}
                           >
-                            {task.title}
-                          </p>
-                          {task.description && (
-                            <p className="text-xs text-nu-muted mt-0.5">
-                              {task.description}
-                            </p>
+                            {statusInfo?.label ?? "할 일"}
+                          </span>
+
+                          {/* Assignee - more prominent */}
+                          {task.assignee && (
+                            <div className="flex items-center gap-2 shrink-0 bg-nu-cream/30 px-2 py-1 border border-nu-ink/[0.06]">
+                              {task.assignee.avatar_url ? (
+                                <img
+                                  src={task.assignee.avatar_url}
+                                  alt={task.assignee.nickname || ""}
+                                  className="w-6 h-6 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-6 h-6 rounded-full bg-nu-pink/20 flex items-center justify-center font-head text-[9px] font-bold text-nu-pink">
+                                  {(task.assignee.nickname || "U")
+                                    .charAt(0)
+                                    .toUpperCase()}
+                                </div>
+                              )}
+                              <span className="font-mono-nu text-[9px] text-nu-ink font-medium">
+                                {task.assignee.nickname}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Due Date */}
+                          {task.due_date && (
+                            <span
+                              className={`font-mono-nu text-[8px] shrink-0 flex items-center gap-1 ${taskOverdue ? "text-red-600 font-bold" : "text-nu-muted"}`}
+                            >
+                              <Calendar size={10} />
+                              {new Date(task.due_date).toLocaleDateString(
+                                "ko",
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                }
+                              )}
+                              {taskOverdue && (
+                                <AlertTriangle
+                                  size={10}
+                                  className="text-red-500"
+                                />
+                              )}
+                            </span>
                           )}
                         </div>
-
-                        {/* Status Badge */}
-                        <span
-                          className={`font-mono-nu text-[8px] font-bold uppercase px-1.5 py-0.5 shrink-0 ${
-                            task.status === "done"
-                              ? "bg-green-50 text-green-600"
-                              : task.status === "in_progress"
-                                ? "bg-nu-amber/10 text-nu-amber"
-                                : "bg-nu-gray/10 text-nu-gray"
-                          }`}
-                        >
-                          {statusInfo.label}
-                        </span>
-
-                        {/* Assignee */}
-                        {task.assignee && (
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <div className="w-6 h-6 rounded-full bg-nu-pink/20 flex items-center justify-center font-head text-[9px] font-bold text-nu-pink">
-                              {(task.assignee.nickname || "U")
-                                .charAt(0)
-                                .toUpperCase()}
-                            </div>
-                            <span className="font-mono-nu text-[8px] text-nu-muted">
-                              {task.assignee.nickname}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Due Date */}
-                        {task.due_date && (
-                          <span className="font-mono-nu text-[8px] text-nu-muted shrink-0 flex items-center gap-1">
-                            <Calendar size={10} />
-                            {new Date(task.due_date).toLocaleDateString("ko", {
-                              month: "short",
-                              day: "numeric",
-                            })}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </>
-              );
-            })()}
-          </div>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            );
+          })()}
         </div>
       )}
 
       {/* Settlement Badges */}
       <div className="space-y-3">
         {milestones
-          .filter((ms) => ms.status === "completed" && (ms as any).reward_percentage > 0)
+          .filter(
+            (ms) =>
+              ms.status === "completed" && (ms as any).reward_percentage > 0
+          )
           .map((ms) => (
             <div
               key={ms.id}

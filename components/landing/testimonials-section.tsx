@@ -5,16 +5,16 @@ import { useRevealOnScroll } from "@/lib/hooks/use-reveal-on-scroll";
 const items = [
   {
     image: "/culture.png",
-    title: "크루 운영",
-    desc: "주제 중심의 소모임을 만들고 정기 미팅, 자료 공유, 액션아이템까지 체계적으로 운영합니다.",
+    title: "너트 운영",
+    desc: "주제 중심의 너트를 만들고 정기 미팅, 자료 공유, 액션아이템까지 체계적으로 운영합니다.",
     num: "01",
     halftone: "halftone-blue",
     accent: "border-t-nu-blue",
   },
   {
     image: "/network.png",
-    title: "프로젝트 협업",
-    desc: "크루원들이 프로젝트에 지원하고, PM이 선발하여 실제 프로젝트를 함께 진행합니다.",
+    title: "볼트 협업",
+    desc: "와셔들이 볼트에 지원하고, PM이 선발하여 실제 볼트를 함께 진행합니다.",
     num: "02",
     halftone: "halftone-pink",
     accent: "border-t-nu-pink",

@@ -22,7 +22,7 @@ export default function PublicWikiErrorPage({
           <Brain size={40} className="text-white" />
         </div>
         <h1 className="font-head text-3xl font-extrabold text-nu-ink mb-3">오류 발생</h1>
-        <p className="text-sm text-nu-graphite mb-2">위키를 불러오는 중 문제가 발생했습니다.</p>
+        <p className="text-sm text-nu-graphite mb-2">탭을 불러오는 중 문제가 발생했습니다.</p>
         {error.digest && (
           <p className="font-mono-nu text-[9px] text-nu-muted mb-4 break-all">digest: {error.digest}</p>
         )}

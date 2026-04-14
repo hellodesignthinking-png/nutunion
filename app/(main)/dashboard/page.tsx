@@ -4,34 +4,10 @@ import Link from "next/link";
 import {
   Users, Calendar, Bell, ChevronRight, MapPin, Clock,
   Briefcase, Activity, Plus, Layers, ArrowUpRight,
-  Star, Crown, Award, Shield, TrendingUp, Zap,
+  Star, TrendingUp, Zap,
   FileText, MessageSquare, CheckCircle2,
 } from "lucide-react";
-
-// ─── Grade helper ────────────────────────────────────────────────
-const GRADE = {
-  bronze: { label: "브론즈", color: "text-amber-500 bg-amber-50 border-amber-200", icon: Award },
-  silver: { label: "실버",  color: "text-slate-500 bg-slate-50 border-slate-200", icon: Star   },
-  gold:   { label: "골드",  color: "text-yellow-500 bg-yellow-50 border-yellow-200", icon: Star },
-  vip:    { label: "VIP",   color: "text-nu-pink bg-nu-pink/5 border-nu-pink/20", icon: Crown  },
-  admin:  { label: "관리자", color: "text-nu-pink bg-nu-pink text-white border-nu-pink", icon: Shield },
-};
-const CAT = {
-  space:    { color: "bg-nu-blue",   dot: "bg-nu-blue",   label: "공간"   },
-  culture:  { color: "bg-nu-amber",  dot: "bg-nu-amber",  label: "문화"   },
-  platform: { color: "bg-nu-ink",    dot: "bg-nu-ink",    label: "플랫폼" },
-  vibe:     { color: "bg-nu-pink",   dot: "bg-nu-pink",   label: "바이브" },
-};
-
-function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "방금";
-  if (m < 60) return `${m}분 전`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}시간 전`;
-  return `${Math.floor(h / 24)}일 전`;
-}
+import { getGrade, getCategory, timeAgo, GRADE_CONFIG, CATEGORY_CONFIG } from "@/lib/constants";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -39,55 +15,75 @@ export default async function DashboardPage() {
   if (!user) redirect("/login");
 
   // ── Fetch all data in parallel ──────────────────────────────────
-  const [
-    { data: profile },
-    { data: memberships },
-    { data: projectMemberships },
-    { count: notifCount },
-    { data: recentActivity },
-  ] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", user.id).single(),
-    supabase.from("group_members")
-      .select("group_id, role, groups(id, name, category, description, max_members)")
-      .eq("user_id", user.id).eq("status", "active").eq("groups.is_active", true),
-    supabase.from("project_members")
-      .select("project_id, role, reward_ratio, projects(id, title, description, status, category)")
-      .eq("user_id", user.id)
-      .in("projects.status", ["active", "draft"]),
-    supabase.from("notifications")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id).eq("is_read", false),
-    supabase.from("crew_posts")
-      .select("id, content, type, created_at, author:profiles!crew_posts_author_id_fkey(nickname, avatar_url), group:groups!crew_posts_group_id_fkey(id, name, is_active)")
-      .eq("group.is_active", true)
-      .order("created_at", { ascending: false })
-      .limit(6),
-  ]);
+  let profile: any = null;
+  let memberships: any[] | null = null;
+  let projectMemberships: any[] | null = null;
+  let recentActivity: any[] | null = null;
+  let events: any[] | null = [];
+  let pendingRequests: any[] | null = [];
+  let pendingCount: number | null = 0;
 
-  const groupIds = memberships?.map((m) => m.group_id) || [];
+  try {
+    const [
+      { data: profileData },
+      { data: membershipsData },
+      { data: projectMembershipsData },
+      ,
+      { data: recentActivityData },
+    ] = await Promise.all([
+      supabase.from("profiles").select("id, nickname, avatar_url, bio, grade, role, interests, points, activity_score, skill_tags, created_at, updated_at").eq("id", user.id).single(),
+      supabase.from("group_members")
+        .select("group_id, role, groups(id, name, category, description, max_members)")
+        .eq("user_id", user.id).eq("status", "active").eq("groups.is_active", true),
+      supabase.from("project_members")
+        .select("project_id, role, reward_ratio, projects(id, title, description, status, category)")
+        .eq("user_id", user.id)
+        .in("projects.status", ["active", "draft"]),
+      supabase.from("notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id).eq("is_read", false),
+      supabase.from("crew_posts")
+        .select("id, content, type, created_at, author:profiles!crew_posts_author_id_fkey(nickname, avatar_url), group:groups!crew_posts_group_id_fkey(id, name, is_active)")
+        .order("created_at", { ascending: false })
+        .limit(10),
+    ]);
 
-  const { data: events } = groupIds.length
-    ? await supabase.from("events")
-        .select("*")
-        .in("group_id", groupIds)
-        .gte("start_at", new Date().toISOString())
-        .order("start_at", { ascending: true })
-        .limit(3)
-    : { data: [] };
+    profile = profileData;
+    memberships = membershipsData;
+    projectMemberships = projectMembershipsData;
+    recentActivity = recentActivityData;
 
-  // ── Pending group join requests (host only) ─────────────────────
-  const hostGroups = (memberships || []).filter((m: any) => m.role === "host").map((m: any) => m.group_id);
-  const { data: pendingRequests, count: pendingCount } = hostGroups.length
-    ? await supabase.from("group_members")
-        .select("id, group_id, user_id, groups(name), profile:profiles!group_members_user_id_fkey(nickname)", { count: "exact" })
-        .in("group_id", hostGroups)
-        .eq("status", "pending")
-        .limit(3)
-    : { data: [], count: 0 };
+    const groupIds = memberships?.map((m) => m.group_id) || [];
 
-  const nickname    = profile?.nickname || "멤버";
+    const { data: eventsData } = groupIds.length
+      ? await supabase.from("events")
+          .select("*")
+          .in("group_id", groupIds)
+          .gte("start_at", new Date().toISOString())
+          .order("start_at", { ascending: true })
+          .limit(3)
+      : { data: [] };
+    events = eventsData;
+
+    // ── Pending group join requests (host only) ─────────────────────
+    const hostGroups = (memberships || []).filter((m: any) => m.role === "host").map((m: any) => m.group_id);
+    const { data: pendingRequestsData, count: pendingCountData } = hostGroups.length
+      ? await supabase.from("group_members")
+          .select("id, group_id, user_id, groups(name), profile:profiles!group_members_user_id_fkey(nickname)", { count: "exact" })
+          .in("group_id", hostGroups)
+          .eq("status", "pending")
+          .limit(3)
+      : { data: [], count: 0 };
+    pendingRequests = pendingRequestsData;
+    pendingCount = pendingCountData;
+  } catch (err) {
+    console.error("Dashboard data fetch error:", err);
+    // Render with safe defaults — partial data is better than a crash
+  }
+
+  const nickname    = profile?.nickname || "와셔";
+  const gradeInfo   = profile ? getGrade(profile) : GRADE_CONFIG.bronze;
   const grade       = profile?.role === "admin" ? "admin" : (profile?.grade || "bronze");
-  const gradeInfo   = GRADE[grade as keyof typeof GRADE] || GRADE.bronze;
   const GradeIcon   = gradeInfo.icon;
   const groupCount  = memberships?.length || 0;
   const projectCount = projectMemberships?.length || 0;
@@ -105,7 +101,7 @@ export default async function DashboardPage() {
       <div className="mb-8 flex flex-col md:flex-row md:items-start md:justify-between gap-6">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-3">
-            <span className={`inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-2 py-1 border ${gradeInfo.color}`}>
+            <span className={`inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-2 py-1 border ${gradeInfo.cls}`}>
               <GradeIcon size={10} /> {gradeInfo.label}
             </span>
             <span className="inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-2 py-1 bg-nu-ink text-white">
@@ -129,21 +125,43 @@ export default async function DashboardPage() {
         <div className="flex items-center gap-2 shrink-0 self-end md:self-start">
           <Link href="/groups/create"
             className="font-mono-nu text-[10px] uppercase tracking-widest px-5 py-3 border-[2px] border-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-all no-underline flex items-center gap-2">
-            <Plus size={14} /> 소모임
+            <Plus size={14} /> 너트
           </Link>
           <Link href="/projects/create"
             className="font-mono-nu text-[10px] uppercase tracking-widest px-5 py-3 bg-nu-pink text-nu-paper hover:bg-nu-pink/90 transition-all no-underline flex items-center gap-2">
-            <Plus size={14} /> 프로젝트
+            <Plus size={14} /> 볼트
+          </Link>
+        </div>
+      </div>
+
+      {/* ── 빠른 시작 ──────────────────────────────────────────── */}
+      <div className="bg-nu-ink/[0.02] border-[2px] border-nu-ink/[0.08] p-5 mb-8 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <div className="flex-1">
+          <h2 className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-1">빠른 시작</h2>
+          <p className="text-sm text-nu-graphite">무엇을 하고 싶으세요?</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/groups?tab=events&action=create"
+            className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2.5 border-[2px] border-nu-pink bg-nu-pink text-nu-paper hover:bg-nu-pink/90 transition-all no-underline flex items-center gap-1.5">
+            <Calendar size={12} /> 새 미팅 만들기
+          </Link>
+          <Link href="/groups"
+            className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2.5 border-[2px] border-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-all no-underline flex items-center gap-1.5">
+            <Layers size={12} /> 너트 탐색
+          </Link>
+          <Link href="/projects"
+            className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2.5 border-[2px] border-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-all no-underline flex items-center gap-1.5">
+            <Briefcase size={12} /> 볼트 찾기
           </Link>
         </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
         {[
-          { label: "내 소모임",   val: groupCount,   href: "/groups",       icon: Layers,    accent: "text-nu-blue",   bg: "bg-nu-blue/8" },
-          { label: "활동 지수",   val: activityScore, href: "/profile",     icon: TrendingUp, accent: "text-green-600", bg: "bg-green-50" },
-          { label: "다가오는 일정", val: eventCount, href: "/dashboard",     icon: Calendar,  accent: "text-nu-pink",   bg: "bg-nu-pink/8" },
-          { label: "넛 포인트",   val: nutPoints,    href: "/profile",     icon: Zap,       accent: "text-nu-amber",  bg: "bg-nu-amber/10" },
+          { label: "내 너트",     val: groupCount,   href: "/groups",       icon: Layers,    accent: "text-nu-blue",   bg: "bg-nu-blue/8" },
+          { label: "강성",         val: activityScore, href: "/profile#activity", icon: TrendingUp, accent: "text-green-600", bg: "bg-green-50" },
+          { label: "다가오는 일정", val: eventCount, href: "/groups?tab=events", icon: Calendar,  accent: "text-nu-pink",   bg: "bg-nu-pink/8" },
+          { label: "강성 포인트", val: nutPoints,    href: "/profile#points", icon: Zap,       accent: "text-nu-amber",  bg: "bg-nu-amber/10" },
         ].map((s) => (
           <Link key={s.label} href={s.href}
             className="bg-nu-white border-[2px] border-nu-ink/[0.06] p-6 flex flex-col gap-3 no-underline hover:border-nu-pink/30 hover:shadow-md transition-all group">
@@ -160,7 +178,7 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* ── LEFT: 소모임 + 프로젝트 ─────────────────────────────── */}
+        {/* ── LEFT: 활동 + 너트 + 볼트 ──────────────────────── */}
         <div className="lg:col-span-2 space-y-6">
 
           {/* 가입 승인 대기 */}
@@ -186,119 +204,19 @@ export default async function DashboardPage() {
             </div>
           )}
 
-          {/* 내 소모임 */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-head text-lg font-extrabold text-nu-ink flex items-center gap-2">
-                <Layers size={16} /> 내 소모임
-              </h2>
-              <Link href="/groups" className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink no-underline hover:underline flex items-center gap-1">
-                전체보기 <ChevronRight size={12} />
-              </Link>
-            </div>
-            {groupCount === 0 ? (
-              <div className="bg-nu-white border border-nu-ink/[0.08] p-8 text-center">
-                <Layers size={28} className="text-nu-muted/30 mx-auto mb-3" />
-                <p className="text-nu-gray text-sm mb-3">아직 소모임이 없습니다</p>
-                <Link href="/groups"
-                  className="font-mono-nu text-[11px] uppercase tracking-widest bg-nu-ink text-nu-paper px-5 py-2.5 no-underline hover:bg-nu-pink transition-colors inline-block">
-                  소모임 탐색하기
-                </Link>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {memberships?.slice(0, 4).map((m: any) => {
-                  const g = m.groups;
-                  if (!g || g.is_active === false) return null;
-                  const cat = CAT[g.category as keyof typeof CAT];
-                  return (
-                    <Link key={g.id} href={`/groups/${g.id}`}
-                      className="bg-nu-white border border-nu-ink/[0.08] p-4 no-underline hover:border-nu-pink/40 hover:shadow-sm transition-all group">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={`font-mono-nu text-[8px] uppercase tracking-widest px-2 py-0.5 text-white font-bold ${cat?.color || "bg-nu-gray"}`}>
-                          {cat?.label || g.category}
-                        </span>
-                        {m.role === "host" && (
-                          <span className="font-mono-nu text-[8px] uppercase tracking-widest bg-nu-pink/10 text-nu-pink px-1.5 py-0.5">Host</span>
-                        )}
-                      </div>
-                      <h3 className="font-head text-sm font-bold text-nu-ink group-hover:text-nu-pink transition-colors truncate">{g.name}</h3>
-                      <p className="text-[11px] text-nu-muted mt-1 line-clamp-1">{g.description || "-"}</p>
-                      <div className="flex items-center justify-end mt-2">
-                        <ArrowUpRight size={13} className="text-nu-muted/40 group-hover:text-nu-pink transition-colors" />
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* 내 프로젝트 */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-head text-lg font-extrabold text-nu-ink flex items-center gap-2">
-                <Briefcase size={16} /> 내 프로젝트
-              </h2>
-              <Link href="/projects" className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink no-underline hover:underline flex items-center gap-1">
-                전체보기 <ChevronRight size={12} />
-              </Link>
-            </div>
-            {projectCount === 0 ? (
-              <div className="bg-nu-white border border-nu-ink/[0.08] p-8 text-center">
-                <Briefcase size={28} className="text-nu-muted/30 mx-auto mb-3" />
-                <p className="text-nu-gray text-sm mb-3">참여 중인 프로젝트가 없습니다</p>
-                <Link href="/projects"
-                  className="font-mono-nu text-[11px] uppercase tracking-widest bg-nu-ink text-nu-paper px-5 py-2.5 no-underline hover:bg-nu-pink transition-colors inline-block">
-                  프로젝트 탐색하기
-                </Link>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {projectMemberships?.slice(0, 4).map((pm: any) => {
-                  const p = pm.projects;
-                  if (!p || !["active", "draft"].includes(p.status)) return null;
-                  const cat = CAT[p.category as keyof typeof CAT];
-                  return (
-                    <Link key={p.id} href={`/projects/${p.id}`}
-                      className="bg-nu-white border border-nu-ink/[0.08] p-4 flex items-center gap-4 no-underline hover:border-nu-pink/40 hover:shadow-sm transition-all group">
-                      <div className={`w-1.5 h-10 shrink-0 ${p.status === "active" ? "bg-green-500" : "bg-nu-muted/20"}`} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <h3 className="font-head text-sm font-bold text-nu-ink group-hover:text-nu-pink transition-colors truncate">{p.title}</h3>
-                          {pm.role === "lead" && (
-                            <span className="font-mono-nu text-[8px] uppercase tracking-widest bg-green-50 text-green-600 px-1.5 py-0.5 shrink-0">PM</span>
-                          )}
-                          {cat && (
-                            <span className={`font-mono-nu text-[8px] uppercase tracking-widest px-1.5 py-0.5 text-white shrink-0 ${cat.color}`}>{cat.label}</span>
-                          )}
-                        </div>
-                        <span className={`font-mono-nu text-[10px] uppercase tracking-widest ${p.status === "active" ? "text-green-600" : "text-nu-muted"}`}>
-                          {p.status === "active" ? "● 진행중" : p.status === "completed" ? "완료" : p.status}
-                        </span>
-                      </div>
-                      {pm.reward_ratio && (
-                        <div className="shrink-0 text-right">
-                          <p className="font-head text-sm font-bold text-green-600">{pm.reward_ratio}%</p>
-                          <p className="font-mono-nu text-[9px] text-nu-muted">배분율</p>
-                        </div>
-                      )}
-                      <ArrowUpRight size={13} className="text-nu-muted/40 group-hover:text-nu-pink transition-colors shrink-0" />
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* 최근 커뮤니티 활동 */}
+          {/* 최근 커뮤니티 활동 (moved up) */}
           <div>
             <h2 className="font-head text-lg font-extrabold text-nu-ink flex items-center gap-2 mb-3">
               <Activity size={16} /> 최근 활동
             </h2>
             {(!recentActivity || recentActivity.length === 0) ? (
-              <div className="bg-nu-white border border-nu-ink/[0.08] p-6 text-center">
-                <p className="text-nu-gray text-sm">최근 활동이 없습니다</p>
+              <div className="bg-nu-white border border-nu-ink/[0.08] p-8 text-center">
+                <Activity size={28} className="text-nu-muted/30 mx-auto mb-3" />
+                <p className="text-nu-gray text-sm mb-3">아직 커뮤니티 활동이 없습니다</p>
+                <Link href="/groups"
+                  className="font-mono-nu text-[11px] uppercase tracking-widest bg-nu-ink text-nu-paper px-5 py-2.5 no-underline hover:bg-nu-pink transition-colors inline-block">
+                  너트에서 대화 시작하기
+                </Link>
               </div>
             ) : (
               <div className="space-y-2">
@@ -329,6 +247,108 @@ export default async function DashboardPage() {
               </div>
             )}
           </div>
+
+          {/* 내 너트 */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-head text-lg font-extrabold text-nu-ink flex items-center gap-2">
+                <Layers size={16} /> 내 너트
+              </h2>
+              <Link href="/groups" className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink no-underline hover:underline flex items-center gap-1">
+                전체보기 <ChevronRight size={12} />
+              </Link>
+            </div>
+            {groupCount === 0 ? (
+              <div className="bg-nu-white border border-nu-ink/[0.08] p-8 text-center">
+                <Layers size={28} className="text-nu-muted/30 mx-auto mb-3" />
+                <p className="text-nu-gray text-sm mb-3">아직 너트가 없습니다</p>
+                <Link href="/groups"
+                  className="font-mono-nu text-[11px] uppercase tracking-widest bg-nu-ink text-nu-paper px-5 py-2.5 no-underline hover:bg-nu-pink transition-colors inline-block">
+                  너트 탐색하기
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {memberships?.slice(0, 4).map((m: any) => {
+                  const g = m.groups;
+                  if (!g || g.is_active === false) return null;
+                  const cat = getCategory(g.category);
+                  return (
+                    <Link key={g.id} href={`/groups/${g.id}`}
+                      className="bg-nu-white border border-nu-ink/[0.08] p-4 no-underline hover:border-nu-pink/40 hover:shadow-sm transition-all group">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`font-mono-nu text-[8px] uppercase tracking-widest px-2 py-0.5 text-white font-bold ${cat?.color || "bg-nu-gray"}`}>
+                          {cat?.label || g.category}
+                        </span>
+                        {m.role === "host" && (
+                          <span className="font-mono-nu text-[8px] uppercase tracking-widest bg-nu-pink/10 text-nu-pink px-1.5 py-0.5">Host</span>
+                        )}
+                      </div>
+                      <h3 className="font-head text-sm font-bold text-nu-ink group-hover:text-nu-pink transition-colors truncate">{g.name}</h3>
+                      <p className="text-[11px] text-nu-muted mt-1 line-clamp-1">{g.description || "-"}</p>
+                      <div className="flex items-center justify-end mt-2">
+                        <ArrowUpRight size={13} className="text-nu-muted/40 group-hover:text-nu-pink transition-colors" />
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* 내 볼트 */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-head text-lg font-extrabold text-nu-ink flex items-center gap-2">
+                <Briefcase size={16} /> 내 볼트
+              </h2>
+              <Link href="/projects" className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink no-underline hover:underline flex items-center gap-1">
+                전체보기 <ChevronRight size={12} />
+              </Link>
+            </div>
+            {projectCount === 0 ? (
+              <div className="bg-nu-white border border-nu-ink/[0.08] p-8 text-center">
+                <Briefcase size={28} className="text-nu-muted/30 mx-auto mb-3" />
+                <p className="text-nu-gray text-sm mb-3">참여 중인 볼트가 없습니다</p>
+                <Link href="/projects"
+                  className="font-mono-nu text-[11px] uppercase tracking-widest bg-nu-ink text-nu-paper px-5 py-2.5 no-underline hover:bg-nu-pink transition-colors inline-block">
+                  볼트 탐색하기
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {projectMemberships?.slice(0, 4).map((pm: any) => {
+                  const p = pm.projects;
+                  if (!p || !["active", "draft"].includes(p.status)) return null;
+                  const cat = getCategory(p.category);
+                  return (
+                    <Link key={p.id} href={`/projects/${p.id}`}
+                      className="bg-nu-white border border-nu-ink/[0.08] p-4 no-underline hover:border-nu-pink/40 hover:shadow-sm transition-all group">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`font-mono-nu text-[8px] uppercase tracking-widest px-2 py-0.5 ${p.status === "active" ? "bg-green-500 text-white" : "bg-nu-muted/20 text-nu-muted"}`}>
+                          {p.status === "active" ? "진행중" : p.status}
+                        </span>
+                        {pm.role === "lead" && (
+                          <span className="font-mono-nu text-[8px] uppercase tracking-widest bg-green-50 text-green-600 px-1.5 py-0.5">PM</span>
+                        )}
+                        {cat && (
+                          <span className={`font-mono-nu text-[8px] uppercase tracking-widest px-1.5 py-0.5 text-white ${cat.color}`}>{cat.label}</span>
+                        )}
+                      </div>
+                      <h3 className="font-head text-sm font-bold text-nu-ink group-hover:text-nu-pink transition-colors truncate">{p.title}</h3>
+                      <p className="text-[11px] text-nu-muted mt-1 line-clamp-1">{p.description || "-"}</p>
+                      <div className="flex items-center justify-between mt-2">
+                        {pm.reward_ratio ? (
+                          <span className="font-mono-nu text-[10px] font-bold text-green-600">{pm.reward_ratio}% 배분</span>
+                        ) : <span />}
+                        <ArrowUpRight size={13} className="text-nu-muted/40 group-hover:text-nu-pink transition-colors" />
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ── RIGHT sidebar ─────────────────────────────────────── */}
@@ -339,9 +359,9 @@ export default async function DashboardPage() {
             <h3 className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-3">빠른 이동</h3>
             <div className="space-y-1">
               {[
-                { href: "/groups",       label: "소모임 탐색",   icon: Layers,    color: "text-nu-blue" },
-                { href: "/projects",     label: "프로젝트 탐색", icon: Briefcase, color: "text-green-600" },
-                { href: "/members",      label: "멤버 탐색",     icon: Users,     color: "text-nu-pink" },
+                { href: "/groups",       label: "너트 탐색",     icon: Layers,    color: "text-nu-blue" },
+                { href: "/projects",     label: "볼트 탐색",     icon: Briefcase, color: "text-green-600" },
+                { href: "/members",      label: "와셔 탐색",     icon: Users,     color: "text-nu-pink" },
                 { href: "/profile",      label: "내 아카이브",   icon: Star,      color: "text-nu-amber" },
                 { href: "/notifications",label: "알림",          icon: Bell,      color: "text-nu-muted" },
               ].map((item) => (
@@ -361,7 +381,14 @@ export default async function DashboardPage() {
               <Calendar size={14} /> 다가오는 일정
             </h3>
             {eventCount === 0 ? (
-              <p className="text-xs text-nu-muted text-center py-4">예정된 일정이 없습니다</p>
+              <div className="text-center py-4">
+                <Calendar size={22} className="text-nu-muted/30 mx-auto mb-2" />
+                <p className="text-xs text-nu-muted mb-2">예정된 일정이 없습니다</p>
+                <Link href="/groups"
+                  className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-pink hover:underline no-underline">
+                  너트에서 일정 확인하기
+                </Link>
+              </div>
             ) : (
               <div className="space-y-3">
                 {events?.map((evt: any) => (
@@ -403,7 +430,7 @@ export default async function DashboardPage() {
             <div className="space-y-3">
               <div>
                 <div className="flex justify-between items-center mb-1">
-                  <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">소모임 활동</span>
+                  <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">너트 활동</span>
                   <span className="font-head text-sm font-bold text-nu-ink">{groupCount}개</span>
                 </div>
                 <div className="h-1.5 bg-nu-ink/5 overflow-hidden">
@@ -412,7 +439,7 @@ export default async function DashboardPage() {
               </div>
               <div>
                 <div className="flex justify-between items-center mb-1">
-                  <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">프로젝트 참여</span>
+                  <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">볼트 참여</span>
                   <span className="font-head text-sm font-bold text-nu-ink">{projectCount}개</span>
                 </div>
                 <div className="h-1.5 bg-nu-ink/5 overflow-hidden">
@@ -422,18 +449,18 @@ export default async function DashboardPage() {
               <div className="pt-2 border-t border-nu-ink/[0.06]">
                 <div className="flex items-center justify-between">
                   <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">현재 등급</span>
-                  <span className={`inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 border ${gradeInfo.color}`}>
+                  <span className={`inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 border ${gradeInfo.cls}`}>
                     <GradeIcon size={9} /> {gradeInfo.label}
                   </span>
                 </div>
                 {grade === "bronze" && (
-                  <p className="text-[10px] text-nu-muted mt-1.5">소모임에 더 참여하면 실버로 승급됩니다</p>
+                  <p className="text-[10px] text-nu-muted mt-1.5">너트에 더 참여하면 실버로 승급됩니다</p>
                 )}
                 {grade === "silver" && (
-                  <p className="text-[10px] text-nu-muted mt-1.5">프로젝트에 참여하면 골드로 승급 가능합니다</p>
+                  <p className="text-[10px] text-nu-muted mt-1.5">볼트에 참여하면 골드로 승급 가능합니다</p>
                 )}
                 {(grade === "gold" || grade === "vip") && (
-                  <p className="text-[10px] text-green-600 mt-1.5">✓ 소모임과 프로젝트를 개설할 수 있습니다</p>
+                  <p className="text-[10px] text-green-600 mt-1.5">✓ 너트와 볼트를 개설할 수 있습니다</p>
                 )}
               </div>
             </div>

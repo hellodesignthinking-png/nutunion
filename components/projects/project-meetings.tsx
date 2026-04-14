@@ -21,6 +21,7 @@ import {
   Play,
   X,
   Sparkles,
+  CalendarX,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,11 +45,34 @@ interface ProjectMember {
   profile?: { id: string; nickname: string } | null;
 }
 
-const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
-  upcoming: { label: "예정", color: "text-nu-blue", bg: "bg-nu-blue/10" },
-  in_progress: { label: "진행 중", color: "text-nu-amber", bg: "bg-nu-amber/10" },
-  completed: { label: "완료", color: "text-green-600", bg: "bg-green-50" },
-  cancelled: { label: "취소", color: "text-nu-muted", bg: "bg-nu-cream/30" },
+const statusConfig: Record<
+  string,
+  { label: string; color: string; bg: string; borderColor: string }
+> = {
+  upcoming: {
+    label: "예정",
+    color: "text-nu-blue",
+    bg: "bg-nu-blue/10",
+    borderColor: "border-l-nu-blue",
+  },
+  in_progress: {
+    label: "진행 중",
+    color: "text-nu-amber",
+    bg: "bg-nu-amber/10",
+    borderColor: "border-l-nu-amber",
+  },
+  completed: {
+    label: "완료",
+    color: "text-green-600",
+    bg: "bg-green-50",
+    borderColor: "border-l-green-500",
+  },
+  cancelled: {
+    label: "취소",
+    color: "text-nu-muted",
+    bg: "bg-nu-cream/30",
+    borderColor: "border-l-nu-gray",
+  },
 };
 
 export function ProjectMeetings({
@@ -79,12 +103,16 @@ export function ProjectMeetings({
     const [meetingsRes, membersRes] = await Promise.all([
       supabase
         .from("meetings")
-        .select("id, title, description, scheduled_at, duration_min, status, organizer_id, summary, created_at")
+        .select(
+          "id, title, description, scheduled_at, duration_min, status, organizer_id, summary, created_at"
+        )
         .eq("project_id", projectId)
         .order("scheduled_at", { ascending: false }),
       supabase
         .from("project_members")
-        .select("user_id, profile:profiles!project_members_user_id_fkey(id, nickname)")
+        .select(
+          "user_id, profile:profiles!project_members_user_id_fkey(id, nickname)"
+        )
         .eq("project_id", projectId),
     ]);
 
@@ -141,6 +169,14 @@ export function ProjectMeetings({
     setSaving(false);
   }
 
+  function handleCancelForm() {
+    setTitle("");
+    setDescription("");
+    setScheduledAt("");
+    setDurationMin(60);
+    setShowForm(false);
+  }
+
   async function handleStatusChange(meetingId: string, newStatus: string) {
     const supabase = createClient();
     const { error } = await supabase
@@ -156,7 +192,8 @@ export function ProjectMeetings({
   }
 
   async function handleDelete(meetingId: string) {
-    if (!confirm("이 회의를 삭제하시겠습니까? 관련 노트도 함께 삭제됩니다.")) return;
+    if (!confirm("이 회의를 삭제하시겠습니까? 관련 노트도 함께 삭제됩니다."))
+      return;
     const supabase = createClient();
     const { error } = await supabase
       .from("meetings")
@@ -205,8 +242,12 @@ export function ProjectMeetings({
     );
   }
 
-  const upcomingMeetings = meetings.filter((m) => m.status === "upcoming" || m.status === "in_progress");
-  const pastMeetings = meetings.filter((m) => m.status === "completed" || m.status === "cancelled");
+  const upcomingMeetings = meetings.filter(
+    (m) => m.status === "upcoming" || m.status === "in_progress"
+  );
+  const pastMeetings = meetings.filter(
+    (m) => m.status === "completed" || m.status === "cancelled"
+  );
 
   return (
     <div className="space-y-8">
@@ -225,31 +266,51 @@ export function ProjectMeetings({
             onClick={() => setShowForm(!showForm)}
             className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[10px] uppercase tracking-widest"
           >
-            {showForm ? <><X size={12} /> 취소</> : <><Plus size={12} /> 새 회의</>}
+            {showForm ? (
+              <>
+                <X size={12} /> 취소
+              </>
+            ) : (
+              <>
+                <Plus size={12} /> 새 회의
+              </>
+            )}
           </Button>
         )}
       </div>
 
       {/* Create Form */}
       {showForm && (
-        <div className="bg-nu-cream/20 border-2 border-dashed border-nu-ink/10 p-6 space-y-4">
-          <h3 className="font-head text-sm font-bold text-nu-ink">새 회의 생성</h3>
-          <Input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="회의 제목 (예: Sprint Week 3 회의)"
-            className="border-nu-ink/15"
-          />
-          <Textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="회의 설명 (선택)"
-            rows={2}
-            className="border-nu-ink/15 resize-none"
-          />
+        <div className="bg-nu-cream/20 border-[2px] border-dashed border-nu-ink/10 p-6 space-y-5">
+          <h3 className="font-head text-sm font-bold text-nu-ink">
+            새 회의 생성
+          </h3>
+          <div className="space-y-1.5">
+            <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block">
+              회의 제목
+            </label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="예: Sprint Week 3 회의, 디자인 리뷰"
+              className="border-nu-ink/15"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block">
+              회의 설명 (선택)
+            </label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="회의에서 다룰 주제나 안건을 간략히 적어주세요..."
+              rows={2}
+              className="border-nu-ink/15 resize-none"
+            />
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="font-mono-nu text-[10px] text-nu-muted block mb-1">
+            <div className="space-y-1.5">
+              <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block">
                 회의 일시
               </label>
               <Input
@@ -259,8 +320,8 @@ export function ProjectMeetings({
                 className="border-nu-ink/15"
               />
             </div>
-            <div>
-              <label className="font-mono-nu text-[10px] text-nu-muted block mb-1">
+            <div className="space-y-1.5">
+              <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block">
                 소요 시간 (분)
               </label>
               <Input
@@ -269,22 +330,40 @@ export function ProjectMeetings({
                 onChange={(e) => setDurationMin(parseInt(e.target.value) || 60)}
                 min={15}
                 step={15}
+                placeholder="60"
                 className="border-nu-ink/15"
               />
             </div>
           </div>
-          <Button
-            onClick={handleCreate}
-            disabled={saving}
-            className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[10px] uppercase tracking-widest"
-          >
-            {saving ? <><Loader2 size={12} className="animate-spin" /> 생성 중...</> : <><Plus size={12} /> 회의 생성</>}
-          </Button>
+          <div className="flex items-center gap-2 pt-1">
+            <Button
+              onClick={handleCreate}
+              disabled={saving}
+              className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[10px] uppercase tracking-widest"
+            >
+              {saving ? (
+                <>
+                  <Loader2 size={12} className="animate-spin" /> 생성 중...
+                </>
+              ) : (
+                <>
+                  <Plus size={12} /> 회의 생성
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={handleCancelForm}
+              variant="outline"
+              className="font-mono-nu text-[10px] uppercase tracking-widest border-nu-ink/[0.12] text-nu-gray"
+            >
+              <X size={12} /> 취소
+            </Button>
+          </div>
         </div>
       )}
 
       {/* Upcoming Meetings */}
-      {upcomingMeetings.length > 0 && (
+      {upcomingMeetings.length > 0 ? (
         <div>
           <h3 className="font-mono-nu text-[10px] font-black uppercase tracking-widest text-nu-muted mb-4">
             예정된 회의 ({upcomingMeetings.length})
@@ -295,7 +374,9 @@ export function ProjectMeetings({
                 key={meeting.id}
                 meeting={meeting}
                 expanded={expandedId === meeting.id}
-                onToggle={() => setExpandedId(expandedId === meeting.id ? null : meeting.id)}
+                onToggle={() =>
+                  setExpandedId(expandedId === meeting.id ? null : meeting.id)
+                }
                 onStatusChange={handleStatusChange}
                 onDelete={handleDelete}
                 onSaveSummary={handleSaveSummary}
@@ -308,10 +389,28 @@ export function ProjectMeetings({
             ))}
           </div>
         </div>
+      ) : (
+        meetings.length > 0 && (
+          <div className="text-center py-12 border-[2px] border-dashed border-nu-ink/[0.08] bg-nu-cream/10">
+            <Calendar
+              size={36}
+              className="mx-auto text-nu-muted/40 mb-3"
+              strokeWidth={1.5}
+            />
+            <p className="font-head text-sm font-bold text-nu-ink mb-1">
+              예정된 회의가 없습니다
+            </p>
+            {canEdit && (
+              <p className="text-xs text-nu-muted">
+                새 회의를 만들어보세요
+              </p>
+            )}
+          </div>
+        )
       )}
 
       {/* Past Meetings */}
-      {pastMeetings.length > 0 && (
+      {pastMeetings.length > 0 ? (
         <div>
           <h3 className="font-mono-nu text-[10px] font-black uppercase tracking-widest text-nu-muted mb-4">
             지난 회의 ({pastMeetings.length})
@@ -322,7 +421,9 @@ export function ProjectMeetings({
                 key={meeting.id}
                 meeting={meeting}
                 expanded={expandedId === meeting.id}
-                onToggle={() => setExpandedId(expandedId === meeting.id ? null : meeting.id)}
+                onToggle={() =>
+                  setExpandedId(expandedId === meeting.id ? null : meeting.id)
+                }
                 onStatusChange={handleStatusChange}
                 onDelete={handleDelete}
                 onSaveSummary={handleSaveSummary}
@@ -335,17 +436,36 @@ export function ProjectMeetings({
             ))}
           </div>
         </div>
+      ) : (
+        meetings.length > 0 && (
+          <div className="text-center py-10 border-[2px] border-dashed border-nu-ink/[0.08] bg-nu-cream/10">
+            <CalendarX
+              size={32}
+              className="mx-auto text-nu-muted/40 mb-3"
+              strokeWidth={1.5}
+            />
+            <p className="font-head text-sm font-bold text-nu-ink/70">
+              아직 완료된 회의가 없습니다
+            </p>
+          </div>
+        )
       )}
 
-      {/* Empty State */}
+      {/* Global Empty State */}
       {meetings.length === 0 && (
-        <div className="bg-nu-white border-2 border-dashed border-nu-ink/10 p-12 text-center">
-          <FileText size={32} className="mx-auto text-nu-muted mb-3" />
-          <p className="font-head text-sm font-bold text-nu-ink mb-1">아직 회의가 없습니다</p>
+        <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/10 p-12 text-center">
+          <Calendar
+            size={40}
+            className="mx-auto text-nu-muted/40 mb-4"
+            strokeWidth={1.5}
+          />
+          <p className="font-head text-sm font-bold text-nu-ink mb-1">
+            아직 회의가 없습니다
+          </p>
           <p className="text-xs text-nu-muted">
             {canEdit
               ? "첫 회의를 생성하여 팀의 논의를 체계적으로 관리해보세요"
-              : "프로젝트 리더가 회의를 생성하면 여기에 표시됩니다"}
+              : "볼트 리더가 회의를 생성하면 여기에 표시됩니다"}
           </p>
         </div>
       )}
@@ -386,17 +506,30 @@ function MeetingCard({
   const [editingSummary, setEditingSummary] = useState(false);
   const cfg = statusConfig[meeting.status] || statusConfig.upcoming;
   const date = new Date(meeting.scheduled_at);
-  const isPast = date < new Date();
+
+  // Date box colors by status
+  const dateBoxClass =
+    meeting.status === "in_progress"
+      ? "bg-nu-amber/15 border-nu-amber/30"
+      : meeting.status === "completed"
+        ? "bg-green-50 border-green-200"
+        : meeting.status === "cancelled"
+          ? "bg-nu-cream/40 border-nu-ink/[0.08]"
+          : "bg-nu-blue/10 border-nu-blue/20";
 
   return (
-    <div className="bg-nu-white border-[2px] border-nu-ink/[0.08] overflow-hidden">
+    <div
+      className={`bg-nu-white border-[2px] border-nu-ink/[0.08] overflow-hidden border-l-[4px] ${cfg.borderColor}`}
+    >
       {/* Header */}
       <button
         onClick={onToggle}
         className="w-full px-5 py-4 text-left hover:bg-nu-cream/20 transition-colors flex items-center gap-4"
       >
-        <div className="w-12 h-12 bg-nu-cream/50 flex flex-col items-center justify-center shrink-0">
-          <span className="font-head text-base font-extrabold text-nu-ink leading-none">
+        <div
+          className={`w-14 h-14 flex flex-col items-center justify-center shrink-0 border ${dateBoxClass}`}
+        >
+          <span className="font-head text-lg font-extrabold text-nu-ink leading-none">
             {date.getDate()}
           </span>
           <span className="font-mono-nu text-[8px] uppercase text-nu-muted">
@@ -409,18 +542,31 @@ function MeetingCard({
             <p className="font-head text-sm font-bold text-nu-ink truncate">
               {meeting.title}
             </p>
-            <span className={`font-mono-nu text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-sm ${cfg.bg} ${cfg.color}`}>
+            <span
+              className={`font-mono-nu text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-sm border ${cfg.bg} ${cfg.color}`}
+            >
               {cfg.label}
             </span>
           </div>
           <div className="flex items-center gap-3 text-[10px] text-nu-muted">
             <span className="flex items-center gap-1">
               <Clock size={10} />
-              {date.toLocaleTimeString("ko", { hour: "2-digit", minute: "2-digit" })}
+              {date.toLocaleTimeString("ko", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
             </span>
             <span>{meeting.duration_min}분</span>
+            {memberProfiles.length > 0 && (
+              <span className="flex items-center gap-1">
+                <Users size={10} />
+                {memberProfiles.length}명
+              </span>
+            )}
             {meeting.description && (
-              <span className="truncate max-w-[200px]">{meeting.description}</span>
+              <span className="truncate max-w-[200px]">
+                {meeting.description}
+              </span>
             )}
           </div>
         </div>
@@ -441,17 +587,17 @@ function MeetingCard({
               {meeting.status === "upcoming" && (
                 <button
                   onClick={() => onStatusChange(meeting.id, "in_progress")}
-                  className="font-mono-nu text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 bg-nu-amber/10 text-nu-amber border border-nu-amber/20 hover:bg-nu-amber/20 transition-colors flex items-center gap-1"
+                  className="font-mono-nu text-[9px] font-bold uppercase tracking-widest px-4 py-2 bg-amber-100 text-amber-700 border-[2px] border-amber-300 hover:bg-amber-200 transition-colors flex items-center gap-1.5"
                 >
-                  <Play size={10} /> 회의 시작
+                  <Play size={11} fill="currentColor" /> 시작
                 </button>
               )}
               {meeting.status === "in_progress" && (
                 <button
                   onClick={() => onStatusChange(meeting.id, "completed")}
-                  className="font-mono-nu text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 transition-colors flex items-center gap-1"
+                  className="font-mono-nu text-[9px] font-bold uppercase tracking-widest px-4 py-2 bg-green-100 text-green-700 border-[2px] border-green-300 hover:bg-green-200 transition-colors flex items-center gap-1.5"
                 >
-                  <CheckCircle2 size={10} /> 회의 완료
+                  <CheckCircle2 size={11} /> 완료
                 </button>
               )}
               {meeting.status !== "cancelled" && (
@@ -529,7 +675,9 @@ function MeetingCard({
                 {meeting.summary}
               </p>
             ) : (
-              <p className="text-xs text-nu-muted italic">아직 요약이 없습니다</p>
+              <p className="text-xs text-nu-muted italic">
+                아직 요약이 없습니다
+              </p>
             )}
           </div>
 
@@ -545,12 +693,18 @@ function MeetingCard({
               canEdit={canEdit}
               onSaveSummary={async (summary) => {
                 const supabase = createClient();
-                await supabase.from("meetings").update({ summary }).eq("id", meeting.id);
+                await supabase
+                  .from("meetings")
+                  .update({ summary })
+                  .eq("id", meeting.id);
                 onRefresh();
               }}
               onSaveNextTopic={async (topic) => {
                 const supabase = createClient();
-                await supabase.from("meetings").update({ next_topic: topic }).eq("id", meeting.id);
+                await supabase
+                  .from("meetings")
+                  .update({ next_topic: topic })
+                  .eq("id", meeting.id);
               }}
               onAddNote={async (content, type) => {
                 const supabase = createClient();
@@ -561,7 +715,9 @@ function MeetingCard({
                   created_by: userId,
                 };
                 if (type === "action_item") insertData.status = "pending";
-                const { error } = await supabase.from("meeting_notes").insert(insertData);
+                const { error } = await supabase
+                  .from("meeting_notes")
+                  .insert(insertData);
                 if (error) {
                   console.error("meeting_notes insert error:", error);
                   throw new Error(error.message);
@@ -581,7 +737,8 @@ function MeetingCard({
                     }),
                   });
                   const data = await res.json();
-                  if (!res.ok) return { error: data.error || "Google Docs 저장 실패" };
+                  if (!res.ok)
+                    return { error: data.error || "Google Docs 저장 실패" };
                   return { url: data.webViewLink };
                 } catch {
                   return { error: "Google Docs 연결에 실패했습니다" };

@@ -11,7 +11,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id: groupId, pageId } = await params;
   const supabase = await createClient();
   const { data: page } = await supabase.from("wiki_pages").select("title, content, updated_at, topic:wiki_topics(name)").eq("id", pageId).single();
-  if (!page) return { title: "위키 페이지" };
+  if (!page) return { title: "탭 페이지" };
   const desc = (page.content || "").replace(/[#*`\[\]]/g, "").slice(0, 160);
   const topicName = (page as any).topic?.name;
   return {

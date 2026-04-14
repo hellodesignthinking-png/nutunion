@@ -15,21 +15,21 @@ export default async function AdminLayout({
 
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("role, nickname")
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "admin") redirect("/dashboard");
+  if (profileError || !profile || profile.role !== "admin") redirect("/dashboard");
 
   const navItems = [
     { label: "대시보드", href: "/admin" },
     { label: "콘텐츠", href: "/admin/content" },
     { label: "미디어", href: "/admin/media" },
     { label: "회원", href: "/admin/users" },
-    { label: "소모임", href: "/admin/groups" },
-    { label: "프로젝트", href: "/admin/projects" },
+    { label: "너트", href: "/admin/groups" },
+    { label: "볼트", href: "/admin/projects" },
     { label: "의뢰", href: "/admin/proposals" },
   ];
 

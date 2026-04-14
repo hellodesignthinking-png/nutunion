@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -86,7 +87,6 @@ function MiniRadar({ scores }: { scores: number[] }) {
 
 export default function TalentSearchPage() {
   const [talents, setTalents] = useState<Talent[]>([]);
-  const [filtered, setFiltered] = useState<Talent[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [minActivity, setMinActivity] = useState(0);
@@ -178,7 +178,7 @@ export default function TalentSearchPage() {
 
         enriched.push({
           profile_id: p.id,
-          nickname: p.nickname || "멤버",
+          nickname: p.nickname || "와셔",
           avatar_url: p.avatar_url || null,
           skill_tags: p.skill_tags || [],
           tier: uiTier,
@@ -199,7 +199,6 @@ export default function TalentSearchPage() {
 
       enriched.sort((a, b) => b.activity_score - a.activity_score);
       setTalents(enriched);
-      setFiltered(enriched);
       setLoading(false);
     }
     load();
@@ -236,7 +235,7 @@ export default function TalentSearchPage() {
     }
   };
 
-  useEffect(() => {
+  const filtered = useMemo(() => {
     let res = talents.filter((t) => {
       const [planning, , , execution, , collab] = getCompetency(t);
       const searchLower = search.toLowerCase();
@@ -283,7 +282,7 @@ export default function TalentSearchPage() {
       res.sort((a, b) => b.activity_score - a.activity_score);
     }
 
-    setFiltered(res);
+    return res;
   }, [
     search,
     minActivity,
@@ -300,14 +299,14 @@ export default function TalentSearchPage() {
   ]);
 
   // Extract all tags for filter
-  const allTags = Array.from(new Set(talents.flatMap((t) => t.skill_tags || []))).sort();
+  const allTags = useMemo(() => Array.from(new Set(talents.flatMap((t) => t.skill_tags || []))).sort(), [talents]);
 
-  const toggleSection = (section: string) => {
+  const toggleSection = useCallback((section: string) => {
     setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
     }));
-  };
+  }, []);
 
   const resetFilters = () => {
     setSearch("");
@@ -341,7 +340,7 @@ export default function TalentSearchPage() {
       <PageHero 
         category="Talent"
         title="Talent Hunter"
-        description="너트유니온의 데이터로 검증된 인재를 찾아보세요. 활동 지수, 리더십 경험, 역량 배지 등 실무 데이터 기반의 팀 빌딩을 지원합니다."
+        description="너트유니온의 데이터로 검증된 와셔를 찾아보세요. 강성, 리더십 경험, 역량 배지 등 실무 데이터 기반의 팀 빌딩을 지원합니다."
       />
 
       <div className="max-w-7xl mx-auto px-8 py-12">
@@ -351,7 +350,7 @@ export default function TalentSearchPage() {
              <h4 className="font-head text-2xl font-extrabold text-nu-ink mb-1 flex items-center gap-2">
                <Zap size={20} className="text-nu-pink fill-nu-pink" /> TOP TALENT READY
              </h4>
-             <p className="text-nu-gray text-sm font-medium">데이터가 증명하는 최상위 인재들이 실전 투입을 기다리고 있습니다.</p>
+             <p className="text-nu-gray text-sm font-medium">데이터가 증명하는 최상위 와셔들이 실전 투입을 기다리고 있습니다.</p>
            </div>
            <div className="text-center md:text-right shrink-0">
              <p className="font-head text-4xl font-extrabold text-nu-pink">{talents.filter(t => t.activity_score >= 80).length}</p>
@@ -395,7 +394,7 @@ export default function TalentSearchPage() {
         {/* Results Count */}
         <div className="mb-6 pb-4 border-b border-nu-ink/5">
           <p className="font-head text-sm font-bold text-nu-ink">
-            {filtered.length}명의 인재
+            {filtered.length}명의 와셔
           </p>
         </div>
 
@@ -417,7 +416,7 @@ export default function TalentSearchPage() {
             <div className="p-4 border border-t-0 border-nu-ink/5 grid grid-cols-1 lg:grid-cols-4 gap-4">
               <div>
                 <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-2">
-                  활동 지수 ({minActivity}%+)
+                  강성 ({minActivity}%+)
                 </label>
                 <input
                   type="range"
@@ -630,7 +629,7 @@ export default function TalentSearchPage() {
                  <div className="flex items-start gap-4 mb-4">
                     <div className="relative">
                       {talent.avatar_url ? (
-                        <img src={talent.avatar_url} alt="" className="w-16 h-16 rounded-full object-cover border-2 border-nu-cream" />
+                        <Image src={talent.avatar_url} alt={talent.nickname || "프로필"} width={64} height={64} className="rounded-full object-cover border-2 border-nu-cream" />
                       ) : (
                         <div className="w-16 h-16 rounded-full bg-nu-pink text-white flex items-center justify-center font-head text-2xl font-bold">
                           {talent.nickname.charAt(0).toUpperCase()}
@@ -703,7 +702,7 @@ export default function TalentSearchPage() {
       {filtered.length === 0 && (
         <div className="text-center py-20 bg-nu-white border border-nu-ink/[0.08]">
           <Search size={40} className="text-nu-muted mx-auto mb-4" />
-          <p className="text-nu-gray font-medium">일치하는 인재를 찾을 수 없습니다.</p>
+          <p className="text-nu-gray font-medium">일치하는 와셔를 찾을 수 없습니다.</p>
           <p className="text-nu-muted text-sm mt-1">필터를 조정하여 검색 범위를 넓혀보세요.</p>
         </div>
       )}

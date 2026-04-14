@@ -39,12 +39,12 @@ export function ProjectsPreview({ projects }: { projects?: ProjectItem[] }) {
             <h2 className="font-head text-[clamp(36px,5vw,56px)] font-extrabold tracking-tighter text-nu-paper leading-[0.9]">
               진행 중인
               <br />
-              프로젝트
+              볼트
             </h2>
           </div>
           <div className="hidden md:block text-right">
             <p className="text-nu-paper/30 text-sm max-w-xs mb-3">
-              크루들이 함께 만들어가는 프로젝트에 참여해보세요
+              너트들이 함께 만들어가는 볼트에 참여해보세요
             </p>
             <span className="font-mono-nu text-[9px] text-nu-paper/15 tracking-widest uppercase">
               ISSUE {String(new Date().getMonth() + 1).padStart(2, '0')}.{new Date().getFullYear()}
@@ -107,7 +107,7 @@ export function ProjectsPreview({ projects }: { projects?: ProjectItem[] }) {
             href="/projects"
             className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-paper/50 hover:text-nu-pink no-underline transition-colors border-[2px] border-nu-paper/20 px-6 py-3 hover:border-nu-pink inline-block"
           >
-            모든 프로젝트 보기 &rarr;
+            모든 볼트 보기 &rarr;
           </Link>
         </div>
       </div>

@@ -380,10 +380,10 @@ export default function ProfilePage() {
           {/* 활동 요약 pills */}
           <div className="flex flex-wrap items-center gap-3 mt-4">
             <span className="flex items-center gap-1.5 font-mono-nu text-[10px] bg-nu-cream/50 px-3 py-1.5 border border-nu-ink/5">
-              <Layers size={12} className="text-nu-pink" /> <b>{crews.length}</b> 소모임
+              <Layers size={12} className="text-nu-pink" /> <b>{crews.length}</b> 너트
             </span>
             <span className="flex items-center gap-1.5 font-mono-nu text-[10px] bg-nu-cream/50 px-3 py-1.5 border border-nu-ink/5">
-              <Briefcase size={12} className="text-nu-blue" /> <b>{projects.length}</b> 프로젝트
+              <Briefcase size={12} className="text-nu-blue" /> <b>{projects.length}</b> 볼트
             </span>
             <span className="flex items-center gap-1.5 font-mono-nu text-[10px] bg-nu-ink text-nu-paper px-3 py-1.5">
               <Award size={12} className="text-nu-pink" /> <b>{profile.points || 0}</b> NUT Pts
@@ -561,15 +561,15 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* ── 오른쪽 메인: 아카이브 + 크루 + 프로젝트 ──────────── */}
+        {/* ── 오른쪽 메인: 아카이브 + 너트 + 볼트 ──────────── */}
         <div className="lg:col-span-2 space-y-5">
 
           {/* 탭 */}
           <div className="flex border-b border-nu-ink/[0.08]">
             {[
               { key: "archive",  label: "활동 아카이브", icon: Archive },
-              { key: "crews",    label: `소모임 (${crews.length})`,   icon: Users },
-              { key: "projects", label: `프로젝트 (${projects.length})`, icon: Briefcase },
+              { key: "crews",    label: `너트 (${crews.length})`,   icon: Users },
+              { key: "projects", label: `볼트 (${projects.length})`, icon: Briefcase },
               { key: "badges",   label: "뱃지·보증", icon: Award },
               { key: "portfolios", label: `포트폴리오 (${portfolios.length})`, icon: Layers },
               { key: "history",  label: "포인트 내역", icon: DollarSign },
@@ -588,7 +588,7 @@ export default function ProfilePage() {
                 <div className="bg-nu-white border border-nu-ink/[0.08] p-10 text-center">
                   <Archive size={32} className="text-nu-muted/30 mx-auto mb-3" />
                   <p className="text-nu-gray text-sm">아직 활동 기록이 없습니다</p>
-                  <p className="text-nu-muted text-xs mt-1">소모임에서 글을 쓰거나 자료를 등록하면 여기에 쌓입니다</p>
+                  <p className="text-nu-muted text-xs mt-1">너트에서 글을 쓰거나 자료를 등록하면 여기에 쌓입니다</p>
                 </div>
               ) : (
                 <div className="bg-nu-white border border-nu-ink/[0.08]">
@@ -632,15 +632,15 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* ── 소모임 탭 ─────────────────────────────────────── */}
+          {/* ── 너트 탭 ─────────────────────────────────────── */}
           {tab === "crews" && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {crews.length === 0 ? (
                 <div className="col-span-2 bg-nu-white border border-nu-ink/[0.08] p-10 text-center">
                   <Users size={32} className="text-nu-muted/30 mx-auto mb-3" />
-                  <p className="text-nu-gray text-sm">참여 중인 소모임이 없습니다</p>
+                  <p className="text-nu-gray text-sm">참여 중인 너트가 없습니다</p>
                   <Link href="/groups" className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-blue hover:underline mt-2 block">
-                    소모임 찾아보기
+                    너트 찾아보기
                   </Link>
                 </div>
               ) : crews.map((c: any, i) => {
@@ -668,15 +668,15 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* ── 프로젝트 탭 ───────────────────────────────────── */}
+          {/* ── 볼트 탭 ───────────────────────────────────── */}
           {tab === "projects" && (
             <div className="space-y-3">
               {projects.length === 0 ? (
                 <div className="bg-nu-white border border-nu-ink/[0.08] p-10 text-center">
                   <Briefcase size={32} className="text-nu-muted/30 mx-auto mb-3" />
-                  <p className="text-nu-gray text-sm">참여 중인 프로젝트가 없습니다</p>
+                  <p className="text-nu-gray text-sm">참여 중인 볼트가 없습니다</p>
                   <Link href="/projects" className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-blue hover:underline mt-2 block">
-                    프로젝트 찾아보기
+                    볼트 찾아보기
                   </Link>
                 </div>
               ) : projects.map((p: any, i) => {
@@ -725,7 +725,7 @@ export default function ProfilePage() {
               {portfolios.length > 0 && (
                 <div>
                   <h3 className="font-head text-sm font-bold uppercase tracking-tight text-nu-ink mb-4 pb-3 border-b-2 border-nu-ink">
-                    프로젝트 포트폴리오
+                    볼트 포트폴리오
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {portfolios.map(p => (

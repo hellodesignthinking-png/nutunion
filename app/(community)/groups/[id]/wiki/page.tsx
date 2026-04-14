@@ -181,7 +181,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
           <div className="flex items-center gap-2 font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest mb-6">
             <Link href={`/groups/${id}`} className="hover:text-nu-ink no-underline transition-colors">{group.name}</Link>
             <ChevronRight size={12} />
-            <span className="text-nu-ink font-bold">성장하는 소셜링</span>
+            <span className="text-nu-ink font-bold">탭</span>
           </div>
 
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-10">
@@ -195,7 +195,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                     Living Wiki
                   </h1>
                   <p className="font-mono-nu text-[10px] text-nu-pink uppercase tracking-[0.3em] font-bold">
-                    Intelligent Knowledge Base
+                    지식의 나사산을 새기는 공간
                   </p>
                 </div>
               </div>
@@ -240,7 +240,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
               <GitBranch size={24} className="text-nu-blue" /> 지식 그래프 (Knowledge Graph)
             </h2>
             <span className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest bg-nu-cream px-3 py-1 border border-nu-ink/10">
-              Interactive · Drag to explore
+              인터랙티브 · 드래그하여 탐색
             </span>
           </div>
           <KnowledgeGraph groupId={id} />
@@ -265,7 +265,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
             {/* Topic Explorer */}
             <section>
               <h2 className="font-head text-2xl font-extrabold text-nu-ink mb-6 flex items-center gap-3">
-                <Brain size={24} className="text-nu-pink" /> 주제별 위키 (Topic Wiki)
+                <Brain size={24} className="text-nu-pink" /> 주제별 탭 (Topic Tap)
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -296,7 +296,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                       </div>
                       <div className="mt-4 flex items-center justify-between border-t border-nu-ink/5 pt-4 relative z-10">
                         <span className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">
-                          Explore Wiki
+                          탭 탐색
                         </span>
                         <ArrowRight size={14} className="text-nu-ink group-hover:translate-x-1 transition-transform" />
                       </div>
@@ -306,7 +306,13 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                   <div className="col-span-2 border-[2px] border-dashed border-nu-ink/15 p-16 text-center bg-white/50">
                     <Brain size={40} className="mx-auto mb-4 text-nu-ink/15" />
                     <p className="text-nu-muted text-sm font-medium mb-2">아직 등록된 주제가 없습니다.</p>
-                    <p className="text-xs text-nu-muted">위의 '새 주제' 버튼으로 첫 번째 지식 주제를 생성하세요.</p>
+                    <p className="text-xs text-nu-muted mb-4">첫 번째 지식 주제를 생성하여 탭을 시작하세요.</p>
+                    <Link
+                      href={`/groups/${id}/wiki?create=topic`}
+                      className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-2.5 bg-nu-pink text-white hover:bg-nu-ink transition-colors inline-flex items-center gap-1.5 no-underline"
+                    >
+                      <Plus size={12} /> 새 주제 만들기
+                    </Link>
                   </div>
                 )}
               </div>
@@ -321,7 +327,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                     <History size={20} className="text-nu-pink" /> 최근 지식 동기화
                   </h2>
                   <span className="font-mono-nu text-[9px] text-white/30 uppercase tracking-widest">
-                    Live Feed
+                    실시간 피드
                   </span>
                 </div>
 
@@ -386,13 +392,13 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
           <div className="lg:col-span-4 space-y-12">
 
             {/* Activity Feed */}
-            {activityFeed.length > 0 && (
-              <section className="bg-white border-[2px] border-nu-ink/[0.08]">
-                <div className="p-4 border-b border-nu-ink/5">
-                  <h3 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
-                    <Sparkles size={14} className="text-nu-pink" /> 최근 활동 피드
-                  </h3>
-                </div>
+            <section className="bg-white border-[2px] border-nu-ink/[0.08]">
+              <div className="p-4 border-b border-nu-ink/5">
+                <h3 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
+                  <Sparkles size={14} className="text-nu-pink" /> 최근 활동 피드
+                </h3>
+              </div>
+              {activityFeed.length > 0 ? (
                 <div className="divide-y divide-nu-ink/5">
                   {activityFeed.map((a: any, i: number) => (
                     <div key={i} className="px-4 py-3 hover:bg-nu-cream/20 transition-colors">
@@ -416,13 +422,17 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                     </div>
                   ))}
                 </div>
-              </section>
-            )}
+              ) : (
+                <div className="p-6 text-center">
+                  <p className="font-mono-nu text-[10px] text-nu-muted">최근 활동이 없습니다</p>
+                </div>
+              )}
+            </section>
 
             {/* Knowledge Champions */}
             <section>
               <h2 className="font-head text-lg font-extrabold text-nu-ink mb-6 flex items-center gap-2">
-                <Trophy size={18} className="text-yellow-500" /> Knowledge Champions
+                <Trophy size={18} className="text-yellow-500" /> 지식 챔피언
               </h2>
               <ContributionLeaderboard groupId={id} />
             </section>
@@ -430,7 +440,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
             {/* Human Capital */}
             <section>
               <h2 className="font-head text-lg font-extrabold text-nu-ink mb-6 flex items-center gap-2">
-                <Users size={18} className="text-nu-pink" /> Human Capital
+                <Users size={18} className="text-nu-pink" /> 인적 자원
               </h2>
               <HumanCapitalVisual groupId={id} />
             </section>
@@ -438,7 +448,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
             {/* Wiki Strategy */}
             <section className="bg-nu-cream p-6 border-[2px] border-nu-ink">
               <h3 className="font-mono-nu text-[11px] font-bold text-nu-ink uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                <Sparkles size={14} className="text-nu-pink" /> Growth Protocol
+                <Sparkles size={14} className="text-nu-pink" /> 성장 프로토콜
               </h3>
               <ul className="space-y-4 font-mono-nu text-[10px] text-nu-muted leading-relaxed">
                 <li className="flex gap-3">
@@ -452,7 +462,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                   <span className="w-6 h-6 bg-nu-blue text-white flex items-center justify-center shrink-0 font-bold text-[9px]">02</span>
                   <div>
                     <span className="text-nu-ink font-bold block mb-0.5">Structure → Connect</span>
-                    추출된 지식을 위키에 구조화하고 서로 연결합니다.
+                    추출된 지식을 탭에 구조화하고 서로 연결합니다.
                   </div>
                 </li>
                 <li className="flex gap-3">
@@ -468,7 +478,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
             {/* Quick Stats */}
             <section className="bg-nu-ink text-white p-6 border-[2px] border-nu-ink">
               <h3 className="font-mono-nu text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 mb-4 flex items-center gap-2">
-                <Target size={14} className="text-nu-pink" /> Knowledge Metrics
+                <Target size={14} className="text-nu-pink" /> 지식 지표
               </h3>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">

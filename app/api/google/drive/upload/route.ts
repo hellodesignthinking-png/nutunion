@@ -28,6 +28,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "파일 크기는 50MB 이하여야 합니다" }, { status: 400 });
     }
 
+    // MIME type whitelist
+    const ALLOWED_TYPES = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "application/vnd.google-apps.document",
+      "application/vnd.google-apps.spreadsheet",
+      "application/vnd.google-apps.presentation",
+      "text/plain",
+      "text/csv",
+      "text/markdown",
+      "image/png",
+      "image/jpeg",
+      "image/gif",
+      "image/webp",
+      "image/svg+xml",
+      "video/mp4",
+      "video/webm",
+      "audio/mpeg",
+      "audio/wav",
+    ];
+    if (file.type && !ALLOWED_TYPES.includes(file.type)) {
+      return NextResponse.json({ error: "허용되지 않는 파일 형식입니다" }, { status: 400 });
+    }
+
     const auth = await getGoogleClient(userId);
     const drive = google.drive({ version: "v3", auth });
 
@@ -140,7 +166,7 @@ export async function POST(req: NextRequest) {
     }
     console.error("Drive upload error:", err);
     return NextResponse.json(
-      { error: "파일 업로드 실패: " + (err.message || "알 수 없는 오류") },
+      { error: "파일 업로드 실패" },
       { status: 500 }
     );
   }

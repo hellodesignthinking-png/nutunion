@@ -11,14 +11,17 @@ export async function GET(req: NextRequest) {
     const auth = await getGoogleClient(userId);
     const calendar = google.calendar({ version: "v3", auth });
 
-    const daysAhead = parseInt(req.nextUrl.searchParams.get("days") || "30");
+    const daysAhead = parseInt(req.nextUrl.searchParams.get("lookahead") || req.nextUrl.searchParams.get("days") || "30") || 30;
+    const lookback = parseInt(req.nextUrl.searchParams.get("lookback") || "0") || 0;
     const now = new Date();
+    const start = new Date(now);
+    start.setDate(now.getDate() - lookback);
     const future = new Date(now);
     future.setDate(now.getDate() + daysAhead);
 
     const res = await calendar.events.list({
       calendarId: "primary",
-      timeMin: now.toISOString(),
+      timeMin: start.toISOString(),
       timeMax: future.toISOString(),
       singleEvents: true,
       orderBy: "startTime",

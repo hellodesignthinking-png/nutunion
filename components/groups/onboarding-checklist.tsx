@@ -87,7 +87,7 @@ export function OnboardingChecklist({
             <span className="w-5 h-5 flex items-center justify-center text-xs font-black bg-nu-pink/20 text-nu-pink rounded-full">
               ✓
             </span>
-            소모임 시작하기
+            너트 시작하기
           </h3>
           <p className="text-[11px] text-nu-muted mt-1">
             팀을 준비하기 위한 필수 단계들입니다

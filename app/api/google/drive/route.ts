@@ -10,16 +10,30 @@ export async function GET(req: NextRequest) {
     const auth = await getGoogleClient(userId);
     const drive = google.drive({ version: "v3", auth });
 
+    const fileId = req.nextUrl.searchParams.get("fileId");
+
+    // Single file lookup
+    if (fileId) {
+      const fileRes = await drive.files.get({
+        fileId,
+        fields: "id, name, mimeType, webViewLink, iconLink, thumbnailLink, modifiedTime, size, parents",
+      });
+      return NextResponse.json({ file: fileRes.data });
+    }
+
     const q = req.nextUrl.searchParams.get("q") || "";
     const folderId = req.nextUrl.searchParams.get("folderId");
     const pageToken = req.nextUrl.searchParams.get("pageToken") || undefined;
 
+    // Escape user input to prevent query injection
+    const escQ = (s: string) => s.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+
     // Build query
     let query = "trashed = false";
     if (folderId) {
-      query = `'${folderId}' in parents and trashed = false`;
+      query = `'${escQ(folderId)}' in parents and trashed = false`;
     } else if (q) {
-      query = `name contains '${q}' and trashed = false`;
+      query = `name contains '${escQ(q)}' and trashed = false`;
     }
 
     const res = await drive.files.list({

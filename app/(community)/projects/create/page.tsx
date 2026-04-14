@@ -47,7 +47,7 @@ const PROJECT_TEMPLATES: Record<string, ProjectTemplateInfo> = {
     title: "Local Branding",
     subtitle: "로컬 브랜딩 / 로컬 브랜딩",
     description:
-      "시장조사부터 런칭까지 로컬 비즈니스의 브랜드 아이덴티티를 개발하는 프로젝트 템플릿입니다. 시장조사, 로고 및 아이덴티티 디자인, 공간 연출 및 제작, 런칭 및 홍보까지 전체 브랜딩 프로세스를 체계적으로 관리할 수 있습니다.",
+      "시장조사부터 런칭까지 로컬 비즈니스의 브랜드 아이덴티티를 개발하는 볼트 템플릿입니다. 시장조사, 로고 및 아이덴티티 디자인, 공간 연출 및 제작, 런칭 및 홍보까지 전체 브랜딩 프로세스를 체계적으로 관리할 수 있습니다.",
     gradient: "from-[#0047FF] via-[#0033CC] to-[#001A66]",
     accent: "#0047FF",
     defaultCategory: "space",
@@ -83,7 +83,7 @@ const PROJECT_TEMPLATES: Record<string, ProjectTemplateInfo> = {
     title: "Pop-up Store",
     subtitle: "팝업스토어 / 팝업스토어",
     description:
-      "공간 섭외부터 정산까지 팝업스토어 프로젝트의 전 과정을 관리하는 템플릿입니다. 임시 공간 기반 비즈니스 운영에 필요한 모든 요소를 포함하며, 공간 섭외, 비주얼 가이드 제작, 스태프 교육부터 운영 및 정산까지 관리합니다.",
+      "공간 섭외부터 정산까지 팝업스토어 볼트의 전 과정을 관리하는 템플릿입니다. 임시 공간 기반 비즈니스 운영에 필요한 모든 요소를 포함하며, 공간 섭외, 비주얼 가이드 제작, 스태프 교육부터 운영 및 정산까지 관리합니다.",
     gradient: "from-[#FF8C00] via-[#CC6600] to-[#663300]",
     accent: "#FF8C00",
     defaultCategory: "space",
@@ -138,7 +138,7 @@ export default function ProjectCreatePage() {
         profile?.grade === "vip";
 
       if (!canCreate) {
-        toast.error("프로젝트를 개설하려면 골드 등급 이상이 필요합니다");
+        toast.error("볼트를 개설하려면 골드 등급 이상이 필요합니다");
         router.push("/projects");
         return;
       }
@@ -159,7 +159,7 @@ export default function ProjectCreatePage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) {
-      toast.error("프로젝트 제목을 입력해주세요");
+      toast.error("볼트 제목을 입력해주세요");
       return;
     }
 
@@ -227,20 +227,18 @@ export default function ProjectCreatePage() {
           await seedProjectTemplate(project.id, templateKey as any, user.id);
         } catch (error) {
           console.error("Template seeding error:", error);
-          toast.error("템플릿 데이터 생성 중 오류가 발생했습니다.");
-          setLoading(false);
-          return;
+          toast.error("템플릿 데이터 일부 생성에 실패했지만 볼트는 생성되었습니다.");
         }
       }
 
       toast.success(
         template
-          ? `${template.title} 템플릿으로 프로젝트가 생성되었습니다!`
-          : "프로젝트가 생성되었습니다!"
+          ? `${template.title} 템플릿으로 볼트가 생성되었습니다!`
+          : "볼트가 생성되었습니다!"
       );
       router.push(`/projects/${project.id}`);
     } catch (err: any) {
-      toast.error(err.message || "프로젝트 생성 실패");
+      toast.error(err.message || "볼트 생성 실패");
     } finally {
       setLoading(false);
     }
@@ -279,7 +277,7 @@ export default function ProjectCreatePage() {
               className="inline-flex items-center gap-1.5 font-mono-nu text-[10px] uppercase tracking-widest text-white/50 hover:text-white/80 transition-colors no-underline mb-8"
             >
               <ArrowLeft size={12} />
-              프로젝트 탐색
+              볼트 탐색
             </Link>
 
             <div className="flex items-center gap-2 mb-5">
@@ -289,7 +287,7 @@ export default function ProjectCreatePage() {
               </span>
               <ChevronRight size={12} className="text-white/30" />
               <span className="font-mono-nu text-[8px] font-black uppercase tracking-[0.2em] text-white/50">
-                새 프로젝트 만들기
+                새 볼트 만들기
               </span>
             </div>
 
@@ -327,7 +325,7 @@ export default function ProjectCreatePage() {
             <div className="lg:col-span-3">
               <div className="bg-nu-white border-2 border-nu-ink/[0.06] p-8">
                 <h2 className="font-head text-lg font-bold text-nu-ink mb-1">
-                  프로젝트 정보 입력
+                  볼트 정보 입력
                 </h2>
                 <p className="text-[11px] text-nu-muted mb-6">
                   템플릿 구조가 자동 적용됩니다. 기본 정보만 입력하세요.
@@ -336,7 +334,7 @@ export default function ProjectCreatePage() {
                 <form onSubmit={handleSubmit} className="flex flex-col gap-5">
                   <div>
                     <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray mb-1.5">
-                      프로젝트 제목 *
+                      볼트 제목 *
                     </label>
                     <input
                       type="text"
@@ -372,7 +370,7 @@ export default function ProjectCreatePage() {
                     <textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      placeholder="프로젝트에 대해 소개해주세요"
+                      placeholder="볼트에 대해 소개해주세요"
                       rows={4}
                       defaultValue={template.description}
                       className="w-full px-4 py-3 border border-nu-ink/15 bg-transparent text-sm focus:outline-none focus:border-nu-pink transition-colors resize-none"
@@ -456,7 +454,7 @@ export default function ProjectCreatePage() {
                       <span className="relative z-10">
                         {loading
                           ? "생성 중..."
-                          : "템플릿으로 프로젝트 만들기"}
+                          : "템플릿으로 볼트 만들기"}
                       </span>
                     </button>
                     <button
@@ -529,7 +527,7 @@ export default function ProjectCreatePage() {
                       </p>
                     </div>
                     <p className="text-[10px] text-white/35 leading-relaxed">
-                      프로젝트 생성 시 위 기능들이 자동으로 구성됩니다.
+                      볼트 생성 시 위 기능들이 자동으로 구성됩니다.
                       별도의 설정 없이 바로 운영을 시작할 수 있습니다.
                     </p>
                   </div>
@@ -546,23 +544,23 @@ export default function ProjectCreatePage() {
   return (
     <div className="max-w-2xl mx-auto px-8 py-12">
       <h1 className="font-head text-3xl font-extrabold text-nu-ink mb-2">
-        새 프로젝트 만들기
+        새 볼트 만들기
       </h1>
       <p className="text-nu-gray text-sm mb-8">
-        크루와 멤버들이 함께할 프로젝트를 시작하세요
+        너트들이 함께할 볼트를 시작하세요
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Title */}
         <div>
           <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">
-            프로젝트 제목 *
+            볼트 제목 *
           </label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="프로젝트 이름을 입력하세요"
+            placeholder="볼트 이름을 입력하세요"
             className="w-full px-4 py-3 bg-nu-white border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink transition-colors"
             required
           />
@@ -594,7 +592,7 @@ export default function ProjectCreatePage() {
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="프로젝트에 대한 설명을 입력하세요"
+            placeholder="볼트에 대한 설명을 입력하세요"
             rows={4}
             className="w-full px-4 py-3 bg-nu-white border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink transition-colors resize-none"
           />
@@ -678,7 +676,7 @@ export default function ProjectCreatePage() {
               <Loader2 size={14} className="animate-spin" /> 생성 중...
             </>
           ) : (
-            "프로젝트 만들기"
+            "볼트 만들기"
           )}
         </button>
       </form>

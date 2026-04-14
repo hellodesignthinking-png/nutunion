@@ -13,12 +13,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { topicId } = await params;
   const supabase = await createClient();
   const { data: topic } = await supabase.from("wiki_topics").select("name, description").eq("id", topicId).single();
-  if (!topic) return { title: "위키 토픽" };
+  if (!topic) return { title: "탭 토픽" };
   const { count } = await supabase.from("wiki_pages").select("id", { count: "exact", head: true }).eq("topic_id", topicId);
   return {
     title: `${topic.name} | Wiki`,
     description: topic.description || `${topic.name} — ${count || 0}개 문서`,
-    openGraph: { title: topic.name, description: topic.description || `${count || 0}개 문서가 있는 위키 토픽` },
+    openGraph: { title: topic.name, description: topic.description || `${count || 0}개 문서가 있는 탭 토픽` },
   };
 }
 

@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     .eq("topic_id", topicId);
 
   if (!pageCount || pageCount === 0) {
-    return NextResponse.json({ error: "공개하려면 최소 1개 이상의 위키 페이지가 필요합니다" }, { status: 400 });
+    return NextResponse.json({ error: "공개하려면 최소 1개 이상의 탭 페이지가 필요합니다" }, { status: 400 });
   }
 
   const slug = generateSlug(topic.name);
@@ -78,6 +78,28 @@ export async function DELETE(request: NextRequest) {
 
   const { topicId } = await request.json();
   if (!topicId) return NextResponse.json({ error: "topicId 필요" }, { status: 400 });
+
+  // Verify user is host of the group
+  const { data: topic } = await supabase
+    .from("wiki_topics")
+    .select("id, group_id")
+    .eq("id", topicId)
+    .single();
+
+  if (!topic) return NextResponse.json({ error: "토픽을 찾을 수 없습니다" }, { status: 404 });
+
+  const { data: group } = await supabase
+    .from("groups")
+    .select("host_id")
+    .eq("id", topic.group_id)
+    .single();
+
+  if (!group || group.host_id !== user.id) {
+    const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+    if (profile?.role !== "admin") {
+      return NextResponse.json({ error: "호스트만 비공개할 수 있습니다" }, { status: 403 });
+    }
+  }
 
   const { error } = await supabase
     .from("wiki_topics")

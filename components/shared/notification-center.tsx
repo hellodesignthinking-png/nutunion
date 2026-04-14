@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import {
@@ -38,12 +38,12 @@ interface Notification {
   };
 }
 
-type NotificationCategory = "전체" | "프로젝트" | "소모임" | "정산" | "시스템";
+type NotificationCategory = "전체" | "볼트" | "너트" | "정산" | "시스템";
 
 const categoryMap: Record<NotificationCategory, string> = {
   "전체": "all",
-  "프로젝트": "project",
-  "소모임": "group",
+  "볼트": "project",
+  "너트": "group",
   "정산": "settlement",
   "시스템": "system",
 };
@@ -245,13 +245,45 @@ export function NotificationCenter() {
   }, [userId, supabase]);
 
   // Filter notifications
-  const filteredNotifications = notifications.filter((n) => {
-    if (selectedCategory === "전체") return true;
-    const categoryKey = categoryMap[selectedCategory];
-    return n.category === categoryKey;
-  });
+  const filteredNotifications = useMemo(
+    () =>
+      notifications.filter((n) => {
+        if (selectedCategory === "전체") return true;
+        const categoryKey = categoryMap[selectedCategory];
+        return n.category === categoryKey;
+      }),
+    [notifications, selectedCategory]
+  );
 
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const unreadCount = useMemo(
+    () => notifications.filter((n) => !n.is_read).length,
+    [notifications]
+  );
+
+  // Group notifications by time period
+  const groupedNotifications = useMemo(() => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterdayStart = new Date(todayStart.getTime() - 86400000);
+
+    const groups: { label: string; items: Notification[] }[] = [];
+    const today: Notification[] = [];
+    const yesterday: Notification[] = [];
+    const older: Notification[] = [];
+
+    for (const n of filteredNotifications) {
+      const created = new Date(n.created_at);
+      if (created >= todayStart) today.push(n);
+      else if (created >= yesterdayStart) yesterday.push(n);
+      else older.push(n);
+    }
+
+    if (today.length > 0) groups.push({ label: "오늘", items: today });
+    if (yesterday.length > 0) groups.push({ label: "어제", items: yesterday });
+    if (older.length > 0) groups.push({ label: "이전", items: older });
+
+    return groups;
+  }, [filteredNotifications]);
 
   // Close panel on outside click
   useEffect(() => {
@@ -275,8 +307,9 @@ export function NotificationCenter() {
       {/* Bell Button */}
       <button
         onClick={() => setOpen(!open)}
-        className="relative p-2 hover:bg-nu-ink/5 rounded-lg transition-colors"
-        aria-label="알림 센터"
+        className="relative p-2 hover:bg-nu-ink/5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-nu-pink focus-visible:ring-offset-2"
+        aria-label={`알림 센터${unreadCount > 0 ? ` — 읽지 않은 알림 ${unreadCount}개` : ""}`}
+        aria-expanded={open}
       >
         <Bell size={20} className="text-nu-ink" />
         {unreadCount > 0 && (
@@ -298,7 +331,8 @@ export function NotificationCenter() {
             </h2>
             <button
               onClick={handleMarkAllAsRead}
-              className="text-[11px] font-mono-nu font-bold text-nu-blue hover:text-nu-ink transition-colors"
+              className="text-[11px] font-mono-nu font-bold text-nu-blue hover:text-nu-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-nu-blue focus-visible:ring-offset-1"
+              aria-label="모든 알림을 읽음으로 표시"
             >
               모두 읽음
             </button>
@@ -306,7 +340,7 @@ export function NotificationCenter() {
 
           {/* Category Filter */}
           <div className="flex gap-2 px-4 py-3 border-b border-nu-ink/10 overflow-x-auto">
-            {(["전체", "프로젝트", "소모임", "정산", "시스템"] as NotificationCategory[]).map(
+            {(["전체", "볼트", "너트", "정산", "시스템"] as NotificationCategory[]).map(
               (cat) => (
                 <button
                   key={cat}
@@ -333,70 +367,83 @@ export function NotificationCenter() {
                 <Loader2 size={20} className="animate-spin text-nu-blue" />
               </div>
             ) : filteredNotifications.length === 0 ? (
-              <div className="flex items-center justify-center py-12 text-nu-muted">
+              <div className="flex flex-col items-center justify-center py-12 text-nu-muted">
+                <Bell size={24} className="text-nu-muted/20 mb-2" />
                 <p className="text-sm">새로운 알림이 없습니다</p>
               </div>
             ) : (
-              <div className="divide-y divide-nu-ink/5">
-                {filteredNotifications.map((notification) => {
-                  const IconComponent = getIconComponent(notification.type);
-                  const iconColor = getTypeColor(notification.type);
+              <div>
+                {groupedNotifications.map((group) => (
+                  <div key={group.label}>
+                    <div className="sticky top-0 z-10 px-4 py-1.5 bg-nu-cream/60 backdrop-blur-sm border-b border-nu-ink/5">
+                      <span className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-muted">
+                        {group.label}
+                      </span>
+                    </div>
+                    <div className="divide-y divide-nu-ink/5">
+                      {group.items.map((notification) => {
+                        const IconComponent = getIconComponent(notification.type);
+                        const iconColor = getTypeColor(notification.type);
 
-                  return (
-                    <button
-                      key={notification.id}
-                      onClick={() =>
-                        handleMarkAsRead(
-                          notification.id,
-                          notification.link_url
-                        )
-                      }
-                      className={`w-full px-4 py-3 text-left hover:bg-nu-ink/5 transition-colors ${
-                        !notification.is_read
-                          ? "bg-nu-pink/5"
-                          : ""
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        {/* Actor Avatar or Icon */}
-                        {notification.actor?.avatar_url ? (
-                          <img
-                            src={notification.actor.avatar_url}
-                            alt={notification.actor.full_name || ""}
-                            className="w-8 h-8 rounded-full flex-shrink-0 object-cover"
-                          />
-                        ) : (
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-nu-ink/10`}>
-                            <IconComponent
-                              size={16}
-                              className={iconColor}
-                            />
-                          </div>
-                        )}
+                        return (
+                          <button
+                            key={notification.id}
+                            onClick={() =>
+                              handleMarkAsRead(
+                                notification.id,
+                                notification.link_url
+                              )
+                            }
+                            aria-label={`${notification.title}${!notification.is_read ? " — 읽지 않음" : ""}`}
+                            className={`w-full px-4 py-3 text-left hover:bg-nu-ink/5 transition-colors ${
+                              !notification.is_read
+                                ? "bg-nu-pink/5"
+                                : ""
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              {/* Actor Avatar or Icon */}
+                              {notification.actor?.avatar_url ? (
+                                <img
+                                  src={notification.actor.avatar_url}
+                                  alt={notification.actor.full_name || ""}
+                                  className="w-8 h-8 rounded-full flex-shrink-0 object-cover"
+                                />
+                              ) : (
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-nu-ink/10`}>
+                                  <IconComponent
+                                    size={16}
+                                    className={iconColor}
+                                  />
+                                </div>
+                              )}
 
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="font-head text-sm font-bold text-nu-ink truncate">
-                              {notification.title}
-                            </p>
-                            {!notification.is_read && (
-                              <div className="w-2 h-2 rounded-full bg-nu-pink flex-shrink-0 mt-2" />
-                            )}
-                          </div>
-                          {notification.body && (
-                            <p className="text-xs text-nu-muted mt-1 line-clamp-2">
-                              {notification.body}
-                            </p>
-                          )}
-                          <p className="font-mono-nu text-[9px] text-nu-muted/60 mt-1.5">
-                            {timeAgo(notification.created_at)}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
+                              {/* Content */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="font-head text-sm font-bold text-nu-ink truncate">
+                                    {notification.title}
+                                  </p>
+                                  {!notification.is_read && (
+                                    <div className="w-2 h-2 rounded-full bg-nu-pink flex-shrink-0 mt-2" />
+                                  )}
+                                </div>
+                                {notification.body && (
+                                  <p className="text-xs text-nu-muted mt-1 line-clamp-2">
+                                    {notification.body}
+                                  </p>
+                                )}
+                                <p className="font-mono-nu text-[9px] text-nu-muted/60 mt-1.5">
+                                  {timeAgo(notification.created_at)}
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>

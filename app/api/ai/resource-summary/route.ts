@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { rateLimit } from "@/lib/rate-limit";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = "gemini-2.5-flash";
@@ -15,16 +16,27 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "로그인 필요" }, { status: 401 });
 
+  const { success } = rateLimit(`ai:${user.id}`, 20, 60_000);
+  if (!success) {
+    return NextResponse.json({ error: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." }, { status: 429 });
+  }
+
   const { resourceId } = await request.json();
   if (!resourceId) return NextResponse.json({ error: "resourceId 필요" }, { status: 400 });
 
-  const { data: resource } = await supabase
-    .from("wiki_weekly_resources")
-    .select("id, title, url, resource_type, description")
-    .eq("id", resourceId)
-    .single();
+  let resource: any = null;
+  try {
+    const { data } = await supabase
+      .from("wiki_weekly_resources")
+      .select("id, title, url, resource_type, description")
+      .eq("id", resourceId)
+      .single();
+    resource = data;
+  } catch {
+    // Table may not exist if migration 028 not run
+  }
 
-  if (!resource) return NextResponse.json({ error: "리소스를 찾을 수 없습니다" }, { status: 404 });
+  if (!resource) return NextResponse.json({ error: "리소스를 찾을 수 없습니��" }, { status: 404 });
 
   // Already has summary
   if (resource.description && resource.description.length > 100) {

@@ -5,11 +5,12 @@ import { PageHero } from "@/components/shared/page-hero";
 import { Suspense } from "react";
 import { ProjectSkeleton } from "@/components/shared/skeletons";
 import { Star } from "lucide-react";
+import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Projects — nutunion",
-  description: "nutunion 커뮤니티 프로젝트를 탐색하고 참여하세요",
+  description: "nutunion 볼트를 탐색하고 참여하세요",
 };
 
 export const revalidate = 60;
@@ -22,9 +23,9 @@ export default async function ProjectsPage() {
     <>
       <PageHero 
         category="Collaborate"
-        title="Projects"
-        description="크루와 멤버들이 함께 실전 서비스를 만들어가는 프로젝트 Scene입니다. 관심 있는 프로젝트에 참여하여 실질적인 비즈니스 경험을 쌓아보세요."
-        action={{ label: "프로젝트 만들기", href: "/projects/create" }}
+        title="볼트 (Bolt)"
+        description="너트들이 합쳐져 해결하는 과제, 볼트. 관심 있는 볼트에 참여하여 실질적인 비즈니스 경험을 쌓아보세요."
+        action={{ label: "볼트 만들기", href: "/projects/create" }}
       />
 
       <div className="max-w-7xl mx-auto px-8 py-10">
@@ -41,12 +42,28 @@ export default async function ProjectsPage() {
                 <h2 className="font-head text-2xl font-black text-white uppercase tracking-tight">Success Templates</h2>
                 <span className="font-mono-nu text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 bg-[#FF2E97]/15 text-[#FF2E97] border border-[#FF2E97]/20">PRO</span>
               </div>
-              <p className="font-mono-nu text-[10px] text-white/40 uppercase tracking-[0.2em]">검증된 구조로 프로젝트를 체계적으로 관리하세요</p>
+              <p className="font-mono-nu text-[10px] text-white/40 uppercase tracking-[0.2em]">검증된 구조로 볼트를 체계적으로 관리하세요</p>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+        {/* Mobile-only compact template pills */}
+        <div className="md:hidden mb-6">
+          <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest mb-3">인기 템플릿</p>
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
+            <Link href="/projects/create?template=local-branding" className="shrink-0 px-4 py-2.5 bg-nu-blue/5 border border-nu-blue/20 text-nu-blue font-mono-nu text-[10px] uppercase tracking-widest no-underline hover:bg-nu-blue/10 transition-colors">
+              🚀 Local Branding
+            </Link>
+            <Link href="/projects/create?template=platform-mvp" className="shrink-0 px-4 py-2.5 bg-nu-pink/5 border border-nu-pink/20 text-nu-pink font-mono-nu text-[10px] uppercase tracking-widest no-underline hover:bg-nu-pink/10 transition-colors">
+              ⚡ Platform MVP
+            </Link>
+            <Link href="/projects/create?template=popup-store" className="shrink-0 px-4 py-2.5 bg-nu-amber/5 border border-nu-amber/20 text-nu-amber font-mono-nu text-[10px] uppercase tracking-widest no-underline hover:bg-nu-amber/10 transition-colors">
+              📖 Pop-up Store
+            </Link>
+          </div>
+        </div>
+
+        <div className="hidden md:grid md:grid-cols-3 gap-6 mb-16">
           <TemplateCard
             title="Local Branding"
             description="시장조사부터 런칭까지 로컬 브랜딩 프로젝트의 전 과정을 관리하는 템플릿입니다."
@@ -121,6 +138,10 @@ export default async function ProjectsPage() {
           <h2 className="font-head text-2xl font-black text-nu-ink uppercase tracking-tight">Active Projects</h2>
         </div>
 
+        <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest mb-6">
+          진행 중인 볼트를 탐색하고 참여하세요
+        </p>
+
         <Suspense fallback={
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => <ProjectSkeleton key={i} />)}
@@ -143,7 +164,7 @@ async function ProjectsListWrapper({ userId }: { userId?: string }) {
   ] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, title, description, status, category, image_url, start_date, end_date, created_at, creator:profiles!projects_created_by_fkey(nickname, avatar_url), project_members(count)")
+      .select("id, title, description, status, category, image_url, start_date, end_date, created_at, creator:profiles!projects_created_by_fkey(nickname, avatar_url), project_members(count), project_milestones(id, status)")
       .neq("status", "draft")
       .order("created_at", { ascending: false }),
     userId ? 
@@ -156,7 +177,10 @@ async function ProjectsListWrapper({ userId }: { userId?: string }) {
   ]);
 
   const formatted = (projects || []).map((p: any) => {
-    const creatorData = Array.isArray(p.creator) ? p.creator[0] : p.creator;
+    const creatorData = Array.isArray(p.creator) ? p.creator[0] || null : p.creator;
+    const milestones = p.project_milestones || [];
+    const milestoneTotal = milestones.length;
+    const milestoneCompleted = milestones.filter((m: any) => m.status === "completed").length;
     return {
       id: p.id,
       title: p.title,
@@ -170,12 +194,14 @@ async function ProjectsListWrapper({ userId }: { userId?: string }) {
       creator_avatar: creatorData?.avatar_url || null,
       member_count: p.project_members?.[0]?.count || 0,
       created_at: p.created_at,
+      milestone_total: milestoneTotal,
+      milestone_completed: milestoneCompleted,
     };
   });
 
   return <ProjectsGrid projects={formatted} userId={userId} />;
   } catch (err) {
     console.error("ProjectsListWrapper error:", err);
-    return <div className="p-8 text-center text-nu-muted">프로젝트 목록을 불러오는 중 오류가 발생했습니다.</div>;
+    return <div className="p-8 text-center text-nu-muted">볼트 목록을 불러오는 중 오류가 발생했습니다.</div>;
   }
 }

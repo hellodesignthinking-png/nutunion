@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import {
@@ -102,11 +102,9 @@ export function ProjectFinanceDashboard({
   };
 
   // Load transactions on mount
-  const [initialized, setInitialized] = useState(false);
-  if (!initialized) {
-    setInitialized(true);
+  useEffect(() => {
     loadTransactions();
-  }
+  }, [projectId]);
 
   // Calculate metrics
   const metrics = useMemo(() => {

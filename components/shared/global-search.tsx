@@ -19,9 +19,9 @@ interface SearchResult {
 }
 
 const typeConfig: Record<ResultType, { icon: any; color: string; label: string }> = {
-  member: { icon: Users, color: "text-nu-pink", label: "멤버" },
-  group: { icon: Hash, color: "text-nu-blue", label: "소모임" },
-  project: { icon: Briefcase, color: "text-nu-amber", label: "프로젝트" },
+  member: { icon: Users, color: "text-nu-pink", label: "와셔" },
+  group: { icon: Hash, color: "text-nu-blue", label: "너트" },
+  project: { icon: Briefcase, color: "text-nu-amber", label: "볼트" },
   resource: { icon: FileText, color: "text-green-600", label: "자료" },
 };
 
@@ -82,8 +82,8 @@ export function GlobalSearch() {
       ]);
 
       (profiles || []).forEach((p: any) => all.push({
-        id: p.id, type: "member", title: p.nickname || "멤버",
-        subtitle: p.bio || "넛유니온 멤버", href: `/portfolio/${p.id}`
+        id: p.id, type: "member", title: p.nickname || "와셔",
+        subtitle: p.bio || "넛유니온 와셔", href: `/portfolio/${p.id}`
       }));
       (groups || []).forEach((g: any) => all.push({
         id: g.id, type: "group", title: g.name,
@@ -126,7 +126,17 @@ export function GlobalSearch() {
     }
   };
 
-  if (!open) return null;
+  if (!open) return (
+    <button
+      onClick={() => setOpen(true)}
+      aria-label="검색 열기 (⌘K)"
+      className="flex items-center gap-2 px-3 py-1.5 text-nu-muted hover:text-nu-ink bg-nu-ink/[0.03] hover:bg-nu-ink/[0.06] border border-nu-ink/10 transition-colors"
+    >
+      <Search size={14} />
+      <span className="font-mono-nu text-[10px] tracking-wider hidden sm:inline">검색</span>
+      <kbd className="font-mono-nu text-[8px] text-nu-muted/60 bg-nu-ink/5 border border-nu-ink/10 px-1.5 py-0.5 hidden sm:inline">⌘K</kbd>
+    </button>
+  );
 
   return (
     <div className="fixed inset-0 z-[9999]">
@@ -144,7 +154,7 @@ export function GlobalSearch() {
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="멤버, 소모임, 프로젝트 검색..."
+              placeholder="와셔, 너트, 볼트 검색..."
               className="flex-1 bg-transparent text-nu-ink text-sm font-medium placeholder:text-nu-muted/50 focus:outline-none"
             />
             <kbd className="font-mono-nu text-[9px] text-nu-muted bg-nu-cream/50 border border-nu-ink/10 px-2 py-1">
@@ -163,8 +173,24 @@ export function GlobalSearch() {
 
             {!loading && query.length >= 2 && results.length === 0 && (
               <div className="px-5 py-8 text-center">
-                <Search size={24} className="text-nu-muted/30 mx-auto mb-2" />
-                <p className="text-sm text-nu-muted">"{query}"에 대한 검색 결과가 없습니다</p>
+                <Search size={24} className="text-nu-muted/30 mx-auto mb-3" />
+                <p className="text-sm font-medium text-nu-ink mb-1">"{query}"에 대한 검색 결과가 없습니다</p>
+                <p className="text-[11px] text-nu-muted mb-4">다른 키워드로 검색하거나, 아래 바로가기를 이용해보세요</p>
+                <div className="flex justify-center gap-2">
+                  {[
+                    { label: "너트 탐색", href: "/groups" },
+                    { label: "볼트 찾기", href: "/projects" },
+                    { label: "와셔 검색", href: "/talents" },
+                  ].map(a => (
+                    <button
+                      key={a.href}
+                      onClick={() => { setOpen(false); router.push(a.href); }}
+                      className="font-mono-nu text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 border border-nu-ink/10 text-nu-muted hover:text-nu-ink hover:border-nu-ink/20 transition-colors"
+                    >
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -204,9 +230,9 @@ export function GlobalSearch() {
                 <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest mb-3">Quick Actions</p>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { label: "소모임 탐색", href: "/groups", icon: Hash },
-                    { label: "프로젝트 찾기", href: "/projects", icon: Briefcase },
-                    { label: "인재 검색", href: "/talents", icon: Users },
+                    { label: "너트 탐색", href: "/groups", icon: Hash },
+                    { label: "볼트 찾기", href: "/projects", icon: Briefcase },
+                    { label: "와셔 검색", href: "/talents", icon: Users },
                     { label: "내 프로필", href: "/profile", icon: Zap },
                   ].map(a => (
                     <button

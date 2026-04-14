@@ -57,13 +57,13 @@ export function AdminGroupList({ groups }: { groups: GroupItem[] }) {
     if (error) { toast.error(error.message); }
     else {
       setLocalGroups(prev => prev.map(g => g.id === groupId ? { ...g, is_active: !current } : g));
-      toast.success(current ? "소모임이 비활성화되었습니다" : "소모임이 활성화되었습니다");
+      toast.success(current ? "너트가 비활성화되었습니다" : "너트가 활성화되었습니다");
     }
     setActionId(null);
   }
 
   async function forceDelete(groupId: string, groupName: string) {
-    if (!confirm(`"${groupName}" 소모임을 완전히 삭제하시겠습니까?\n\n모든 회의, 멤버, 게시글, 자료, 일정 데이터가 영구 삭제됩니다.\n이 작업은 되돌릴 수 없습니다.`)) return;
+    if (!confirm(`"${groupName}" 너트를 완전히 삭제하시겠습니까?\n\n모든 회의, 멤버, 게시글, 자료, 일정 데이터가 영구 삭제됩니다.\n이 작업은 되돌릴 수 없습니다.`)) return;
     setActionId(groupId);
     const supabase = createClient();
 
@@ -108,7 +108,7 @@ export function AdminGroupList({ groups }: { groups: GroupItem[] }) {
       toast.error("삭제 실패: " + error.message);
     } else {
       setLocalGroups(prev => prev.filter(g => g.id !== groupId));
-      toast.success("소모임이 완전히 삭제되었습니다");
+      toast.success("너트가 완전히 삭제되었습니다");
     }
     setActionId(null);
   }
@@ -124,7 +124,7 @@ export function AdminGroupList({ groups }: { groups: GroupItem[] }) {
         <div className="relative flex-1">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-nu-muted" />
           <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-            placeholder="소모임 이름 또는 호스트로 검색..."
+            placeholder="너트 이름 또는 호스트로 검색..."
             className="w-full pl-9 pr-4 py-2.5 text-sm border border-nu-ink/[0.08] bg-nu-white focus:outline-none focus:border-nu-blue/40" />
         </div>
         <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}
@@ -150,7 +150,7 @@ export function AdminGroupList({ groups }: { groups: GroupItem[] }) {
         <table className="w-full hidden md:table">
           <thead>
             <tr className="border-b border-nu-ink/[0.08]">
-              {["소모임","카테고리","호스트","멤버","상태","관리"].map(h => (
+              {["너트","카테고리","호스트","와셔","상태","관리"].map(h => (
                 <th key={h} className="text-left px-4 py-3 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted font-normal">{h}</th>
               ))}
             </tr>

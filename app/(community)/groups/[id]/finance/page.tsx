@@ -243,7 +243,7 @@ export default function GroupFinancePage() {
       );
 
       if (newStatus === "approved") {
-        toast.success("정산이 승인되었습니다! 활동 지수와 Nut Points가 지급됩니다.");
+        toast.success("정산이 승인되었습니다! 강성과 Nut Points가 지급됩니다.");
       } else {
         toast.error("정산이 반려되었습니다.");
       }
@@ -440,7 +440,7 @@ export default function GroupFinancePage() {
               <div className="p-4">
                 <p className="text-[11px] text-nu-muted leading-relaxed italic">
                   {activeTab === "all"
-                    ? "프로젝트 전체 자금의 흐름과 멤버들의 기여 증빙을 검토합니다."
+                    ? "너트 전체 자금의 흐름과 와셔들의 기여 증빙을 검토합니다."
                     : "본인의 정산 요청 상태를 실시간으로 추적할 수 있는 대기실입니다."}
                 </p>
               </div>

@@ -104,7 +104,7 @@ export function RelatedGroups({ groupId, category }: { groupId: string; category
             <Sparkles size={16} />
           </div>
           <div>
-            <h2 className="font-head text-lg font-extrabold text-nu-ink">추천 소모임</h2>
+            <h2 className="font-head text-lg font-extrabold text-nu-ink">추천 너트</h2>
             <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">
               Similar communities you might like
             </p>

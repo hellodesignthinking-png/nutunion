@@ -57,7 +57,7 @@ export function MonthlyEvolutionAnalysis({ groupId }: { groupId: string }) {
 
       const topicIds = (topics || []).map(t => t.id);
       if (topicIds.length === 0) {
-        toast.info("분석할 위키 데이터가 아직 없습니다.");
+        toast.info("분석할 탭 데이터가 아직 없습니다.");
         setLoading(false);
         return;
       }
@@ -211,7 +211,7 @@ export function MonthlyEvolutionAnalysis({ groupId }: { groupId: string }) {
         recommendations.push({
           type: "expand",
           title: "지식 베이스 확장을 시작하세요",
-          description: "위키에 더 많은 주제와 문서를 추가하여 팀의 지식 자산을 성장시키세요.",
+          description: "탭에 더 많은 주제와 문서를 추가하여 팀의 지식 자산을 성장시키세요.",
         });
       }
 
@@ -262,7 +262,7 @@ export function MonthlyEvolutionAnalysis({ groupId }: { groupId: string }) {
         </div>
         <h3 className="font-head text-2xl font-extrabold mb-3">월간 지식 진화 분석</h3>
         <p className="text-sm text-white/50 max-w-lg mx-auto mb-3 leading-relaxed">
-          지난 한 달간 축적된 모든 회의록과 위키 데이터를 교차 분석하여,
+          지난 한 달간 축적된 모든 회의록과 탭 데이터를 교차 분석하여,
           각 주제의 관점 변화와 지식 성장 패턴을 시각화합니다.
         </p>
         <p className="font-mono-nu text-[9px] text-white/25 uppercase tracking-widest mb-8">

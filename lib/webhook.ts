@@ -165,13 +165,13 @@ export async function triggerIntegrations(
 
 function eventTitle(event: string, data: Record<string, any>): string {
   const titles: Record<string, string> = {
-    member_joined: `${data.member_name ?? "새 멤버"}님이 참여했습니다`,
-    member_left: `${data.member_name ?? "멤버"}님이 나갔습니다`,
+    member_joined: `${data.member_name ?? "새 와셔"}님이 참여했습니다`,
+    member_left: `${data.member_name ?? "와셔"}님이 나갔습니다`,
     task_completed: `작업 완료: ${data.task_title ?? ""}`,
     task_created: `새 작업: ${data.task_title ?? ""}`,
     milestone_updated: `마일스톤 업데이트: ${data.milestone_title ?? ""}`,
     milestone_completed: `마일스톤 완료: ${data.milestone_title ?? ""}`,
-    project_update: `프로젝트 소식이 등록되었습니다`,
+    project_update: `볼트 소식이 등록되었습니다`,
     application_received: `새 지원서가 도착했습니다`,
     application_approved: `지원서가 승인되었습니다`,
     application_rejected: `지원서가 거절되었습니다`,
@@ -186,13 +186,13 @@ function eventDescription(event: string, data: Record<string, any>): string {
   const parts: string[] = [];
 
   if (data.project_title) {
-    parts.push(`프로젝트: ${data.project_title}`);
+    parts.push(`볼트: ${data.project_title}`);
   }
   if (data.crew_name) {
-    parts.push(`크루: ${data.crew_name}`);
+    parts.push(`너트: ${data.crew_name}`);
   }
   if (data.member_name) {
-    parts.push(`멤버: ${data.member_name}`);
+    parts.push(`와셔: ${data.member_name}`);
   }
   if (data.message) {
     parts.push(data.message);

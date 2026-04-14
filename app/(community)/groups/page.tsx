@@ -5,11 +5,12 @@ import { TemplateCard } from "@/components/groups/template-card";
 import { PageHero } from "@/components/shared/page-hero";
 import { Suspense } from "react";
 import { GroupSkeleton } from "@/components/shared/skeletons";
+import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "소모임 — nutunion",
-  description: "nutunion 소모임을 탐색하고 참여하세요",
+  title: "너트 (Nut) — nutunion",
+  description: "nutunion 너트를 탐색하고 참여하세요",
 };
 
 export const revalidate = 60;
@@ -22,9 +23,9 @@ export default async function GroupsPage() {
     <div className="bg-nu-paper min-h-screen">
       <PageHero
         category="Collaborate"
-        title="소모임 탐색"
-        description="Scene을 만들어가는 크루들을 탐색하고 함께 성장하세요. 관심사나 프로젝트 성격에 맞는 팀을 찾아보세요."
-        action={user ? { label: "소모임 만들기", href: "/groups/create" } : undefined}
+        title="너트 (Nut) 탐색"
+        description="변화를 만드는 최소 단위, 너트로 모여보세요. 관심사나 과제에 맞는 너트를 찾아 단단하게 결합하세요."
+        action={user ? { label: "너트 만들기", href: "/groups/create" } : undefined}
       />
 
       {/* ── Featured Templates Section ─────────────────────────────── */}
@@ -47,7 +48,23 @@ export default async function GroupsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+        {/* Mobile-only compact template pills */}
+        <div className="md:hidden mb-6">
+          <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest mb-3">인기 템플릿</p>
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
+            <Link href="/templates/sprint" className="shrink-0 px-4 py-2.5 bg-nu-blue/5 border border-nu-blue/20 text-nu-blue font-mono-nu text-[10px] uppercase tracking-widest no-underline hover:bg-nu-blue/10 transition-colors">
+              🚀 Sprint
+            </Link>
+            <Link href="/templates/paper-review" className="shrink-0 px-4 py-2.5 bg-nu-pink/5 border border-nu-pink/20 text-nu-pink font-mono-nu text-[10px] uppercase tracking-widest no-underline hover:bg-nu-pink/10 transition-colors">
+              📖 Paper Review
+            </Link>
+            <Link href="/templates/venture" className="shrink-0 px-4 py-2.5 bg-nu-amber/5 border border-nu-amber/20 text-nu-amber font-mono-nu text-[10px] uppercase tracking-widest no-underline hover:bg-nu-amber/10 transition-colors">
+              ⚡ Venture
+            </Link>
+          </div>
+        </div>
+
+        <div className="hidden md:grid md:grid-cols-3 gap-6 mb-16">
            <TemplateCard
               title="Project Sprint - Standard"
               description="6주 단위의 고밀도 실행 스프린트에 최적화된 자료 구조와 미팅 아카이브 템플릿입니다."
@@ -71,7 +88,7 @@ export default async function GroupsPage() {
            />
            <TemplateCard
               title="Weekly Paper Review"
-              description="매주 1편의 논문이나 보고서를 깊게 읽고 인사이트를 나누는 지식 기반 소모임 전용입니다."
+              description="매주 1편의 논문이나 보고서를 깊게 읽고 인사이트를 나누는 지식 기반 너트 전용입니다."
               iconName="book-open"
               color="bg-nu-pink/5 border-nu-pink/20 text-nu-pink"
               colorKey="pink"
@@ -118,7 +135,11 @@ export default async function GroupsPage() {
            <div className="w-1.5 h-6 bg-nu-pink" />
            <h2 className="font-head text-2xl font-black text-nu-ink uppercase tracking-tight">Active Communities</h2>
         </div>
-        
+
+        <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest mb-6">
+          활발하게 운영 중인 너트를 탐색하세요
+        </p>
+
         <Suspense fallback={
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => <GroupSkeleton key={i} />)}
@@ -142,7 +163,7 @@ async function GroupsListWrapper({ userId }: { userId?: string }) {
     ] = await Promise.all([
       supabase
         .from("groups")
-        .select("id, name, category, description, max_members, host_id, image_url, host:profiles!groups_host_id_fkey(nickname), group_members(count)")
+        .select("id, name, category, description, max_members, host_id, image_url, created_at, host:profiles!groups_host_id_fkey(nickname, avatar_url), group_members(count)")
         .eq("is_active", true)
         .order("created_at", { ascending: false }),
       userId 
@@ -162,8 +183,10 @@ async function GroupsListWrapper({ userId }: { userId?: string }) {
         max_members: g.max_members,
         host_id: g.host_id,
         image_url: g.image_url,
+        created_at: g.created_at,
         member_count: g.group_members?.[0]?.count || 0,
         host_nickname: hostData?.nickname || "unknown",
+        host_avatar_url: hostData?.avatar_url || null,
         user_status: statusMap.get(g.id) || null,
       };
     });
@@ -171,6 +194,6 @@ async function GroupsListWrapper({ userId }: { userId?: string }) {
     return <GroupsList groups={formattedGroups} userId={userId} />;
   } catch (err) {
     console.error("GroupsListWrapper error:", err);
-    return <div className="p-8 text-center text-nu-muted">소모임 목록을 불러오는 중 오류가 발생했습니다.</div>;
+    return <div className="p-8 text-center text-nu-muted">너트 목록을 불러오는 중 오류가 발생했습니다.</div>;
   }
 }

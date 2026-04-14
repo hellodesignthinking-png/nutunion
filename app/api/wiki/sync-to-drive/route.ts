@@ -1,0 +1,167 @@
+import { google } from "googleapis";
+import { NextRequest, NextResponse } from "next/server";
+import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
+import { createClient } from "@/lib/supabase/server";
+import { Readable } from "stream";
+
+/**
+ * POST /api/wiki/sync-to-drive
+ * Syncs a wiki page to Google Docs in the group's Drive wiki folder.
+ * If the page already has a google_doc_id, updates it. Otherwise creates new.
+ */
+export async function POST(req: NextRequest) {
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
+  }
+
+  try {
+    const { pageId, groupId, title, content } = await req.json();
+
+    if (!groupId || !title || !content) {
+      return NextResponse.json({ error: "필수 정보가 부족합니다" }, { status: 400 });
+    }
+
+    const auth = await getGoogleClient(userId);
+    const drive = google.drive({ version: "v3", auth });
+    const supabase = await createClient();
+
+    // Get group's wiki folder ID
+    const { data: group } = await supabase
+      .from("groups")
+      .select("google_drive_wiki_folder_id, google_drive_folder_id, name")
+      .eq("id", groupId)
+      .single();
+
+    // Determine parent folder (wiki subfolder, or main group folder, or root)
+    const parentFolderId = (group as any)?.google_drive_wiki_folder_id
+      || (group as any)?.google_drive_folder_id
+      || null;
+
+    // Check if this wiki page already has a Google Doc
+    let existingDocId: string | null = null;
+    if (pageId) {
+      const { data: page } = await supabase
+        .from("wiki_pages")
+        .select("google_doc_id")
+        .eq("id", pageId)
+        .single();
+      existingDocId = (page as any)?.google_doc_id || null;
+    }
+
+    // Format content: add header with metadata
+    const formattedContent = `${title}\n${"=".repeat(title.length)}\n\n너트: ${group?.name || ""}\n최종 수정: ${new Date().toLocaleDateString("ko")}\n\n---\n\n${content}`;
+
+    const buffer = Buffer.from(formattedContent, "utf-8");
+    const stream = new Readable();
+    stream.push(buffer);
+    stream.push(null);
+
+    let fileId: string;
+    let webViewLink: string;
+
+    if (existingDocId) {
+      // Update existing Google Doc content
+      const updateStream = new Readable();
+      updateStream.push(buffer);
+      updateStream.push(null);
+
+      await drive.files.update({
+        fileId: existingDocId,
+        media: {
+          mimeType: "text/plain",
+          body: updateStream,
+        },
+      });
+
+      const fileRes = await drive.files.get({
+        fileId: existingDocId,
+        fields: "id, webViewLink",
+      });
+
+      fileId = existingDocId;
+      webViewLink = fileRes.data.webViewLink!;
+    } else {
+      // Create new Google Doc
+      const fileMetadata: any = {
+        name: `[탭] ${title}`,
+        mimeType: "application/vnd.google-apps.document",
+      };
+      if (parentFolderId) {
+        fileMetadata.parents = [parentFolderId];
+      }
+
+      const driveRes = await drive.files.create({
+        requestBody: fileMetadata,
+        media: {
+          mimeType: "text/plain",
+          body: stream,
+        },
+        fields: "id, name, webViewLink",
+      });
+
+      fileId = driveRes.data.id!;
+      webViewLink = driveRes.data.webViewLink!;
+
+      // Set "anyone with link can view"
+      try {
+        await drive.permissions.create({
+          fileId,
+          requestBody: { role: "reader", type: "anyone" },
+        });
+      } catch {
+        // Non-critical
+      }
+    }
+
+    // Save google_doc_id to wiki_pages (column may not exist yet -- use upsert pattern)
+    if (pageId) {
+      try {
+        await supabase
+          .from("wiki_pages")
+          .update({ google_doc_id: fileId, google_doc_url: webViewLink } as any)
+          .eq("id", pageId);
+      } catch {
+        // Columns may not exist yet -- silently fail
+      }
+    }
+
+    // Also register as file_attachment for the resources page
+    if (!existingDocId) {
+      await supabase.from("file_attachments").insert({
+        target_type: "group",
+        target_id: groupId,
+        uploaded_by: userId,
+        file_name: `[탭] ${title}`,
+        file_url: webViewLink,
+        file_size: buffer.length,
+        file_type: "drive-link",
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      documentId: fileId,
+      webViewLink,
+      isUpdate: !!existingDocId,
+    });
+  } catch (err: any) {
+    if (err.message === "GOOGLE_NOT_CONNECTED") {
+      return NextResponse.json(
+        { error: "Google 계정이 연결되지 않았습니다. 설정에서 연결해주세요.", code: "NOT_CONNECTED" },
+        { status: 403 }
+      );
+    }
+    if (err.message === "GOOGLE_TOKEN_EXPIRED") {
+      return NextResponse.json(
+        { error: "Google 토큰이 만료되었습니다.", code: "TOKEN_EXPIRED" },
+        { status: 401 }
+      );
+    }
+    console.error("Wiki sync to Drive error:", err);
+    return NextResponse.json(
+      { error: "Google Docs 동기화 실패: " + (err.message || "알 수 없는 오류") },
+      { status: 500 }
+    );
+  }
+}
