@@ -97,7 +97,7 @@ export function ChatPanel() {
   async function loadRoomPreviews(roomList: ChatRoom[], supabase: any) {
     for (const room of roomList) {
       const { data } = await supabase
-        .from("chat_messages")
+        .from("staff_chat_messages")
         .select("content, created_at")
         .eq("room_id", room.id)
         .order("created_at", { ascending: false })
@@ -156,7 +156,7 @@ export function ChatPanel() {
       // Load from Supabase
       const supabase = createClient();
       const { data } = await supabase
-        .from("chat_messages")
+        .from("staff_chat_messages")
         .select("id, content, sender_id, created_at, metadata")
         .eq("room_id", room.id)
         .order("created_at", { ascending: true })
@@ -202,7 +202,7 @@ export function ChatPanel() {
       .on("postgres_changes", {
         event: "INSERT",
         schema: "public",
-        table: "chat_messages",
+        table: "staff_chat_messages",
         filter: `room_id=eq.${activeRoom.id}`,
       }, (payload: any) => {
         const newMsg = payload.new;
@@ -244,9 +244,9 @@ export function ChatPanel() {
     } else {
       // Send to Supabase
       const supabase = createClient();
-      const { error } = await supabase.from("chat_messages").insert({
+      const { error } = await supabase.from("staff_chat_messages").insert({
         room_id: activeRoom.id,
-        room_type: activeRoom.type === "dm" ? "project" : activeRoom.type === "project" ? "project" : "crew",
+        room_type: activeRoom.type === "dm" ? "dm" : activeRoom.type === "project" ? "project" : "team",
         sender_id: userId,
         content: input.trim(),
         metadata: { sender_name: userName },
