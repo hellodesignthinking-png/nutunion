@@ -245,6 +245,15 @@ export default function StaffProjectDetailPage() {
     setCreatingDoc(false);
   }
 
+  async function handleDeleteFile(fileId: string) {
+    if (!confirm("이 파일 연결을 삭제하시겠습니까?")) return;
+    const supabase = createClient();
+    const { error } = await supabase.from("staff_files").delete().eq("id", fileId);
+    if (error) { toast.error("파일 삭제 실패"); return; }
+    setFiles(prev => prev.filter(f => f.id !== fileId));
+    toast.success("파일이 삭제되었습니다");
+  }
+
   // ─── Comment handlers ─────────────────────────────
 
   async function handleAddComment(e: React.FormEvent) {
@@ -266,6 +275,15 @@ export default function StaffProjectDetailPage() {
       await loadData();
     }
     setSubmittingComment(false);
+  }
+
+  async function handleDeleteComment(commentId: string) {
+    if (!confirm("이 댓글을 삭제하시겠습니까?")) return;
+    const supabase = createClient();
+    const { error } = await supabase.from("staff_comments").delete().eq("id", commentId);
+    if (error) { toast.error("댓글 삭제 실패"); return; }
+    setComments(prev => prev.filter(c => c.id !== commentId));
+    toast.success("댓글이 삭제되었습니다");
   }
 
   // ─── Member handlers ─────────────────────────────
@@ -537,6 +555,13 @@ export default function StaffProjectDetailPage() {
                       ))}
                     </div>
                   )}
+                  <button
+                    onClick={() => handleDeleteFile(f.id)}
+                    className="opacity-0 group-hover:opacity-100 text-nu-muted hover:text-red-500 transition-all bg-transparent border-none cursor-pointer p-1 shrink-0"
+                    aria-label="파일 삭제"
+                  >
+                    <Trash2 size={13} />
+                  </button>
                 </div>
               ))}
             </div>
@@ -791,7 +816,18 @@ export default function StaffProjectDetailPage() {
                       {new Date(c.created_at).toLocaleDateString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </div>
-                  <p className="text-sm text-nu-ink whitespace-pre-wrap pl-8">{c.content}</p>
+                  <div className="flex items-start justify-between">
+                    <p className="text-sm text-nu-ink whitespace-pre-wrap pl-8 flex-1">{c.content}</p>
+                    {c.author_id === userId && (
+                      <button
+                        onClick={() => handleDeleteComment(c.id)}
+                        className="text-nu-muted hover:text-red-500 transition-colors bg-transparent border-none cursor-pointer p-1 shrink-0 ml-2"
+                        aria-label="댓글 삭제"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { FolderOpen, CheckSquare, FileText, Calendar, Plus, ArrowRight, Clock, Activity } from "lucide-react";
+import { TodayCalendarWidget } from "./today-calendar-widget";
 
 export const dynamic = "force-dynamic";
 
@@ -254,6 +255,9 @@ export default async function StaffDashboardPage() {
               </div>
             )}
           </section>
+
+          {/* Today's Calendar */}
+          <TodayCalendarWidget />
 
           {/* Activity Feed */}
           <section className="bg-white border border-nu-ink/[0.06]">

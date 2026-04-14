@@ -16,6 +16,7 @@ export default function StaffTasksPage() {
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("active");
+  const [sortBy, setSortBy] = useState<"default" | "due_date" | "priority">("default");
   const [userId, setUserId] = useState("");
 
   // Quick-add task
@@ -133,8 +134,19 @@ export default function StaffTasksPage() {
     if (priorityFilter !== "all") result = result.filter(t => t.priority === priorityFilter);
     if (statusFilter === "active") result = result.filter(t => t.status !== "done");
     else if (statusFilter === "done") result = result.filter(t => t.status === "done");
+    if (sortBy === "due_date") {
+      result = [...result].sort((a, b) => {
+        if (!a.due_date && !b.due_date) return 0;
+        if (!a.due_date) return 1;
+        if (!b.due_date) return -1;
+        return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+      });
+    } else if (sortBy === "priority") {
+      const pOrder: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+      result = [...result].sort((a, b) => (pOrder[a.priority] ?? 4) - (pOrder[b.priority] ?? 4));
+    }
     return result;
-  }, [tasks, filter, userId, projectFilter, priorityFilter, statusFilter]);
+  }, [tasks, filter, userId, projectFilter, priorityFilter, statusFilter, sortBy]);
 
   const grouped = useMemo(() => ({
     inProgress: filteredTasks.filter(t => t.status === "in_progress"),
@@ -268,6 +280,17 @@ export default function StaffTasksPage() {
           <option value="active">미완료</option>
           <option value="all">전체</option>
           <option value="done">완료만</option>
+        </select>
+
+        {/* Sort */}
+        <select
+          value={sortBy}
+          onChange={e => setSortBy(e.target.value as any)}
+          className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 border border-nu-ink/15 bg-transparent cursor-pointer"
+        >
+          <option value="default">기본 정렬</option>
+          <option value="due_date">마감일순</option>
+          <option value="priority">우선순위순</option>
         </select>
 
         {(projectFilter !== "all" || priorityFilter !== "all" || statusFilter !== "active") && (

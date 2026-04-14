@@ -195,10 +195,16 @@ export default function StaffCalendarPage() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <h3 className="font-head text-sm font-bold text-nu-ink group-hover:text-indigo-600 transition-colors">{ev.summary}</h3>
-                        <div className="flex items-center gap-4 mt-1">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
                           <span className="font-mono-nu text-[9px] text-nu-muted flex items-center gap-1">
                             <Clock size={10} />
                             {new Date(ev.start).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })} — {new Date(ev.end).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}
+                            <span className="text-nu-muted/50 ml-1">
+                              ({(() => {
+                                const mins = Math.round((new Date(ev.end).getTime() - new Date(ev.start).getTime()) / 60000);
+                                return mins >= 60 ? `${Math.floor(mins / 60)}시간${mins % 60 > 0 ? ` ${mins % 60}분` : ""}` : `${mins}분`;
+                              })()})
+                            </span>
                           </span>
                           {ev.location && (
                             <span className="font-mono-nu text-[9px] text-nu-muted flex items-center gap-1">
@@ -211,6 +217,9 @@ export default function StaffCalendarPage() {
                             </span>
                           )}
                         </div>
+                        {ev.description && (
+                          <p className="font-mono-nu text-[9px] text-nu-muted/60 mt-1.5 line-clamp-2">{ev.description}</p>
+                        )}
                       </div>
                       <ExternalLink size={12} className="text-nu-muted group-hover:text-indigo-600 mt-1 shrink-0" />
                     </div>
