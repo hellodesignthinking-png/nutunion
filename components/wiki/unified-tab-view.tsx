@@ -178,11 +178,50 @@ export function UnifiedTabView({ groupId, groupName }: { groupId: string; groupN
     return { completion: Math.min(completion, 100), totalWords, totalSections: sections.length, activeSections };
   }, [sections]);
 
-  // Simple markdown to HTML
-  const renderMarkdown = (md: string) => {
+  // Build backlink map for smart linking
+  const backlinkMap = useMemo(() => {
+    const map: { keyword: string; url: string; type: "section" | "page" }[] = [];
+    sections.forEach(s => {
+      // Don't link section names shorter than 3 chars (too generic)
+      if (s.topicName.length >= 3) {
+        map.push({ keyword: s.topicName, url: `#section-${s.topicId}`, type: "section" });
+      }
+      s.pages.forEach(p => {
+        if (p.title.length >= 3) {
+          map.push({ keyword: p.title, url: `/groups/${groupId}/wiki/pages/${p.id}`, type: "page" });
+        }
+      });
+    });
+    // Sort by keyword length descending so longer matches take priority
+    return map.sort((a, b) => b.keyword.length - a.keyword.length);
+  }, [sections, groupId]);
+
+  // Apply smart backlinks to text
+  const applyBacklinks = (html: string, currentPageId?: string): string => {
+    let result = html;
+    for (const link of backlinkMap) {
+      // Skip self-references
+      if (currentPageId && link.url.includes(currentPageId)) continue;
+      // Only replace in text content (not inside tags or existing links)
+      const escapedKeyword = link.keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(`(?<![<\\/\\w])(?<!href=")${escapedKeyword}(?![\\w>])`, "g");
+      // Only replace first occurrence to avoid cluttering
+      let replaced = false;
+      result = result.replace(regex, (match) => {
+        if (replaced) return match;
+        replaced = true;
+        const color = link.type === "section" ? "text-nu-pink" : "text-nu-blue";
+        return `<a href="${link.url}" class="${color} no-underline hover:underline font-medium" title="${link.type === "section" ? "섹션" : "페이지"}: ${link.keyword}">${match}</a>`;
+      });
+    }
+    return result;
+  };
+
+  // Markdown to HTML with smart backlinks
+  const renderMarkdown = (md: string, currentPageId?: string) => {
     const escaped = md
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    return escaped
+    let html = escaped
       .replace(/### (.+)/g, '<h4 class="font-head text-sm font-bold mt-5 mb-2 text-nu-ink">$1</h4>')
       .replace(/## (.+)/g, '<h3 class="font-head text-base font-extrabold mt-6 mb-3 text-nu-ink">$1</h3>')
       .replace(/# (.+)/g, '<h2 class="font-head text-lg font-extrabold mt-8 mb-4 text-nu-ink">$1</h2>')
@@ -194,6 +233,9 @@ export function UnifiedTabView({ groupId, groupName }: { groupId: string; groupN
       .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" class="text-nu-blue hover:text-nu-pink underline" target="_blank" rel="noopener noreferrer">$1</a>')
       .replace(/\n\n/g, '<br/><br/>')
       .replace(/\n/g, '<br/>');
+    // Apply smart backlinks
+    html = applyBacklinks(html, currentPageId);
+    return html;
   };
 
   const scrollToSection = (topicId: string) => {
@@ -320,7 +362,30 @@ export function UnifiedTabView({ groupId, groupName }: { groupId: string; groupN
         </div>
 
         {/* ── Document Body ──────────────────────── */}
-        <div className="px-6 sm:px-8 py-8">
+        <div className="px-6 sm:px-8 py-8 relative">
+          {/* Floating TOC for large screens */}
+          {sections.length > 1 && (
+            <nav className="hidden xl:block absolute right-8 top-8 w-44 sticky-toc" style={{ position: "sticky", top: "6rem", alignSelf: "flex-start" }}>
+              <div className="border-l-2 border-nu-ink/10 pl-3 space-y-1">
+                <p className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest mb-2">목차</p>
+                {sections.map((s, i) => (
+                  <button
+                    key={s.topicId}
+                    onClick={() => scrollToSection(s.topicId)}
+                    className={`block w-full text-left font-mono-nu text-[9px] py-0.5 transition-colors truncate ${
+                      activeSection === s.topicId
+                        ? "text-nu-pink font-bold"
+                        : s.pages.length > 0
+                        ? "text-nu-muted hover:text-nu-ink"
+                        : "text-nu-muted/30"
+                    }`}
+                  >
+                    {String(i + 1).padStart(2, "0")}. {s.topicName}
+                  </button>
+                ))}
+              </div>
+            </nav>
+          )}
           <div className="max-w-3xl mx-auto space-y-12">
             {sections.map((section, sectionIdx) => (
               <section
@@ -388,7 +453,7 @@ export function UnifiedTabView({ groupId, groupName }: { groupId: string; groupN
                         <div
                           className="prose prose-sm max-w-none text-nu-graphite leading-relaxed text-[14px]"
                           dangerouslySetInnerHTML={{
-                            __html: DOMPurify.sanitize(renderMarkdown(page.content)),
+                            __html: DOMPurify.sanitize(renderMarkdown(page.content, page.id)),
                           }}
                         />
                         {page.updatedBy && (

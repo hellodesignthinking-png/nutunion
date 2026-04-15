@@ -53,6 +53,9 @@ const MonthlyEvolutionAnalysis = lazyLoad(() => import("@/components/wiki/monthl
 const UnifiedTabView = lazyLoad(() => import("@/components/wiki/unified-tab-view").then(m => m.UnifiedTabView), {
   loading: () => <WikiSkeleton h="h-96" />,
 });
+const AskWiki = lazyLoad(() => import("@/components/wiki/ask-wiki").then(m => m.AskWiki), {
+  loading: () => <WikiSkeleton h="h-16" />,
+});
 
 export const revalidate = 60;
 
@@ -282,6 +285,13 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
 
       {/* ── Main Content ────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-10 md:py-12">
+
+        {/* ══════════════════════════════════════════════
+            ASK WIKI — AI 지식 비서
+            ══════════════════════════════════════════════ */}
+        <section className="mb-8">
+          <AskWiki groupId={id} />
+        </section>
 
         {/* ══════════════════════════════════════════════
             SECTION A: 통합 탭 (메인 문서)
