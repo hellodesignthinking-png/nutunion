@@ -60,7 +60,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Google 계정을 연결해주세요" }, { status: 401 });
     }
     console.error("Google Chat API error:", error);
-    return NextResponse.json({ error: "Google Chat API 오류" }, { status: 500 });
+    const detail = error?.response?.data?.error?.message || error?.message || "알 수 없는 오류";
+    const code = error?.response?.data?.error?.code || error?.code || 500;
+    return NextResponse.json({
+      error: "Google Chat API 오류",
+      detail,
+      code,
+      hint: detail.includes("not been used") || detail.includes("disabled")
+        ? "Google Cloud Console에서 Google Chat API를 활성화해야 합니다"
+        : detail.includes("scope") || detail.includes("permission") || detail.includes("insufficient")
+        ? "Google 계정을 연결 해제 후 다시 연결해주세요 (Chat 권한 필요)"
+        : undefined
+    }, { status: 500 });
   }
 }
 
