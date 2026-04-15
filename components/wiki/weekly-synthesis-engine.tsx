@@ -660,27 +660,55 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
 
       {/* Done */}
       {phase === "done" && result && (
-        <div className="p-6">
-          <div className="text-center mb-4">
-            <CheckCircle2 size={32} className="text-green-500 mx-auto mb-3" />
+        <div className="divide-y divide-nu-ink/5">
+          {/* Success header */}
+          <div className="p-6 text-center bg-green-50/30">
+            <CheckCircle2 size={28} className="text-green-500 mx-auto mb-2" />
             <p className="text-sm font-bold text-nu-ink mb-1">
-              {createdPages.length > 0 ? `${createdPages.length}개 탭 페이지가 저장되었습니다!` : result.wikiPageSuggestions.length > 0 ? "지식 통합 완료!" : result.weeklyTheme}
+              {createdPages.length > 0 ? `${createdPages.length}개 탭 페이지가 저장되었습니다` : result.wikiPageSuggestions.length > 0 ? "지식 통합 완료" : result.weeklyTheme}
             </p>
-            <p className="text-xs text-nu-muted">{result.compactionNote || result.consolidatedSummary}</p>
+            {result.weeklyTheme && createdPages.length > 0 && (
+              <p className="font-mono-nu text-[9px] text-nu-pink font-bold uppercase tracking-wider mt-1">{result.weeklyTheme}</p>
+            )}
           </div>
+
+          {/* Growth metrics summary */}
+          {result.growthMetrics && (createdPages.length > 0 || result.wikiPageSuggestions.length > 0) && (
+            <div className="p-4 flex items-center justify-center gap-6">
+              <div className="text-center">
+                <p className="font-head text-lg font-extrabold text-green-600">{result.growthMetrics.newConceptsIntroduced}</p>
+                <p className="font-mono-nu text-[7px] text-nu-muted uppercase">새 개념</p>
+              </div>
+              <div className="text-center">
+                <p className="font-head text-lg font-extrabold text-nu-blue">{result.growthMetrics.conceptsDeepened}</p>
+                <p className="font-mono-nu text-[7px] text-nu-muted uppercase">심화</p>
+              </div>
+              <div className="text-center">
+                <p className="font-head text-lg font-extrabold text-nu-pink">{result.growthMetrics.connectionsDiscovered}</p>
+                <p className="font-mono-nu text-[7px] text-nu-muted uppercase">연결</p>
+              </div>
+            </div>
+          )}
+
+          {/* Consolidated summary */}
+          {result.consolidatedSummary && result.consolidatedSummary !== "마지막 통합 이후 새로 공유된 리소스나 회의가 없습니다." && (
+            <div className="p-4">
+              <p className="text-xs text-nu-graphite leading-relaxed">{result.consolidatedSummary}</p>
+            </div>
+          )}
 
           {/* Created pages list with links */}
           {createdPages.length > 0 && (
-            <div className="bg-green-50/50 border border-green-200/50 p-4 mb-4">
+            <div className="p-4">
               <p className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-green-700 mb-3 flex items-center gap-1.5">
                 <BookOpen size={11} /> 저장된 탭 페이지
               </p>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {createdPages.map(page => (
                   <Link
                     key={page.id}
                     href={`/groups/${groupId}/wiki/pages/${page.id}`}
-                    className="flex items-center gap-2 p-2 bg-white border border-green-100 hover:border-nu-blue/30 transition-colors no-underline group"
+                    className="flex items-center gap-2 p-2.5 bg-white border border-green-100 hover:border-nu-blue/30 transition-colors no-underline group"
                   >
                     <span className={`font-mono-nu text-[7px] font-bold uppercase px-1.5 py-0.5 shrink-0 ${
                       page.action === "create" ? "bg-green-100 text-green-600" : "bg-nu-amber/10 text-nu-amber"
@@ -697,28 +725,43 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
                   </Link>
                 ))}
               </div>
-              <p className="font-mono-nu text-[8px] text-nu-muted mt-3">
-                아래 &ldquo;주제별 탭&rdquo; 섹션에서도 확인할 수 있습니다
-              </p>
             </div>
           )}
 
           {/* No new data case */}
           {createdPages.length === 0 && result.wikiPageSuggestions.length === 0 && (
-            <div className="bg-nu-cream/50 border border-nu-ink/10 p-4 mb-4 text-center">
-              <p className="text-xs text-nu-muted mb-2">
-                마지막 통합 이후 새로 공유된 리소스나 회의가 없습니다.
+            <div className="p-5 text-center">
+              <p className="text-xs text-nu-muted mb-1">
+                마지막 통합 이후 새로 공유된 리소스나 회의가 없습니다
               </p>
-              <p className="font-mono-nu text-[9px] text-nu-muted/70">
-                좌측 &ldquo;지식 수집&rdquo;에서 리소스를 추가하거나 미팅을 진행한 후 다시 실행하세요.
+              <p className="font-mono-nu text-[8px] text-nu-muted/60">
+                자료실에 리소스를 추가하거나 미팅을 진행한 후 다시 실행하세요
               </p>
             </div>
           )}
 
-          <div className="flex items-center justify-center gap-3">
+          {/* Next week suggestions */}
+          {result.nextWeekSuggestions?.length > 0 && (
+            <div className="p-4">
+              <p className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-ink mb-2 flex items-center gap-1.5">
+                <TrendingUp size={11} className="text-green-500" /> 다음 주 학습 제안
+              </p>
+              <ul className="space-y-1">
+                {result.nextWeekSuggestions.map((s, i) => (
+                  <li key={i} className="text-[11px] text-nu-graphite flex items-start gap-2">
+                    <span className="font-mono-nu text-[8px] text-nu-pink font-bold shrink-0">{String(i + 1).padStart(2, "0")}</span>
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="p-4 flex items-center justify-center gap-3 bg-nu-cream/20">
             <button
               onClick={() => { setPhase("idle"); setResult(null); setCreatedPages([]); }}
-              className="font-mono-nu text-[10px] text-nu-blue hover:text-nu-pink transition-colors flex items-center gap-1"
+              className="font-mono-nu text-[10px] text-nu-muted hover:text-nu-ink transition-colors flex items-center gap-1"
             >
               <RefreshCw size={11} /> 다시 실행
             </button>
@@ -727,7 +770,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
                 onClick={() => window.location.reload()}
                 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2 bg-nu-ink text-white hover:bg-nu-graphite transition-colors flex items-center gap-1.5"
               >
-                <BookOpen size={11} /> 탭 새로고침
+                <BookOpen size={11} /> 페이지 새로고침
               </button>
             )}
           </div>

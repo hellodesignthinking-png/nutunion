@@ -230,8 +230,10 @@ export function ContributionLeaderboard({ groupId }: { groupId: string }) {
           {/* 2nd place */}
           {topThree[1] && (
             <div className="flex flex-col items-center">
-              <div className="w-14 h-14 rounded-full bg-white/10 border-2 border-white/30 flex items-center justify-center font-head text-lg font-bold mb-2">
-                {topThree[1].nickname.charAt(0)}
+              <div className="w-14 h-14 rounded-full bg-white/10 border-2 border-white/30 flex items-center justify-center font-head text-lg font-bold mb-2 overflow-hidden">
+                {topThree[1].avatarUrl ? (
+                  <img src={topThree[1].avatarUrl} alt="" className="w-full h-full object-cover" />
+                ) : topThree[1].nickname.charAt(0)}
               </div>
               <span className="text-xs font-bold mb-1">{topThree[1].nickname}</span>
               <div className="w-20 bg-white/10 border-t-2 border-white/20 flex flex-col items-center pt-3 pb-2" style={{ height: 80 }}>
@@ -245,8 +247,10 @@ export function ContributionLeaderboard({ groupId }: { groupId: string }) {
           {topThree[0] && (
             <div className="flex flex-col items-center -mt-4">
               <Crown size={20} className="text-yellow-400 mb-1 animate-bounce" />
-              <div className="w-16 h-16 rounded-full bg-yellow-400/20 border-2 border-yellow-400 flex items-center justify-center font-head text-xl font-bold mb-2 shadow-lg shadow-yellow-400/20">
-                {topThree[0].nickname.charAt(0)}
+              <div className="w-16 h-16 rounded-full bg-yellow-400/20 border-2 border-yellow-400 flex items-center justify-center font-head text-xl font-bold mb-2 shadow-lg shadow-yellow-400/20 overflow-hidden">
+                {topThree[0].avatarUrl ? (
+                  <img src={topThree[0].avatarUrl} alt="" className="w-full h-full object-cover" />
+                ) : topThree[0].nickname.charAt(0)}
               </div>
               <span className="text-sm font-bold mb-1">{topThree[0].nickname}</span>
               <div className="w-24 bg-yellow-400/10 border-t-2 border-yellow-400/40 flex flex-col items-center pt-3 pb-2" style={{ height: 110 }}>
@@ -262,8 +266,10 @@ export function ContributionLeaderboard({ groupId }: { groupId: string }) {
           {/* 3rd place */}
           {topThree[2] && (
             <div className="flex flex-col items-center">
-              <div className="w-12 h-12 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center font-head text-base font-bold mb-2">
-                {topThree[2].nickname.charAt(0)}
+              <div className="w-12 h-12 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center font-head text-base font-bold mb-2 overflow-hidden">
+                {topThree[2].avatarUrl ? (
+                  <img src={topThree[2].avatarUrl} alt="" className="w-full h-full object-cover" />
+                ) : topThree[2].nickname.charAt(0)}
               </div>
               <span className="text-xs font-bold mb-1">{topThree[2].nickname}</span>
               <div className="w-20 bg-white/10 border-t-2 border-white/15 flex flex-col items-center pt-3 pb-2" style={{ height: 60 }}>
@@ -294,8 +300,10 @@ export function ContributionLeaderboard({ groupId }: { groupId: string }) {
                     {i < 3 ? ["🥇", "🥈", "🥉"][i] : `#${i + 1}`}
                   </span>
 
-                  <div className="w-10 h-10 rounded-full bg-nu-cream border border-nu-ink/10 flex items-center justify-center font-head text-sm font-bold text-nu-ink group-hover:border-nu-pink transition-colors">
-                    {c.nickname.charAt(0)}
+                  <div className="w-10 h-10 rounded-full bg-nu-cream border border-nu-ink/10 flex items-center justify-center font-head text-sm font-bold text-nu-ink group-hover:border-nu-pink transition-colors overflow-hidden">
+                    {c.avatarUrl ? (
+                      <img src={c.avatarUrl} alt="" className="w-full h-full object-cover" />
+                    ) : c.nickname.charAt(0)}
                   </div>
 
                   <div className="flex-1 min-w-0">

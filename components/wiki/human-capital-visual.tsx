@@ -53,7 +53,7 @@ export function HumanCapitalVisual({ groupId }: { groupId: string }) {
         `)
         .eq("group_id", groupId)
         .eq("status", "active")
-        .limit(12);
+        .limit(30);
 
       // Get topics for this group
       const { data: topics } = await supabase
@@ -149,9 +149,9 @@ export function HumanCapitalVisual({ groupId }: { groupId: string }) {
               className="w-full text-left bg-white border-[2px] border-nu-ink/[0.08] hover:border-nu-pink/40 transition-all p-4"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-nu-cream flex items-center justify-center font-head text-sm font-bold text-nu-ink border border-nu-ink/10 group-hover:border-nu-pink transition-colors shrink-0 overflow-hidden">
+                <div className="w-10 h-10 rounded-full bg-nu-cream flex items-center justify-center font-head text-sm font-bold text-nu-ink border border-nu-ink/10 group-hover:border-nu-pink transition-colors shrink-0 overflow-hidden">
                   {m.avatarUrl ? (
-                    <img src={m.avatarUrl} alt="" className="w-full h-full object-cover" />
+                    <img src={m.avatarUrl} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).parentElement!.textContent = initials; }} />
                   ) : initials}
                 </div>
                 <div className="flex-1 min-w-0">
