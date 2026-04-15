@@ -19,6 +19,7 @@ import {
   Send,
   Trash2,
   ExternalLink,
+  Edit3,
 } from "lucide-react";
 import type { ProjectMilestone, ProjectTask, MilestoneStatus, TaskStatus } from "@/lib/types";
 import { ResourceInteractions } from "@/components/shared/resource-interactions";
@@ -74,6 +75,12 @@ export function MilestoneList({
   const [addingTaskFor, setAddingTaskFor] = useState<string | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [savingTask, setSavingTask] = useState(false);
+  const [editingMs, setEditingMs] = useState<string | null>(null);
+  const [editMsTitle, setEditMsTitle] = useState("");
+  const [editMsDueDate, setEditMsDueDate] = useState("");
+  const [editMsReward, setEditMsReward] = useState(0);
+  const [editingTask, setEditingTask] = useState<string | null>(null);
+  const [editTaskTitle, setEditTaskTitle] = useState("");
 
   // Per-milestone comments & links
   const [msComments, setMsComments] = useState<Record<string, MilestoneComment[]>>({});
@@ -295,6 +302,73 @@ export function MilestoneList({
     }
   }
 
+  // ─── Edit / Delete: Milestones ───
+  function startEditMilestone(ms: ProjectMilestone) {
+    setEditingMs(ms.id);
+    setEditMsTitle(ms.title);
+    setEditMsDueDate(ms.due_date || "");
+    setEditMsReward((ms as any).reward_percentage || 0);
+  }
+
+  async function saveMilestoneEdit(msId: string) {
+    if (!editMsTitle.trim()) return;
+    const supabase = createClient();
+    const updatePayload: Record<string, any> = {
+      title: editMsTitle.trim(),
+      due_date: editMsDueDate || null,
+    };
+    if (editMsReward > 0) updatePayload.reward_percentage = editMsReward;
+
+    const { error } = await supabase.from("project_milestones").update(updatePayload).eq("id", msId);
+    if (error) { toast.error("마일스톤 수정 실패: " + error.message); return; }
+
+    setMilestones(prev => prev.map(m => m.id === msId ? { ...m, title: editMsTitle.trim(), due_date: editMsDueDate || null, reward_percentage: editMsReward } as any : m));
+    setEditingMs(null);
+    toast.success("마일스톤이 수정되었습니다");
+    router.refresh();
+  }
+
+  async function deleteMilestone(msId: string) {
+    if (!confirm("이 마일스톤과 관련된 모든 태스크가 삭제됩니다. 계속하시겠습니까?")) return;
+    const supabase = createClient();
+
+    // Delete tasks first (cascade should handle but be explicit)
+    await supabase.from("project_tasks").delete().eq("milestone_id", msId);
+    const { error } = await supabase.from("project_milestones").delete().eq("id", msId);
+    if (error) { toast.error("마일스톤 삭제 실패: " + error.message); return; }
+
+    setMilestones(prev => prev.filter(m => m.id !== msId));
+    toast.success("마일스톤이 삭제되었습니다");
+    router.refresh();
+  }
+
+  // ─── Edit / Delete: Tasks ───
+  async function saveTaskEdit(milestoneId: string, taskId: string) {
+    if (!editTaskTitle.trim()) return;
+    const supabase = createClient();
+    const { error } = await supabase.from("project_tasks").update({ title: editTaskTitle.trim() }).eq("id", taskId);
+    if (error) { toast.error("태스크 수정 실패"); return; }
+
+    setMilestones(prev => prev.map(ms => ms.id === milestoneId
+      ? { ...ms, tasks: (ms.tasks || []).map(t => t.id === taskId ? { ...t, title: editTaskTitle.trim() } : t) }
+      : ms));
+    setEditingTask(null);
+    toast.success("태스크가 수정되었습니다");
+  }
+
+  async function deleteTask(milestoneId: string, taskId: string) {
+    if (!confirm("이 태스크를 삭제하시겠습니까?")) return;
+    const supabase = createClient();
+    const { error } = await supabase.from("project_tasks").delete().eq("id", taskId);
+    if (error) { toast.error("태스크 삭제 실패"); return; }
+
+    setMilestones(prev => prev.map(ms => ms.id === milestoneId
+      ? { ...ms, tasks: (ms.tasks || []).filter(t => t.id !== taskId) }
+      : ms));
+    toast.success("태스크가 삭제되었습니다");
+    router.refresh();
+  }
+
   async function toggleTaskStatus(milestoneId: string, task: ProjectTask) {
     if (!canEdit) return;
     const next = taskStatusIcons[task.status]?.next || "todo";
@@ -474,6 +548,25 @@ export function MilestoneList({
         return (
           <div key={ms.id} className="bg-nu-white border-2 border-nu-ink/[0.08] overflow-hidden">
             {/* ── Milestone Header ── */}
+            {editingMs === ms.id ? (
+              <div className="p-5 space-y-3">
+                <input value={editMsTitle} onChange={e => setEditMsTitle(e.target.value)}
+                  className="w-full px-3 py-2 bg-nu-paper border border-nu-ink/[0.12] text-sm font-bold focus:outline-none focus:border-nu-pink"
+                  autoFocus onKeyDown={e => { if (e.key === "Enter") saveMilestoneEdit(ms.id); if (e.key === "Escape") setEditingMs(null); }} />
+                <div className="flex gap-3">
+                  <input type="date" value={editMsDueDate} onChange={e => setEditMsDueDate(e.target.value)}
+                    className="px-3 py-2 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink" />
+                  <input type="number" value={editMsReward} onChange={e => setEditMsReward(parseInt(e.target.value) || 0)} min={0} max={100}
+                    placeholder="보상 %" className="w-24 px-3 py-2 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink" />
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => saveMilestoneEdit(ms.id)}
+                    className="font-mono-nu text-[10px] font-bold uppercase px-4 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors">저장</button>
+                  <button onClick={() => setEditingMs(null)}
+                    className="font-mono-nu text-[10px] uppercase px-4 py-2 text-nu-muted hover:text-nu-ink transition-colors">취소</button>
+                </div>
+              </div>
+            ) : (
             <button
               onClick={() => toggleExpand(ms.id)}
               className="w-full flex items-center gap-3 p-5 text-left hover:bg-nu-cream/20 transition-colors"
@@ -493,6 +586,19 @@ export function MilestoneList({
                     <span className="font-mono-nu text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 bg-nu-pink/10 text-nu-pink border border-nu-pink/20">
                       REWARD {(ms as any).reward_percentage}%
                     </span>
+                  )}
+                  {/* Edit/Delete buttons */}
+                  {canEdit && (
+                    <>
+                      <button onClick={(e) => { e.stopPropagation(); startEditMilestone(ms); }}
+                        className="p-1 text-nu-muted hover:text-indigo-600 transition-colors" title="수정">
+                        <Edit3 size={12} />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); deleteMilestone(ms.id); }}
+                        className="p-1 text-nu-muted hover:text-red-500 transition-colors" title="삭제">
+                        <Trash2 size={12} />
+                      </button>
+                    </>
                   )}
                 </div>
                 <div className="flex items-center gap-4 mt-1.5 text-xs text-nu-muted">
@@ -548,6 +654,7 @@ export function MilestoneList({
                 </button>
               )}
             </button>
+            )}
 
             {/* ── Expanded Content ── */}
             {isExpanded && (
@@ -592,8 +699,23 @@ export function MilestoneList({
                     {tasks.map((task) => {
                       const statusInfo = taskStatusIcons[task.status] || taskStatusIcons.todo;
                       const Icon = statusInfo.icon;
+
+                      if (editingTask === task.id) {
+                        return (
+                          <div key={task.id} className="flex items-center gap-2 px-5 py-3 border-b border-nu-ink/[0.04]">
+                            <input value={editTaskTitle} onChange={e => setEditTaskTitle(e.target.value)}
+                              className="flex-1 px-3 py-2 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink"
+                              autoFocus onKeyDown={e => { if (e.key === "Enter") saveTaskEdit(ms.id, task.id); if (e.key === "Escape") setEditingTask(null); }} />
+                            <button onClick={() => saveTaskEdit(ms.id, task.id)}
+                              className="font-mono-nu text-[10px] font-bold uppercase px-3 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors">저장</button>
+                            <button onClick={() => setEditingTask(null)}
+                              className="text-nu-muted hover:text-nu-ink text-sm px-2">취소</button>
+                          </div>
+                        );
+                      }
+
                       return (
-                        <div key={task.id} className="flex items-center gap-3 px-5 py-3 border-b border-nu-ink/[0.04] last:border-0 hover:bg-nu-cream/10">
+                        <div key={task.id} className="flex items-center gap-3 px-5 py-3 border-b border-nu-ink/[0.04] last:border-0 hover:bg-nu-cream/10 group/task">
                           <button
                             onClick={() => toggleTaskStatus(ms.id, task)}
                             disabled={!canEdit}
@@ -619,6 +741,18 @@ export function MilestoneList({
                               <Calendar size={9} />
                               {new Date(task.due_date).toLocaleDateString("ko", { month: "short", day: "numeric" })}
                             </span>
+                          )}
+                          {canEdit && (
+                            <div className="hidden group-hover/task:flex items-center gap-0.5 shrink-0">
+                              <button onClick={() => { setEditingTask(task.id); setEditTaskTitle(task.title); }}
+                                className="p-1 text-nu-muted hover:text-indigo-600 transition-colors" title="수정">
+                                <Edit3 size={11} />
+                              </button>
+                              <button onClick={() => deleteTask(ms.id, task.id)}
+                                className="p-1 text-nu-muted hover:text-red-500 transition-colors" title="삭제">
+                                <Trash2 size={11} />
+                              </button>
+                            </div>
                           )}
                         </div>
                       );

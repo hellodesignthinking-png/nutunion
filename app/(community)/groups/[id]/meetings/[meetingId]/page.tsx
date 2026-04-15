@@ -77,6 +77,128 @@ interface LinkedIssue {
   created_at: string;
 }
 
+function MeetingInfoEditor({ meeting, date, canEdit, meetingId, onUpdate }: {
+  meeting: Meeting; date: Date; canEdit: boolean; meetingId: string; onUpdate: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(meeting.title);
+  const [description, setDescription] = useState(meeting.description || "");
+  const [scheduledAt, setScheduledAt] = useState(
+    new Date(meeting.scheduled_at).toISOString().slice(0, 16)
+  );
+  const [durationMin, setDurationMin] = useState(meeting.duration_min || 60);
+  const [location, setLocation] = useState(meeting.location || "");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave() {
+    setSaving(true);
+    const supabase = createClient();
+    const { error } = await supabase.from("meetings").update({
+      title: title.trim(),
+      description: description.trim() || null,
+      scheduled_at: new Date(scheduledAt).toISOString(),
+      duration_min: durationMin,
+      location: location.trim() || null,
+    }).eq("id", meetingId);
+    if (error) toast.error("수정 실패: " + error.message);
+    else { toast.success("회의 정보가 수정되었습니다"); setEditing(false); onUpdate(); }
+    setSaving(false);
+  }
+
+  async function handleDelete() {
+    if (!confirm("이 회의를 삭제하시겠습니까? 관련된 안건, 노트, 자료가 모두 삭제됩니다.")) return;
+    const supabase = createClient();
+    // Clean up related data
+    await Promise.allSettled([
+      supabase.from("meeting_notes").delete().eq("meeting_id", meetingId),
+      supabase.from("meeting_resources").delete().eq("meeting_id", meetingId),
+      supabase.from("meeting_agendas").delete().eq("meeting_id", meetingId),
+    ]);
+    const { error } = await supabase.from("meetings").delete().eq("id", meetingId);
+    if (error) toast.error("삭제 실패: " + error.message);
+    else {
+      toast.success("회의가 삭제되었습니다");
+      window.location.href = `/groups/${meeting.group_id}/meetings`;
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="bg-nu-white border border-nu-ink/[0.08] p-6 mb-6 space-y-4">
+        <div>
+          <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-1">회의 제목</label>
+          <input value={title} onChange={e => setTitle(e.target.value)}
+            className="w-full px-3 py-2 border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink bg-nu-paper" />
+        </div>
+        <div>
+          <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-1">설명</label>
+          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
+            className="w-full px-3 py-2 border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink bg-nu-paper resize-none" />
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-1">일시</label>
+            <input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)}
+              className="w-full px-3 py-2 border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink bg-nu-paper" />
+          </div>
+          <div>
+            <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-1">시간 (분)</label>
+            <input type="number" value={durationMin} onChange={e => setDurationMin(parseInt(e.target.value) || 60)} min={10} max={480}
+              className="w-full px-3 py-2 border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink bg-nu-paper" />
+          </div>
+          <div>
+            <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-1">장소</label>
+            <input value={location} onChange={e => setLocation(e.target.value)} placeholder="온라인 / 장소"
+              className="w-full px-3 py-2 border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink bg-nu-paper" />
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={handleSave} disabled={saving || !title.trim()}
+            className="font-mono-nu text-[10px] font-bold uppercase px-4 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors disabled:opacity-50">
+            {saving ? "저장 중..." : "저장"}
+          </button>
+          <button onClick={() => setEditing(false)}
+            className="font-mono-nu text-[10px] uppercase px-4 py-2 text-nu-muted hover:text-nu-ink transition-colors">취소</button>
+          <button onClick={handleDelete}
+            className="ml-auto font-mono-nu text-[10px] uppercase px-4 py-2 text-red-500 hover:text-red-700 border border-red-200 hover:border-red-400 transition-colors flex items-center gap-1">
+            <Trash2 size={11} /> 회의 삭제
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-nu-white border border-nu-ink/[0.08] p-6 mb-6">
+      <div className="flex flex-wrap gap-6">
+        <div className="flex items-center gap-2">
+          <Calendar size={16} className="text-nu-pink" />
+          <span className="text-sm">{date.toLocaleDateString("ko", { year: "numeric", month: "long", day: "numeric", weekday: "long" })}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Clock size={16} className="text-nu-blue" />
+          <span className="text-sm">{date.toLocaleTimeString("ko", { hour: "2-digit", minute: "2-digit" })} ({meeting.duration_min}분)</span>
+        </div>
+        {meeting.location && (
+          <div className="flex items-center gap-2">
+            <MapPin size={16} className="text-nu-amber" />
+            <span className="text-sm">{meeting.location}</span>
+          </div>
+        )}
+        {canEdit && (
+          <button onClick={() => setEditing(true)}
+            className="ml-auto font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink hover:underline flex items-center gap-1">
+            <Edit3 size={11} /> 수정
+          </button>
+        )}
+      </div>
+      {meeting.status === "in_progress" && (
+        <MeetingTimer startTime={meeting.scheduled_at} />
+      )}
+    </div>
+  );
+}
+
 export default function MeetingDetailPage() {
   const params     = useParams();
   const router     = useRouter();
@@ -516,28 +638,13 @@ export default function MeetingDetailPage() {
       </div>
 
       {/* Meeting info */}
-      <div className="bg-nu-white border border-nu-ink/[0.08] p-6 mb-6">
-        <div className="flex flex-wrap gap-6">
-          <div className="flex items-center gap-2">
-            <Calendar size={16} className="text-nu-pink" />
-            <span className="text-sm">{date.toLocaleDateString("ko", { year: "numeric", month: "long", day: "numeric", weekday: "long" })}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Clock size={16} className="text-nu-blue" />
-            <span className="text-sm">{date.toLocaleTimeString("ko", { hour: "2-digit", minute: "2-digit" })} ({meeting.duration_min}분)</span>
-          </div>
-          {meeting.location && (
-            <div className="flex items-center gap-2">
-              <MapPin size={16} className="text-nu-amber" />
-              <span className="text-sm">{meeting.location}</span>
-            </div>
-          )}
-        </div>
-        {/* Elapsed timer for in-progress meetings */}
-        {meeting.status === "in_progress" && (
-          <MeetingTimer startTime={meeting.scheduled_at} />
-        )}
-      </div>
+      <MeetingInfoEditor
+        meeting={meeting}
+        date={date}
+        canEdit={canEdit}
+        meetingId={meetingId}
+        onUpdate={loadMeeting}
+      />
 
       {/* Google Calendar */}
       {meeting.status === "upcoming" && (

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {
   Users, Calendar, Bell, ChevronRight, MapPin, Clock,
   Briefcase, Activity, Plus, Layers, ArrowUpRight,
@@ -8,6 +9,16 @@ import {
   FileText, MessageSquare, CheckCircle2,
 } from "lucide-react";
 import { getGrade, getCategory, timeAgo, GRADE_CONFIG, CATEGORY_CONFIG } from "@/lib/constants";
+
+const MyTasksWidget = dynamic(() => import("@/components/dashboard/my-tasks-widget").then(m => ({ default: m.MyTasksWidget })), {
+  loading: () => <div className="bg-nu-white border border-nu-ink/[0.08] p-5 h-48 animate-pulse" />,
+});
+const MyCalendarWidget = dynamic(() => import("@/components/dashboard/my-calendar-widget").then(m => ({ default: m.MyCalendarWidget })), {
+  loading: () => <div className="bg-nu-white border border-nu-ink/[0.08] p-5 h-48 animate-pulse" />,
+});
+const AiAssistantWidget = dynamic(() => import("@/components/dashboard/ai-assistant-widget").then(m => ({ default: m.AiAssistantWidget })), {
+  loading: () => <div className="bg-gradient-to-br from-indigo-50/50 to-nu-pink/5 border border-indigo-200/50 p-5 h-40 animate-pulse" />,
+});
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -354,42 +365,21 @@ export default async function DashboardPage() {
         {/* ── RIGHT sidebar ─────────────────────────────────────── */}
         <div className="space-y-5">
 
-          {/* 빠른 이동 */}
-          <div className="bg-nu-white border border-nu-ink/[0.08] p-5">
-            <h3 className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-3">빠른 이동</h3>
-            <div className="space-y-1">
-              {[
-                { href: "/groups",       label: "너트 탐색",     icon: Layers,    color: "text-nu-blue" },
-                { href: "/projects",     label: "볼트 탐색",     icon: Briefcase, color: "text-green-600" },
-                { href: "/members",      label: "와셔 탐색",     icon: Users,     color: "text-nu-pink" },
-                { href: "/profile",      label: "내 아카이브",   icon: Star,      color: "text-nu-amber" },
-                { href: "/notifications",label: "알림",          icon: Bell,      color: "text-nu-muted" },
-              ].map((item) => (
-                <Link key={item.href} href={item.href}
-                  className="flex items-center gap-2.5 px-3 py-2 hover:bg-nu-cream/30 transition-colors no-underline group">
-                  <item.icon size={13} className={item.color} />
-                  <span className="text-sm text-nu-graphite group-hover:text-nu-ink">{item.label}</span>
-                  <ChevronRight size={11} className="ml-auto text-nu-muted/30 group-hover:text-nu-pink transition-colors" />
-                </Link>
-              ))}
-            </div>
-          </div>
+          {/* AI 어시스턴트 */}
+          <AiAssistantWidget />
 
-          {/* 다가오는 일정 */}
-          <div className="bg-nu-white border border-nu-ink/[0.08] p-5">
-            <h3 className="font-head text-sm font-extrabold text-nu-ink flex items-center gap-2 mb-3">
-              <Calendar size={14} /> 다가오는 일정
-            </h3>
-            {eventCount === 0 ? (
-              <div className="text-center py-4">
-                <Calendar size={22} className="text-nu-muted/30 mx-auto mb-2" />
-                <p className="text-xs text-nu-muted mb-2">예정된 일정이 없습니다</p>
-                <Link href="/groups"
-                  className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-pink hover:underline no-underline">
-                  너트에서 일정 확인하기
-                </Link>
-              </div>
-            ) : (
+          {/* 오늘의 할일 (Google Tasks + 볼트 태스크) */}
+          <MyTasksWidget />
+
+          {/* 다가오는 일정 (Google Calendar) */}
+          <MyCalendarWidget />
+
+          {/* 너트 일정 (서버 데이터) */}
+          {eventCount > 0 && (
+            <div className="bg-nu-white border border-nu-ink/[0.08] p-5">
+              <h3 className="font-head text-sm font-extrabold text-nu-ink flex items-center gap-2 mb-3">
+                <Layers size={14} className="text-nu-blue" /> 너트 일정
+              </h3>
               <div className="space-y-3">
                 {events?.map((evt: any) => (
                   <Link key={evt.id} href={`/groups/${evt.group_id}/events/${evt.id}`}
@@ -419,7 +409,28 @@ export default async function DashboardPage() {
                   </Link>
                 ))}
               </div>
-            )}
+            </div>
+          )}
+
+          {/* 빠른 이동 */}
+          <div className="bg-nu-white border border-nu-ink/[0.08] p-5">
+            <h3 className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-3">빠른 이동</h3>
+            <div className="space-y-1">
+              {[
+                { href: "/groups",       label: "너트 탐색",     icon: Layers,    color: "text-nu-blue" },
+                { href: "/projects",     label: "볼트 탐색",     icon: Briefcase, color: "text-green-600" },
+                { href: "/members",      label: "와셔 탐색",     icon: Users,     color: "text-nu-pink" },
+                { href: "/profile",      label: "내 아카이브",   icon: Star,      color: "text-nu-amber" },
+                { href: "/notifications",label: "알림",          icon: Bell,      color: "text-nu-muted" },
+              ].map((item) => (
+                <Link key={item.href} href={item.href}
+                  className="flex items-center gap-2.5 px-3 py-2 hover:bg-nu-cream/30 transition-colors no-underline group">
+                  <item.icon size={13} className={item.color} />
+                  <span className="text-sm text-nu-graphite group-hover:text-nu-ink">{item.label}</span>
+                  <ChevronRight size={11} className="ml-auto text-nu-muted/30 group-hover:text-nu-pink transition-colors" />
+                </Link>
+              ))}
+            </div>
           </div>
 
           {/* 성장 현황 */}

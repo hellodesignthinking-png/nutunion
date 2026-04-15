@@ -111,7 +111,15 @@
       "Bash(grep -r \"google_\" /Users/TaiNa0/Desktop/nutunion/supabase/migrations/*.sql)",
       "Bash(find \"app/\\(staff\\)/workspace\" -name \"*.tsx\" -exec grep -l \"staff/projects\" {} \\\\;)",
       "Bash(grep -n \"staff_files_created_by_fkey\\\\|staff_tasks_assigned_to_fkey\\\\|staff_project_members_user_id_fkey\\\\|staff_comments_author_id_fkey\\\\|staff_activity_user_id_fkey\" /Users/TaiNa0/Desktop/nutunion/app/\\\\\\(staff\\\\\\)/**/*.tsx)",
-      "Bash(npx supabase:*)"
+      "Bash(npx supabase:*)",
+      "Bash(grep -E \"\\\\.\\(prisma|ts\\)$\")",
+      "Bash(grep -l \"chat_message\\\\|create table.*chat\" /Users/TaiNa0/Desktop/nutunion/supabase/migrations/*.sql)",
+      "Bash(grep -n \"ACTIVITY\\\\|activity ===\" /Users/TaiNa0/Desktop/nutunion/app/staff/workspace/[id]/page.tsx)",
+      "Bash(kill 93131)",
+      "mcp__Control_Chrome__execute_javascript",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "Bash(ls /Users/TaiNa0/Desktop/nutunion/app/favicon* /Users/TaiNa0/Desktop/nutunion/app/icon* /Users/TaiNa0/Desktop/nutunion/app/apple-icon*)",
+      "Bash(grep -r \"google_drive_folder_id\\\\|google_drive_wiki_folder_id\\\\|google_drive_meetings_folder_id\\\\|google_drive_resources_folder_id\" /Users/TaiNa0/Desktop/nutunion/supabase/migrations/*.sql)"
     ]
   }
 }

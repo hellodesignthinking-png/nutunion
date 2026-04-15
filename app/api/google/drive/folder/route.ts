@@ -5,7 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 
 /**
  * POST /api/google/drive/folder
- * Creates a Google Drive folder for a group and saves the folder ID to the group record.
+ * Creates a Google Drive folder for a group, project(bolt), or staff project.
+ * - Groups: 3 subfolders (회의록, 탭, 자료)
+ * - Projects (bolt): 4 subfolders (기획, 중간산출, 증빙, 최종)
+ * - Staff: plain folder
+ *
+ * Members are auto-shared via "anyone with link can view" (no individual email sharing needed).
+ * The folder URL is stored in the DB so all members can access it through the UI.
  */
 export async function POST(req: NextRequest) {
   const userId = await getCurrentUserId();
@@ -14,19 +20,30 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { groupId, staffProjectId, folderName } = await req.json();
+    const { groupId, projectId, staffProjectId, folderName } = await req.json();
 
-    if ((!groupId && !staffProjectId) || !folderName) {
-      return NextResponse.json({ error: "groupId 또는 staffProjectId와 folderName이 필요합니다" }, { status: 400 });
+    if ((!groupId && !projectId && !staffProjectId) || !folderName) {
+      return NextResponse.json({ error: "groupId, projectId, 또는 staffProjectId와 folderName이 필요합니다" }, { status: 400 });
     }
 
     const authSupabase = await createClient();
 
+    // Authorization checks
     if (staffProjectId) {
-      // Staff project: verify user is staff/admin
       const { data: profile } = await authSupabase.from("profiles").select("role").eq("id", userId).single();
       if (!profile || (profile.role !== "staff" && profile.role !== "admin")) {
         return NextResponse.json({ error: "스태프만 드라이브 폴더를 설정할 수 있습니다" }, { status: 403 });
+      }
+    } else if (projectId) {
+      // Bolt project: verify user is lead
+      const { data: membership } = await authSupabase
+        .from("project_members")
+        .select("role")
+        .eq("project_id", projectId)
+        .eq("user_id", userId)
+        .single();
+      if (!membership || membership.role !== "lead") {
+        return NextResponse.json({ error: "프로젝트 리드만 드라이브 폴더를 설정할 수 있습니다" }, { status: 403 });
       }
     } else {
       // Group: verify user is the host
@@ -39,10 +56,13 @@ export async function POST(req: NextRequest) {
     const auth = await getGoogleClient(userId);
     const drive = google.drive({ version: "v3", auth });
 
+    // Determine folder prefix
+    const prefix = projectId ? "볼트" : staffProjectId ? "스태프" : "너트";
+
     // Create folder in Google Drive
     const folderRes = await drive.files.create({
       requestBody: {
-        name: `[nutunion] ${folderName}`,
+        name: `[nutunion ${prefix}] ${folderName}`,
         mimeType: "application/vnd.google-apps.folder",
       },
       fields: "id, name, webViewLink",
@@ -51,7 +71,8 @@ export async function POST(req: NextRequest) {
     const folderId = folderRes.data.id!;
     const webViewLink = folderRes.data.webViewLink!;
 
-    // Set "anyone with link can view" permission
+    // Set "anyone with link can view" — no individual sharing needed.
+    // All nut/bolt members access the folder through the nutunion UI link.
     try {
       await drive.permissions.create({
         fileId: folderId,
@@ -61,9 +82,15 @@ export async function POST(req: NextRequest) {
       console.warn("Folder permission setting skipped:", permErr.message);
     }
 
-    // Create sub-folders: 회의록, 위키, 자료
+    // Create context-appropriate sub-folders
     const subFolders: Record<string, string> = {};
-    for (const subName of ["회의록", "탭", "자료"]) {
+    const subNames = projectId
+      ? ["기획", "중간산출", "증빙", "최종"]       // Bolt (project stages)
+      : staffProjectId
+        ? []                                          // Staff: flat
+        : ["회의록", "탭", "자료"];                    // Nut (group)
+
+    for (const subName of subNames) {
       try {
         const subRes = await drive.files.create({
           requestBody: {
@@ -74,6 +101,13 @@ export async function POST(req: NextRequest) {
           fields: "id, name",
         });
         subFolders[subName] = subRes.data.id!;
+        // Inherit "anyone with link" permission
+        try {
+          await drive.permissions.create({
+            fileId: subRes.data.id!,
+            requestBody: { role: "reader", type: "anyone" },
+          });
+        } catch { /* inherits parent perm */ }
       } catch (subErr: any) {
         console.warn(`Sub-folder ${subName} creation skipped:`, subErr.message);
       }
@@ -90,6 +124,20 @@ export async function POST(req: NextRequest) {
         })
         .eq("id", staffProjectId);
       if (updateErr) console.error("Staff project Drive update failed:", updateErr.message);
+    } else if (projectId) {
+      // Save to projects table
+      const { error: updateErr } = await supabase
+        .from("projects")
+        .update({
+          google_drive_url: webViewLink,
+          google_drive_folder_id: folderId,
+          google_drive_planning_folder_id: subFolders["기획"] || null,
+          google_drive_interim_folder_id: subFolders["중간산출"] || null,
+          google_drive_evidence_folder_id: subFolders["증빙"] || null,
+          google_drive_final_folder_id: subFolders["최종"] || null,
+        } as any)
+        .eq("id", projectId);
+      if (updateErr) console.error("Project Drive update failed:", updateErr.message);
     } else {
       const { error: updateErr } = await supabase
         .from("groups")
