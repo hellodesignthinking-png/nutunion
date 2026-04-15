@@ -161,20 +161,26 @@ async function ProjectsListWrapper({ userId }: { userId?: string }) {
   const [
     { data: projects },
     { data: profile },
+    { data: userMemberships },
   ] = await Promise.all([
     supabase
       .from("projects")
       .select("id, title, description, status, category, image_url, start_date, end_date, created_at, creator:profiles!projects_created_by_fkey(nickname, avatar_url), project_members(count), project_milestones(id, status)")
       .neq("status", "draft")
       .order("created_at", { ascending: false }),
-    userId ? 
+    userId ?
       supabase
         .from("profiles")
         .select("role, can_create_crew, grade")
         .eq("id", userId)
-        .single() : 
-      Promise.resolve({ data: null })
+        .single() :
+      Promise.resolve({ data: null }),
+    userId
+      ? supabase.from("project_members").select("project_id, role").eq("user_id", userId)
+      : Promise.resolve({ data: [] }),
   ]);
+
+  const memberMap = new Map((userMemberships || []).map((m: any) => [m.project_id, m.role]));
 
   const formatted = (projects || []).map((p: any) => {
     const creatorData = Array.isArray(p.creator) ? p.creator[0] || null : p.creator;
@@ -196,6 +202,7 @@ async function ProjectsListWrapper({ userId }: { userId?: string }) {
       created_at: p.created_at,
       milestone_total: milestoneTotal,
       milestone_completed: milestoneCompleted,
+      user_role: memberMap.get(p.id) || null,
     };
   });
 

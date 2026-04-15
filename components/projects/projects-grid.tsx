@@ -13,6 +13,7 @@ import {
   Pencil,
   Archive,
   RotateCcw,
+  Check,
 } from "lucide-react";
 
 const categoryFilters = [
@@ -59,6 +60,7 @@ interface ProjectItem {
   member_count: number;
   milestone_total?: number;
   milestone_completed?: number;
+  user_role?: string | null;
 }
 
 function formatDateRange(start: string | null, end: string | null) {
@@ -179,13 +181,18 @@ export function ProjectsGrid({
       return true;
     });
 
-    // Sort
+    // Sort: joined projects first, then by user-chosen key
     result = [...result].sort((a, b) => {
+      // 1) Membership — joined projects float to top
+      const aJoined = a.user_role ? 0 : 1;
+      const bJoined = b.user_role ? 0 : 1;
+      if (aJoined !== bJoined) return aJoined - bJoined;
+
+      // 2) User-chosen sort within each group
       switch (sortKey) {
         case "latest":
           return new Date(b.start_date || b.created_at).getTime() - new Date(a.start_date || a.created_at).getTime();
         case "deadline": {
-          // Only active projects with end_date; others go to the end
           const aEnd = a.status === "active" && a.end_date ? new Date(a.end_date).getTime() : Infinity;
           const bEnd = b.status === "active" && b.end_date ? new Date(b.end_date).getTime() : Infinity;
           return aEnd - bEnd;
@@ -346,6 +353,11 @@ export function ProjectsGrid({
                     </>
                   )}
                   <div className="absolute top-4 left-4 flex gap-2">
+                    {p.user_role && (
+                      <span className="font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 bg-green-600 text-white inline-flex items-center gap-1">
+                        <Check size={9} /> {p.user_role === "lead" ? "리드" : "참여중"}
+                      </span>
+                    )}
                     {p.category && (
                       <span
                         className={`font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 text-white ${style.bg}`}
@@ -445,6 +457,11 @@ export function ProjectsGrid({
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    {p.user_role && (
+                      <span className="font-mono-nu text-[8px] font-bold uppercase tracking-[0.15em] px-2 py-0.5 bg-green-600 text-white inline-flex items-center gap-1">
+                        <Check size={8} /> {p.user_role === "lead" ? "리드" : "참여중"}
+                      </span>
+                    )}
                     {p.category && (
                       <span
                         className={`font-mono-nu text-[8px] font-bold uppercase tracking-[0.15em] px-2 py-0.5 text-white ${style.bg}`}

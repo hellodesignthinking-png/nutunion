@@ -101,22 +101,28 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
       return true;
     });
 
+    // Sort: joined groups always first, then apply user-chosen sort
+    const memberPriority = (s: string | null | undefined) =>
+      s === "active" ? 0 : s === "pending" ? 1 : s === "waitlist" ? 2 : 3;
+
     const sorted = [...base];
-    switch (sort) {
-      case "popular":
-        sorted.sort((a, b) => b.member_count - a.member_count);
-        break;
-      case "name":
-        sorted.sort((a, b) => a.name.localeCompare(b.name, "ko"));
-        break;
-      case "newest":
-      default:
-        sorted.sort((a, b) => {
+    sorted.sort((a, b) => {
+      // 1) Membership status — joined first
+      const mp = memberPriority(a.user_status) - memberPriority(b.user_status);
+      if (mp !== 0) return mp;
+
+      // 2) User-chosen sort within each group
+      switch (sort) {
+        case "popular":
+          return b.member_count - a.member_count;
+        case "name":
+          return a.name.localeCompare(b.name, "ko");
+        case "newest":
+        default:
           if (!a.created_at || !b.created_at) return 0;
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        });
-        break;
-    }
+      }
+    });
     return sorted;
   }, [groups, filter, search, sort]);
 
