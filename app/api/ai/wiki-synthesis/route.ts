@@ -15,8 +15,30 @@ export async function GET(request: NextRequest) {
   const checks: Record<string, string> = {};
 
   try {
-    checks.gemini_key = GEMINI_API_KEY ? "set" : "MISSING";
+    checks.gemini_key = GEMINI_API_KEY ? `set (${GEMINI_API_KEY.slice(0, 8)}...)` : "MISSING";
     checks.gemini_model = GEMINI_MODEL;
+    checks.gemini_url = GEMINI_URL ? "built" : "MISSING";
+
+    // Always test Gemini (no auth needed)
+    try {
+      const geminiQuickTest = await fetch(GEMINI_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: "Reply with: OK" }] }],
+          generationConfig: { maxOutputTokens: 5 },
+        }),
+      });
+      if (geminiQuickTest.ok) {
+        const gd = await geminiQuickTest.json();
+        checks.gemini_quick_test = `ok: ${gd?.candidates?.[0]?.content?.parts?.[0]?.text || "(empty)"}`;
+      } else {
+        const errText = await geminiQuickTest.text();
+        checks.gemini_quick_test = `FAIL HTTP ${geminiQuickTest.status}: ${errText.slice(0, 300)}`;
+      }
+    } catch (e: any) {
+      checks.gemini_quick_test = `ERROR: ${e.message}`;
+    }
 
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -60,7 +82,7 @@ export async function GET(request: NextRequest) {
 
     // Test Gemini reachability
     try {
-      const res = await fetch(GEMINI_URL, {
+      const geminiTestRes = await fetch(GEMINI_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -68,7 +90,12 @@ export async function GET(request: NextRequest) {
           generationConfig: { maxOutputTokens: 5 },
         }),
       });
-      checks.gemini_api = res.ok ? "ok" : `HTTP ${res.status}`;
+      if (geminiTestRes.ok) {
+        checks.gemini_api = "ok";
+      } else {
+        const errBody = await geminiTestRes.text();
+        checks.gemini_api = `HTTP ${geminiTestRes.status}: ${errBody.slice(0, 200)}`;
+      }
     } catch (e: any) {
       checks.gemini_api = `ERROR: ${e.message}`;
     }
