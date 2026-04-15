@@ -365,13 +365,14 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
             </div>
             <div className="text-center sm:text-left flex-1">
               <p className="text-sm font-bold text-nu-ink mb-1.5">
-                주간 지식 통합
+                회의록 기반 탭 강화
               </p>
               <p className="text-xs text-nu-muted leading-relaxed mb-1">
-                새로 공유된 리소스와 회의 내용을 AI가 분석하여 탭 페이지로 정리합니다.
+                회의록과 토론 내용을 1차 자료로, 공유된 리소스를 보강 자료로 활용하여
+                통합 탭을 점진적으로 강화합니다.
               </p>
               <p className="font-mono-nu text-[8px] text-nu-muted/60">
-                이전 통합 이후 새 데이터만 처리 · 토큰 절약 · 증분 방식
+                회의 → 분석 → 기존 섹션 강화 · 증분 처리 · 토큰 절약
               </p>
             </div>
           </div>

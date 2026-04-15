@@ -50,6 +50,9 @@ const WeeklyInsightNewsletter = lazyLoad(() => import("@/components/wiki/weekly-
 const MonthlyEvolutionAnalysis = lazyLoad(() => import("@/components/wiki/monthly-evolution-analysis").then(m => m.MonthlyEvolutionAnalysis), {
   loading: () => <WikiSkeleton h="h-72" />,
 });
+const UnifiedTabView = lazyLoad(() => import("@/components/wiki/unified-tab-view").then(m => m.UnifiedTabView), {
+  loading: () => <WikiSkeleton h="h-96" />,
+});
 
 export const revalidate = 60;
 
@@ -216,8 +219,8 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                 </div>
               </div>
               <p className="text-nu-graphite leading-relaxed text-sm font-medium mt-4 max-w-xl">
-                매주 공유한 자료와 토론을 AI가 정리하여 탭으로 축적합니다.
-                모두가 함께 만든 기록이 팀의 공유 지식이 됩니다.
+                매주 회의와 토론을 기반으로 AI가 하나의 문서를 강화합니다.
+                자료와 회의록이 쌓이면서 논문형 공유 지식이 완성됩니다.
               </p>
             </div>
 
@@ -252,11 +255,11 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4">
           <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-hide pb-1">
             {[
-              { icon: Library, label: "자료 공유", sub: `${weeklyResourceCount}건 이번 주`, color: "text-[#ff6f00]", bgColor: "bg-[#ff6f00]/10", active: weeklyResourceCount > 0 },
-              { icon: Users, label: "토론 · 회의", sub: "함께 분석", color: "text-nu-blue", bgColor: "bg-nu-blue/10", active: false },
-              { icon: Brain, label: "AI 지식 통합", sub: "핵심 추출", color: "text-nu-pink", bgColor: "bg-nu-pink/10", active: false },
-              { icon: FileText, label: "탭 축적", sub: `${totalPages}페이지`, color: "text-green-600", bgColor: "bg-green-500/10", active: totalPages > 0 },
-              { icon: TrendingUp, label: "모두의 성장", sub: `${activeContributorsCount}명 활동`, color: "text-purple-600", bgColor: "bg-purple-500/10", active: activeContributorsCount > 0 },
+              { icon: Users, label: "회의 · 토론", sub: "회의록 기록", color: "text-nu-blue", bgColor: "bg-nu-blue/10", active: false },
+              { icon: Library, label: "자료 보강", sub: `${weeklyResourceCount}건 이번 주`, color: "text-[#ff6f00]", bgColor: "bg-[#ff6f00]/10", active: weeklyResourceCount > 0 },
+              { icon: Brain, label: "AI 통합", sub: "회의록 → 탭", color: "text-nu-pink", bgColor: "bg-nu-pink/10", active: false },
+              { icon: BookOpen, label: "통합 탭 강화", sub: `${totalPages}페이지`, color: "text-green-600", bgColor: "bg-green-500/10", active: totalPages > 0 },
+              { icon: TrendingUp, label: "점진적 성장", sub: `${activeContributorsCount}명 기여`, color: "text-purple-600", bgColor: "bg-purple-500/10", active: activeContributorsCount > 0 },
             ].map((step, i) => (
               <div key={i} className="flex items-center gap-1 sm:gap-2 shrink-0">
                 {i > 0 && <ArrowRight size={10} className="text-nu-ink/15 shrink-0 hidden sm:block" />}
@@ -280,58 +283,95 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
       {/* ── Main Content ────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-10 md:py-12">
 
-        {/* ── Section 1: Knowledge Graph ────────────── */}
+        {/* ══════════════════════════════════════════════
+            SECTION A: 통합 탭 (메인 문서)
+            — 모든 주제가 하나의 문서로 조립됨
+            ══════════════════════════════════════════════ */}
         <section className="mb-14">
           <div className="flex items-center justify-between mb-5">
             <h2 className="font-head text-xl font-extrabold text-nu-ink flex items-center gap-2">
-              <GitBranch size={20} className="text-nu-blue" /> 지식 그래프
+              <BookOpen size={20} className="text-nu-ink" /> 통합 탭
             </h2>
             <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest bg-nu-cream px-3 py-1 border border-nu-ink/10">
-              주제 · 페이지 · 자료 시각화
+              회의 기반 · 주간 성장 · 논문형 문서
             </span>
           </div>
-          <KnowledgeGraph groupId={id} />
+          <UnifiedTabView groupId={id} groupName={group.name} />
         </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        {/* ══════════════════════════════════════════════
+            SECTION B: 주간 워크플로우 (입력 도구)
+            — 회의록 + 자료 → AI 통합 → 탭 강화
+            ══════════════════════════════════════════════ */}
+        <div className="mb-14">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-8 h-8 bg-nu-ink flex items-center justify-center">
+              <Zap size={16} className="text-white" />
+            </div>
+            <div>
+              <h2 className="font-head text-lg font-extrabold text-nu-ink">주간 워크플로우</h2>
+              <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">자료 공유 → 회의 · 토론 → AI 통합 → 탭 강화</p>
+            </div>
+          </div>
 
-          {/* ── Left Column (8 cols) ─────────────────── */}
-          <div className="lg:col-span-8 space-y-14">
-
-            {/* ── Section 2: Weekly Resource Feed ──────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Weekly Resource Feed */}
             <section>
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="font-head text-xl font-extrabold text-nu-ink flex items-center gap-2">
-                  <Library size={20} className="text-[#ff6f00]" /> 주간 자료실
-                </h2>
-                <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">
-                  이번 주 {weeklyResourceCount}건 · 전체 {totalResources}건
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-head text-base font-bold text-nu-ink flex items-center gap-2">
+                  <Library size={16} className="text-[#ff6f00]" /> 주간 자료실
+                </h3>
+                <span className="font-mono-nu text-[8px] text-nu-muted uppercase">
+                  이번 주 {weeklyResourceCount}건
                 </span>
               </div>
               <WeeklyResourceFeed groupId={id} userId={user.id} />
             </section>
 
-            {/* ── Section 3: AI Knowledge Synthesis ───── */}
+            {/* AI Knowledge Synthesis */}
             <section>
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="font-head text-xl font-extrabold text-nu-ink flex items-center gap-2">
-                  <Sparkles size={20} className="text-nu-pink" /> AI 지식 통합
-                </h2>
-                <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">
-                  자료 + 회의 → 탭 자동 생성
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-head text-base font-bold text-nu-ink flex items-center gap-2">
+                  <Sparkles size={16} className="text-nu-pink" /> AI 지식 통합
+                </h3>
+                <span className="font-mono-nu text-[8px] text-nu-muted uppercase">
+                  회의록 + 자료 → 탭 강화
                 </span>
               </div>
               <WeeklySynthesisEngine groupId={id} isHost={isHost} />
             </section>
+          </div>
+        </div>
 
-            {/* ── Section 4: Topic Explorer ─────────── */}
+        {/* ══════════════════════════════════════════════
+            SECTION C: 구성 요소 & 분석
+            ══════════════════════════════════════════════ */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+
+          {/* ── Left Column (8 cols) ─────────────────── */}
+          <div className="lg:col-span-8 space-y-14">
+
+            {/* ── Knowledge Graph ────────────────── */}
             <section>
               <div className="flex items-center justify-between mb-5">
                 <h2 className="font-head text-xl font-extrabold text-nu-ink flex items-center gap-2">
-                  <Brain size={20} className="text-nu-pink" /> 주제별 탭
+                  <GitBranch size={20} className="text-nu-blue" /> 지식 그래프
+                </h2>
+                <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest bg-nu-cream px-3 py-1 border border-nu-ink/10">
+                  섹션 · 페이지 · 자료 시각화
+                </span>
+              </div>
+              <KnowledgeGraph groupId={id} />
+            </section>
+
+            {/* ── Section Management (구성 섹션) ──── */}
+            <section>
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="font-head text-xl font-extrabold text-nu-ink flex items-center gap-2">
+                  <Brain size={20} className="text-nu-pink" /> 구성 섹션
                 </h2>
                 <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">
-                  {topics?.length || 0}개 주제 · {totalPages}개 페이지
+                  {topics?.length || 0}개 섹션이 통합 탭을 구성합니다
                 </span>
               </div>
 
@@ -341,118 +381,102 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                     const pageCount = topicPageCounts[topic.id] || 0;
                     const lastUpdate = topicLatestUpdate[topic.id];
                     const colorClasses = ["border-l-nu-pink", "border-l-nu-blue", "border-l-[#ff6f00]", "border-l-green-500", "border-l-purple-500", "border-l-cyan-500"];
-                    const bgHoverClasses = ["hover:bg-nu-pink/[0.02]", "hover:bg-nu-blue/[0.02]", "hover:bg-[#ff6f00]/[0.02]", "hover:bg-green-500/[0.02]", "hover:bg-purple-500/[0.02]", "hover:bg-cyan-500/[0.02]"];
                     return (
                       <Link
                         key={topic.id}
                         href={`/groups/${id}/wiki/topics/${topic.id}`}
-                        className={`group bg-white border-[2px] border-nu-ink/10 border-l-[4px] ${colorClasses[i % colorClasses.length]} p-5 no-underline hover:border-nu-ink/25 ${bgHoverClasses[i % bgHoverClasses.length]} hover:shadow-sm transition-all`}
+                        className={`group bg-white border-[2px] border-nu-ink/10 border-l-[4px] ${colorClasses[i % colorClasses.length]} p-4 no-underline hover:border-nu-ink/25 hover:shadow-sm transition-all`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-head text-base font-bold text-nu-ink group-hover:text-nu-pink transition-colors truncate">
-                              {topic.name}
-                            </h3>
-                            <p className="text-[11px] text-nu-muted leading-relaxed mt-1 line-clamp-2">
-                              {topic.description || "탭 주제를 클릭하여 페이지를 탐색하세요"}
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono-nu text-[9px] text-nu-muted/40 font-bold">
+                                §{String(i + 1).padStart(2, "0")}
+                              </span>
+                              <h3 className="font-head text-sm font-bold text-nu-ink group-hover:text-nu-pink transition-colors truncate">
+                                {topic.name}
+                              </h3>
+                            </div>
+                            <p className="text-[10px] text-nu-muted leading-relaxed mt-1 line-clamp-1">
+                              {topic.description || "섹션을 편집하여 탭을 강화하세요"}
                             </p>
                           </div>
-                          <div className="flex flex-col items-center shrink-0 bg-nu-cream/50 px-3 py-1.5 border border-nu-ink/5">
-                            <span className="font-head text-xl font-extrabold text-nu-ink">{pageCount}</span>
-                            <span className="font-mono-nu text-[7px] text-nu-muted uppercase">pages</span>
-                          </div>
-                        </div>
-                        <div className="mt-3 flex items-center justify-between pt-3 border-t border-nu-ink/5">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">
-                              탭 탐색
-                            </span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="font-mono-nu text-[9px] text-nu-muted">{pageCount}p</span>
                             {lastUpdate && (
-                              <span className="font-mono-nu text-[7px] text-nu-muted/50">
-                                · 최근 {new Date(lastUpdate).toLocaleDateString("ko", { month: "short", day: "numeric" })}
+                              <span className="font-mono-nu text-[7px] text-nu-muted/40">
+                                {new Date(lastUpdate).toLocaleDateString("ko", { month: "short", day: "numeric" })}
                               </span>
                             )}
+                            <ArrowRight size={12} className="text-nu-ink/20 group-hover:text-nu-pink transition-colors" />
                           </div>
-                          <ArrowRight size={12} className="text-nu-ink/30 group-hover:text-nu-pink group-hover:translate-x-1 transition-all" />
                         </div>
                       </Link>
                     );
                   })
                 ) : (
-                  <div className="col-span-2 border-[2px] border-dashed border-nu-ink/15 p-12 text-center bg-white/50">
-                    <Brain size={36} className="mx-auto mb-3 text-nu-ink/15" />
-                    <p className="text-nu-muted text-sm font-medium mb-2">아직 등록된 주제가 없습니다</p>
-                    <p className="text-xs text-nu-muted/70 mb-4">첫 번째 지식 주제를 생성하여 탭을 시작하세요</p>
+                  <div className="col-span-2 border-[2px] border-dashed border-nu-ink/15 p-10 text-center bg-white/50">
+                    <Brain size={32} className="mx-auto mb-3 text-nu-ink/15" />
+                    <p className="text-nu-muted text-sm font-medium mb-1">아직 등록된 섹션이 없습니다</p>
+                    <p className="text-xs text-nu-muted/70">섹션(주제)을 생성하면 통합 탭의 목차가 됩니다</p>
                   </div>
                 )}
               </div>
             </section>
 
-            {/* ── Section 5: Recent Changes Timeline ──── */}
+            {/* ── Recent Changes ──────────────────── */}
             <section className="bg-nu-ink text-white p-6 sm:p-8 relative overflow-hidden">
               <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
               <div className="absolute top-0 right-0 w-48 h-48 bg-nu-pink/[0.06] rounded-full blur-3xl" />
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="font-head text-lg font-extrabold flex items-center gap-2">
-                    <History size={18} className="text-nu-pink" /> 최근 변경 기록
+                    <History size={18} className="text-nu-pink" /> 변경 기록
                   </h2>
                   <span className="font-mono-nu text-[8px] text-white/25 uppercase tracking-widest">
-                    {recentPages.length}건 · 실시간
+                    {recentPages.length}건
                   </span>
                 </div>
 
                 <div className="space-y-0">
                   {recentPages.length > 0 ? (
-                    recentPages.map((page, i) => {
+                    recentPages.slice(0, 6).map((page, i) => {
                       const isRecent = Date.now() - new Date(page.updated_at).getTime() < 3 * 24 * 60 * 60 * 1000;
                       return (
                         <div key={page.id} className="flex gap-4 group">
-                          <div className="flex flex-col items-center w-6 shrink-0">
-                            <div className={`w-2.5 h-2.5 rounded-full border-2 shrink-0 transition-colors ${
-                              i === 0 ? "bg-nu-pink border-nu-pink shadow-[0_0_6px_rgba(233,30,99,0.4)]" : isRecent ? "bg-nu-pink/30 border-nu-pink/50" : "bg-transparent border-white/20"
+                          <div className="flex flex-col items-center w-5 shrink-0">
+                            <div className={`w-2 h-2 rounded-full shrink-0 ${
+                              i === 0 ? "bg-nu-pink shadow-[0_0_6px_rgba(233,30,99,0.4)]" : isRecent ? "bg-nu-pink/30" : "bg-white/15"
                             }`} />
-                            {i < recentPages.length - 1 && <div className="w-px flex-1 bg-white/10" />}
+                            {i < Math.min(recentPages.length, 6) - 1 && <div className="w-px flex-1 bg-white/10" />}
                           </div>
-                          <div className="flex-1 pb-5">
-                            <div className="flex items-center gap-2">
-                              <Link
-                                href={`/groups/${id}/wiki/pages/${page.id}`}
-                                className="block font-head text-sm font-bold text-white no-underline hover:text-nu-pink transition-colors truncate"
-                              >
-                                {page.title}
-                              </Link>
-                              {isRecent && i < 3 && (
-                                <span className="font-mono-nu text-[7px] px-1.5 py-0.5 bg-nu-pink/20 text-nu-pink uppercase shrink-0">new</span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 mt-1 font-mono-nu text-[8px] text-white/30 uppercase tracking-widest flex-wrap">
-                              <span className="flex items-center gap-1 text-white/40">
-                                <BookOpen size={8} /> {(page as any).topic?.name}
-                              </span>
-                              <span>·</span>
-                              <span className="text-nu-pink/50">v{page.version}</span>
-                              <span>·</span>
-                              <span>{(page as any).author?.nickname || "?"}</span>
-                              <span>·</span>
-                              <span>{new Date(page.updated_at).toLocaleDateString("ko", { month: "short", day: "numeric" })}</span>
+                          <div className="flex-1 pb-4 min-w-0">
+                            <Link
+                              href={`/groups/${id}/wiki/pages/${page.id}`}
+                              className="block text-sm font-bold text-white no-underline hover:text-nu-pink transition-colors truncate"
+                            >
+                              {page.title}
+                            </Link>
+                            <div className="flex items-center gap-2 mt-0.5 font-mono-nu text-[8px] text-white/25">
+                              <span>{(page as any).topic?.name}</span>
+                              <span>· v{page.version}</span>
+                              <span>· {(page as any).author?.nickname || "?"}</span>
+                              <span>· {new Date(page.updated_at).toLocaleDateString("ko", { month: "short", day: "numeric" })}</span>
                             </div>
                           </div>
                         </div>
                       );
                     })
                   ) : (
-                    <div className="text-center py-8">
-                      <History size={28} className="mx-auto mb-3 text-white/10" />
-                      <p className="text-white/30 text-xs">아직 등록된 페이지가 없습니다</p>
-                      <p className="text-white/15 text-[10px] mt-1">AI 지식 통합으로 첫 페이지를 만들어보세요</p>
+                    <div className="text-center py-6">
+                      <p className="text-white/30 text-xs">아직 변경 기록이 없습니다</p>
                     </div>
                   )}
                 </div>
               </div>
             </section>
 
-            {/* ── Section 6: Weekly Insight ──────────── */}
+            {/* ── Weekly Insight & Monthly Evolution ── */}
             <section>
               <h2 className="font-head text-xl font-extrabold text-nu-ink mb-5 flex items-center gap-2">
                 <BarChart3 size={20} className="text-nu-amber" /> 주간 인사이트
@@ -460,10 +484,9 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
               <WeeklyInsightNewsletter groupId={id} isHost={isHost} />
             </section>
 
-            {/* ── Section 7: Monthly Evolution ──────── */}
             <section>
               <h2 className="font-head text-xl font-extrabold text-nu-ink mb-5 flex items-center gap-2">
-                <Zap size={20} className="text-purple-500" /> 월간 진화 분석
+                <TrendingUp size={20} className="text-purple-500" /> 월간 진화 분석
               </h2>
               <MonthlyEvolutionAnalysis groupId={id} isHost={isHost} />
             </section>
@@ -480,16 +503,14 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
               </h3>
               <div className="space-y-4 relative">
                 {[
-                  { label: "지식 커버리지", value: knowledgeCoverage, color: "bg-nu-pink", textColor: "text-nu-pink", desc: `${topics?.length || 0}개 주제` },
+                  { label: "섹션 커버리지", value: knowledgeCoverage, color: "bg-nu-pink", textColor: "text-nu-pink", desc: `${topics?.length || 0}개 섹션` },
                   { label: "연결 밀도", value: linkDensity, color: "bg-nu-blue", textColor: "text-nu-blue", desc: `${totalLinks}개 연결` },
                   { label: "참여 활성도", value: participationRate, color: "bg-nu-amber", textColor: "text-nu-amber", desc: `${activeContributorsCount}/${memberCountFinalVal}명` },
                 ].map(m => (
                   <div key={m.label}>
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-[11px] text-white/60">{m.label}</span>
-                      <span className={`font-mono-nu text-[10px] font-bold ${m.textColor}`}>
-                        {m.value}%
-                      </span>
+                      <span className={`font-mono-nu text-[10px] font-bold ${m.textColor}`}>{m.value}%</span>
                     </div>
                     <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                       <div className={`h-full ${m.color} rounded-full transition-all duration-700`} style={{ width: `${m.value}%` }} />
@@ -498,9 +519,8 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                   </div>
                 ))}
               </div>
-              {/* Overall score */}
               <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between">
-                <span className="font-mono-nu text-[9px] text-white/30 uppercase tracking-widest">종합 점수</span>
+                <span className="font-mono-nu text-[9px] text-white/30 uppercase tracking-widest">종합</span>
                 <span className="font-head text-xl font-extrabold text-nu-pink">
                   {Math.round((knowledgeCoverage + linkDensity + participationRate) / 3)}
                   <span className="text-[10px] text-white/30 ml-0.5">/ 100</span>
@@ -518,11 +538,11 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
               </div>
               {activityFeed.length > 0 ? (
                 <div className="divide-y divide-nu-ink/5">
-                  {activityFeed.map((a: any, i: number) => {
+                  {activityFeed.slice(0, 8).map((a: any, i: number) => {
                     const isAI = a.source_type === "ai_synthesis";
                     return (
                       <div key={i} className={`px-4 py-3 hover:bg-nu-cream/20 transition-colors ${isAI ? "bg-nu-pink/[0.02]" : ""}`}>
-                        <div className="flex items-center gap-2 mb-1.5">
+                        <div className="flex items-center gap-2 mb-1">
                           {isAI ? (
                             <div className="w-5 h-5 rounded-full bg-gradient-to-br from-nu-pink to-purple-500 flex items-center justify-center shrink-0">
                               <Brain size={10} className="text-white" />
@@ -537,18 +557,12 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                           <span className="font-head text-[11px] font-bold text-nu-ink truncate">
                             {isAI ? "AI 통합" : (a.contributor?.nickname || "?")}
                           </span>
-                          {isAI && (
-                            <span className="font-mono-nu text-[7px] px-1 py-0.5 bg-nu-pink/10 text-nu-pink uppercase tracking-wider">AUTO</span>
-                          )}
                           <span className="font-mono-nu text-[7px] text-nu-muted/40 ml-auto shrink-0">
                             {new Date(a.created_at).toLocaleDateString("ko", { month: "short", day: "numeric" })}
                           </span>
                         </div>
                         {a.page && (
-                          <Link
-                            href={`/groups/${id}/wiki/pages/${a.page.id}`}
-                            className="text-[11px] text-nu-blue no-underline hover:underline truncate block ml-7"
-                          >
+                          <Link href={`/groups/${id}/wiki/pages/${a.page.id}`} className="text-[11px] text-nu-blue no-underline hover:underline truncate block ml-7">
                             {a.page.title}
                           </Link>
                         )}
@@ -562,8 +576,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
               ) : (
                 <div className="p-8 text-center">
                   <Sparkles size={24} className="mx-auto mb-2 text-nu-ink/10" />
-                  <p className="font-mono-nu text-[10px] text-nu-muted mb-1">아직 기여 활동이 없습니다</p>
-                  <p className="font-mono-nu text-[8px] text-nu-muted/50">자료를 공유하거나 탭을 편집하면 여기에 표시됩니다</p>
+                  <p className="font-mono-nu text-[10px] text-nu-muted">기여 활동을 시작해보세요</p>
                 </div>
               )}
             </section>
@@ -584,18 +597,18 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
               <HumanCapitalVisual groupId={id} />
             </section>
 
-            {/* Weekly Growth Cycle Guide */}
+            {/* Growth Cycle Guide */}
             <section className="bg-nu-cream p-5 border-[2px] border-nu-ink">
               <h3 className="font-mono-nu text-[10px] font-bold text-nu-ink uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                 <Calendar size={13} className="text-nu-pink" /> 주간 성장 사이클
               </h3>
               <ul className="space-y-3 font-mono-nu text-[10px] text-nu-muted leading-relaxed">
                 {[
-                  { num: "01", color: "bg-[#ff6f00]", title: "자료 공유", desc: "각자 발견한 아티클, 영상, 문서를 자료실에 올립니다" },
-                  { num: "02", color: "bg-nu-blue", title: "토론 & 회의", desc: "자료를 함께 읽고 회의에서 논의합니다" },
-                  { num: "03", color: "bg-nu-pink", title: "AI 지식 통합", desc: "자료와 회의 내용을 AI가 분석, 탭 페이지로 정리합니다" },
-                  { num: "04", color: "bg-green-600", title: "탭 축적 & 기록", desc: "정리된 지식이 탭에 저장되고, 기여자가 기록됩니다" },
-                  { num: "05", color: "bg-purple-600", title: "다음 주로 연결", desc: "이전 맥락 위에 새 지식을 쌓아 점진적으로 성장합니다" },
+                  { num: "01", color: "bg-nu-blue", title: "회의 · 토론", desc: "주제에 대해 회의하고 회의록을 기록합니다" },
+                  { num: "02", color: "bg-[#ff6f00]", title: "자료 보강", desc: "회의에서 나온 주제를 보강할 자료를 공유합니다" },
+                  { num: "03", color: "bg-nu-pink", title: "AI 통합", desc: "회의록과 자료를 AI가 분석, 통합 탭을 강화합니다" },
+                  { num: "04", color: "bg-green-600", title: "탭 성장", desc: "하나의 완성된 문서가 점진적으로 성장합니다" },
+                  { num: "05", color: "bg-purple-600", title: "다음 주", desc: "이전 맥락 위에 새 회의 결과를 쌓아갑니다" },
                 ].map(s => (
                   <li key={s.num} className="flex gap-3">
                     <span className={`w-5 h-5 ${s.color} text-white flex items-center justify-center shrink-0 font-bold text-[8px]`}>{s.num}</span>
