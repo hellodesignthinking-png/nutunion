@@ -8,7 +8,7 @@ import { GitBranch, ZoomIn, ZoomOut, Maximize2, ExternalLink } from "lucide-reac
 interface Node {
   id: string;
   label: string;
-  type: "topic" | "page";
+  type: "topic" | "page" | "resource";
   x: number;
   y: number;
   vx: number;
@@ -17,6 +17,8 @@ interface Node {
   radius: number;
   pageCount?: number;
   topicId?: string;
+  url?: string;
+  resourceType?: string;
 }
 
 interface Edge {
@@ -26,11 +28,17 @@ interface Edge {
 }
 
 const TOPIC_COLORS = ["#e91e63", "#2196f3", "#ff9800", "#4caf50", "#9c27b0", "#00bcd4"];
+const RESOURCE_COLOR = "#ff6f00";
 const LINK_COLORS: Record<string, string> = {
   reference: "rgba(100,100,100,0.25)",
   extends: "rgba(33,150,243,0.4)",
   contradicts: "rgba(233,30,99,0.4)",
   prerequisite: "rgba(255,152,0,0.4)",
+  resource_link: "rgba(255,111,0,0.3)",
+};
+const RESOURCE_TYPE_ICONS: Record<string, string> = {
+  youtube: "▶", pdf: "📄", article: "📰", notion: "N", drive: "G",
+  docs: "D", sheet: "S", slide: "P", link: "🔗", other: "·",
 };
 
 export function KnowledgeGraph({ groupId }: { groupId: string }) {
@@ -44,7 +52,7 @@ export function KnowledgeGraph({ groupId }: { groupId: string }) {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
-  const [stats, setStats] = useState({ topics: 0, pages: 0, links: 0 });
+  const [stats, setStats] = useState({ topics: 0, pages: 0, links: 0, resources: 0 });
   const animFrameRef = useRef<number>(0);
   const nodesRef = useRef<Node[]>([]);
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
@@ -77,6 +85,14 @@ export function KnowledgeGraph({ groupId }: { groupId: string }) {
           .in("source_page_id", pageIds);
         links = (data || []).filter(l => pageIds.includes(l.target_page_id));
       }
+
+      // Fetch weekly resources for this group
+      const { data: resources } = await supabase
+        .from("wiki_weekly_resources")
+        .select("id, title, url, resource_type, linked_wiki_page_id")
+        .eq("group_id", groupId)
+        .order("created_at", { ascending: false })
+        .limit(30);
 
       // Count pages per topic
       const pageCountByTopic: Record<string, number> = {};
@@ -122,6 +138,25 @@ export function KnowledgeGraph({ groupId }: { groupId: string }) {
         });
       });
 
+      // Add resource nodes — positioned around the edge of the graph
+      const resourceList = resources || [];
+      resourceList.forEach((r, i) => {
+        const angle = (Math.PI * 2 * i) / Math.max(resourceList.length, 1);
+        const rLabel = r.title.length > 14 ? r.title.slice(0, 12) + "…" : r.title;
+        newNodes.push({
+          id: `res-${r.id}`,
+          label: rLabel,
+          type: "resource",
+          x: centerX + Math.cos(angle) * 280 + (Math.random() - 0.5) * 60,
+          y: centerY + Math.sin(angle) * 280 + (Math.random() - 0.5) * 60,
+          vx: 0, vy: 0,
+          color: RESOURCE_COLOR,
+          radius: 12,
+          url: r.url,
+          resourceType: r.resource_type,
+        });
+      });
+
       // Build edges
       const newEdges: Edge[] = [];
       (pages || []).forEach(p => {
@@ -135,7 +170,23 @@ export function KnowledgeGraph({ groupId }: { groupId: string }) {
         });
       });
 
-      setStats({ topics: (topics || []).length, pages: (pages || []).length, links: (links || []).length });
+      // Resource → linked wiki page edges
+      resourceList.forEach(r => {
+        if (r.linked_wiki_page_id && pageIds.includes(r.linked_wiki_page_id)) {
+          newEdges.push({
+            source: `res-${r.id}`,
+            target: r.linked_wiki_page_id,
+            type: "resource_link",
+          });
+        }
+      });
+
+      setStats({
+        topics: (topics || []).length,
+        pages: (pages || []).length,
+        links: (links || []).length + resourceList.filter(r => r.linked_wiki_page_id).length,
+        resources: resourceList.length,
+      });
       setNodes(newNodes);
       nodesRef.current = newNodes;
       setEdges(newEdges);
@@ -260,47 +311,79 @@ export function KnowledgeGraph({ groupId }: { groupId: string }) {
         ctx.shadowBlur = isHovered ? 20 : 8;
       }
 
-      ctx.beginPath();
-      ctx.arc(n.x, n.y, n.radius + (isHovered ? 4 : 0), 0, Math.PI * 2);
-
-      if (n.type === "topic") {
-        const grad = ctx.createRadialGradient(n.x - 4, n.y - 4, 0, n.x, n.y, n.radius);
-        grad.addColorStop(0, n.color);
-        grad.addColorStop(1, n.color + "99");
-        ctx.fillStyle = grad;
-      } else {
-        ctx.fillStyle = isHovered ? n.color : "#ffffff";
-      }
-      ctx.fill();
-      ctx.shadowBlur = 0;
-
-      ctx.strokeStyle = n.type === "topic" ? n.color : (isHovered ? n.color : n.color + "44");
-      ctx.lineWidth = n.type === "topic" ? 3 : 2;
-      ctx.stroke();
-
-      // Label
-      ctx.fillStyle = n.type === "topic" ? "#fff" : (isHovered ? "#fff" : "#333");
-      ctx.font = n.type === "topic"
-        ? "bold 10px 'Inter', sans-serif"
-        : "600 8px 'Inter', sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(n.label, n.x, n.y);
-
-      // Page count badge for topics
-      if (n.type === "topic" && n.pageCount && n.pageCount > 0) {
-        const bx = n.x + n.radius * 0.7;
-        const by = n.y - n.radius * 0.7;
+      if (n.type === "resource") {
+        // Draw diamond shape for resources
+        const r = n.radius + (isHovered ? 3 : 0);
         ctx.beginPath();
-        ctx.arc(bx, by, 8, 0, Math.PI * 2);
-        ctx.fillStyle = "#fff";
+        ctx.moveTo(n.x, n.y - r);
+        ctx.lineTo(n.x + r, n.y);
+        ctx.lineTo(n.x, n.y + r);
+        ctx.lineTo(n.x - r, n.y);
+        ctx.closePath();
+        ctx.fillStyle = isHovered ? RESOURCE_COLOR : RESOURCE_COLOR + "20";
         ctx.fill();
-        ctx.strokeStyle = n.color;
-        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = RESOURCE_COLOR;
+        ctx.lineWidth = isHovered ? 2.5 : 1.5;
         ctx.stroke();
-        ctx.fillStyle = n.color;
+        ctx.shadowBlur = 0;
+
+        // Resource type icon
+        const icon = RESOURCE_TYPE_ICONS[n.resourceType || "other"] || "·";
+        ctx.fillStyle = isHovered ? "#fff" : RESOURCE_COLOR;
         ctx.font = "bold 8px 'Inter', sans-serif";
-        ctx.fillText(String(n.pageCount), bx, by);
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(icon, n.x, n.y);
+
+        // Label below diamond
+        if (isHovered) {
+          ctx.fillStyle = "#333";
+          ctx.font = "600 7px 'Inter', sans-serif";
+          ctx.fillText(n.label, n.x, n.y + r + 10);
+        }
+      } else {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.radius + (isHovered ? 4 : 0), 0, Math.PI * 2);
+
+        if (n.type === "topic") {
+          const grad = ctx.createRadialGradient(n.x - 4, n.y - 4, 0, n.x, n.y, n.radius);
+          grad.addColorStop(0, n.color);
+          grad.addColorStop(1, n.color + "99");
+          ctx.fillStyle = grad;
+        } else {
+          ctx.fillStyle = isHovered ? n.color : "#ffffff";
+        }
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.strokeStyle = n.type === "topic" ? n.color : (isHovered ? n.color : n.color + "44");
+        ctx.lineWidth = n.type === "topic" ? 3 : 2;
+        ctx.stroke();
+
+        // Label
+        ctx.fillStyle = n.type === "topic" ? "#fff" : (isHovered ? "#fff" : "#333");
+        ctx.font = n.type === "topic"
+          ? "bold 10px 'Inter', sans-serif"
+          : "600 8px 'Inter', sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(n.label, n.x, n.y);
+
+        // Page count badge for topics
+        if (n.type === "topic" && n.pageCount && n.pageCount > 0) {
+          const bx = n.x + n.radius * 0.7;
+          const by = n.y - n.radius * 0.7;
+          ctx.beginPath();
+          ctx.arc(bx, by, 8, 0, Math.PI * 2);
+          ctx.fillStyle = "#fff";
+          ctx.fill();
+          ctx.strokeStyle = n.color;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          ctx.fillStyle = n.color;
+          ctx.font = "bold 8px 'Inter', sans-serif";
+          ctx.fillText(String(n.pageCount), bx, by);
+        }
       }
     });
 
@@ -365,7 +448,9 @@ export function KnowledgeGraph({ groupId }: { groupId: string }) {
           if (clickedNode) {
             if (clickedNode.type === "topic") {
               router.push(`/groups/${groupId}/wiki/topics/${clickedNode.id}`);
-            } else {
+            } else if (clickedNode.type === "resource" && clickedNode.url) {
+              window.open(clickedNode.url, "_blank", "noopener");
+            } else if (clickedNode.type === "page") {
               router.push(`/groups/${groupId}/wiki/pages/${clickedNode.id}`);
             }
           }
@@ -450,7 +535,8 @@ export function KnowledgeGraph({ groupId }: { groupId: string }) {
           const clickedNode = nodes.find(n => n.id === dragging);
           if (clickedNode) {
             if (clickedNode.type === "topic") router.push(`/groups/${groupId}/wiki/topics/${clickedNode.id}`);
-            else router.push(`/groups/${groupId}/wiki/pages/${clickedNode.id}`);
+            else if (clickedNode.type === "resource" && clickedNode.url) window.open(clickedNode.url, "_blank", "noopener");
+            else if (clickedNode.type === "page") router.push(`/groups/${groupId}/wiki/pages/${clickedNode.id}`);
           }
         }
       }
@@ -497,6 +583,9 @@ export function KnowledgeGraph({ groupId }: { groupId: string }) {
         <span className="bg-nu-pink/80 text-white px-2 py-1 font-mono-nu text-[8px] uppercase tracking-widest">
           {stats.pages} pages
         </span>
+        <span className="bg-[#ff6f00]/80 text-white px-2 py-1 font-mono-nu text-[8px] uppercase tracking-widest">
+          {stats.resources} resources
+        </span>
         <span className="bg-nu-blue/80 text-white px-2 py-1 font-mono-nu text-[8px] uppercase tracking-widest">
           {stats.links} links
         </span>
@@ -507,17 +596,23 @@ export function KnowledgeGraph({ groupId }: { groupId: string }) {
         <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted font-bold mb-2">Nodes</p>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-nu-pink" />
-          <span className="font-mono-nu text-[7px] text-nu-muted uppercase">Topic</span>
+          <span className="font-mono-nu text-[7px] text-nu-muted uppercase">Topic (주제)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-white border border-nu-ink/30" />
-          <span className="font-mono-nu text-[7px] text-nu-muted uppercase">Page</span>
+          <span className="font-mono-nu text-[7px] text-nu-muted uppercase">Page (페이지)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2.5 h-2.5 rotate-45 border border-[#ff6f00]" style={{ backgroundColor: "#ff6f0020" }} />
+          <span className="font-mono-nu text-[7px] text-nu-muted uppercase">Resource (자료)</span>
         </div>
         <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted font-bold mt-2 mb-1">Links</p>
         {Object.entries(LINK_COLORS).map(([type, color]) => (
           <div key={type} className="flex items-center gap-2">
             <div className="w-8 h-0.5" style={{ backgroundColor: color }} />
-            <span className="font-mono-nu text-[7px] text-nu-muted uppercase">{type}</span>
+            <span className="font-mono-nu text-[7px] text-nu-muted uppercase">
+              {type === "resource_link" ? "resource → page" : type}
+            </span>
           </div>
         ))}
       </div>
@@ -527,11 +622,12 @@ export function KnowledgeGraph({ groupId }: { groupId: string }) {
         <div className="absolute top-14 left-4 z-10 bg-nu-ink text-white p-3 max-w-[220px] shadow-lg">
           <p className="font-head text-xs font-bold">{hoveredNode.label}</p>
           <p className="font-mono-nu text-[8px] text-white/50 uppercase mt-1 flex items-center gap-1">
-            {hoveredNode.type}
+            {hoveredNode.type === "resource" ? `📦 ${hoveredNode.resourceType || "resource"}` : hoveredNode.type}
             {hoveredNode.pageCount !== undefined && ` · ${hoveredNode.pageCount} pages`}
           </p>
           <p className="font-mono-nu text-[7px] text-nu-pink mt-1.5 flex items-center gap-1">
-            <ExternalLink size={8} /> 클릭하여 이동
+            <ExternalLink size={8} />
+            {hoveredNode.type === "resource" ? "클릭하여 자료 열기" : "클릭하여 이동"}
           </p>
         </div>
       )}

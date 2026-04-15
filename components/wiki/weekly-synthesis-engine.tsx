@@ -189,6 +189,25 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
             version: 1,
           }).select("id").single();
           if (error || !inserted) { failed++; continue; }
+
+          // Record contribution for knowledge growth tracking
+          await supabase.from("wiki_contributions").insert({
+            page_id: inserted.id,
+            user_id: user.id,
+            change_summary: `AI 지식 통합으로 페이지 생성: ${suggestion.keyInsight || suggestion.title}`,
+            source_type: "ai_synthesis",
+          });
+
+          // Record first page version
+          await supabase.from("wiki_page_versions").insert({
+            page_id: inserted.id,
+            version: 1,
+            title: suggestion.title,
+            content: suggestion.content,
+            edited_by: user.id,
+            change_summary: "AI 지식 통합으로 자동 생성",
+          });
+
           newlyCreated.push({ id: inserted.id, title: suggestion.title, topicName: suggestion.topicName, action: "create" });
           created++;
         } else {
@@ -202,12 +221,32 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
             .maybeSingle();
 
           if (existingPage) {
+            const newVersion = existingPage.version + 1;
+            const newContent = existingPage.content + "\n\n---\n\n" + suggestion.content;
             const { error: updateError } = await supabase.from("wiki_pages").update({
-              content: existingPage.content + "\n\n---\n\n" + suggestion.content,
-              version: existingPage.version + 1,
+              content: newContent,
+              version: newVersion,
               last_updated_by: user.id,
             }).eq("id", existingPage.id);
             if (updateError) { failed++; continue; }
+
+            // Record contribution & version
+            await supabase.from("wiki_contributions").insert({
+              page_id: existingPage.id,
+              user_id: user.id,
+              change_summary: `AI 지식 통합으로 내용 추가: ${suggestion.keyInsight || suggestion.title}`,
+              source_type: "ai_synthesis",
+            });
+
+            await supabase.from("wiki_page_versions").insert({
+              page_id: existingPage.id,
+              version: newVersion,
+              title: suggestion.title,
+              content: newContent,
+              edited_by: user.id,
+              change_summary: "AI 지식 통합으로 내용 추가",
+            });
+
             newlyCreated.push({ id: existingPage.id, title: suggestion.title, topicName: suggestion.topicName, action: "update" });
             created++;
           } else {
@@ -221,6 +260,23 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
               version: 1,
             }).select("id").single();
             if (insertError || !inserted) { failed++; continue; }
+
+            await supabase.from("wiki_contributions").insert({
+              page_id: inserted.id,
+              user_id: user.id,
+              change_summary: `AI 지식 통합으로 페이지 생성: ${suggestion.keyInsight || suggestion.title}`,
+              source_type: "ai_synthesis",
+            });
+
+            await supabase.from("wiki_page_versions").insert({
+              page_id: inserted.id,
+              version: 1,
+              title: suggestion.title,
+              content: suggestion.content,
+              edited_by: user.id,
+              change_summary: "AI 지식 통합으로 자동 생성",
+            });
+
             newlyCreated.push({ id: inserted.id, title: suggestion.title, topicName: suggestion.topicName, action: "create" });
             created++;
           }
