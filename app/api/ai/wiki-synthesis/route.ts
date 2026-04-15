@@ -478,32 +478,52 @@ export async function POST(request: NextRequest) {
     // ── 5. Parse Gemini response ──
     step = "parse-gemini";
     const data = await response.json();
+
+    // Check for prompt feedback blocking
+    if (data?.promptFeedback?.blockReason) {
+      return NextResponse.json({
+        error: `AI가 요청을 차단했습니다: ${data.promptFeedback.blockReason}`,
+      }, { status: 502 });
+    }
+
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const finishReason = data?.candidates?.[0]?.finishReason || "unknown";
 
     if (!text) {
-      const finishReason = data?.candidates?.[0]?.finishReason;
-      console.error("Gemini returned empty text, finishReason:", finishReason, "full response:", JSON.stringify(data).slice(0, 500));
+      console.error("Gemini empty response:", JSON.stringify(data).slice(0, 1000));
       return NextResponse.json({
-        error: `AI가 빈 응답을 반환했습니다. (reason: ${finishReason || "unknown"})`,
+        error: `AI가 빈 응답을 반환했습니다. (reason: ${finishReason}, candidates: ${data?.candidates?.length || 0})`,
       }, { status: 502 });
     }
 
     let result;
     try {
       result = JSON.parse(text);
-    } catch {
+    } catch (parseErr1) {
       // Try extracting JSON from markdown code blocks
       const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
       if (jsonMatch) {
-        result = JSON.parse(jsonMatch[1].trim());
-      } else {
+        try {
+          result = JSON.parse(jsonMatch[1].trim());
+        } catch {
+          // Fall through to brace matching
+        }
+      }
+      if (!result) {
         const braceMatch = text.match(/\{[\s\S]*\}/);
         if (braceMatch) {
-          result = JSON.parse(braceMatch[0]);
-        } else {
-          console.error("Failed to parse Gemini JSON:", text.slice(0, 500));
-          return NextResponse.json({ error: "AI 응답에서 JSON을 파싱할 수 없습니다" }, { status: 502 });
+          try {
+            result = JSON.parse(braceMatch[0]);
+          } catch {
+            // Fall through to error
+          }
         }
+      }
+      if (!result) {
+        console.error("Failed to parse Gemini JSON:", text.slice(0, 1000));
+        return NextResponse.json({
+          error: `AI JSON 파싱 실패 (finishReason: ${finishReason}). 응답 미리보기: ${text.slice(0, 200)}`,
+        }, { status: 502 });
       }
     }
 
