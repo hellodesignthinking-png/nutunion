@@ -433,7 +433,8 @@ export async function POST(request: NextRequest) {
     }
 
     prompt += `위 **새 데이터만** 분석하여 탭을 고도화할 통합 결과를 JSON으로 생성해주세요.\n`;
-    prompt += `이전에 정리된 내용을 반복하지 마세요. 새로운 지식만 추가하세요.`;
+    prompt += `이전에 정리된 내용을 반복하지 마세요. 새로운 지식만 추가하세요.\n`;
+    prompt += `**중요**: wikiPageSuggestions는 최대 3개까지만, 각 content는 500자 이내로 핵심만 작성하세요. 토큰 초과를 방지하기 위해 간결하게 작성하세요.`;
 
     // ── 4. Call Gemini ──
     step = "call-gemini";
@@ -442,7 +443,7 @@ export async function POST(request: NextRequest) {
       generationConfig: {
         temperature: 0.3,
         topP: 0.8,
-        maxOutputTokens: 4096,
+        maxOutputTokens: 8192,
         responseMimeType: "application/json",
       },
     };
