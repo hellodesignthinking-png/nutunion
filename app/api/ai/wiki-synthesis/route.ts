@@ -6,6 +6,76 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = "gemini-2.5-flash";
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
+// ── Diagnostic GET endpoint ──────────────────────────────────────
+export async function GET(request: NextRequest) {
+  const groupId = new URL(request.url).searchParams.get("groupId");
+  const checks: Record<string, string> = {};
+
+  try {
+    checks.gemini_key = GEMINI_API_KEY ? "set" : "MISSING";
+    checks.gemini_model = GEMINI_MODEL;
+
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    checks.auth = user ? `ok (${user.id.slice(0, 8)})` : "NOT_LOGGED_IN";
+
+    if (!user || !groupId) {
+      return NextResponse.json({ checks, hint: "Add ?groupId=xxx while logged in" });
+    }
+
+    // Check group & host
+    const { data: g, error: ge } = await supabase.from("groups").select("host_id").eq("id", groupId).single();
+    checks.group = ge ? `ERROR: ${ge.message}` : g ? "ok" : "NOT_FOUND";
+    checks.is_host = g?.host_id === user.id ? "yes" : "no";
+
+    // Check tables
+    for (const t of ["wiki_synthesis_logs", "wiki_weekly_resources", "wiki_topics", "wiki_pages", "meetings", "file_attachments"]) {
+      const { count, error } = await supabase.from(t).select("id", { count: "exact", head: true });
+      checks[`table_${t}`] = error ? `ERROR: ${error.message}` : `ok (${count} rows)`;
+    }
+
+    // Test insert + delete on wiki_synthesis_logs
+    const { error: insertErr } = await supabase.from("wiki_synthesis_logs").insert({
+      group_id: groupId,
+      week_start: "2025-01-01",
+      week_end: "2025-01-01",
+      synthesis_type: "weekly_consolidation",
+      input_summary: { _diag: true },
+      output_data: {},
+      created_by: user.id,
+    });
+    checks.insert_synthesis_log = insertErr ? `ERROR: ${insertErr.message}` : "ok";
+
+    // Clean up
+    if (!insertErr) {
+      await supabase.from("wiki_synthesis_logs").delete()
+        .eq("group_id", groupId)
+        .eq("created_by", user.id)
+        .eq("week_start", "2025-01-01");
+      checks.cleanup = "ok";
+    }
+
+    // Test Gemini reachability
+    try {
+      const res = await fetch(GEMINI_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: "Say OK" }] }],
+          generationConfig: { maxOutputTokens: 5 },
+        }),
+      });
+      checks.gemini_api = res.ok ? "ok" : `HTTP ${res.status}`;
+    } catch (e: any) {
+      checks.gemini_api = `ERROR: ${e.message}`;
+    }
+
+    return NextResponse.json({ checks });
+  } catch (e: any) {
+    return NextResponse.json({ checks, fatal: e.message }, { status: 500 });
+  }
+}
+
 const SYSTEM_PROMPT = `당신은 NutUnion 너트의 **증분 지식 통합 엔진** AI입니다.
 
 핵심 원칙: **이미 탭으로 정리된 자료는 다시 검토하지 않습니다.**
