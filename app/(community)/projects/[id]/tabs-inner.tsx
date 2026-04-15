@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -25,6 +25,8 @@ import {
   FolderOpen,
   TrendingUp,
   Loader2,
+  Columns3,
+  BarChart3,
 } from "lucide-react";
 import { MilestoneList } from "@/components/projects/milestone-list";
 import { ProjectActivityFeed } from "@/components/projects/project-activity-feed";
@@ -34,13 +36,17 @@ import { ProjectFinanceDashboard } from "@/components/projects/project-finance-d
 import { ProjectBurndownChart } from "@/components/projects/project-burndown-chart";
 import { ProjectMeetings } from "@/components/projects/project-meetings";
 import { ProjectRadarChart, ProjectActivityHeatmap } from "@/components/projects/project-vitals";
+import { ProjectKanbanBoard } from "@/components/projects/project-kanban-board";
+import { ProjectInsights } from "@/components/projects/project-insights";
 import { EndorsementPanel } from "@/components/shared/endorsement-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 const baseTabs = [
   { key: "overview", label: "개요", icon: Target },
+  { key: "kanban", label: "칸반 보드", icon: Columns3 },
   { key: "milestones", label: "마일스톤", icon: Layers },
+  { key: "insights", label: "인사이트", icon: BarChart3 },
   { key: "meetings", label: "회의록", icon: FileText },
   { key: "resources", label: "자료실", icon: FolderOpen },
   { key: "finance", label: "자금·보상", icon: Wallet },
@@ -104,10 +110,36 @@ export function TabsInner({
   const events      = JSON.parse(eventsData);
   const project     = projectData ? JSON.parse(projectData) : null;
 
+  // ── Live task stats (refreshable on client) ──
+  const [liveTaskStats, setLiveTaskStats] = useState(taskStats);
+  const [liveTotalTasks, setLiveTotalTasks] = useState(totalTasks);
+  const [liveProgressPct, setLiveProgressPct] = useState(progressPct);
+
+  const refreshTaskStats = useCallback(async () => {
+    const supabase = createClient();
+    const { data: tasks } = await supabase
+      .from("project_tasks")
+      .select("status")
+      .eq("project_id", projectId);
+    if (tasks) {
+      const newStats = {
+        todo: tasks.filter(t => t.status === "todo").length,
+        in_progress: tasks.filter(t => t.status === "in_progress").length,
+        done: tasks.filter(t => t.status === "done").length,
+      };
+      const newTotal = newStats.todo + newStats.in_progress + newStats.done;
+      setLiveTaskStats(newStats);
+      setLiveTotalTasks(newTotal);
+      setLiveProgressPct(newTotal > 0 ? Math.round((newStats.done / newTotal) * 100) : 0);
+    }
+  }, [projectId]);
+
   // Build tabs with item counts
   const tabCounts: Record<string, number | null> = {
     overview: null,
+    kanban: liveTotalTasks || null,
     milestones: milestones?.length || null,
+    insights: null,
     meetings: events?.length || null,
     resources: null,
     finance: null,
@@ -135,7 +167,7 @@ export function TabsInner({
                 <TrendingUp size={16} className="text-nu-pink" /> 마일스톤 진행률
               </h3>
             </div>
-            <span className="font-mono-nu text-[11px] font-bold text-nu-ink">
+            <span className="font-mono-nu text-[13px] font-bold text-nu-ink">
               {completedMilestones}/{totalMilestones}
             </span>
           </div>
@@ -154,7 +186,7 @@ export function TabsInner({
               <p className="font-mono-nu text-[12px] font-bold text-nu-ink">
                 {milestoneProgressPct}%
               </p>
-              <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">
+              <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">
                 {isCompleted ? "완료" : "진행 중"}
               </p>
             </div>
@@ -168,7 +200,7 @@ export function TabsInner({
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`font-mono-nu text-[11px] uppercase tracking-widest px-5 py-3.5 border-b-[3px] transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 ${
+            className={`font-mono-nu text-[13px] uppercase tracking-widest px-5 py-3.5 border-b-[3px] transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 ${
               activeTab === tab.key
                 ? "border-nu-pink text-nu-ink font-black bg-nu-pink/[0.04]"
                 : "border-transparent text-nu-muted hover:text-nu-graphite"
@@ -177,7 +209,7 @@ export function TabsInner({
             <tab.icon size={14} />
             {tab.label}
             {tab.count != null && tab.count > 0 && (
-              <span className={`text-[9px] font-bold px-1.5 py-0.5 ${
+              <span className={`text-[11px] font-bold px-1.5 py-0.5 ${
                 activeTab === tab.key
                   ? "bg-nu-pink/15 text-nu-pink"
                   : "bg-nu-ink/5 text-nu-muted"
@@ -190,7 +222,7 @@ export function TabsInner({
         {canEdit && (
           <Link
             href={`/projects/${projectId}/settings`}
-            className="font-mono-nu text-[11px] uppercase tracking-widest px-5 py-3.5 border-b-[3px] border-transparent text-nu-muted hover:text-nu-graphite no-underline ml-auto flex items-center gap-2 whitespace-nowrap shrink-0"
+            className="font-mono-nu text-[13px] uppercase tracking-widest px-5 py-3.5 border-b-[3px] border-transparent text-nu-muted hover:text-nu-graphite no-underline ml-auto flex items-center gap-2 whitespace-nowrap shrink-0"
           >
             설정
           </Link>
@@ -223,28 +255,28 @@ export function TabsInner({
               {/* Stats row */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="text-center p-4 bg-nu-cream/50 border border-nu-ink/5">
-                  <p className="font-head text-3xl font-extrabold text-nu-ink">{progressPct}%</p>
-                  <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mt-1">전체 진행률</p>
+                  <p className="font-head text-3xl font-extrabold text-nu-ink">{liveProgressPct}%</p>
+                  <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mt-1">전체 진행률</p>
                 </div>
                 <div className="text-center p-4 bg-nu-cream/50 border border-nu-ink/5">
-                  <p className="font-head text-3xl font-extrabold text-nu-ink">{totalTasks}</p>
-                  <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mt-1">전체 태스크</p>
+                  <p className="font-head text-3xl font-extrabold text-nu-ink">{liveTotalTasks}</p>
+                  <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mt-1">전체 태스크</p>
                 </div>
                 <div className="text-center p-4 bg-green-50 border border-green-200">
-                  <p className="font-head text-3xl font-extrabold text-green-600">{taskStats.done}</p>
-                  <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mt-1">완료</p>
+                  <p className="font-head text-3xl font-extrabold text-green-600">{liveTaskStats.done}</p>
+                  <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mt-1">완료</p>
                 </div>
                 {project?.total_budget ? (
                   <div className="text-center p-4 bg-nu-blue/5 border border-nu-blue/20 cursor-pointer hover:bg-nu-blue/10 transition-colors" onClick={() => setActiveTab("finance")}>
                     <p className="font-head text-2xl font-extrabold text-nu-ink">
                       {parseInt(project.total_budget).toLocaleString("ko-KR")}
                     </p>
-                    <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mt-1">총 예산 ({project.budget_currency || "KRW"})</p>
+                    <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mt-1">총 예산 ({project.budget_currency || "KRW"})</p>
                   </div>
                 ) : (
                   <div className="text-center p-4 bg-nu-cream/50 border border-nu-ink/5">
-                    <p className="font-head text-3xl font-extrabold text-nu-amber">{taskStats.in_progress}</p>
-                    <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mt-1">진행 중</p>
+                    <p className="font-head text-3xl font-extrabold text-nu-amber">{liveTaskStats.in_progress}</p>
+                    <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mt-1">진행 중</p>
                   </div>
                 )}
               </div>
@@ -252,17 +284,17 @@ export function TabsInner({
               {/* Progress bar */}
               <div className="mb-5">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">태스크 진행률</span>
-                  <span className="font-mono-nu text-[12px] font-bold">{taskStats.done}/{totalTasks}</span>
+                  <span className="font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest">태스크 진행률</span>
+                  <span className="font-mono-nu text-[12px] font-bold">{liveTaskStats.done}/{liveTotalTasks}</span>
                 </div>
                 <div className="h-3 bg-nu-cream rounded-full overflow-hidden flex">
-                  <div className="h-full bg-green-600 transition-all" style={{ width: `${totalTasks > 0 ? (taskStats.done / totalTasks) * 100 : 0}%` }} />
-                  <div className="h-full bg-nu-amber transition-all" style={{ width: `${totalTasks > 0 ? (taskStats.in_progress / totalTasks) * 100 : 0}%` }} />
+                  <div className="h-full bg-green-600 transition-all" style={{ width: `${liveTotalTasks > 0 ? (liveTaskStats.done / liveTotalTasks) * 100 : 0}%` }} />
+                  <div className="h-full bg-nu-amber transition-all" style={{ width: `${liveTotalTasks > 0 ? (liveTaskStats.in_progress / liveTotalTasks) * 100 : 0}%` }} />
                 </div>
                 <div className="flex items-center gap-4 mt-2">
-                  <span className="flex items-center gap-1.5 text-[10px] text-nu-muted"><span className="w-2 h-2 bg-green-600 rounded-full" /> 완료 {taskStats.done}</span>
-                  <span className="flex items-center gap-1.5 text-[10px] text-nu-muted"><span className="w-2 h-2 bg-nu-amber rounded-full" /> 진행 중 {taskStats.in_progress}</span>
-                  <span className="flex items-center gap-1.5 text-[10px] text-nu-muted"><span className="w-2 h-2 bg-nu-cream rounded-full border border-nu-ink/10" /> 대기 {taskStats.todo}</span>
+                  <span className="flex items-center gap-1.5 text-[12px] text-nu-muted"><span className="w-2 h-2 bg-green-600 rounded-full" /> 완료 {liveTaskStats.done}</span>
+                  <span className="flex items-center gap-1.5 text-[12px] text-nu-muted"><span className="w-2 h-2 bg-nu-amber rounded-full" /> 진행 중 {liveTaskStats.in_progress}</span>
+                  <span className="flex items-center gap-1.5 text-[12px] text-nu-muted"><span className="w-2 h-2 bg-nu-cream rounded-full border border-nu-ink/10" /> 대기 {liveTaskStats.todo}</span>
                 </div>
               </div>
             </div>
@@ -273,14 +305,14 @@ export function TabsInner({
                 <h3 className="font-head text-lg font-extrabold flex items-center gap-2">
                   <Layers size={18} /> 마일스톤
                 </h3>
-                <button onClick={() => setActiveTab("milestones")} className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted hover:text-nu-ink transition-colors flex items-center gap-1">
+                <button onClick={() => setActiveTab("milestones")} className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted hover:text-nu-ink transition-colors flex items-center gap-1">
                   상세 보기 <ChevronRight size={12} />
                 </button>
               </div>
               {milestones.length === 0 ? (
                 <div className="text-center py-6">
                   <p className="text-nu-gray text-sm mb-2">아직 마일스톤이 없습니다</p>
-                  {canEdit && <p className="text-[10px] text-nu-muted">마일스톤 탭에서 첫 마일스톤을 추가해보세요</p>}
+                  {canEdit && <p className="text-[12px] text-nu-muted">마일스톤 탭에서 첫 마일스톤을 추가해보세요</p>}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -296,7 +328,7 @@ export function TabsInner({
                           <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${msStatusColors[ms.status] || "bg-nu-gray"}`} />
                           <p className="text-sm font-bold flex-1 truncate">{ms.title}</p>
                           {rewardPct > 0 && (
-                            <span className="font-mono-nu text-[9px] text-green-600 bg-green-50 px-2 py-0.5 border border-green-200 shrink-0">
+                            <span className="font-mono-nu text-[11px] text-green-600 bg-green-50 px-2 py-0.5 border border-green-200 shrink-0">
                               {rewardPct}% · {budgetAmount.toLocaleString("ko-KR")}원
                             </span>
                           )}
@@ -305,8 +337,8 @@ export function TabsInner({
                           <div className="flex-1 h-1.5 bg-nu-cream rounded-full overflow-hidden">
                             <div className="h-full bg-green-600 rounded-full transition-all" style={{ width: `${pct}%` }} />
                           </div>
-                          <span className="font-mono-nu text-[10px] text-nu-muted shrink-0">{done}/{tasks.length}</span>
-                          {ms.due_date && <span className="font-mono-nu text-[9px] text-nu-muted shrink-0">{new Date(ms.due_date).toLocaleDateString("ko", { month: "short", day: "numeric" })}</span>}
+                          <span className="font-mono-nu text-[12px] text-nu-muted shrink-0">{done}/{tasks.length}</span>
+                          {ms.due_date && <span className="font-mono-nu text-[11px] text-nu-muted shrink-0">{new Date(ms.due_date).toLocaleDateString("ko", { month: "short", day: "numeric" })}</span>}
                         </div>
                       </div>
                     );
@@ -338,7 +370,7 @@ export function TabsInner({
                     <div key={evt.id} className="flex items-center gap-4 p-3 bg-nu-cream/30">
                       <div className="w-12 h-12 bg-nu-pink/10 flex flex-col items-center justify-center shrink-0">
                         <span className="font-head text-base font-extrabold text-nu-pink leading-none">{new Date(evt.start_at).getDate()}</span>
-                        <span className="font-mono-nu text-[8px] uppercase text-nu-pink/70">{new Date(evt.start_at).toLocaleDateString("ko", { month: "short" })}</span>
+                        <span className="font-mono-nu text-[10px] uppercase text-nu-pink/70">{new Date(evt.start_at).toLocaleDateString("ko", { month: "short" })}</span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{evt.title}</p>
@@ -359,7 +391,7 @@ export function TabsInner({
               <div className="bg-nu-white border-[2px] border-nu-pink/20 p-6 relative overflow-hidden group">
                  <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                     <div className="flex-1">
-                      <span className="bg-nu-pink text-white text-[9px] font-bold uppercase tracking-widest px-2 py-0.5">ZeroSite</span>
+                      <span className="bg-nu-pink text-white text-[11px] font-bold uppercase tracking-widest px-2 py-0.5">ZeroSite</span>
                       <h3 className="font-head text-lg font-extrabold text-nu-ink mt-2 mb-1">오프라인 프로그램 출시 제안</h3>
                       <p className="text-xs text-nu-gray leading-relaxed max-w-lg">이 볼트의 결과물을 제로싸이트 공간의 정규 프로그램으로 출시해보세요.</p>
                     </div>
@@ -372,13 +404,13 @@ export function TabsInner({
                           if (error) toast.error("제안 발송 실패: " + error.message);
                           else { toast.success("제안서가 운영팀에 성공적으로 전달되었습니다."); window.location.reload(); }
                         }}
-                        className="bg-nu-ink text-nu-paper hover:bg-nu-pink transition-all font-mono-nu text-[10px] uppercase tracking-widest px-6 py-5 h-auto shrink-0"
+                        className="bg-nu-ink text-nu-paper hover:bg-nu-pink transition-all font-mono-nu text-[12px] uppercase tracking-widest px-6 py-5 h-auto shrink-0"
                       >
                         Launch <ChevronRight size={14} className="ml-1" />
                       </Button>
                     ) : (
                       <div className="bg-nu-cream/50 border border-nu-ink/5 px-5 py-3 text-center shrink-0">
-                        <p className="font-mono-nu text-[10px] text-nu-muted uppercase mb-0.5">Status</p>
+                        <p className="font-mono-nu text-[12px] text-nu-muted uppercase mb-0.5">Status</p>
                         <p className="font-head text-sm font-extrabold text-nu-ink capitalize">{(project as any)?.zerosite_launch_status}</p>
                       </div>
                     )}
@@ -450,7 +482,7 @@ export function TabsInner({
                   {parseInt(project.total_budget).toLocaleString("ko-KR")}
                   <span className="font-mono-nu text-sm font-normal text-nu-muted ml-1">{project.budget_currency || "KRW"}</span>
                 </p>
-                <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest mt-1">자금·보상 탭에서 상세 확인 →</p>
+                <p className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest mt-1">자금·보상 탭에서 상세 확인 →</p>
               </div>
             )}
 
@@ -467,7 +499,7 @@ export function TabsInner({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{m.profile?.nickname}</p>
-                      <p className="text-[10px] text-nu-muted">{roleLabels[m.role] || m.role}</p>
+                      <p className="text-[12px] text-nu-muted">{roleLabels[m.role] || m.role}</p>
                     </div>
                   </div>
                 ))}
@@ -490,7 +522,7 @@ export function TabsInner({
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate text-nu-ink">{m.crew?.name}</p>
-                        <p className="text-[10px] text-nu-muted capitalize">{m.crew?.category}</p>
+                        <p className="text-[12px] text-nu-muted capitalize">{m.crew?.category}</p>
                       </div>
                     </Link>
                   ))}
@@ -505,13 +537,26 @@ export function TabsInner({
         </div>
       )}
 
+      {/* Kanban Board Tab */}
+      {activeTab === "kanban" && (
+        <ProjectKanbanBoard projectId={projectId} canEdit={canEdit} onTaskChange={refreshTaskStats} />
+      )}
+
       {/* Milestones Tab (includes roadmap + burndown) — constrained */}
       {activeTab === "milestones" && (
         <div className="max-w-6xl mx-auto space-y-8">
           <ProjectBurndownChart projectId={projectId} />
           <ProjectRoadmap projectId={projectId} milestones={milestones} isLead={canEdit} />
-          <MilestoneList projectId={projectId} initialMilestones={milestones} canEdit={canEdit} />
+          <MilestoneList projectId={projectId} initialMilestones={milestones} canEdit={canEdit} onTaskChange={refreshTaskStats} />
         </div>
+      )}
+
+      {/* Insights Tab */}
+      {activeTab === "insights" && (
+        <ProjectInsights
+          projectId={projectId}
+          totalBudget={project?.total_budget ? parseInt(project.total_budget) : 0}
+        />
       )}
 
       {/* Meetings Tab — project meeting notes */}
@@ -562,7 +607,7 @@ export function TabsInner({
           {/* 동료 보증 — 팀원들 상호 보증 */}
           {userMembers.length > 0 && (
             <div>
-              <h3 className="font-mono-nu text-[10px] font-black uppercase tracking-widest text-nu-muted mb-4">팀원 보증</h3>
+              <h3 className="font-mono-nu text-[12px] font-black uppercase tracking-widest text-nu-muted mb-4">팀원 보증</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {userMembers.filter((m: any) => m.user_id !== userId).map((m: any) => (
                   <EndorsementPanel
@@ -626,7 +671,7 @@ function ProjectRewardsTab({ project, members, canEdit }: any) {
              <DollarSign size={18} className="text-green-600" /> 보상 예산
            </h3>
            <div className="bg-nu-cream/40 p-5 border border-nu-ink/5 mb-4">
-             <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-1">총 보상 예산</p>
+             <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-1">총 보상 예산</p>
              <p className="font-head text-3xl font-extrabold">
                {parseInt(String(total)).toLocaleString("ko-KR")}
                <span className="text-base font-normal ml-1">{currency}</span>
@@ -648,7 +693,7 @@ function ProjectRewardsTab({ project, members, canEdit }: any) {
         <div className="bg-nu-white border border-nu-ink/[0.08] p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-head text-lg font-extrabold flex items-center gap-2"><Users size={18} /> 와셔별 배분</h3>
-            <span className={`font-mono-nu text-[11px] font-bold px-2 py-1 border ${totalRatio === 100 ? "text-green-600 bg-green-50 border-green-200" : totalRatio > 100 ? "text-red-600 bg-red-50 border-red-200" : "text-nu-amber bg-nu-amber/10 border-nu-amber/20"}`}>
+            <span className={`font-mono-nu text-[13px] font-bold px-2 py-1 border ${totalRatio === 100 ? "text-green-600 bg-green-50 border-green-200" : totalRatio > 100 ? "text-red-600 bg-red-50 border-red-200" : "text-nu-amber bg-nu-amber/10 border-nu-amber/20"}`}>
               합계: {totalRatio}%
             </span>
           </div>
@@ -660,11 +705,11 @@ function ProjectRewardsTab({ project, members, canEdit }: any) {
                 <div key={m.id} className="p-4 bg-nu-cream/20 border border-nu-ink/5">
                    <div className="flex items-center justify-between mb-2">
                      <div className="flex items-center gap-2">
-                       <div className="w-7 h-7 rounded-full bg-nu-cream flex items-center justify-center font-head text-[10px] font-bold">
+                       <div className="w-7 h-7 rounded-full bg-nu-cream flex items-center justify-center font-head text-[12px] font-bold">
                          {(m.profile?.nickname || "U").charAt(0).toUpperCase()}
                        </div>
                        <span className="text-sm font-bold text-nu-ink">{m.profile?.nickname}</span>
-                       <span className="font-mono-nu text-[8px] text-nu-muted uppercase">{roleLabels[m.role] || m.role}</span>
+                       <span className="font-mono-nu text-[10px] text-nu-muted uppercase">{roleLabels[m.role] || m.role}</span>
                      </div>
                      <span className="font-mono-nu text-sm font-bold text-green-600">{ratio}%</span>
                    </div>
@@ -675,11 +720,11 @@ function ProjectRewardsTab({ project, members, canEdit }: any) {
                      {canEdit && (
                        <input type="number" value={ratio}
                          onChange={(e) => setRatios(prev => ({ ...prev, [m.id]: Math.max(0, Math.min(100, parseInt(e.target.value) || 0)) }))}
-                         className="w-14 h-7 text-[11px] text-center border border-nu-ink/20 bg-white focus:outline-none focus:border-nu-pink"
+                         className="w-14 h-7 text-[13px] text-center border border-nu-ink/20 bg-white focus:outline-none focus:border-nu-pink"
                          max={100} min={0} />
                      )}
                    </div>
-                   <p className="text-[10px] text-nu-muted mt-1.5">
+                   <p className="text-[12px] text-nu-muted mt-1.5">
                      예상 지급액: <span className="font-bold text-nu-ink">{amount.toLocaleString("ko-KR")}</span> {currency}
                    </p>
                 </div>
@@ -689,7 +734,7 @@ function ProjectRewardsTab({ project, members, canEdit }: any) {
           </div>
           {canEdit && (
             <Button onClick={saveRewards} disabled={saving}
-              className="w-full mt-6 bg-nu-ink text-nu-paper hover:bg-nu-pink py-6 font-mono-nu text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50">
+              className="w-full mt-6 bg-nu-ink text-nu-paper hover:bg-nu-pink py-6 font-mono-nu text-[13px] uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50">
               {saving ? <><Loader2 size={14} className="animate-spin" /> 저장 중...</> : <><Save size={16} /> 배분 변경사항 저장</>}
             </Button>
           )}
@@ -706,14 +751,14 @@ function ProjectRewardsTab({ project, members, canEdit }: any) {
                <CheckCircle2 size={16} className="text-green-600 mt-0.5" />
                <div>
                  <p className="text-sm font-medium">마일스톤 100% 완료</p>
-                 <p className="text-[11px] text-nu-muted mt-0.5 leading-relaxed">모든 할당된 태스크가 완료 상태여야 하며, 최종 승인을 획득해야 합니다.</p>
+                 <p className="text-[13px] text-nu-muted mt-0.5 leading-relaxed">모든 할당된 태스크가 완료 상태여야 하며, 최종 승인을 획득해야 합니다.</p>
                </div>
              </div>
              <div className="flex items-start gap-3">
                <CheckCircle2 size={16} className="text-green-600 mt-0.5" />
                <div>
                  <p className="text-sm font-medium">최종 결과물(포트폴리오) 등록</p>
-                 <p className="text-[11px] text-nu-muted mt-0.5 leading-relaxed">볼트 완료 보고서 및 분야별 산출물이 플랫폼 아카이브에 등록되어야 합니다.</p>
+                 <p className="text-[13px] text-nu-muted mt-0.5 leading-relaxed">볼트 완료 보고서 및 분야별 산출물이 플랫폼 아카이브에 등록되어야 합니다.</p>
                </div>
              </div>
            </div>
@@ -723,7 +768,7 @@ function ProjectRewardsTab({ project, members, canEdit }: any) {
            <h3 className="font-head text-base font-extrabold text-nu-pink mb-2 flex items-center gap-2">
              <Zap size={16} /> PM 권한 알림
            </h3>
-           <p className="text-[11px] text-nu-pink/80 leading-relaxed font-medium">
+           <p className="text-[13px] text-nu-pink/80 leading-relaxed font-medium">
              보상금 배분율은 볼트 리드(PM)가 와셔들의 기여도를 평가하여 결정합니다.
              최종 지급은 플랫폼 관리자의 검토를 거쳐 실행되며, 기한 내 산출물 미등록 시 보상이 제한될 수 있습니다.
            </p>

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { MeetingNotes } from "@/components/meetings/meeting-notes";
 import { AiMeetingAssistant } from "@/components/meetings/ai-meeting-assistant";
+import { MeetingRecorder } from "@/components/meetings/meeting-recorder";
 import { AgendaList } from "@/components/meetings/agenda-list";
 import { toast } from "sonner";
 import {
@@ -257,14 +258,14 @@ export function ProjectMeetings({
           <h2 className="font-head text-xl font-extrabold text-nu-ink flex items-center gap-2">
             <FileText size={20} /> 회의록
           </h2>
-          <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest mt-1">
+          <p className="font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest mt-1">
             {meetings.length} meetings · {upcomingMeetings.length} upcoming
           </p>
         </div>
         {canEdit && (
           <Button
             onClick={() => setShowForm(!showForm)}
-            className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[10px] uppercase tracking-widest"
+            className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[12px] uppercase tracking-widest"
           >
             {showForm ? (
               <>
@@ -286,7 +287,7 @@ export function ProjectMeetings({
             새 회의 생성
           </h3>
           <div className="space-y-1.5">
-            <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block">
+            <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted block">
               회의 제목
             </label>
             <Input
@@ -297,7 +298,7 @@ export function ProjectMeetings({
             />
           </div>
           <div className="space-y-1.5">
-            <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block">
+            <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted block">
               회의 설명 (선택)
             </label>
             <Textarea
@@ -310,7 +311,7 @@ export function ProjectMeetings({
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block">
+              <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted block">
                 회의 일시
               </label>
               <Input
@@ -321,7 +322,7 @@ export function ProjectMeetings({
               />
             </div>
             <div className="space-y-1.5">
-              <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block">
+              <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted block">
                 소요 시간 (분)
               </label>
               <Input
@@ -339,7 +340,7 @@ export function ProjectMeetings({
             <Button
               onClick={handleCreate}
               disabled={saving}
-              className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[10px] uppercase tracking-widest"
+              className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[12px] uppercase tracking-widest"
             >
               {saving ? (
                 <>
@@ -354,7 +355,7 @@ export function ProjectMeetings({
             <Button
               onClick={handleCancelForm}
               variant="outline"
-              className="font-mono-nu text-[10px] uppercase tracking-widest border-nu-ink/[0.12] text-nu-gray"
+              className="font-mono-nu text-[12px] uppercase tracking-widest border-nu-ink/[0.12] text-nu-gray"
             >
               <X size={12} /> 취소
             </Button>
@@ -365,7 +366,7 @@ export function ProjectMeetings({
       {/* Upcoming Meetings */}
       {upcomingMeetings.length > 0 ? (
         <div>
-          <h3 className="font-mono-nu text-[10px] font-black uppercase tracking-widest text-nu-muted mb-4">
+          <h3 className="font-mono-nu text-[12px] font-black uppercase tracking-widest text-nu-muted mb-4">
             예정된 회의 ({upcomingMeetings.length})
           </h3>
           <div className="space-y-3">
@@ -412,7 +413,7 @@ export function ProjectMeetings({
       {/* Past Meetings */}
       {pastMeetings.length > 0 ? (
         <div>
-          <h3 className="font-mono-nu text-[10px] font-black uppercase tracking-widest text-nu-muted mb-4">
+          <h3 className="font-mono-nu text-[12px] font-black uppercase tracking-widest text-nu-muted mb-4">
             지난 회의 ({pastMeetings.length})
           </h3>
           <div className="space-y-3">
@@ -532,7 +533,7 @@ function MeetingCard({
           <span className="font-head text-lg font-extrabold text-nu-ink leading-none">
             {date.getDate()}
           </span>
-          <span className="font-mono-nu text-[8px] uppercase text-nu-muted">
+          <span className="font-mono-nu text-[10px] uppercase text-nu-muted">
             {date.toLocaleDateString("ko", { month: "short" })}
           </span>
         </div>
@@ -543,12 +544,12 @@ function MeetingCard({
               {meeting.title}
             </p>
             <span
-              className={`font-mono-nu text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-sm border ${cfg.bg} ${cfg.color}`}
+              className={`font-mono-nu text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-sm border ${cfg.bg} ${cfg.color}`}
             >
               {cfg.label}
             </span>
           </div>
-          <div className="flex items-center gap-3 text-[10px] text-nu-muted">
+          <div className="flex items-center gap-3 text-[12px] text-nu-muted">
             <span className="flex items-center gap-1">
               <Clock size={10} />
               {date.toLocaleTimeString("ko", {
@@ -587,7 +588,7 @@ function MeetingCard({
               {meeting.status === "upcoming" && (
                 <button
                   onClick={() => onStatusChange(meeting.id, "in_progress")}
-                  className="font-mono-nu text-[9px] font-bold uppercase tracking-widest px-4 py-2 bg-amber-100 text-amber-700 border-[2px] border-amber-300 hover:bg-amber-200 transition-colors flex items-center gap-1.5"
+                  className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-4 py-2 bg-amber-100 text-amber-700 border-[2px] border-amber-300 hover:bg-amber-200 transition-colors flex items-center gap-1.5"
                 >
                   <Play size={11} fill="currentColor" /> 시작
                 </button>
@@ -595,7 +596,7 @@ function MeetingCard({
               {meeting.status === "in_progress" && (
                 <button
                   onClick={() => onStatusChange(meeting.id, "completed")}
-                  className="font-mono-nu text-[9px] font-bold uppercase tracking-widest px-4 py-2 bg-green-100 text-green-700 border-[2px] border-green-300 hover:bg-green-200 transition-colors flex items-center gap-1.5"
+                  className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-4 py-2 bg-green-100 text-green-700 border-[2px] border-green-300 hover:bg-green-200 transition-colors flex items-center gap-1.5"
                 >
                   <CheckCircle2 size={11} /> 완료
                 </button>
@@ -603,7 +604,7 @@ function MeetingCard({
               {meeting.status !== "cancelled" && (
                 <button
                   onClick={() => onDelete(meeting.id)}
-                  className="font-mono-nu text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 text-nu-muted hover:text-red-600 hover:bg-red-50 border border-nu-ink/10 transition-colors flex items-center gap-1 ml-auto"
+                  className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 text-nu-muted hover:text-red-600 hover:bg-red-50 border border-nu-ink/10 transition-colors flex items-center gap-1 ml-auto"
                 >
                   <Trash2 size={10} /> 삭제
                 </button>
@@ -611,9 +612,18 @@ function MeetingCard({
             </div>
           )}
 
+          {/* Recording / Upload */}
+          <MeetingRecorder
+            meetingId={meeting.id}
+            meetingTitle={meeting.title}
+            meetingStatus={meeting.status}
+            canEdit={canEdit}
+            onTranscriptionComplete={onRefresh}
+          />
+
           {/* Agendas with resource attachment */}
           <div>
-            <h4 className="font-mono-nu text-[10px] font-black uppercase tracking-widest text-nu-muted mb-3 flex items-center gap-1.5">
+            <h4 className="font-mono-nu text-[12px] font-black uppercase tracking-widest text-nu-muted mb-3 flex items-center gap-1.5">
               안건 · 사전 자료
             </h4>
             <AgendaList
@@ -627,13 +637,13 @@ function MeetingCard({
           {/* Summary */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h4 className="font-mono-nu text-[10px] font-black uppercase tracking-widest text-nu-muted">
+              <h4 className="font-mono-nu text-[12px] font-black uppercase tracking-widest text-nu-muted">
                 회의 요약
               </h4>
               {canEdit && !editingSummary && (
                 <button
                   onClick={() => setEditingSummary(true)}
-                  className="font-mono-nu text-[9px] text-nu-blue hover:text-nu-ink transition-colors"
+                  className="font-mono-nu text-[11px] text-nu-blue hover:text-nu-ink transition-colors"
                 >
                   {meeting.summary ? "수정" : "작성"}
                 </button>
@@ -654,7 +664,7 @@ function MeetingCard({
                       onSaveSummary(meeting.id, summaryText);
                       setEditingSummary(false);
                     }}
-                    className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[9px] uppercase tracking-widest h-8"
+                    className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[11px] uppercase tracking-widest h-8"
                   >
                     저장
                   </Button>
@@ -664,7 +674,7 @@ function MeetingCard({
                       setEditingSummary(false);
                     }}
                     variant="outline"
-                    className="font-mono-nu text-[9px] uppercase tracking-widest h-8"
+                    className="font-mono-nu text-[11px] uppercase tracking-widest h-8"
                   >
                     취소
                   </Button>
@@ -683,7 +693,7 @@ function MeetingCard({
 
           {/* AI Meeting Assistant */}
           <div>
-            <h4 className="font-mono-nu text-[10px] font-black uppercase tracking-widest text-nu-muted mb-3 flex items-center gap-1.5">
+            <h4 className="font-mono-nu text-[12px] font-black uppercase tracking-widest text-nu-muted mb-3 flex items-center gap-1.5">
               <Sparkles size={12} className="text-nu-pink" /> AI 회의록
             </h4>
             <AiMeetingAssistant
@@ -749,7 +759,7 @@ function MeetingCard({
 
           {/* Meeting Notes (reused from groups) */}
           <div>
-            <h4 className="font-mono-nu text-[10px] font-black uppercase tracking-widest text-nu-muted mb-3">
+            <h4 className="font-mono-nu text-[12px] font-black uppercase tracking-widest text-nu-muted mb-3">
               노트 · 액션 아이템 · 결정 사항
             </h4>
             <MeetingNotes

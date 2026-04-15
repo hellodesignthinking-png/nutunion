@@ -192,7 +192,9 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
   const knowledgeCoverage = Math.min((topics?.length || 0) * 15, 100);
 
   return (
-    <div className="min-h-screen bg-nu-paper">
+    <div className="min-h-screen bg-nu-paper relative">
+      {/* Subtle grid background for workstation feel */}
+      <div className="absolute inset-0 opacity-[0.015] pointer-events-none" style={{ backgroundImage: "radial-gradient(circle, #0d0d0d 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
       {/* ── Hero Header ─────────────────────────────── */}
       <div className="border-b-[3px] border-nu-ink bg-gradient-to-br from-nu-cream/50 via-white to-nu-cream/30 relative overflow-hidden">
         <div className="absolute -right-32 -top-32 w-96 h-96 bg-nu-pink/[0.03] rounded-full blur-3xl" />
@@ -200,7 +202,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
         <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: "radial-gradient(circle, #0d0d0d 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-10 md:py-12 relative z-10">
-          <div className="flex items-center gap-2 font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest mb-6">
+          <div className="flex items-center gap-2 font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest mb-6">
             <Link href={`/groups/${id}`} className="hover:text-nu-ink no-underline transition-colors">{group.name}</Link>
             <ChevronRight size={12} />
             <span className="text-nu-ink font-bold">탭</span>
@@ -216,7 +218,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                   <h1 className="font-head text-4xl md:text-5xl font-extrabold text-nu-ink tracking-tight leading-none">
                     Living Wiki
                   </h1>
-                  <p className="font-mono-nu text-[10px] text-nu-pink uppercase tracking-[0.3em] font-bold">
+                  <p className="font-mono-nu text-[12px] text-nu-pink uppercase tracking-[0.3em] font-bold">
                     함께 만드는 지식 생태계
                   </p>
                 </div>
@@ -239,7 +241,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                 <div key={i} className={`bg-white border-[2px] ${kpi.border} p-3 text-center min-w-0 relative overflow-hidden group hover:shadow-sm transition-shadow`}>
                   <kpi.icon size={32} className={`absolute -right-1 -top-1 ${kpi.color} opacity-[0.06]`} />
                   <p className={`font-head text-2xl md:text-3xl font-extrabold ${kpi.color} relative`}>{kpi.value}</p>
-                  <p className="font-mono-nu text-[7px] text-nu-muted uppercase tracking-widest mt-0.5">{kpi.label}</p>
+                  <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest mt-0.5">{kpi.label}</p>
                 </div>
               ))}
             </div>
@@ -266,15 +268,15 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
             ].map((step, i) => (
               <div key={i} className="flex items-center gap-1 sm:gap-2 shrink-0">
                 {i > 0 && <ArrowRight size={10} className="text-nu-ink/15 shrink-0 hidden sm:block" />}
-                {i > 0 && <span className="text-nu-ink/15 sm:hidden text-[8px]">›</span>}
+                {i > 0 && <span className="text-nu-ink/15 sm:hidden text-[10px]">›</span>}
                 <div className={`flex items-center gap-2 px-3 py-2 rounded-sm ${step.bgColor} ${step.active ? "ring-1 ring-inset ring-current" : ""}`}>
                   <div className="relative">
                     <step.icon size={14} className={step.color} />
                     {step.active && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full" />}
                   </div>
                   <div>
-                    <p className={`font-mono-nu text-[9px] font-bold uppercase tracking-wider ${step.color} whitespace-nowrap`}>{step.label}</p>
-                    <p className="font-mono-nu text-[7px] text-nu-muted whitespace-nowrap">{step.sub}</p>
+                    <p className={`font-mono-nu text-[11px] font-bold uppercase tracking-wider ${step.color} whitespace-nowrap`}>{step.label}</p>
+                    <p className="font-mono-nu text-[9px] text-nu-muted whitespace-nowrap">{step.sub}</p>
                   </div>
                 </div>
               </div>
@@ -302,7 +304,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
             <h2 className="font-head text-xl font-extrabold text-nu-ink flex items-center gap-2">
               <BookOpen size={20} className="text-nu-ink" /> 통합 탭
             </h2>
-            <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest bg-nu-cream px-3 py-1 border border-nu-ink/10">
+            <span className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest bg-nu-cream px-3 py-1 border border-nu-ink/10">
               회의 기반 · 주간 성장 · 논문형 문서
             </span>
           </div>
@@ -320,7 +322,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
             </div>
             <div>
               <h2 className="font-head text-lg font-extrabold text-nu-ink">주간 워크플로우</h2>
-              <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">자료 공유 → 회의 · 토론 → AI 통합 → 탭 강화</p>
+              <p className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest">자료 공유 → 회의 · 토론 → AI 통합 → 탭 강화</p>
             </div>
           </div>
 
@@ -331,7 +333,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                 <h3 className="font-head text-base font-bold text-nu-ink flex items-center gap-2">
                   <Library size={16} className="text-[#ff6f00]" /> 주간 자료실
                 </h3>
-                <span className="font-mono-nu text-[8px] text-nu-muted uppercase">
+                <span className="font-mono-nu text-[10px] text-nu-muted uppercase">
                   이번 주 {weeklyResourceCount}건
                 </span>
               </div>
@@ -344,7 +346,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                 <h3 className="font-head text-base font-bold text-nu-ink flex items-center gap-2">
                   <Sparkles size={16} className="text-nu-pink" /> AI 지식 통합
                 </h3>
-                <span className="font-mono-nu text-[8px] text-nu-muted uppercase">
+                <span className="font-mono-nu text-[10px] text-nu-muted uppercase">
                   회의록 + 자료 → 탭 강화
                 </span>
               </div>
@@ -367,7 +369,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                 <h2 className="font-head text-xl font-extrabold text-nu-ink flex items-center gap-2">
                   <GitBranch size={20} className="text-nu-blue" /> 지식 그래프
                 </h2>
-                <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest bg-nu-cream px-3 py-1 border border-nu-ink/10">
+                <span className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest bg-nu-cream px-3 py-1 border border-nu-ink/10">
                   섹션 · 페이지 · 자료 시각화
                 </span>
               </div>
@@ -380,45 +382,46 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                 <h2 className="font-head text-xl font-extrabold text-nu-ink flex items-center gap-2">
                   <Brain size={20} className="text-nu-pink" /> 구성 섹션
                 </h2>
-                <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">
+                <span className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
                   {topics?.length || 0}개 섹션이 통합 탭을 구성합니다
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {topics && topics.length > 0 ? (
                   topics.map((topic, i) => {
                     const pageCount = topicPageCounts[topic.id] || 0;
                     const lastUpdate = topicLatestUpdate[topic.id];
-                    const colorClasses = ["border-l-nu-pink", "border-l-nu-blue", "border-l-[#ff6f00]", "border-l-green-500", "border-l-purple-500", "border-l-cyan-500"];
+                    const bgColors = ["bg-nu-pink", "bg-nu-blue", "bg-[#ff6f00]", "bg-green-500", "bg-purple-500", "bg-cyan-500"];
+                    const bgColor = bgColors[i % bgColors.length];
                     return (
                       <Link
                         key={topic.id}
                         href={`/groups/${id}/wiki/topics/${topic.id}`}
-                        className={`group bg-white border-[2px] border-nu-ink/10 border-l-[4px] ${colorClasses[i % colorClasses.length]} p-4 no-underline hover:border-nu-ink/25 hover:shadow-sm transition-all`}
+                        className="group bg-white border-[3px] border-nu-ink p-5 no-underline shadow-[4px_4px_0px_0px_rgba(13,13,13,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(13,13,13,1)] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono-nu text-[9px] text-nu-muted/40 font-bold">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`font-mono-nu text-[10px] text-white font-bold px-1.5 py-0.5 ${bgColor}`}>
                                 §{String(i + 1).padStart(2, "0")}
                               </span>
-                              <h3 className="font-head text-sm font-bold text-nu-ink group-hover:text-nu-pink transition-colors truncate">
+                              <h3 className="font-head text-sm font-extrabold text-nu-ink group-hover:text-nu-pink transition-colors truncate">
                                 {topic.name}
                               </h3>
                             </div>
-                            <p className="text-[10px] text-nu-muted leading-relaxed mt-1 line-clamp-1">
+                            <p className="text-[12px] text-nu-muted leading-relaxed mt-1 line-clamp-2">
                               {topic.description || "섹션을 편집하여 탭을 강화하세요"}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="font-mono-nu text-[9px] text-nu-muted">{pageCount}p</span>
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            <span className="font-mono-nu text-[12px] font-bold text-nu-ink">{pageCount}p</span>
                             {lastUpdate && (
-                              <span className="font-mono-nu text-[7px] text-nu-muted/40">
+                              <span className="font-mono-nu text-[9px] text-nu-muted/60">
                                 {new Date(lastUpdate).toLocaleDateString("ko", { month: "short", day: "numeric" })}
                               </span>
                             )}
-                            <ArrowRight size={12} className="text-nu-ink/20 group-hover:text-nu-pink transition-colors" />
+                            <ArrowRight size={12} className="text-nu-ink/20 group-hover:text-nu-pink group-hover:translate-x-1 transition-all mt-1" />
                           </div>
                         </div>
                       </Link>
@@ -443,7 +446,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                   <h2 className="font-head text-lg font-extrabold flex items-center gap-2">
                     <History size={18} className="text-nu-pink" /> 변경 기록
                   </h2>
-                  <span className="font-mono-nu text-[8px] text-white/25 uppercase tracking-widest">
+                  <span className="font-mono-nu text-[10px] text-white/25 uppercase tracking-widest">
                     {recentPages.length}건
                   </span>
                 </div>
@@ -467,7 +470,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                             >
                               {page.title}
                             </Link>
-                            <div className="flex items-center gap-2 mt-0.5 font-mono-nu text-[8px] text-white/25">
+                            <div className="flex items-center gap-2 mt-0.5 font-mono-nu text-[10px] text-white/25">
                               <span>{(page as any).topic?.name}</span>
                               <span>· v{page.version}</span>
                               <span>· {(page as any).author?.nickname || "?"}</span>
@@ -508,7 +511,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
             {/* Knowledge Metrics */}
             <section className="bg-nu-ink text-white p-5 border-[2px] border-nu-ink relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-nu-pink/[0.08] rounded-full blur-2xl" />
-              <h3 className="font-mono-nu text-[9px] font-bold uppercase tracking-[0.2em] text-white/40 mb-5 flex items-center gap-2 relative">
+              <h3 className="font-mono-nu text-[11px] font-bold uppercase tracking-[0.2em] text-white/40 mb-5 flex items-center gap-2 relative">
                 <Target size={13} className="text-nu-pink" /> 지식 지표
               </h3>
               <div className="space-y-4 relative">
@@ -519,21 +522,21 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                 ].map(m => (
                   <div key={m.label}>
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[11px] text-white/60">{m.label}</span>
-                      <span className={`font-mono-nu text-[10px] font-bold ${m.textColor}`}>{m.value}%</span>
+                      <span className="text-[13px] text-white/60">{m.label}</span>
+                      <span className={`font-mono-nu text-[12px] font-bold ${m.textColor}`}>{m.value}%</span>
                     </div>
                     <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                       <div className={`h-full ${m.color} rounded-full transition-all duration-700`} style={{ width: `${m.value}%` }} />
                     </div>
-                    <p className="font-mono-nu text-[8px] text-white/20 mt-1">{m.desc}</p>
+                    <p className="font-mono-nu text-[10px] text-white/20 mt-1">{m.desc}</p>
                   </div>
                 ))}
               </div>
               <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between">
-                <span className="font-mono-nu text-[9px] text-white/30 uppercase tracking-widest">종합</span>
+                <span className="font-mono-nu text-[11px] text-white/30 uppercase tracking-widest">종합</span>
                 <span className="font-head text-xl font-extrabold text-nu-pink">
                   {Math.round((knowledgeCoverage + linkDensity + participationRate) / 3)}
-                  <span className="text-[10px] text-white/30 ml-0.5">/ 100</span>
+                  <span className="text-[12px] text-white/30 ml-0.5">/ 100</span>
                 </span>
               </div>
             </section>
@@ -541,10 +544,10 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
             {/* Activity Feed */}
             <section className="bg-white border-[2px] border-nu-ink/[0.08]">
               <div className="p-4 border-b border-nu-ink/5 flex items-center justify-between">
-                <h3 className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
+                <h3 className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
                   <Sparkles size={12} className="text-nu-pink" /> 기여 활동
                 </h3>
-                <span className="font-mono-nu text-[7px] text-nu-muted uppercase">{activityFeed.length}건</span>
+                <span className="font-mono-nu text-[9px] text-nu-muted uppercase">{activityFeed.length}건</span>
               </div>
               {activityFeed.length > 0 ? (
                 <div className="divide-y divide-nu-ink/5">
@@ -560,23 +563,23 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                           ) : a.contributor?.avatar_url ? (
                             <img src={a.contributor.avatar_url} alt="" className="w-5 h-5 rounded-full object-cover border border-nu-ink/10" />
                           ) : (
-                            <div className="w-5 h-5 rounded-full bg-nu-blue/10 flex items-center justify-center font-head text-[8px] font-bold text-nu-blue shrink-0">
+                            <div className="w-5 h-5 rounded-full bg-nu-blue/10 flex items-center justify-center font-head text-[10px] font-bold text-nu-blue shrink-0">
                               {(a.contributor?.nickname || "U").charAt(0)}
                             </div>
                           )}
-                          <span className="font-head text-[11px] font-bold text-nu-ink truncate">
+                          <span className="font-head text-[13px] font-bold text-nu-ink truncate">
                             {isAI ? "AI 통합" : (a.contributor?.nickname || "?")}
                           </span>
-                          <span className="font-mono-nu text-[7px] text-nu-muted/40 ml-auto shrink-0">
+                          <span className="font-mono-nu text-[9px] text-nu-muted/40 ml-auto shrink-0">
                             {new Date(a.created_at).toLocaleDateString("ko", { month: "short", day: "numeric" })}
                           </span>
                         </div>
                         {a.page && (
-                          <Link href={`/groups/${id}/wiki/pages/${a.page.id}`} className="text-[11px] text-nu-blue no-underline hover:underline truncate block ml-7">
+                          <Link href={`/groups/${id}/wiki/pages/${a.page.id}`} className="text-[13px] text-nu-blue no-underline hover:underline truncate block ml-7">
                             {a.page.title}
                           </Link>
                         )}
-                        <p className="font-mono-nu text-[8px] text-nu-muted mt-0.5 line-clamp-1 ml-7">
+                        <p className="font-mono-nu text-[10px] text-nu-muted mt-0.5 line-clamp-1 ml-7">
                           {a.change_summary || "편집"}
                         </p>
                       </div>
@@ -586,7 +589,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
               ) : (
                 <div className="p-8 text-center">
                   <Sparkles size={24} className="mx-auto mb-2 text-nu-ink/10" />
-                  <p className="font-mono-nu text-[10px] text-nu-muted">기여 활동을 시작해보세요</p>
+                  <p className="font-mono-nu text-[12px] text-nu-muted">기여 활동을 시작해보세요</p>
                 </div>
               )}
             </section>
@@ -609,10 +612,10 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
 
             {/* Growth Cycle Guide */}
             <section className="bg-nu-cream p-5 border-[2px] border-nu-ink">
-              <h3 className="font-mono-nu text-[10px] font-bold text-nu-ink uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+              <h3 className="font-mono-nu text-[12px] font-bold text-nu-ink uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                 <Calendar size={13} className="text-nu-pink" /> 주간 성장 사이클
               </h3>
-              <ul className="space-y-3 font-mono-nu text-[10px] text-nu-muted leading-relaxed">
+              <ul className="space-y-3 font-mono-nu text-[12px] text-nu-muted leading-relaxed">
                 {[
                   { num: "01", color: "bg-nu-blue", title: "회의 · 토론", desc: "주제에 대해 회의하고 회의록을 기록합니다" },
                   { num: "02", color: "bg-[#ff6f00]", title: "자료 보강", desc: "회의에서 나온 주제를 보강할 자료를 공유합니다" },
@@ -621,10 +624,10 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                   { num: "05", color: "bg-purple-600", title: "다음 주", desc: "이전 맥락 위에 새 회의 결과를 쌓아갑니다" },
                 ].map(s => (
                   <li key={s.num} className="flex gap-3">
-                    <span className={`w-5 h-5 ${s.color} text-white flex items-center justify-center shrink-0 font-bold text-[8px]`}>{s.num}</span>
+                    <span className={`w-5 h-5 ${s.color} text-white flex items-center justify-center shrink-0 font-bold text-[10px]`}>{s.num}</span>
                     <div>
-                      <span className="text-nu-ink font-bold block text-[10px]">{s.title}</span>
-                      <span className="text-[9px]">{s.desc}</span>
+                      <span className="text-nu-ink font-bold block text-[12px]">{s.title}</span>
+                      <span className="text-[11px]">{s.desc}</span>
                     </div>
                   </li>
                 ))}

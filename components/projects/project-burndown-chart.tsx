@@ -67,7 +67,7 @@ export function ProjectBurndownChart({
             id,
             title,
             due_date,
-            project_tasks(id, status, created_at)
+            project_tasks(id, status, created_at, updated_at)
           `
           )
           .eq("project_id", projectId)
@@ -97,9 +97,31 @@ export function ProjectBurndownChart({
         const startDate = new Date(
           project.start_date || project.created_at
         );
-        const deadline = new Date(
+        const rawDeadline = new Date(
           milestones[milestones.length - 1].due_date || new Date()
         );
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        // Extend timeline to whichever is later: deadline or today
+        const deadline = rawDeadline > today ? rawDeadline : today;
+
+        // Build a map of completed tasks with estimated completion dates
+        // Since we don't have a `completed_at` column, we use `updated_at` if available,
+        // otherwise distribute completions evenly from start to today
+        const doneTasks = allTasks.filter(t => t.status === "done");
+        const doneCompletionDates = new Map<string, Date>();
+
+        doneTasks.forEach((task) => {
+          // Use updated_at if present, otherwise use a heuristic (halfway between creation and today)
+          const completedAt = (task as any).updated_at
+            ? new Date((task as any).updated_at)
+            : new Date(Math.max(
+                new Date(task.created_at).getTime(),
+                today.getTime() - (1000 * 60 * 60 * 24) // assume completed yesterday if no date
+              ));
+          completedAt.setHours(0, 0, 0, 0);
+          doneCompletionDates.set(task.id, completedAt);
+        });
 
         // Create timeline array
         const timelinePoints: BurndownDataPoint[] = [];
@@ -117,8 +139,14 @@ export function ProjectBurndownChart({
 
             // Task exists at this point if it was created before or on this date
             if (createdDate <= currentDate) {
-              // Task is remaining if it's not done, or if it's done after this point
-              if (task.status !== "done") {
+              if (task.status === "done") {
+                // Task completed — only count as remaining if this date is before completion
+                const completedDate = doneCompletionDates.get(task.id);
+                if (completedDate && currentDate < completedDate) {
+                  remainingCount++;
+                }
+              } else {
+                // Task not done — always remaining
                 remainingCount++;
               }
             }
@@ -134,13 +162,13 @@ export function ProjectBurndownChart({
           currentDate.setDate(currentDate.getDate() + 1);
         }
 
-        // Create ideal line (straight diagonal from total to 0)
+        // Create ideal line (straight diagonal from total to 0, based on original deadline)
         const totalTasks = allTasks.length;
         const completedTasks = allTasks.filter(
           (t) => t.status === "done"
         ).length;
-        const totalDays = Math.ceil(
-          (deadline.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+        const idealDays = Math.ceil(
+          (rawDeadline.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
         );
 
         const idealLine = timelinePoints.map((point) => {
@@ -148,7 +176,7 @@ export function ProjectBurndownChart({
             (point.timestamp - startDate.getTime()) / (1000 * 60 * 60 * 24)
           );
           const tasksBurnedIdeal =
-            (daysElapsed / Math.max(totalDays, 1)) * totalTasks;
+            (daysElapsed / Math.max(idealDays, 1)) * totalTasks;
           const remainingIdeal = Math.max(0, totalTasks - tasksBurnedIdeal);
 
           return {
@@ -344,7 +372,7 @@ export function ProjectBurndownChart({
     <div className="bg-nu-white border-2 border-nu-ink/[0.08] p-8">
       {/* Header */}
       <div className="mb-8">
-        <h2 className="text-[9px] font-black uppercase tracking-widest text-nu-ink mb-6">
+        <h2 className="text-[11px] font-black uppercase tracking-widest text-nu-ink mb-6">
           번다운 차트
         </h2>
 
@@ -353,7 +381,7 @@ export function ProjectBurndownChart({
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-nu-ink/20"></div>
-              <span className="text-[9px] font-mono-nu text-nu-gray">
+              <span className="text-[11px] font-mono-nu text-nu-gray">
                 전체 태스크
               </span>
             </div>
@@ -365,7 +393,7 @@ export function ProjectBurndownChart({
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-3 h-3 text-green-600" />
-              <span className="text-[9px] font-mono-nu text-nu-gray">
+              <span className="text-[11px] font-mono-nu text-nu-gray">
                 완료된 태스크
               </span>
             </div>
@@ -377,7 +405,7 @@ export function ProjectBurndownChart({
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <TrendingDown className="w-3 h-3 text-nu-pink" />
-              <span className="text-[9px] font-mono-nu text-nu-gray">
+              <span className="text-[11px] font-mono-nu text-nu-gray">
                 남은 태스크
               </span>
             </div>
@@ -389,7 +417,7 @@ export function ProjectBurndownChart({
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Calendar className="w-3 h-3 text-nu-blue" />
-              <span className="text-[9px] font-mono-nu text-nu-gray">
+              <span className="text-[11px] font-mono-nu text-nu-gray">
                 마감일
               </span>
             </div>
@@ -576,7 +604,7 @@ export function ProjectBurndownChart({
       </div>
 
       {/* Footer labels */}
-      <div className="flex justify-between text-[9px] font-mono-nu text-nu-gray">
+      <div className="flex justify-between text-[11px] font-mono-nu text-nu-gray">
         <span>{formatDate(startDate)}</span>
         <span>{formatDate(deadline)}</span>
       </div>

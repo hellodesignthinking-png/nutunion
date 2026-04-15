@@ -59,10 +59,12 @@ export function MilestoneList({
   projectId,
   initialMilestones,
   canEdit,
+  onTaskChange,
 }: {
   projectId: string;
   initialMilestones: ProjectMilestone[];
   canEdit: boolean;
+  onTaskChange?: () => void;
 }) {
   const router = useRouter();
   const [milestones, setMilestones] = useState<ProjectMilestone[]>(initialMilestones);
@@ -294,6 +296,7 @@ export function MilestoneList({
       setNewTaskTitle("");
       setAddingTaskFor(null);
       toast.success("태스크가 추가되었습니다");
+      onTaskChange?.();
       router.refresh();
     } catch (err: any) {
       toast.error(err.message || "태스크 추가 실패");
@@ -339,6 +342,7 @@ export function MilestoneList({
 
     setMilestones(prev => prev.filter(m => m.id !== msId));
     toast.success("마일스톤이 삭제되었습니다");
+    onTaskChange?.();
     router.refresh();
   }
 
@@ -366,6 +370,7 @@ export function MilestoneList({
       ? { ...ms, tasks: (ms.tasks || []).filter(t => t.id !== taskId) }
       : ms));
     toast.success("태스크가 삭제되었습니다");
+    onTaskChange?.();
     router.refresh();
   }
 
@@ -404,6 +409,7 @@ export function MilestoneList({
         if (newMsStatus === "completed") toast.success(`🎉 마일스톤 "${milestone.title}" 완료!`);
       }
     }
+    onTaskChange?.();
     router.refresh();
   }
 
@@ -561,9 +567,9 @@ export function MilestoneList({
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => saveMilestoneEdit(ms.id)}
-                    className="font-mono-nu text-[10px] font-bold uppercase px-4 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors">저장</button>
+                    className="font-mono-nu text-[12px] font-bold uppercase px-4 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors">저장</button>
                   <button onClick={() => setEditingMs(null)}
-                    className="font-mono-nu text-[10px] uppercase px-4 py-2 text-nu-muted hover:text-nu-ink transition-colors">취소</button>
+                    className="font-mono-nu text-[12px] uppercase px-4 py-2 text-nu-muted hover:text-nu-ink transition-colors">취소</button>
                 </div>
               </div>
             ) : (
@@ -579,11 +585,11 @@ export function MilestoneList({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="font-head text-base font-extrabold text-nu-ink">{ms.title}</h3>
-                  <span className={`font-mono-nu text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 ${statusStyle.bg} ${statusStyle.text}`}>
+                  <span className={`font-mono-nu text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 ${statusStyle.bg} ${statusStyle.text}`}>
                     {statusStyle.label}
                   </span>
                   {(ms as any).reward_percentage > 0 && (
-                    <span className="font-mono-nu text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 bg-nu-pink/10 text-nu-pink border border-nu-pink/20">
+                    <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 bg-nu-pink/10 text-nu-pink border border-nu-pink/20">
                       REWARD {(ms as any).reward_percentage}%
                     </span>
                   )}
@@ -625,7 +631,7 @@ export function MilestoneList({
               {/* Progress bar */}
               {tasks.length > 0 && (
                 <div className="w-24 shrink-0 text-right">
-                  <span className="font-mono-nu text-[10px] font-bold text-nu-ink">{progressPct}%</span>
+                  <span className="font-mono-nu text-[12px] font-bold text-nu-ink">{progressPct}%</span>
                   <div className="h-1.5 bg-nu-cream rounded-full overflow-hidden mt-1">
                     <div className="h-full bg-green-600 rounded-full transition-all" style={{ width: `${progressPct}%` }} />
                   </div>
@@ -648,7 +654,7 @@ export function MilestoneList({
                       router.refresh();
                     }
                   }}
-                  className="font-mono-nu text-[9px] font-bold uppercase tracking-widest px-3 py-2 bg-nu-pink text-white hover:bg-nu-pink/90 transition-colors shrink-0"
+                  className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-2 bg-nu-pink text-white hover:bg-nu-pink/90 transition-colors shrink-0"
                 >
                   SETTLE
                 </button>
@@ -669,7 +675,7 @@ export function MilestoneList({
                     <button
                       key={tab.key}
                       onClick={() => setActiveSection((prev) => ({ ...prev, [ms.id]: tab.key }))}
-                      className={`flex items-center gap-1.5 px-4 py-2.5 font-mono-nu text-[9px] uppercase tracking-widest border-b-2 transition-colors ${
+                      className={`flex items-center gap-1.5 px-4 py-2.5 font-mono-nu text-[11px] uppercase tracking-widest border-b-2 transition-colors ${
                         section === tab.key
                           ? "border-nu-pink text-nu-pink font-bold"
                           : "border-transparent text-nu-muted hover:text-nu-ink"
@@ -682,7 +688,7 @@ export function MilestoneList({
                   {/* Like button in tab bar */}
                   <button
                     onClick={() => toggleLike(ms.id)}
-                    className={`ml-auto flex items-center gap-1 px-4 py-2.5 font-mono-nu text-[9px] uppercase tracking-widest transition-colors ${
+                    className={`ml-auto flex items-center gap-1 px-4 py-2.5 font-mono-nu text-[11px] uppercase tracking-widest transition-colors ${
                       likes.liked ? "text-nu-pink" : "text-nu-muted hover:text-nu-pink"
                     }`}
                   >
@@ -707,7 +713,7 @@ export function MilestoneList({
                               className="flex-1 px-3 py-2 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink"
                               autoFocus onKeyDown={e => { if (e.key === "Enter") saveTaskEdit(ms.id, task.id); if (e.key === "Escape") setEditingTask(null); }} />
                             <button onClick={() => saveTaskEdit(ms.id, task.id)}
-                              className="font-mono-nu text-[10px] font-bold uppercase px-3 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors">저장</button>
+                              className="font-mono-nu text-[12px] font-bold uppercase px-3 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors">저장</button>
                             <button onClick={() => setEditingTask(null)}
                               className="text-nu-muted hover:text-nu-ink text-sm px-2">취소</button>
                           </div>
@@ -730,14 +736,14 @@ export function MilestoneList({
                           </div>
                           {task.assignee && (
                             <div className="flex items-center gap-1.5 shrink-0">
-                              <div className="w-5 h-5 rounded-full bg-nu-cream flex items-center justify-center font-head text-[8px] font-bold">
+                              <div className="w-5 h-5 rounded-full bg-nu-cream flex items-center justify-center font-head text-[10px] font-bold">
                                 {(task.assignee.nickname || "U").charAt(0).toUpperCase()}
                               </div>
-                              <span className="font-mono-nu text-[9px] text-nu-muted">{task.assignee.nickname}</span>
+                              <span className="font-mono-nu text-[11px] text-nu-muted">{task.assignee.nickname}</span>
                             </div>
                           )}
                           {task.due_date && (
-                            <span className="font-mono-nu text-[9px] text-nu-muted shrink-0 flex items-center gap-1">
+                            <span className="font-mono-nu text-[11px] text-nu-muted shrink-0 flex items-center gap-1">
                               <Calendar size={9} />
                               {new Date(task.due_date).toLocaleDateString("ko", { month: "short", day: "numeric" })}
                             </span>
@@ -776,7 +782,7 @@ export function MilestoneList({
                               autoFocus
                             />
                             <button onClick={() => addTask(ms.id)} disabled={savingTask}
-                              className="font-mono-nu text-[10px] font-bold uppercase px-3 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors disabled:opacity-50">
+                              className="font-mono-nu text-[12px] font-bold uppercase px-3 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors disabled:opacity-50">
                               {savingTask ? <Loader2 size={12} className="animate-spin" /> : "추가"}
                             </button>
                             <button onClick={() => { setAddingTaskFor(null); setNewTaskTitle(""); }}
@@ -784,7 +790,7 @@ export function MilestoneList({
                           </div>
                         ) : (
                           <button onClick={() => { setAddingTaskFor(ms.id); setNewTaskTitle(""); }}
-                            className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted hover:text-nu-ink transition-colors flex items-center gap-1">
+                            className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted hover:text-nu-ink transition-colors flex items-center gap-1">
                             <Plus size={12} /> 태스크 추가
                           </button>
                         )}
@@ -807,7 +813,7 @@ export function MilestoneList({
                             className="text-sm font-bold text-nu-ink hover:text-nu-pink transition-colors no-underline truncate block">
                             {link.name || link.url}
                           </a>
-                          <span className="font-mono-nu text-[8px] text-nu-muted">{timeAgo(link.created_at)}</span>
+                          <span className="font-mono-nu text-[10px] text-nu-muted">{timeAgo(link.created_at)}</span>
                         </div>
                         <a href={link.url} target="_blank" rel="noopener noreferrer"
                           className="shrink-0 p-1.5 text-nu-muted hover:text-nu-blue transition-colors">
@@ -881,7 +887,7 @@ export function MilestoneList({
                                     placeholder="URL (https://...)" className="flex-1 px-3 py-2 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink"
                                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLink(ms.id); } }} autoFocus />
                                   <button onClick={() => addLink(ms.id)}
-                                    className="font-mono-nu text-[10px] font-bold uppercase px-3 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors">추가</button>
+                                    className="font-mono-nu text-[12px] font-bold uppercase px-3 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors">추가</button>
                                   <button onClick={() => { setShowLinkForm(null); setLinkTitle(""); setLinkUrl(""); }}
                                     className="text-nu-muted hover:text-nu-ink text-sm px-2">취소</button>
                                 </div>
@@ -890,7 +896,7 @@ export function MilestoneList({
                           </div>
                         ) : (
                           <button onClick={() => setShowLinkForm(ms.id)}
-                            className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted hover:text-nu-ink transition-colors flex items-center gap-1">
+                            className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted hover:text-nu-ink transition-colors flex items-center gap-1">
                             <Plus size={12} /> 자료 링크 추가
                           </button>
                         )}
@@ -908,18 +914,18 @@ export function MilestoneList({
                     {comments.map((c) => (
                       <div key={c.id} className="px-5 py-3 border-b border-nu-ink/[0.04] last:border-0">
                         <div className="flex items-start gap-2.5">
-                          <div className="w-6 h-6 rounded-full bg-nu-cream flex items-center justify-center font-head text-[9px] font-bold shrink-0 mt-0.5">
+                          <div className="w-6 h-6 rounded-full bg-nu-cream flex items-center justify-center font-head text-[11px] font-bold shrink-0 mt-0.5">
                             {(c.author?.nickname || "?").charAt(0)}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="text-[11px] font-bold text-nu-ink">{c.author?.nickname || "멤버"}</span>
-                              <span className="font-mono-nu text-[8px] text-nu-muted">{timeAgo(c.created_at)}</span>
+                              <span className="text-[13px] font-bold text-nu-ink">{c.author?.nickname || "멤버"}</span>
+                              <span className="font-mono-nu text-[10px] text-nu-muted">{timeAgo(c.created_at)}</span>
                             </div>
                             <p className="text-sm text-nu-ink mt-0.5 leading-relaxed">{c.content}</p>
                             <button
                               onClick={() => setReplyingTo(replyingTo === c.id ? null : c.id)}
-                              className="font-mono-nu text-[9px] text-nu-muted hover:text-nu-pink mt-1 transition-colors"
+                              className="font-mono-nu text-[11px] text-nu-muted hover:text-nu-pink mt-1 transition-colors"
                             >
                               답글
                             </button>
@@ -929,13 +935,13 @@ export function MilestoneList({
                               <div className="mt-2 ml-3 border-l-2 border-nu-ink/[0.06] pl-3 space-y-2">
                                 {c.replies.map((r) => (
                                   <div key={r.id} className="flex items-start gap-2">
-                                    <div className="w-5 h-5 rounded-full bg-nu-cream flex items-center justify-center font-head text-[8px] font-bold shrink-0">
+                                    <div className="w-5 h-5 rounded-full bg-nu-cream flex items-center justify-center font-head text-[10px] font-bold shrink-0">
                                       {(r.author?.nickname || "?").charAt(0)}
                                     </div>
                                     <div>
                                       <div className="flex items-center gap-1.5">
-                                        <span className="text-[10px] font-bold text-nu-ink">{r.author?.nickname}</span>
-                                        <span className="font-mono-nu text-[7px] text-nu-muted">{timeAgo(r.created_at)}</span>
+                                        <span className="text-[12px] font-bold text-nu-ink">{r.author?.nickname}</span>
+                                        <span className="font-mono-nu text-[9px] text-nu-muted">{timeAgo(r.created_at)}</span>
                                       </div>
                                       <p className="text-[12px] text-nu-ink mt-0.5">{r.content}</p>
                                     </div>
@@ -1010,12 +1016,12 @@ export function MilestoneList({
               />
               <div className="flex gap-4">
                 <div className="flex-1">
-                  <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-1 block">목표 날짜</label>
+                  <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-1 block">목표 날짜</label>
                   <input type="date" value={newMsDueDate} onChange={(e) => setNewMsDueDate(e.target.value)}
                     className="w-full px-4 py-3 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink" />
                 </div>
                 <div className="w-32">
-                  <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-1 block">보상 비율 (%)</label>
+                  <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-1 block">보상 비율 (%)</label>
                   <input type="number" min="0" max="100" value={newMsReward}
                     onChange={(e) => setNewMsReward(parseInt(e.target.value) || 0)}
                     className="w-full px-4 py-3 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink" />
@@ -1023,16 +1029,16 @@ export function MilestoneList({
               </div>
               <div className="flex gap-2">
                 <button onClick={addMilestone} disabled={savingMs}
-                  className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors disabled:opacity-50 flex items-center gap-1">
+                  className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-5 py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors disabled:opacity-50 flex items-center gap-1">
                   {savingMs ? <Loader2 size={12} className="animate-spin" /> : "마일스톤 추가"}
                 </button>
                 <button onClick={() => { setAddingMilestone(false); setNewMsTitle(""); setNewMsDueDate(""); }}
-                  className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted hover:text-nu-ink px-3">취소</button>
+                  className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted hover:text-nu-ink px-3">취소</button>
               </div>
             </div>
           ) : (
             <button onClick={() => setAddingMilestone(true)}
-              className="w-full font-mono-nu text-[11px] uppercase tracking-widest py-4 border-2 border-dashed border-nu-ink/20 text-nu-muted hover:text-nu-ink hover:border-nu-ink/40 transition-colors flex items-center justify-center gap-2">
+              className="w-full font-mono-nu text-[13px] uppercase tracking-widest py-4 border-2 border-dashed border-nu-ink/20 text-nu-muted hover:text-nu-ink hover:border-nu-ink/40 transition-colors flex items-center justify-center gap-2">
               <Plus size={14} /> 마일스톤 추가
             </button>
           )}

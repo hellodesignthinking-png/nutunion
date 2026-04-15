@@ -315,7 +315,7 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
       <div>
         <button
           onClick={() => setIsEditing(false)}
-          className="mb-6 font-mono-nu text-[10px] text-nu-muted hover:text-nu-ink flex items-center gap-1 uppercase tracking-widest"
+          className="mb-6 font-mono-nu text-[12px] text-nu-muted hover:text-nu-ink flex items-center gap-1 uppercase tracking-widest"
         >
           <ArrowLeft size={12} /> 취소
         </button>
@@ -343,7 +343,7 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
           <h1 className="font-head text-4xl font-extrabold text-nu-ink tracking-tight mb-3">
             {page.title}
           </h1>
-          <div className="flex items-center gap-4 font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest flex-wrap">
+          <div className="flex items-center gap-4 font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest flex-wrap">
             <span className="flex items-center gap-1">
               <GitBranch size={12} /> v{page.version}
             </span>
@@ -372,7 +372,7 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
 
         <button
           onClick={() => setIsEditing(true)}
-          className="px-5 py-2.5 bg-nu-ink text-white font-mono-nu text-[10px] font-bold uppercase tracking-widest hover:bg-nu-pink transition-all flex items-center gap-2 shrink-0"
+          className="px-5 py-2.5 bg-nu-ink text-white font-mono-nu text-[12px] font-bold uppercase tracking-widest hover:bg-nu-pink transition-all flex items-center gap-2 shrink-0"
         >
           <Edit3 size={12} /> Edit
         </button>
@@ -385,7 +385,7 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
             onClick={() => setShowTOC(!showTOC)}
             className="w-full flex items-center justify-between p-4 hover:bg-nu-cream/30 transition-colors"
           >
-            <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
+            <span className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
               <List size={14} className="text-nu-blue" /> Table of Contents ({tocItems.length})
             </span>
             {showTOC ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -416,13 +416,13 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
       {/* Content */}
       <div
         ref={contentRef}
-        className="bg-white border-[2px] border-nu-ink/[0.08] p-8 md:p-12 text-sm text-nu-graphite leading-relaxed min-h-[300px]"
+        className="wiki-page-content bg-white border-[3px] border-nu-ink p-8 md:p-12 text-sm text-nu-graphite leading-relaxed min-h-[300px] shadow-[8px_8px_0px_0px_rgba(13,13,13,0.06)]"
         dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderMarkdownWithIds(page.content || "")) }}
       />
 
       {/* Reactions — now DB-backed with counts */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest mr-2">React:</span>
+        <span className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest mr-2">React:</span>
         {REACTIONS.map(r => {
           const count = reactionCounts[r] || 0;
           const isActive = activeReactions.has(r);
@@ -441,7 +441,7 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
             >
               {r}
               {count > 0 && (
-                <span className={`font-mono-nu text-[9px] font-bold ${isActive ? "text-nu-pink" : "text-nu-muted"}`}>
+                <span className={`font-mono-nu text-[11px] font-bold ${isActive ? "text-nu-pink" : "text-nu-muted"}`}>
                   {count}
                 </span>
               )}
@@ -457,7 +457,7 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
           {pageTags.map((t, i) => (
             <span
               key={i}
-              className="font-mono-nu text-[9px] px-2 py-0.5 border flex items-center gap-1"
+              className="font-mono-nu text-[11px] px-2 py-0.5 border flex items-center gap-1"
               style={{ borderColor: (t.color || '#e91e63') + '40', backgroundColor: (t.color || '#e91e63') + '10', color: t.color || '#e91e63' }}
             >
               <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: t.color || '#e91e63' }} />
@@ -470,12 +470,12 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
       {/* Linked Pages (Knowledge Graph Connections) */}
       <div className="border-[2px] border-nu-ink/[0.08]">
         <div className="flex items-center justify-between p-4 bg-white">
-          <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
+          <span className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
             <Link2 size={14} className="text-nu-blue" /> Linked Pages ({linkedPages.length})
           </span>
           <button
             onClick={() => setShowLinkCreator(!showLinkCreator)}
-            className="font-mono-nu text-[9px] text-nu-pink font-bold uppercase tracking-widest hover:underline flex items-center gap-1"
+            className="font-mono-nu text-[11px] text-nu-pink font-bold uppercase tracking-widest hover:underline flex items-center gap-1"
           >
             {showLinkCreator ? <X size={12} /> : <Plus size={12} />}
             {showLinkCreator ? "닫기" : "연결 추가"}
@@ -542,7 +542,7 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
                 >
                   {lp.title}
                 </Link>
-                <span className="font-mono-nu text-[7px] text-nu-muted uppercase tracking-widest">
+                <span className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">
                   {lp.direction === 'outgoing' ? '→ outgoing' : '← incoming'}
                 </span>
                 {lp.direction === 'outgoing' && (
@@ -574,7 +574,7 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
         )}
         {linkedPages.length === 0 && !showLinkCreator && (
           <div className="border-t border-nu-ink/5 p-4 text-center">
-            <p className="text-[11px] text-nu-muted">연결된 페이지가 없습니다. "연결 추가"로 지식 그래프를 확장하세요.</p>
+            <p className="text-[13px] text-nu-muted">연결된 페이지가 없습니다. "연결 추가"로 지식 그래프를 확장하세요.</p>
           </div>
         )}
       </div>
@@ -587,7 +587,7 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
             onClick={() => { setShowVersions(!showVersions); setDiffVersion(null); }}
             className="w-full flex items-center justify-between p-4 bg-white hover:bg-nu-cream/30 transition-colors"
           >
-            <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
+            <span className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
               <History size={14} className="text-nu-blue" /> Version History ({versions.length})
             </span>
             {showVersions ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -597,11 +597,11 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
               {versions.map((v: any) => (
                 <div key={v.id} className="flex items-center justify-between py-2 border-b border-nu-ink/5 last:border-0">
                   <div className="flex items-center gap-3">
-                    <span className="font-mono-nu text-[10px] font-bold text-nu-pink w-8">v{v.version}</span>
+                    <span className="font-mono-nu text-[12px] font-bold text-nu-pink w-8">v{v.version}</span>
                     <span className="text-xs text-nu-graphite">{v.change_summary || "변경 내용"}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="font-mono-nu text-[9px] text-nu-muted">
+                    <span className="font-mono-nu text-[11px] text-nu-muted">
                       {v.editor?.nickname} · {new Date(v.created_at).toLocaleDateString("ko")}
                     </span>
                     {v.content && (
@@ -610,7 +610,7 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
                           e.stopPropagation();
                           setDiffVersion(diffVersion?.version === v.version ? null : { version: v.version, content: v.content, title: v.title });
                         }}
-                        className={`px-2 py-1 font-mono-nu text-[8px] font-bold uppercase tracking-widest transition-all ${
+                        className={`px-2 py-1 font-mono-nu text-[10px] font-bold uppercase tracking-widest transition-all ${
                           diffVersion?.version === v.version
                             ? "bg-nu-pink text-white"
                             : "bg-white border border-nu-ink/10 text-nu-muted hover:text-nu-ink hover:border-nu-ink/30"
@@ -632,14 +632,14 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
           {diffVersion && (
             <div className="border-t-[2px] border-nu-pink/30 bg-nu-cream/20 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h4 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
+                <h4 className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
                   <ArrowUpDown size={14} className="text-nu-pink" />
                   v{diffVersion.version} vs v{page.version} (현재)
                 </h4>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest mb-2 text-center">v{diffVersion.version} (이전)</p>
+                  <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest mb-2 text-center">v{diffVersion.version} (이전)</p>
                   <div className="bg-white border border-nu-ink/10 p-4 text-xs text-nu-graphite leading-relaxed max-h-64 overflow-auto font-mono-nu whitespace-pre-wrap">
                     {diffVersion.content.split("\n").map((line, i) => {
                       const currentLines = (page.content || "").split("\n");
@@ -653,7 +653,7 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
                   </div>
                 </div>
                 <div>
-                  <p className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest mb-2 text-center">v{page.version} (현재)</p>
+                  <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest mb-2 text-center">v{page.version} (현재)</p>
                   <div className="bg-white border border-nu-ink/10 p-4 text-xs text-nu-graphite leading-relaxed max-h-64 overflow-auto font-mono-nu whitespace-pre-wrap">
                     {(page.content || "").split("\n").map((line, i) => {
                       const oldLines = diffVersion.content.split("\n");
@@ -677,7 +677,7 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
             onClick={() => setShowContribs(!showContribs)}
             className="w-full flex items-center justify-between p-4 bg-white hover:bg-nu-cream/30 transition-colors"
           >
-            <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
+            <span className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
               <Users size={14} className="text-nu-pink" /> Contributors ({contributions.length})
             </span>
             {showContribs ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -687,12 +687,12 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
               {contributions.map((c: any) => (
                 <div key={c.id} className="flex items-center justify-between py-2 border-b border-nu-ink/5 last:border-0">
                   <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 bg-nu-pink/10 rounded-full flex items-center justify-center font-head text-[10px] font-bold text-nu-pink shrink-0">
+                    <div className="w-6 h-6 bg-nu-pink/10 rounded-full flex items-center justify-center font-head text-[12px] font-bold text-nu-pink shrink-0">
                       {(c.contributor?.nickname || "U").charAt(0)}
                     </div>
                     <span className="text-xs text-nu-graphite">{c.change_summary || "기여"}</span>
                   </div>
-                  <span className="font-mono-nu text-[9px] text-nu-muted">
+                  <span className="font-mono-nu text-[11px] text-nu-muted">
                     {c.contributor?.nickname} · {new Date(c.created_at).toLocaleDateString("ko")}
                   </span>
                 </div>
@@ -707,13 +707,13 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
 
       {/* Footer */}
       <div className="pt-6 border-t-[2px] border-nu-ink/10 flex items-center justify-between">
-        <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest flex items-center gap-2">
+        <p className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest flex items-center gap-2">
           <Sparkles size={10} className="text-nu-pink" /> Last updated by <span className="text-nu-ink font-bold">@{page.updater?.nickname}</span>
         </p>
         {page.topic && (
           <Link
             href={`/groups/${groupId}/wiki/topics/${page.topic.id}`}
-            className="font-mono-nu text-[10px] text-nu-pink font-bold uppercase tracking-widest hover:underline flex items-center gap-1 no-underline"
+            className="font-mono-nu text-[12px] text-nu-pink font-bold uppercase tracking-widest hover:underline flex items-center gap-1 no-underline"
           >
             <ArrowLeft size={12} /> {page.topic.name}으로 돌아가기
           </Link>

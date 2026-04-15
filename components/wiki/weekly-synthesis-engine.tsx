@@ -18,6 +18,7 @@ interface WikiPageSuggestion {
   action: "create" | "update";
   tags: string[];
   sourceResources: string[];
+  sourceMeetings?: string[];
   keyInsight: string;
 }
 
@@ -28,16 +29,35 @@ interface CrossReference {
   reason: string;
 }
 
+interface KnowledgeGap {
+  topic: string;
+  reason: string;
+  suggestedAction: string;
+}
+
+interface SectionStatus {
+  sectionName: string;
+  completeness: number;
+  missingAspects: string[];
+}
+
 interface SynthesisResult {
   weeklyTheme: string;
   consolidatedSummary: string;
   wikiPageSuggestions: WikiPageSuggestion[];
   crossReferences: CrossReference[];
-  knowledgeGaps: string[];
+  knowledgeGaps: (string | KnowledgeGap)[];
+  tabCompletionAssessment?: {
+    overallCompleteness: number;
+    sectionStatuses: SectionStatus[];
+    blockers: string[];
+    estimatedWeeksToComplete: number;
+  };
   growthMetrics: {
     newConceptsIntroduced: number;
     conceptsDeepened: number;
     connectionsDiscovered: number;
+    evidenceStrength?: string;
   };
   nextWeekSuggestions: string[];
   compactionNote: string;
@@ -45,6 +65,7 @@ interface SynthesisResult {
     newResourceCount: number;
     newMeetingCount: number;
     newNoteCount: number;
+    driveDocsProcessed?: number;
     existingPageCount: number;
     isIncremental: boolean;
     lastSynthesisAt: string;
@@ -348,7 +369,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
           <Brain size={18} className="text-nu-pink" />
           AI 지식 통합 엔진
         </h3>
-        <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest mt-1">
+        <p className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest mt-1">
           Incremental Knowledge Synthesis · Gemini 2.5 Flash
         </p>
       </div>
@@ -371,7 +392,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
                 회의록과 토론 내용을 1차 자료로, 공유된 리소스를 보강 자료로 활용하여
                 통합 탭을 점진적으로 강화합니다.
               </p>
-              <p className="font-mono-nu text-[8px] text-nu-muted/60">
+              <p className="font-mono-nu text-[10px] text-nu-muted/60">
                 회의 → 분석 → 기존 섹션 강화 · 증분 처리 · 토큰 절약
               </p>
             </div>
@@ -382,12 +403,12 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
             {isHost ? (
               <button
                 onClick={runSynthesis}
-                className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-ink text-white hover:bg-nu-pink transition-colors flex items-center gap-2 shadow-[3px_3px_0px_rgba(233,30,99,0.25)] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+                className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-ink text-white hover:bg-nu-pink transition-colors flex items-center gap-2 shadow-[3px_3px_0px_rgba(233,30,99,0.25)] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
               >
                 <Zap size={14} /> 지식 통합 시작
               </button>
             ) : (
-              <div className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest px-4 py-2.5 border border-nu-ink/10 bg-nu-cream/30">
+              <div className="font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest px-4 py-2.5 border border-nu-ink/10 bg-nu-cream/30">
                 호스트만 실행 가능
               </div>
             )}
@@ -396,7 +417,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
           {/* Error detail display */}
           {errorDetail && (
             <div className="mt-4 mx-auto max-w-md bg-red-50 border border-red-200 p-3 text-left">
-              <p className="font-mono-nu text-[9px] font-bold text-red-600 uppercase tracking-widest mb-1 flex items-center gap-1">
+              <p className="font-mono-nu text-[11px] font-bold text-red-600 uppercase tracking-widest mb-1 flex items-center gap-1">
                 <AlertCircle size={10} /> 오류 상세
               </p>
               <p className="text-xs text-red-700 break-all">{errorDetail}</p>
@@ -408,7 +429,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
             <div className="mt-6 border-t border-nu-ink/5 pt-4">
               <button
                 onClick={() => setShowHistory(!showHistory)}
-                className="font-mono-nu text-[9px] text-nu-muted hover:text-nu-ink flex items-center gap-1 mx-auto transition-colors"
+                className="font-mono-nu text-[11px] text-nu-muted hover:text-nu-ink flex items-center gap-1 mx-auto transition-colors"
               >
                 <History size={11} /> 이전 통합 기록 ({history.length})
                 {showHistory ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
@@ -422,7 +443,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
                         <p className="text-xs font-medium text-nu-ink truncate">
                           {log.theme || "통합 완료"}
                         </p>
-                        <div className="flex items-center gap-2 mt-1 font-mono-nu text-[8px] text-nu-muted flex-wrap">
+                        <div className="flex items-center gap-2 mt-1 font-mono-nu text-[10px] text-nu-muted flex-wrap">
                           <span>{new Date(log.createdAt).toLocaleDateString("ko", { month: "short", day: "numeric" })}</span>
                           <span>·</span>
                           <span>{log.inputSummary?.newResourceCount || 0} 리소스</span>
@@ -432,7 +453,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
                           <span>{log.createdBy}</span>
                         </div>
                         {log.compactionNote && (
-                          <p className="text-[10px] text-nu-muted/70 mt-1 line-clamp-1">{log.compactionNote}</p>
+                          <p className="text-[12px] text-nu-muted/70 mt-1 line-clamp-1">{log.compactionNote}</p>
                         )}
                       </div>
                     </div>
@@ -454,14 +475,14 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
               <Brain size={24} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-nu-pink" />
             </div>
             <p className="text-sm font-bold text-nu-ink mb-2">AI가 지식을 통합하고 있습니다</p>
-            <div className="flex items-center gap-4 font-mono-nu text-[9px] text-nu-muted">
+            <div className="flex items-center gap-4 font-mono-nu text-[11px] text-nu-muted">
               <span className="flex items-center gap-1"><FileText size={10} /> 자료 수집</span>
               <span>→</span>
               <span className="flex items-center gap-1"><Brain size={10} /> 분석 중</span>
               <span>→</span>
               <span className="flex items-center gap-1 text-nu-muted/40"><Sparkles size={10} /> 탭 생성</span>
             </div>
-            <p className="font-mono-nu text-[8px] text-nu-muted/50 mt-3">최대 60초 소요될 수 있습니다</p>
+            <p className="font-mono-nu text-[10px] text-nu-muted/50 mt-3">최대 60초 소요될 수 있습니다</p>
           </div>
         </div>
       )}
@@ -473,7 +494,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
           <div className="p-5 bg-nu-cream/30">
             <div className="flex items-center gap-2 mb-2">
               <Sparkles size={14} className="text-nu-pink" />
-              <span className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-pink">
+              <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-pink">
                 이번 주 테마
               </span>
             </div>
@@ -482,7 +503,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
 
             {/* Meta info */}
             {result._meta && (
-              <div className="flex items-center gap-4 mt-3 font-mono-nu text-[8px] text-nu-muted">
+              <div className="flex items-center gap-4 mt-3 font-mono-nu text-[10px] text-nu-muted">
                 <span>리소스 {result._meta.newResourceCount}건</span>
                 <span>미팅 {result._meta.newMeetingCount}건</span>
                 <span>노트 {result._meta.newNoteCount}건</span>
@@ -493,49 +514,114 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
             )}
           </div>
 
+          {/* Tab Completion Assessment */}
+          {result.tabCompletionAssessment && (
+            <div className="p-5 border-b border-nu-ink/5">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="relative w-14 h-14 shrink-0">
+                  <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                    <circle cx="18" cy="18" r="15.5" fill="none" stroke="#f0ede6" strokeWidth="2.5" />
+                    <circle cx="18" cy="18" r="15.5" fill="none"
+                      stroke={result.tabCompletionAssessment.overallCompleteness >= 70 ? "#16a34a" : result.tabCompletionAssessment.overallCompleteness >= 40 ? "#f59e0b" : "#e91e63"}
+                      strokeWidth="2.5"
+                      strokeDasharray={`${result.tabCompletionAssessment.overallCompleteness * 0.974} 100`}
+                      strokeLinecap="round" />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="font-head text-sm font-extrabold">{result.tabCompletionAssessment.overallCompleteness}%</span>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <p className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-ink">통합 문서 완성도</p>
+                  <p className="text-xs text-nu-muted mt-0.5">
+                    예상 완료까지 약 {result.tabCompletionAssessment.estimatedWeeksToComplete}주
+                  </p>
+                </div>
+              </div>
+              {/* Section completeness bars */}
+              {result.tabCompletionAssessment.sectionStatuses?.length > 0 && (
+                <div className="space-y-1.5">
+                  {result.tabCompletionAssessment.sectionStatuses.map((sec, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="font-mono-nu text-[10px] text-nu-muted w-24 truncate shrink-0">{sec.sectionName}</span>
+                      <div className="flex-1 h-1.5 bg-nu-cream overflow-hidden">
+                        <div className="h-full bg-nu-pink transition-all" style={{ width: `${sec.completeness}%` }} />
+                      </div>
+                      <span className="font-mono-nu text-[10px] text-nu-muted w-8 text-right">{sec.completeness}%</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {result.tabCompletionAssessment.blockers?.length > 0 && (
+                <div className="mt-3 bg-red-50 border border-red-200 p-2">
+                  <p className="font-mono-nu text-[10px] text-red-600 font-bold uppercase tracking-widest mb-1">완성 차단 요소</p>
+                  {result.tabCompletionAssessment.blockers.map((b, i) => (
+                    <p key={i} className="text-[11px] text-red-700 flex items-start gap-1">
+                      <AlertCircle size={10} className="shrink-0 mt-0.5" /> {b}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Growth Metrics */}
           {result.growthMetrics && (
             <div className="p-5 flex items-center gap-4 sm:gap-6 flex-wrap">
               <div className="flex items-center gap-2">
                 <Plus size={12} className="text-green-500" />
-                <span className="font-mono-nu text-[10px]">
+                <span className="font-mono-nu text-[12px]">
                   <span className="font-bold text-nu-ink">{result.growthMetrics.newConceptsIntroduced}</span>
                   <span className="text-nu-muted ml-1">새 개념</span>
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <TrendingUp size={12} className="text-nu-blue" />
-                <span className="font-mono-nu text-[10px]">
+                <span className="font-mono-nu text-[12px]">
                   <span className="font-bold text-nu-ink">{result.growthMetrics.conceptsDeepened}</span>
                   <span className="text-nu-muted ml-1">심화</span>
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <LinkIcon size={12} className="text-nu-pink" />
-                <span className="font-mono-nu text-[10px]">
+                <span className="font-mono-nu text-[12px]">
                   <span className="font-bold text-nu-ink">{result.growthMetrics.connectionsDiscovered}</span>
                   <span className="text-nu-muted ml-1">연결</span>
                 </span>
               </div>
+              {result.growthMetrics.evidenceStrength && (
+                <div className="flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${
+                    result.growthMetrics.evidenceStrength === "strong" ? "bg-green-500" :
+                    result.growthMetrics.evidenceStrength === "moderate" ? "bg-amber-500" : "bg-red-400"
+                  }`} />
+                  <span className="font-mono-nu text-[11px] text-nu-muted">
+                    근거 강도: <span className="font-bold text-nu-ink">
+                      {result.growthMetrics.evidenceStrength === "strong" ? "강함" :
+                       result.growthMetrics.evidenceStrength === "moderate" ? "보통" : "약함"}
+                    </span>
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
           {/* Wiki Page Suggestions */}
           <div className="p-5">
             <div className="flex items-center justify-between mb-4">
-              <h4 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
+              <h4 className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
                 <FileText size={13} /> 탭 페이지 제안 ({result.wikiPageSuggestions.length}건)
               </h4>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setSelectedPages(new Set(result.wikiPageSuggestions.map((_, i) => i)))}
-                  className="font-mono-nu text-[9px] text-nu-blue hover:text-nu-pink transition-colors"
+                  className="font-mono-nu text-[11px] text-nu-blue hover:text-nu-pink transition-colors"
                 >
                   전체 선택
                 </button>
                 <button
                   onClick={() => setSelectedPages(new Set())}
-                  className="font-mono-nu text-[9px] text-nu-muted hover:text-nu-ink transition-colors"
+                  className="font-mono-nu text-[11px] text-nu-muted hover:text-nu-ink transition-colors"
                 >
                   선택 해제
                 </button>
@@ -558,7 +644,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-bold text-nu-ink truncate">{page.title}</span>
-                        <span className={`font-mono-nu text-[8px] font-bold uppercase px-1.5 py-0.5 ${
+                        <span className={`font-mono-nu text-[10px] font-bold uppercase px-1.5 py-0.5 ${
                           page.action === "create" ? "bg-green-50 text-green-600" : "bg-nu-amber/10 text-nu-amber"
                         }`}>
                           {page.action === "create" ? "NEW" : "UPDATE"}
@@ -566,28 +652,50 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
                       </div>
                       <p className="text-xs text-nu-muted mt-0.5">{page.keyInsight}</p>
                     </div>
-                    <span className="font-mono-nu text-[8px] text-nu-muted shrink-0">{page.topicName}</span>
+                    <span className="font-mono-nu text-[10px] text-nu-muted shrink-0">{page.topicName}</span>
                     {expandedPage === idx ? <ChevronUp size={14} className="text-nu-muted" /> : <ChevronDown size={14} className="text-nu-muted" />}
                   </div>
 
                   {expandedPage === idx && (
                     <div className="px-3 pb-3 border-t border-nu-ink/5">
-                      <div className="bg-nu-paper p-3 mt-2 text-xs text-nu-graphite leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto font-mono">
+                      <div className="bg-nu-paper p-4 mt-2 text-[13px] text-nu-graphite leading-relaxed whitespace-pre-wrap max-h-[400px] overflow-y-auto prose prose-sm prose-headings:font-head prose-headings:text-nu-ink prose-headings:text-sm prose-headings:font-extrabold">
                         {page.content}
                       </div>
+
+                      {/* Source Attribution */}
+                      <div className="mt-3 bg-nu-cream/30 border border-nu-ink/5 p-3 space-y-2">
+                        <p className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink">출처 및 근거</p>
+                        {page.sourceMeetings && page.sourceMeetings.length > 0 && (
+                          <div className="flex items-start gap-2">
+                            <FileText size={11} className="text-nu-blue shrink-0 mt-0.5" />
+                            <div>
+                              <p className="font-mono-nu text-[10px] text-nu-blue font-bold uppercase">회의</p>
+                              <p className="text-[12px] text-nu-graphite">{page.sourceMeetings.join(" · ")}</p>
+                            </div>
+                          </div>
+                        )}
+                        {page.sourceResources.length > 0 && (
+                          <div className="flex items-start gap-2">
+                            <BookOpen size={11} className="text-nu-amber shrink-0 mt-0.5" />
+                            <div>
+                              <p className="font-mono-nu text-[10px] text-nu-amber font-bold uppercase">참고 자료</p>
+                              <p className="text-[12px] text-nu-graphite">{page.sourceResources.join(" · ")}</p>
+                            </div>
+                          </div>
+                        )}
+                        {(!page.sourceMeetings || page.sourceMeetings.length === 0) && page.sourceResources.length === 0 && (
+                          <p className="text-[11px] text-nu-muted italic">명시된 출처 없음</p>
+                        )}
+                      </div>
+
                       {page.tags.length > 0 && (
                         <div className="flex items-center gap-1 mt-2 flex-wrap">
                           {page.tags.map(tag => (
-                            <span key={tag} className="font-mono-nu text-[8px] px-1.5 py-0.5 bg-nu-ink/5 text-nu-muted">
+                            <span key={tag} className="font-mono-nu text-[10px] px-1.5 py-0.5 bg-nu-ink/5 text-nu-muted">
                               #{tag}
                             </span>
                           ))}
                         </div>
-                      )}
-                      {page.sourceResources.length > 0 && (
-                        <p className="font-mono-nu text-[8px] text-nu-muted/60 mt-1">
-                          참조: {page.sourceResources.join(", ")}
-                        </p>
                       )}
                     </div>
                   )}
@@ -599,7 +707,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
           {/* Cross References */}
           {result.crossReferences?.length > 0 && (
             <div className="p-5">
-              <h4 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2 mb-3">
+              <h4 className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2 mb-3">
                 <LinkIcon size={13} /> 지식 연결 ({result.crossReferences.length}건)
               </h4>
               <div className="space-y-1">
@@ -608,7 +716,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
                     <span className="font-medium text-nu-ink">{ref.fromPage}</span>
                     <ArrowRight size={10} />
                     <span className="font-medium text-nu-ink">{ref.toPage}</span>
-                    <span className="font-mono-nu text-[8px] px-1 bg-nu-ink/5">{ref.linkType}</span>
+                    <span className="font-mono-nu text-[10px] px-1 bg-nu-ink/5">{ref.linkType}</span>
                   </div>
                 ))}
               </div>
@@ -618,30 +726,44 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
           {/* Knowledge Gaps */}
           {result.knowledgeGaps?.length > 0 && (
             <div className="p-5">
-              <h4 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2 mb-3">
+              <h4 className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2 mb-3">
                 <AlertCircle size={13} className="text-nu-amber" /> 탐구 필요 영역
               </h4>
-              <ul className="space-y-1">
-                {result.knowledgeGaps.map((gap, i) => (
-                  <li key={i} className="text-xs text-nu-muted flex items-start gap-2">
-                    <span className="text-nu-amber shrink-0">?</span>
-                    {gap}
-                  </li>
-                ))}
-              </ul>
+              <div className="space-y-2">
+                {result.knowledgeGaps.map((gap, i) => {
+                  const isRich = typeof gap === "object" && gap !== null;
+                  const gapObj = isRich ? (gap as KnowledgeGap) : null;
+                  return (
+                    <div key={i} className="bg-amber-50/50 border border-amber-200/50 p-3">
+                      <p className="text-sm font-bold text-nu-ink flex items-start gap-2">
+                        <span className="font-mono-nu text-[11px] bg-amber-200 text-amber-800 px-1.5 py-0.5 font-bold shrink-0">{i + 1}</span>
+                        {gapObj ? gapObj.topic : String(gap)}
+                      </p>
+                      {gapObj?.reason && (
+                        <p className="text-[12px] text-nu-muted mt-1 ml-7">{gapObj.reason}</p>
+                      )}
+                      {gapObj?.suggestedAction && (
+                        <p className="text-[12px] text-nu-blue mt-1 ml-7 flex items-center gap-1">
+                          <Zap size={10} className="shrink-0" /> {gapObj.suggestedAction}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 
           {/* Next Week Suggestions */}
           {result.nextWeekSuggestions?.length > 0 && (
             <div className="p-5">
-              <h4 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2 mb-3">
+              <h4 className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2 mb-3">
                 <TrendingUp size={13} className="text-green-500" /> 다음 주 학습 제안
               </h4>
               <ul className="space-y-1">
                 {result.nextWeekSuggestions.map((s, i) => (
                   <li key={i} className="text-xs text-nu-graphite flex items-start gap-2">
-                    <span className="font-mono-nu text-[9px] text-nu-pink font-bold">{String(i + 1).padStart(2, "0")}</span>
+                    <span className="font-mono-nu text-[11px] text-nu-pink font-bold">{String(i + 1).padStart(2, "0")}</span>
                     {s}
                   </li>
                 ))}
@@ -651,7 +773,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
 
           {/* Apply Button */}
           <div className="p-5 bg-nu-cream/30 flex items-center justify-between">
-            <p className="font-mono-nu text-[9px] text-nu-muted">
+            <p className="font-mono-nu text-[11px] text-nu-muted">
               {selectedPages.size}개 선택됨
             </p>
             <div className="flex items-center gap-2">
@@ -664,7 +786,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
               <button
                 onClick={applySelectedPages}
                 disabled={selectedPages.size === 0}
-                className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-2.5 bg-nu-pink text-white hover:bg-nu-pink/90 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-5 py-2.5 bg-nu-pink text-white hover:bg-nu-pink/90 transition-colors disabled:opacity-50 flex items-center gap-1.5"
               >
                 <Save size={12} /> 탭에 적용 ({selectedPages.size})
               </button>
@@ -679,7 +801,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
           <Loader2 size={32} className="animate-spin text-nu-pink mx-auto mb-4" />
           <p className="text-sm font-bold text-nu-ink mb-1">탭 페이지를 생성하고 있습니다...</p>
           {applyingIndex !== null && result && (
-            <p className="font-mono-nu text-[9px] text-nu-muted">
+            <p className="font-mono-nu text-[11px] text-nu-muted">
               {applyingIndex + 1} / {selectedPages.size}
             </p>
           )}
@@ -696,24 +818,49 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
               {createdPages.length > 0 ? `${createdPages.length}개 탭 페이지가 저장되었습니다` : result.wikiPageSuggestions.length > 0 ? "지식 통합 완료" : result.weeklyTheme}
             </p>
             {result.weeklyTheme && createdPages.length > 0 && (
-              <p className="font-mono-nu text-[9px] text-nu-pink font-bold uppercase tracking-wider mt-1">{result.weeklyTheme}</p>
+              <p className="font-mono-nu text-[11px] text-nu-pink font-bold uppercase tracking-wider mt-1">{result.weeklyTheme}</p>
             )}
           </div>
 
-          {/* Growth metrics summary */}
-          {result.growthMetrics && (createdPages.length > 0 || result.wikiPageSuggestions.length > 0) && (
-            <div className="p-4 flex items-center justify-center gap-6">
-              <div className="text-center">
-                <p className="font-head text-lg font-extrabold text-green-600">{result.growthMetrics.newConceptsIntroduced}</p>
-                <p className="font-mono-nu text-[7px] text-nu-muted uppercase">새 개념</p>
-              </div>
-              <div className="text-center">
-                <p className="font-head text-lg font-extrabold text-nu-blue">{result.growthMetrics.conceptsDeepened}</p>
-                <p className="font-mono-nu text-[7px] text-nu-muted uppercase">심화</p>
-              </div>
-              <div className="text-center">
-                <p className="font-head text-lg font-extrabold text-nu-pink">{result.growthMetrics.connectionsDiscovered}</p>
-                <p className="font-mono-nu text-[7px] text-nu-muted uppercase">연결</p>
+          {/* Completion Assessment + Growth metrics */}
+          {(result.tabCompletionAssessment || result.growthMetrics) && (createdPages.length > 0 || result.wikiPageSuggestions.length > 0) && (
+            <div className="p-4">
+              {/* Completion ring */}
+              {result.tabCompletionAssessment && (
+                <div className="flex items-center justify-center gap-6 mb-4">
+                  <div className="relative w-16 h-16">
+                    <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                      <circle cx="18" cy="18" r="15.5" fill="none" stroke="#f0ede6" strokeWidth="2.5" />
+                      <circle cx="18" cy="18" r="15.5" fill="none"
+                        stroke={result.tabCompletionAssessment.overallCompleteness >= 70 ? "#16a34a" : result.tabCompletionAssessment.overallCompleteness >= 40 ? "#f59e0b" : "#e91e63"}
+                        strokeWidth="2.5"
+                        strokeDasharray={`${result.tabCompletionAssessment.overallCompleteness * 0.974} 100`}
+                        strokeLinecap="round" />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="font-head text-base font-extrabold">{result.tabCompletionAssessment.overallCompleteness}%</span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-ink">통합 문서 완성도</p>
+                    <p className="text-xs text-nu-muted">예상 {result.tabCompletionAssessment.estimatedWeeksToComplete}주 후 완료</p>
+                  </div>
+                </div>
+              )}
+              {/* Growth metrics row */}
+              <div className="flex items-center justify-center gap-6">
+                <div className="text-center">
+                  <p className="font-head text-lg font-extrabold text-green-600">{result.growthMetrics.newConceptsIntroduced}</p>
+                  <p className="font-mono-nu text-[10px] text-nu-muted uppercase">새 개념</p>
+                </div>
+                <div className="text-center">
+                  <p className="font-head text-lg font-extrabold text-nu-blue">{result.growthMetrics.conceptsDeepened}</p>
+                  <p className="font-mono-nu text-[10px] text-nu-muted uppercase">심화</p>
+                </div>
+                <div className="text-center">
+                  <p className="font-head text-lg font-extrabold text-nu-pink">{result.growthMetrics.connectionsDiscovered}</p>
+                  <p className="font-mono-nu text-[10px] text-nu-muted uppercase">연결</p>
+                </div>
               </div>
             </div>
           )}
@@ -728,7 +875,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
           {/* Created pages list with links */}
           {createdPages.length > 0 && (
             <div className="p-4">
-              <p className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-green-700 mb-3 flex items-center gap-1.5">
+              <p className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-green-700 mb-3 flex items-center gap-1.5">
                 <BookOpen size={11} /> 저장된 탭 페이지
               </p>
               <div className="space-y-1.5">
@@ -738,7 +885,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
                     href={`/groups/${groupId}/wiki/pages/${page.id}`}
                     className="flex items-center gap-2 p-2.5 bg-white border border-green-100 hover:border-nu-blue/30 transition-colors no-underline group"
                   >
-                    <span className={`font-mono-nu text-[7px] font-bold uppercase px-1.5 py-0.5 shrink-0 ${
+                    <span className={`font-mono-nu text-[9px] font-bold uppercase px-1.5 py-0.5 shrink-0 ${
                       page.action === "create" ? "bg-green-100 text-green-600" : "bg-nu-amber/10 text-nu-amber"
                     }`}>
                       {page.action === "create" ? "NEW" : "UPD"}
@@ -747,7 +894,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
                       <span className="text-xs font-bold text-nu-ink group-hover:text-nu-blue transition-colors truncate block">
                         {page.title}
                       </span>
-                      <span className="font-mono-nu text-[8px] text-nu-muted">{page.topicName}</span>
+                      <span className="font-mono-nu text-[10px] text-nu-muted">{page.topicName}</span>
                     </div>
                     <ArrowRight size={12} className="text-nu-muted group-hover:text-nu-blue transition-colors shrink-0" />
                   </Link>
@@ -762,7 +909,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
               <p className="text-xs text-nu-muted mb-1">
                 마지막 통합 이후 새로 공유된 리소스나 회의가 없습니다
               </p>
-              <p className="font-mono-nu text-[8px] text-nu-muted/60">
+              <p className="font-mono-nu text-[10px] text-nu-muted/60">
                 자료실에 리소스를 추가하거나 미팅을 진행한 후 다시 실행하세요
               </p>
             </div>
@@ -771,13 +918,13 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
           {/* Next week suggestions */}
           {result.nextWeekSuggestions?.length > 0 && (
             <div className="p-4">
-              <p className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-ink mb-2 flex items-center gap-1.5">
+              <p className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-ink mb-2 flex items-center gap-1.5">
                 <TrendingUp size={11} className="text-green-500" /> 다음 주 학습 제안
               </p>
               <ul className="space-y-1">
                 {result.nextWeekSuggestions.map((s, i) => (
-                  <li key={i} className="text-[11px] text-nu-graphite flex items-start gap-2">
-                    <span className="font-mono-nu text-[8px] text-nu-pink font-bold shrink-0">{String(i + 1).padStart(2, "0")}</span>
+                  <li key={i} className="text-[13px] text-nu-graphite flex items-start gap-2">
+                    <span className="font-mono-nu text-[10px] text-nu-pink font-bold shrink-0">{String(i + 1).padStart(2, "0")}</span>
                     {s}
                   </li>
                 ))}
@@ -789,14 +936,14 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
           <div className="p-4 flex items-center justify-center gap-3 bg-nu-cream/20">
             <button
               onClick={() => { setPhase("idle"); setResult(null); setCreatedPages([]); }}
-              className="font-mono-nu text-[10px] text-nu-muted hover:text-nu-ink transition-colors flex items-center gap-1"
+              className="font-mono-nu text-[12px] text-nu-muted hover:text-nu-ink transition-colors flex items-center gap-1"
             >
               <RefreshCw size={11} /> 다시 실행
             </button>
             {createdPages.length > 0 && (
               <button
                 onClick={() => window.location.reload()}
-                className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2 bg-nu-ink text-white hover:bg-nu-graphite transition-colors flex items-center gap-1.5"
+                className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2 bg-nu-ink text-white hover:bg-nu-graphite transition-colors flex items-center gap-1.5"
               >
                 <BookOpen size={11} /> 페이지 새로고침
               </button>

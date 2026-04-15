@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { WikiPageViewer } from "@/components/wiki/wiki-page-viewer";
+import { WikiFloatingTOC } from "@/components/wiki/wiki-floating-toc";
 import type { Metadata } from "next";
 
 export const revalidate = 60;
@@ -86,7 +87,7 @@ export default async function WikiPageDetailPage({ params }: { params: Promise<{
       {/* Header */}
       <div className="border-b-[3px] border-nu-ink bg-white py-6">
         <div className="max-w-4xl mx-auto px-8">
-          <nav className="flex items-center gap-1.5 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted flex-wrap">
+          <nav className="flex items-center gap-1.5 font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted flex-wrap">
             <Link href={`/groups/${groupId}`} className="hover:text-nu-ink no-underline">{group.name}</Link>
             <ChevronRight size={10} />
             <Link href={`/groups/${groupId}/wiki`} className="hover:text-nu-ink no-underline">Wiki</Link>
@@ -104,13 +105,16 @@ export default async function WikiPageDetailPage({ params }: { params: Promise<{
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-8 py-10">
-        <WikiPageViewer
-          page={page as any}
-          groupId={groupId}
-          versions={versions || []}
-          contributions={contributions || []}
-        />
+      <div className="max-w-7xl mx-auto px-8 py-10 flex gap-0">
+        <div className="flex-1 min-w-0 max-w-4xl">
+          <WikiPageViewer
+            page={page as any}
+            groupId={groupId}
+            versions={versions || []}
+            contributions={contributions || []}
+          />
+        </div>
+        <WikiFloatingTOC contentSelector=".wiki-page-content" title="이 문서의 목차" />
       </div>
     </div>
   );

@@ -276,7 +276,7 @@ export function UnifiedTabView({ groupId, groupName }: { groupId: string; groupN
         <div className="p-6 sm:p-8 border-b border-nu-ink/10">
           {/* Title block */}
           <div className="max-w-3xl mx-auto text-center">
-            <p className="font-mono-nu text-[9px] text-nu-pink uppercase tracking-[0.3em] font-bold mb-3">
+            <p className="font-mono-nu text-[11px] text-nu-pink uppercase tracking-[0.3em] font-bold mb-3">
               {groupName} · Living Document
             </p>
             <h1 className="font-head text-2xl sm:text-3xl font-extrabold text-nu-ink leading-tight mb-4">
@@ -291,8 +291,8 @@ export function UnifiedTabView({ groupId, groupName }: { groupId: string; groupN
           {/* Progress & Meta */}
           <div className="max-w-3xl mx-auto mt-6">
             <div className="flex items-center justify-between mb-2">
-              <span className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">완성도</span>
-              <span className="font-mono-nu text-[10px] font-bold text-nu-pink">{progress.completion}%</span>
+              <span className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest">완성도</span>
+              <span className="font-mono-nu text-[12px] font-bold text-nu-pink">{progress.completion}%</span>
             </div>
             <div className="w-full h-2.5 bg-nu-ink/[0.06] rounded-full overflow-hidden">
               <div
@@ -300,7 +300,7 @@ export function UnifiedTabView({ groupId, groupName }: { groupId: string; groupN
                 style={{ width: `${progress.completion}%` }}
               />
             </div>
-            <div className="flex items-center justify-between mt-2 font-mono-nu text-[8px] text-nu-muted">
+            <div className="flex items-center justify-between mt-2 font-mono-nu text-[10px] text-nu-muted">
               <span>{progress.activeSections}/{progress.totalSections} 섹션 작성됨</span>
               <span>{Math.round(progress.totalWords / 500)}분 분량</span>
               {lastUpdated && (
@@ -316,7 +316,7 @@ export function UnifiedTabView({ groupId, groupName }: { groupId: string; groupN
             onClick={() => setShowTOC(!showTOC)}
             className="w-full px-6 sm:px-8 py-3 flex items-center justify-between hover:bg-nu-cream/30 transition-colors"
           >
-            <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
+            <span className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
               <List size={13} /> 목차 ({sections.length}개 섹션)
             </span>
             {showTOC ? <ChevronUp size={14} className="text-nu-muted" /> : <ChevronDown size={14} className="text-nu-muted" />}
@@ -338,18 +338,18 @@ export function UnifiedTabView({ groupId, groupName }: { groupId: string; groupN
                               : "hover:bg-nu-cream/50 text-nu-ink"
                           }`}
                         >
-                          <span className="font-mono-nu text-[10px] text-nu-muted w-6 shrink-0">
+                          <span className="font-mono-nu text-[12px] text-nu-muted w-6 shrink-0">
                             {String(i + 1).padStart(2, "0")}
                           </span>
                           <span className={`text-sm font-medium flex-1 ${!hasContent ? "text-nu-muted/50" : ""}`}>
                             {section.topicName}
                           </span>
                           {hasContent ? (
-                            <span className="font-mono-nu text-[8px] text-nu-muted">
+                            <span className="font-mono-nu text-[10px] text-nu-muted">
                               v{Math.max(...section.pages.map(p => p.version))} · {section.pages.length}p
                             </span>
                           ) : (
-                            <span className="font-mono-nu text-[8px] text-nu-muted/40 italic">미작성</span>
+                            <span className="font-mono-nu text-[10px] text-nu-muted/40 italic">미작성</span>
                           )}
                         </button>
                       </li>
@@ -362,31 +362,10 @@ export function UnifiedTabView({ groupId, groupName }: { groupId: string; groupN
         </div>
 
         {/* ── Document Body ──────────────────────── */}
-        <div className="px-6 sm:px-8 py-8 relative">
-          {/* Floating TOC for large screens */}
-          {sections.length > 1 && (
-            <nav className="hidden xl:block absolute right-8 top-8 w-44 sticky-toc" style={{ position: "sticky", top: "6rem", alignSelf: "flex-start" }}>
-              <div className="border-l-2 border-nu-ink/10 pl-3 space-y-1">
-                <p className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest mb-2">목차</p>
-                {sections.map((s, i) => (
-                  <button
-                    key={s.topicId}
-                    onClick={() => scrollToSection(s.topicId)}
-                    className={`block w-full text-left font-mono-nu text-[9px] py-0.5 transition-colors truncate ${
-                      activeSection === s.topicId
-                        ? "text-nu-pink font-bold"
-                        : s.pages.length > 0
-                        ? "text-nu-muted hover:text-nu-ink"
-                        : "text-nu-muted/30"
-                    }`}
-                  >
-                    {String(i + 1).padStart(2, "0")}. {s.topicName}
-                  </button>
-                ))}
-              </div>
-            </nav>
-          )}
-          <div className="max-w-3xl mx-auto space-y-12">
+        <div className="px-6 sm:px-8 py-8">
+          <div className="max-w-7xl mx-auto flex gap-0">
+          {/* Main content */}
+          <div className="flex-1 min-w-0 max-w-3xl mx-auto space-y-12">
             {sections.map((section, sectionIdx) => (
               <section
                 key={section.topicId}
@@ -395,7 +374,7 @@ export function UnifiedTabView({ groupId, groupName }: { groupId: string; groupN
               >
                 {/* Section header */}
                 <div className="flex items-start gap-4 mb-4 pb-3 border-b-[2px] border-nu-ink/10">
-                  <span className="font-mono-nu text-[11px] text-nu-muted/40 mt-1 w-8 shrink-0 font-bold">
+                  <span className="font-mono-nu text-[13px] text-nu-muted/40 mt-1 w-8 shrink-0 font-bold">
                     {String(sectionIdx + 1).padStart(2, "0")}
                   </span>
                   <div className="flex-1">
@@ -405,7 +384,7 @@ export function UnifiedTabView({ groupId, groupName }: { groupId: string; groupN
                     {section.description && (
                       <p className="text-xs text-nu-muted mt-1 leading-relaxed">{section.description}</p>
                     )}
-                    <div className="flex items-center gap-3 mt-2 font-mono-nu text-[8px] text-nu-muted flex-wrap">
+                    <div className="flex items-center gap-3 mt-2 font-mono-nu text-[10px] text-nu-muted flex-wrap">
                       {section.pages.length > 0 && (
                         <span className="flex items-center gap-1">
                           <FileText size={9} /> {section.pages.length} 페이지
@@ -447,7 +426,7 @@ export function UnifiedTabView({ groupId, groupName }: { groupId: string; groupN
                             >
                               {page.title}
                             </Link>
-                            <span className="font-mono-nu text-[7px] text-nu-muted/40">v{page.version}</span>
+                            <span className="font-mono-nu text-[9px] text-nu-muted/40">v{page.version}</span>
                           </div>
                         )}
                         <div
@@ -457,7 +436,7 @@ export function UnifiedTabView({ groupId, groupName }: { groupId: string; groupN
                           }}
                         />
                         {page.updatedBy && (
-                          <p className="font-mono-nu text-[7px] text-nu-muted/40 mt-3 text-right">
+                          <p className="font-mono-nu text-[9px] text-nu-muted/40 mt-3 text-right">
                             — {page.updatedBy}, {new Date(page.updatedAt).toLocaleDateString("ko", { year: "numeric", month: "short", day: "numeric" })}
                           </p>
                         )}
@@ -467,7 +446,7 @@ export function UnifiedTabView({ groupId, groupName }: { groupId: string; groupN
                 ) : (
                   <div className="pl-12 py-6 border border-dashed border-nu-ink/10 bg-nu-cream/20 text-center">
                     <p className="text-xs text-nu-muted mb-1">이 섹션은 아직 작성되지 않았습니다</p>
-                    <p className="font-mono-nu text-[8px] text-nu-muted/50">
+                    <p className="font-mono-nu text-[10px] text-nu-muted/50">
                       회의에서 이 주제를 논의하면 AI가 자동으로 내용을 채웁니다
                     </p>
                   </div>
@@ -475,13 +454,65 @@ export function UnifiedTabView({ groupId, groupName }: { groupId: string; groupN
               </section>
             ))}
           </div>
+
+          {/* ── Floating TOC (Neo-Brutalism) ── */}
+          {sections.length > 1 && (
+            <aside className="hidden xl:block sticky top-24 self-start w-52 shrink-0 ml-8">
+              <div className="border-[3px] border-nu-ink bg-white shadow-[6px_6px_0px_0px_rgba(13,13,13,1)]">
+                <div className="px-4 py-3 border-b-[2px] border-nu-ink bg-nu-cream/30">
+                  <span className="font-head text-xs font-extrabold uppercase tracking-widest text-nu-ink flex items-center gap-2">
+                    <List size={13} /> 목차
+                  </span>
+                </div>
+                <nav className="px-3 py-3 space-y-0.5 max-h-[55vh] overflow-y-auto scrollbar-hide">
+                  {sections.map((s, i) => {
+                    const isActive = activeSection === s.topicId;
+                    const hasContent = s.pages.length > 0;
+                    return (
+                      <button
+                        key={s.topicId}
+                        onClick={() => scrollToSection(s.topicId)}
+                        className={`
+                          w-full text-left block transition-all duration-150 px-2 py-1.5 rounded-sm
+                          ${isActive
+                            ? "bg-nu-pink/10 text-nu-pink font-bold border-l-[3px] border-nu-pink -ml-[1px]"
+                            : hasContent
+                            ? "text-nu-graphite hover:text-nu-ink hover:bg-nu-cream/40"
+                            : "text-nu-muted/30 hover:text-nu-muted/50"
+                          }
+                        `}
+                      >
+                        <span className="font-head text-[11px] leading-snug block truncate">
+                          <span className="font-mono-nu text-[10px] text-nu-muted/50 mr-1.5">
+                            {String(i + 1).padStart(2, "0")}
+                          </span>
+                          {s.topicName}
+                        </span>
+                        {hasContent && (
+                          <span className="font-mono-nu text-[9px] text-nu-muted/40 block mt-0.5 pl-5">
+                            v{Math.max(...s.pages.map(p => p.version))} · {s.pages.length}p · {s.contributorCount}명
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </nav>
+                <div className="px-4 py-2 border-t border-nu-ink/10 bg-nu-cream/20">
+                  <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
+                    {sections.filter(s => s.pages.length > 0).length}/{sections.length} 작성됨
+                  </p>
+                </div>
+              </div>
+            </aside>
+          )}
+          </div>
         </div>
 
         {/* ── Meeting Contributions Timeline ──────── */}
         {meetings.length > 0 && (
           <div className="border-t-[2px] border-nu-ink/10 px-6 sm:px-8 py-6 bg-nu-cream/20">
             <div className="max-w-3xl mx-auto">
-              <h3 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink mb-4 flex items-center gap-2">
+              <h3 className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-ink mb-4 flex items-center gap-2">
                 <Calendar size={13} className="text-nu-blue" /> 회의 기반 성장 기록
               </h3>
               <div className="space-y-0">
@@ -494,7 +525,7 @@ export function UnifiedTabView({ groupId, groupName }: { groupId: string; groupN
                     <div className="flex-1 pb-4 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-bold text-nu-ink truncate">{m.title}</span>
-                        <span className="font-mono-nu text-[8px] text-nu-muted">
+                        <span className="font-mono-nu text-[10px] text-nu-muted">
                           {new Date(m.scheduledAt).toLocaleDateString("ko", { month: "short", day: "numeric" })}
                         </span>
                       </div>
@@ -502,14 +533,14 @@ export function UnifiedTabView({ groupId, groupName }: { groupId: string; groupN
                         <div className="flex items-center gap-1 mt-1 flex-wrap">
                           <ArrowRight size={8} className="text-nu-muted/40" />
                           {m.linkedSections.map((s, si) => (
-                            <span key={si} className="font-mono-nu text-[8px] px-1.5 py-0.5 bg-nu-blue/10 text-nu-blue">
+                            <span key={si} className="font-mono-nu text-[10px] px-1.5 py-0.5 bg-nu-blue/10 text-nu-blue">
                               {s}
                             </span>
                           ))}
                         </div>
                       )}
                       {m.summary && (
-                        <p className="text-[10px] text-nu-muted mt-1 line-clamp-1">{m.summary}</p>
+                        <p className="text-[12px] text-nu-muted mt-1 line-clamp-1">{m.summary}</p>
                       )}
                     </div>
                   </div>
