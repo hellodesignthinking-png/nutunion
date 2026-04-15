@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
       q: query,
       pageToken,
       fields:
-        "nextPageToken, files(id, name, mimeType, webViewLink, iconLink, thumbnailLink, modifiedTime, size, parents)",
+        "nextPageToken, files(id, name, mimeType, webViewLink, iconLink, thumbnailLink, modifiedTime, size, parents, owners(displayName))",
       orderBy: "modifiedTime desc",
     });
 

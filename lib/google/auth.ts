@@ -24,6 +24,8 @@ export const GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/calendar.events",
   "https://www.googleapis.com/auth/chat.spaces",
   "https://www.googleapis.com/auth/chat.messages",
+  "https://www.googleapis.com/auth/tasks",
+  "https://www.googleapis.com/auth/drive",
 ];
 
 /**

@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { CheckSquare, Clock, Plus, AlertTriangle, X, Square, CheckCircle2, Circle, Users, Link2 } from "lucide-react";
+import { CheckSquare, Clock, Plus, AlertTriangle, X, Square, CheckCircle2, Circle, Users, Link2, RefreshCw, Loader2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
@@ -25,7 +25,7 @@ export default function StaffTasksPage() {
   const [filter, setFilter] = useState<"all" | "mine">("mine");
   const [memberFilter, setMemberFilter] = useState<string>("all");
   const [projectFilter, setProjectFilter] = useState<string>("all");
-  const [sourceFilter, setSourceFilter] = useState<"all" | "staff" | "bolt">("all");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "staff" | "bolt" | "google">("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("active");
   const [sortBy, setSortBy] = useState<"default" | "due_date" | "priority">("default");
@@ -38,6 +38,11 @@ export default function StaffTasksPage() {
   const [quickAssignee, setQuickAssignee] = useState("");
   const [quickSource, setQuickSource] = useState<"staff" | "bolt">("staff");
   const [adding, setAdding] = useState(false);
+  // Google Tasks
+  const [googleTasks, setGoogleTasks] = useState<any[]>([]);
+  const [googleTasksLoaded, setGoogleTasksLoaded] = useState(false);
+  const [googleTasksLoading, setGoogleTasksLoading] = useState(false);
+  const [googleTasksError, setGoogleTasksError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -85,6 +90,62 @@ export default function StaffTasksPage() {
     }
     load();
   }, []);
+
+  // Load Google Tasks
+  async function loadGoogleTasks() {
+    setGoogleTasksLoading(true);
+    setGoogleTasksError(null);
+    try {
+      const listsRes = await fetch("/api/google/tasks");
+      if (!listsRes.ok) {
+        const d = await listsRes.json();
+        setGoogleTasksError(d.detail || "Google Tasks 로드 실패");
+        setGoogleTasksLoading(false);
+        return;
+      }
+      const { taskLists } = await listsRes.json();
+      const allTasks: any[] = [];
+      for (const list of (taskLists || []).slice(0, 5)) {
+        const res = await fetch(`/api/google/tasks?listId=${encodeURIComponent(list.id)}`);
+        if (res.ok) {
+          const data = await res.json();
+          (data.tasks || []).forEach((t: any) => {
+            if (t.title) {
+              allTasks.push({ ...t, _listId: list.id, _listTitle: list.title });
+            }
+          });
+        }
+      }
+      setGoogleTasks(allTasks);
+      setGoogleTasksLoaded(true);
+    } catch {
+      setGoogleTasksError("Google Tasks 연결 오류");
+    }
+    setGoogleTasksLoading(false);
+  }
+
+  useEffect(() => {
+    if (!loading && !googleTasksLoaded) loadGoogleTasks();
+  }, [loading]);
+
+  async function toggleGoogleTask(taskId: string, listId: string, currentStatus: string) {
+    const newStatus = currentStatus === "completed" ? "needsAction" : "completed";
+    setGoogleTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+    try {
+      const res = await fetch("/api/google/tasks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listId, taskId, status: newStatus }),
+      });
+      if (!res.ok) {
+        setGoogleTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: currentStatus } : t));
+        toast.error("Google Task 상태 변경 실패");
+      }
+    } catch {
+      setGoogleTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: currentStatus } : t));
+      toast.error("Google Task 연결 오류");
+    }
+  }
 
   async function toggleStatus(taskId: string, currentStatus: string, isBolt: boolean = false) {
     if (isBolt) {
@@ -282,11 +343,26 @@ export default function StaffTasksPage() {
 
     let boltResult = normalizedBoltTasks;
 
-    // Source filter
-    if (sourceFilter === "staff") boltResult = [];
-    if (sourceFilter === "bolt") staffResult = [];
+    // Google Tasks normalized
+    let googleResult = googleTasks.map(t => ({
+      ...t,
+      _source: "google" as const,
+      _projectTitle: t._listTitle || "Google Tasks",
+      _projectId: t._listId || "",
+      _projectHref: "",
+      status: t.status === "completed" ? "done" : "todo",
+      due_date: t.due || null,
+      assigned_to: userId,
+      priority: "medium",
+      title: t.title,
+    }));
 
-    let result = [...staffResult, ...boltResult];
+    // Source filter
+    if (sourceFilter === "staff") { boltResult = []; googleResult = []; }
+    if (sourceFilter === "bolt") { staffResult = []; googleResult = []; }
+    if (sourceFilter === "google") { staffResult = []; boltResult = []; }
+
+    let result = [...staffResult, ...boltResult, ...googleResult];
 
     // Mine / All / Member filter
     if (filter === "mine") {
@@ -315,7 +391,7 @@ export default function StaffTasksPage() {
     }
 
     return result;
-  }, [tasks, normalizedBoltTasks, filter, userId, memberFilter, projectFilter, priorityFilter, statusFilter, sortBy, sourceFilter]);
+  }, [tasks, normalizedBoltTasks, googleTasks, filter, userId, memberFilter, projectFilter, priorityFilter, statusFilter, sortBy, sourceFilter]);
 
   const grouped = useMemo(() => ({
     inProgress: allFilteredTasks.filter(t => t.status === "in_progress"),
@@ -346,10 +422,11 @@ export default function StaffTasksPage() {
         <div>
           <h1 className="font-head text-3xl font-extrabold text-nu-ink">할일</h1>
           <p className="font-mono-nu text-[11px] text-nu-muted mt-1 uppercase tracking-widest">
-            스태프 + 볼트 통합 · {allFilteredTasks.length}개
+            스태프 + 볼트 + Google Tasks · {allFilteredTasks.length}개
             {overdueCount > 0 && (
               <span className="ml-2 text-red-600">· {overdueCount}개 지연</span>
             )}
+            {googleTasksLoading && <span className="ml-2 text-blue-500">Google Tasks 로딩...</span>}
           </p>
         </div>
         <Button
@@ -458,9 +535,10 @@ export default function StaffTasksPage() {
           onChange={e => setSourceFilter(e.target.value as any)}
           className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 border border-nu-ink/15 bg-transparent cursor-pointer"
         >
-          <option value="all">스태프+볼트</option>
+          <option value="all">전체 (스태프+볼트+Google)</option>
           <option value="staff">스태프만</option>
           <option value="bolt">볼트만</option>
+          <option value="google">Google Tasks</option>
         </select>
 
         {/* Project filter */}
@@ -545,15 +623,27 @@ export default function StaffTasksPage() {
                       isBolt ? "border-purple-100 hover:border-purple-200" :
                       "border-nu-ink/[0.06] hover:border-indigo-200"
                     }`}>
-                      <StatusCheckbox status={t.status} taskId={t.id} isBolt={isBolt} />
+                      {t._source === "google" ? (
+                        <button
+                          onClick={() => toggleGoogleTask(t.id, t._listId, t.status === "done" ? "completed" : "needsAction")}
+                          className="flex-shrink-0 bg-transparent border-none cursor-pointer p-0 group/check"
+                        >
+                          {t.status === "done"
+                            ? <CheckCircle2 size={20} className="text-green-500 group-hover/check:text-green-300 transition-colors" />
+                            : <Circle size={20} className="text-blue-400 group-hover/check:text-green-400 transition-colors" />}
+                        </button>
+                      ) : (
+                        <StatusCheckbox status={t.status} taskId={t.id} isBolt={isBolt} />
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className={`font-head text-sm font-bold truncate ${t.status === "done" ? "line-through text-nu-muted" : "text-nu-ink"}`}>{t.title}</p>
                         <div className="flex items-center gap-2 mt-0.5">
                           {/* Source badge */}
                           <span className={`font-mono-nu text-[7px] uppercase px-1.5 py-px ${
+                            t._source === "google" ? "bg-blue-100 text-blue-600" :
                             isBolt ? "bg-purple-100 text-purple-600" : "bg-indigo-50 text-indigo-600"
                           }`}>
-                            {isBolt ? "볼트" : "스태프"}
+                            {t._source === "google" ? "Google" : isBolt ? "볼트" : "스태프"}
                           </span>
 
                           {/* Project link */}
