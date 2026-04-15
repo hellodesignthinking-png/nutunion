@@ -277,7 +277,7 @@ export async function POST(request: NextRequest) {
       existingPageTitles = (data || []).map(p => p.title);
     }
 
-    // ── 2b. Fetch Drive-linked files ──
+    // ── 2b. Fetch Drive-linked files (lightweight REST API, no googleapis SDK) ──
     step = "fetch-drive-files";
     let driveDocContents: { name: string; content: string }[] = [];
     try {
@@ -297,22 +297,30 @@ export async function POST(request: NextRequest) {
         .limit(10);
 
       if (driveFiles && driveFiles.length > 0) {
-        try {
-          const { getGoogleClient } = await import("@/lib/google/auth");
-          const { google } = await import("googleapis");
-          const auth = await getGoogleClient(user.id);
-          const docs = google.docs({ version: "v1", auth });
+        // Get user's Google access token from profile (lightweight, no googleapis SDK)
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("google_access_token")
+          .eq("id", user.id)
+          .single();
 
+        if (profile?.google_access_token) {
           for (const df of driveFiles) {
             const docIdMatch = df.file_url?.match(/\/document\/d\/([a-zA-Z0-9_-]+)/);
             if (!docIdMatch) continue;
             try {
-              const docRes = await docs.documents.get({ documentId: docIdMatch[1] });
-              const docContent = docRes.data.body?.content
-                ?.map((block: any) => {
+              // Use Google Docs REST API directly with fetch (avoids bundling googleapis ~50MB)
+              const docRes = await fetch(
+                `https://docs.googleapis.com/v1/documents/${docIdMatch[1]}`,
+                { headers: { Authorization: `Bearer ${profile.google_access_token}` } }
+              );
+              if (!docRes.ok) continue;
+              const docData = await docRes.json();
+              const docContent = (docData.body?.content || [])
+                .map((block: any) => {
                   if (block.paragraph) {
-                    return block.paragraph.elements
-                      ?.map((el: any) => el.textRun?.content || "")
+                    return (block.paragraph.elements || [])
+                      .map((el: any) => el.textRun?.content || "")
                       .join("");
                   }
                   return "";
@@ -329,8 +337,6 @@ export async function POST(request: NextRequest) {
               // Skip individual docs that can't be read
             }
           }
-        } catch {
-          // Google not connected — skip Drive content extraction entirely
         }
       }
     } catch (driveErr: any) {
