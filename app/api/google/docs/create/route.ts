@@ -26,6 +26,51 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Membership verification when targetType is provided
+    if (targetType && targetId) {
+      const supabase = await createClient();
+
+      if (targetType === "group") {
+        const { data: membership } = await supabase
+          .from("group_members")
+          .select("id")
+          .eq("group_id", targetId)
+          .eq("user_id", userId)
+          .eq("status", "active")
+          .maybeSingle();
+
+        if (!membership) {
+          // Check if user is the host of the group
+          const { data: group } = await supabase
+            .from("groups")
+            .select("host_id")
+            .eq("id", targetId)
+            .single();
+
+          if (!group || group.host_id !== userId) {
+            return NextResponse.json(
+              { error: "그룹 멤버만 문서를 생성할 수 있습니다" },
+              { status: 403 }
+            );
+          }
+        }
+      } else if (targetType === "project") {
+        const { data: membership } = await supabase
+          .from("project_members")
+          .select("id")
+          .eq("project_id", targetId)
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (!membership) {
+          return NextResponse.json(
+            { error: "프로젝트 멤버만 문서를 생성할 수 있습니다" },
+            { status: 403 }
+          );
+        }
+      }
+    }
+
     const auth = await getGoogleClient(userId);
     const drive = google.drive({ version: "v3", auth });
 

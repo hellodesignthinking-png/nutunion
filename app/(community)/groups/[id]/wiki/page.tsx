@@ -15,7 +15,11 @@ import {
   Trophy,
   BarChart3,
   Zap,
-  Target
+  Target,
+  FileText,
+  TrendingUp,
+  Calendar,
+  Library,
 } from "lucide-react";
 import lazyLoad from "next/dynamic";
 import { WikiTopicCreator } from "@/components/wiki/wiki-topic-creator";
@@ -76,10 +80,20 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
   let activeContributorsCount = 0;
   let memberCountFinal = 0;
   let activityFeed: any[] = [];
+  let totalResources = 0;
+  let weeklyResourceCount = 0;
   const topicPageCounts: Record<string, number> = {};
 
+  // Fetch resource count
+  const [resourceCountResult, weeklyResResult] = await Promise.all([
+    supabase.from("wiki_weekly_resources").select("id", { count: "exact", head: true }).eq("group_id", id),
+    supabase.from("wiki_weekly_resources").select("id", { count: "exact", head: true }).eq("group_id", id)
+      .gte("created_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
+  ]);
+  totalResources = resourceCountResult.count || 0;
+  weeklyResourceCount = weeklyResResult.count || 0;
+
   if (topicIds.length > 0) {
-    // ── Round 1: Run recentPages + allPages + memberCount in parallel ──
     const [rpResult, allPagesResult, memberCountResult] = await Promise.all([
       supabase
         .from("wiki_pages")
@@ -91,7 +105,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
           last_updated_by,
           topic_id,
           topic:wiki_topics(name),
-          author:profiles!wiki_pages_last_updated_by_fkey(nickname)
+          author:profiles!wiki_pages_last_updated_by_fkey(nickname, avatar_url)
         `)
         .in("topic_id", topicIds)
         .order("updated_at", { ascending: false })
@@ -111,7 +125,6 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
     totalPages = (allPagesResult.data || []).length;
     memberCountFinal = memberCountResult.count || 0;
 
-    // Count pages per topic
     (allPagesResult.data || []).forEach(p => {
       topicPageCounts[p.topic_id] = (topicPageCounts[p.topic_id] || 0) + 1;
     });
@@ -121,7 +134,6 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      // ── Round 2: Run contributions + links + recentContribs + activity feed in parallel ──
       const [contribResult, linkResult, recentContribResult, activityFeedResult] = await Promise.all([
         supabase
           .from("wiki_contributions")
@@ -138,10 +150,10 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
           .gte("created_at", thirtyDaysAgo.toISOString()),
         supabase
           .from("wiki_contributions")
-          .select("change_summary, created_at, contributor:profiles!wiki_contributions_user_id_fkey(nickname), page:wiki_pages!wiki_contributions_page_id_fkey(id, title)")
+          .select("change_summary, created_at, source_type, contributor:profiles!wiki_contributions_user_id_fkey(nickname, avatar_url), page:wiki_pages!wiki_contributions_page_id_fkey(id, title)")
           .in("page_id", allPageIds)
           .order("created_at", { ascending: false })
-          .limit(8),
+          .limit(10),
       ]);
 
       totalContributions = contribResult.count || 0;
@@ -151,7 +163,6 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
     }
   }
 
-  // If no topics, still need memberCount (reuse if already fetched)
   let memberCountFinalVal = memberCountFinal;
   if (topicIds.length === 0) {
     const { count: mc } = await supabase
@@ -162,15 +173,14 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
     memberCountFinalVal = mc || 0;
   }
 
-  // Compute real metrics
   const linkDensity = totalPages > 0 ? Math.min(Math.round((totalLinks / totalPages) * 50), 100) : 0;
   const participationRate = memberCountFinalVal > 0 ? Math.min(Math.round((activeContributorsCount / memberCountFinalVal) * 100), 100) : 0;
+  const knowledgeCoverage = Math.min((topics?.length || 0) * 15, 100);
 
   return (
     <div className="min-h-screen bg-nu-paper">
       {/* ── Hero Header ─────────────────────────────── */}
       <div className="border-b-[3px] border-nu-ink bg-gradient-to-br from-nu-cream/50 via-white to-nu-cream/30 relative overflow-hidden">
-        {/* Decorative elements */}
         <div className="absolute -right-32 -top-32 w-96 h-96 bg-nu-pink/[0.03] rounded-full blur-3xl" />
         <div className="absolute -left-32 -bottom-32 w-96 h-96 bg-nu-blue/[0.03] rounded-full blur-3xl" />
         <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: "radial-gradient(circle, #0d0d0d 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
@@ -193,29 +203,37 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                     Living Wiki
                   </h1>
                   <p className="font-mono-nu text-[10px] text-nu-pink uppercase tracking-[0.3em] font-bold">
-                    지식의 나사산을 새기는 공간
+                    함께 만드는 지식 생태계
                   </p>
                 </div>
               </div>
               <p className="text-nu-graphite leading-relaxed text-sm font-medium mt-4 max-w-xl">
-                기록 → 분석 → 구조화 → 연결의 선순환 구조로 성장하는 지식 저장소.
-                모든 미팅의 결론, 모든 구성원의 통찰이 연결되어 팀의 공유 뇌가 됩니다.
+                매주 공유한 자료와 토론을 AI가 정리하여 탭으로 축적합니다.
+                모두가 함께 만든 기록이 팀의 공유 지식이 됩니다.
               </p>
             </div>
 
-            {/* KPI Summary Cards */}
-            <div className="grid grid-cols-3 gap-3 shrink-0">
-              <div className="bg-white border-[2px] border-nu-ink p-4 text-center min-w-[100px]">
-                <p className="font-head text-3xl font-extrabold text-nu-ink">{topics?.length || 0}</p>
-                <p className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest mt-1">Topics</p>
+            {/* KPI Summary Cards — 5 metrics */}
+            <div className="grid grid-cols-5 gap-2 shrink-0">
+              <div className="bg-white border-[2px] border-nu-ink p-3 text-center min-w-[72px]">
+                <p className="font-head text-2xl font-extrabold text-nu-ink">{topics?.length || 0}</p>
+                <p className="font-mono-nu text-[7px] text-nu-muted uppercase tracking-widest mt-0.5">주제</p>
               </div>
-              <div className="bg-white border-[2px] border-nu-ink p-4 text-center min-w-[100px]">
-                <p className="font-head text-3xl font-extrabold text-nu-pink">{totalPages}</p>
-                <p className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest mt-1">Pages</p>
+              <div className="bg-white border-[2px] border-nu-ink p-3 text-center min-w-[72px]">
+                <p className="font-head text-2xl font-extrabold text-nu-pink">{totalPages}</p>
+                <p className="font-mono-nu text-[7px] text-nu-muted uppercase tracking-widest mt-0.5">페이지</p>
               </div>
-              <div className="bg-white border-[2px] border-nu-ink p-4 text-center min-w-[100px]">
-                <p className="font-head text-3xl font-extrabold text-nu-blue">{memberCountFinalVal}</p>
-                <p className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest mt-1">Members</p>
+              <div className="bg-white border-[2px] border-nu-ink p-3 text-center min-w-[72px]">
+                <p className="font-head text-2xl font-extrabold text-[#ff6f00]">{totalResources}</p>
+                <p className="font-mono-nu text-[7px] text-nu-muted uppercase tracking-widest mt-0.5">자료</p>
+              </div>
+              <div className="bg-white border-[2px] border-nu-ink p-3 text-center min-w-[72px]">
+                <p className="font-head text-2xl font-extrabold text-nu-blue">{totalContributions}</p>
+                <p className="font-mono-nu text-[7px] text-nu-muted uppercase tracking-widest mt-0.5">기여</p>
+              </div>
+              <div className="bg-white border-[2px] border-nu-ink p-3 text-center min-w-[72px]">
+                <p className="font-head text-2xl font-extrabold text-green-600">{memberCountFinalVal}</p>
+                <p className="font-mono-nu text-[7px] text-nu-muted uppercase tracking-widest mt-0.5">멤버</p>
               </div>
             </div>
           </div>
@@ -224,12 +242,32 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
           <div className="mt-8 flex flex-col sm:flex-row gap-3">
             <WikiSearchBar groupId={id} />
             <WikiTopicCreator groupId={id} />
-            <Link
-              href={`/groups/${id}/wiki/guide`}
-              className="flex items-center gap-2 px-4 py-2.5 bg-nu-ink/5 border border-nu-ink/10 hover:bg-nu-ink/10 transition-colors no-underline font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink shrink-0"
-            >
-              <BookOpen size={14} /> 사용 가이드
-            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Weekly Growth Cycle Banner ────────────────── */}
+      <div className="bg-nu-ink/[0.02] border-b border-nu-ink/5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-5">
+          <div className="flex items-center gap-1 sm:gap-3 overflow-x-auto">
+            {[
+              { icon: Library, label: "자료 공유", sub: `${weeklyResourceCount}건 이번 주`, color: "text-[#ff6f00]", bgColor: "bg-[#ff6f00]/10" },
+              { icon: Users, label: "토론 · 회의", sub: "함께 분석", color: "text-nu-blue", bgColor: "bg-nu-blue/10" },
+              { icon: Brain, label: "AI 지식 통합", sub: "핵심 추출", color: "text-nu-pink", bgColor: "bg-nu-pink/10" },
+              { icon: FileText, label: "탭 축적", sub: `${totalPages}페이지`, color: "text-green-600", bgColor: "bg-green-500/10" },
+              { icon: TrendingUp, label: "모두의 성장", sub: `${activeContributorsCount}명 기여`, color: "text-purple-600", bgColor: "bg-purple-500/10" },
+            ].map((step, i) => (
+              <div key={i} className="flex items-center gap-1 sm:gap-3 shrink-0">
+                {i > 0 && <ArrowRight size={12} className="text-nu-ink/15 shrink-0" />}
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-sm ${step.bgColor}`}>
+                  <step.icon size={14} className={step.color} />
+                  <div>
+                    <p className={`font-mono-nu text-[9px] font-bold uppercase tracking-wider ${step.color}`}>{step.label}</p>
+                    <p className="font-mono-nu text-[7px] text-nu-muted">{step.sub}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -237,100 +275,114 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
       {/* ── Main Content ────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-10 md:py-12">
 
-        {/* Knowledge Graph Section */}
-        <section className="mb-16">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="font-head text-2xl font-extrabold text-nu-ink flex items-center gap-3">
-              <GitBranch size={24} className="text-nu-blue" /> 지식 그래프 (Knowledge Graph)
+        {/* ── Section 1: Knowledge Graph ────────────── */}
+        <section className="mb-14">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="font-head text-xl font-extrabold text-nu-ink flex items-center gap-2">
+              <GitBranch size={20} className="text-nu-blue" /> 지식 그래프
             </h2>
-            <span className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest bg-nu-cream px-3 py-1 border border-nu-ink/10">
-              인터랙티브 · 드래그하여 탐색
+            <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest bg-nu-cream px-3 py-1 border border-nu-ink/10">
+              주제 · 페이지 · 자료 시각화
             </span>
           </div>
           <KnowledgeGraph groupId={id} />
         </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
 
           {/* ── Left Column (8 cols) ─────────────────── */}
-          <div className="lg:col-span-8 space-y-16">
+          <div className="lg:col-span-8 space-y-14">
 
-            {/* Weekly Resource Feed + AI Synthesis */}
+            {/* ── Section 2: Weekly Resource Feed ──────── */}
             <section>
-              <h2 className="font-head text-2xl font-extrabold text-nu-ink mb-6 flex items-center gap-3">
-                <Sparkles size={24} className="text-nu-blue" /> 지식 수집 & 통합
-              </h2>
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                <WeeklyResourceFeed groupId={id} userId={user.id} />
-                <WeeklySynthesisEngine groupId={id} isHost={isHost} />
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="font-head text-xl font-extrabold text-nu-ink flex items-center gap-2">
+                  <Library size={20} className="text-[#ff6f00]" /> 주간 자료실
+                </h2>
+                <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">
+                  이번 주 {weeklyResourceCount}건 · 전체 {totalResources}건
+                </span>
               </div>
+              <WeeklyResourceFeed groupId={id} userId={user.id} />
             </section>
 
-            {/* Topic Explorer */}
+            {/* ── Section 3: AI Knowledge Synthesis ───── */}
             <section>
-              <h2 className="font-head text-2xl font-extrabold text-nu-ink mb-6 flex items-center gap-3">
-                <Brain size={24} className="text-nu-pink" /> 주제별 탭 (Topic Tap)
-              </h2>
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="font-head text-xl font-extrabold text-nu-ink flex items-center gap-2">
+                  <Sparkles size={20} className="text-nu-pink" /> AI 지식 통합
+                </h2>
+                <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">
+                  자료 + 회의 → 탭 자동 생성
+                </span>
+              </div>
+              <WeeklySynthesisEngine groupId={id} isHost={isHost} />
+            </section>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* ── Section 4: Topic Explorer ─────────── */}
+            <section>
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="font-head text-xl font-extrabold text-nu-ink flex items-center gap-2">
+                  <Brain size={20} className="text-nu-pink" /> 주제별 탭
+                </h2>
+                <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">
+                  {topics?.length || 0}개 주제 · {totalPages}개 페이지
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {topics && topics.length > 0 ? (
-                  topics.map((topic, i) => (
-                    <Link
-                      key={topic.id}
-                      href={`/groups/${id}/wiki/topics/${topic.id}`}
-                      className="group bg-white border-[2px] border-nu-ink p-6 no-underline hover:border-nu-pink transition-all flex flex-col justify-between min-h-[160px] relative overflow-hidden"
-                    >
-                      {/* Decorative corner */}
-                      <div className={`absolute -right-6 -top-6 w-16 h-16 rounded-full opacity-10 ${
-                        ["bg-nu-pink", "bg-nu-blue", "bg-nu-amber", "bg-green-500"][i % 4]
-                      }`} />
-
-                      <div className="relative z-10">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-head text-lg font-bold text-nu-ink group-hover:text-nu-pink transition-colors">
-                            {topic.name}
-                          </h3>
-                          <span className="font-mono-nu text-[8px] bg-nu-ink/5 px-1.5 py-0.5 text-nu-muted">
-                            {topicPageCounts[topic.id] || 0} pages
-                          </span>
+                  topics.map((topic, i) => {
+                    const pageCount = topicPageCounts[topic.id] || 0;
+                    const colorClasses = ["border-l-nu-pink", "border-l-nu-blue", "border-l-[#ff6f00]", "border-l-green-500", "border-l-purple-500", "border-l-cyan-500"];
+                    return (
+                      <Link
+                        key={topic.id}
+                        href={`/groups/${id}/wiki/topics/${topic.id}`}
+                        className={`group bg-white border-[2px] border-nu-ink/10 border-l-[4px] ${colorClasses[i % colorClasses.length]} p-5 no-underline hover:border-nu-ink/30 hover:shadow-sm transition-all`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-head text-base font-bold text-nu-ink group-hover:text-nu-pink transition-colors truncate">
+                              {topic.name}
+                            </h3>
+                            <p className="text-[11px] text-nu-muted leading-relaxed mt-1 line-clamp-2">
+                              {topic.description || "탭 주제를 클릭하여 페이지를 탐색하세요"}
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-center shrink-0">
+                            <span className="font-head text-lg font-extrabold text-nu-ink">{pageCount}</span>
+                            <span className="font-mono-nu text-[7px] text-nu-muted uppercase">pages</span>
+                          </div>
                         </div>
-                        <p className="text-xs text-nu-muted leading-relaxed line-clamp-2">
-                          {topic.description || "이 주제에 대한 설명을 추가해주세요."}
-                        </p>
-                      </div>
-                      <div className="mt-4 flex items-center justify-between border-t border-nu-ink/5 pt-4 relative z-10">
-                        <span className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">
-                          탭 탐색
-                        </span>
-                        <ArrowRight size={14} className="text-nu-ink group-hover:translate-x-1 transition-transform" />
-                      </div>
-                    </Link>
-                  ))
+                        <div className="mt-3 flex items-center justify-between pt-3 border-t border-nu-ink/5">
+                          <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">
+                            탭 탐색 →
+                          </span>
+                          <ArrowRight size={12} className="text-nu-ink/30 group-hover:text-nu-pink group-hover:translate-x-1 transition-all" />
+                        </div>
+                      </Link>
+                    );
+                  })
                 ) : (
-                  <div className="col-span-2 border-[2px] border-dashed border-nu-ink/15 p-16 text-center bg-white/50">
-                    <Brain size={40} className="mx-auto mb-4 text-nu-ink/15" />
-                    <p className="text-nu-muted text-sm font-medium mb-2">아직 등록된 주제가 없습니다.</p>
-                    <p className="text-xs text-nu-muted mb-4">첫 번째 지식 주제를 생성하여 탭을 시작하세요.</p>
-                    <Link
-                      href={`/groups/${id}/wiki?create=topic`}
-                      className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-2.5 bg-nu-pink text-white hover:bg-nu-ink transition-colors inline-flex items-center gap-1.5 no-underline"
-                    >
-                      <Plus size={12} /> 새 주제 만들기
-                    </Link>
+                  <div className="col-span-2 border-[2px] border-dashed border-nu-ink/15 p-12 text-center bg-white/50">
+                    <Brain size={36} className="mx-auto mb-3 text-nu-ink/15" />
+                    <p className="text-nu-muted text-sm font-medium mb-2">아직 등록된 주제가 없습니다</p>
+                    <p className="text-xs text-nu-muted/70 mb-4">첫 번째 지식 주제를 생성하여 탭을 시작하세요</p>
                   </div>
                 )}
               </div>
             </section>
 
-            {/* Recent Changes Timeline */}
-            <section className="bg-nu-ink text-white p-8 relative overflow-hidden">
+            {/* ── Section 5: Recent Changes Timeline ──── */}
+            <section className="bg-nu-ink text-white p-6 sm:p-8 relative overflow-hidden">
               <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
               <div className="relative z-10">
-                <div className="flex items-center justify-between mb-8">
-                  <h2 className="font-head text-xl font-extrabold flex items-center gap-3">
-                    <History size={20} className="text-nu-pink" /> 최근 지식 동기화
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="font-head text-lg font-extrabold flex items-center gap-2">
+                    <History size={18} className="text-nu-pink" /> 최근 변경 기록
                   </h2>
-                  <span className="font-mono-nu text-[9px] text-white/30 uppercase tracking-widest">
+                  <span className="font-mono-nu text-[8px] text-white/25 uppercase tracking-widest">
                     실시간 피드
                   </span>
                 </div>
@@ -339,182 +391,170 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                   {recentPages.length > 0 ? (
                     recentPages.map((page, i) => (
                       <div key={page.id} className="flex gap-4 group">
-                        {/* Timeline line */}
                         <div className="flex flex-col items-center w-6 shrink-0">
-                          <div className={`w-3 h-3 rounded-full border-2 shrink-0 ${
+                          <div className={`w-2.5 h-2.5 rounded-full border-2 shrink-0 ${
                             i === 0 ? "bg-nu-pink border-nu-pink" : "bg-transparent border-white/20"
                           }`} />
                           {i < recentPages.length - 1 && <div className="w-px flex-1 bg-white/10" />}
                         </div>
-
-                        <div className="flex-1 pb-6">
+                        <div className="flex-1 pb-5">
                           <Link
                             href={`/groups/${id}/wiki/pages/${page.id}`}
                             className="block font-head text-sm font-bold text-white no-underline hover:text-nu-pink transition-colors"
                           >
                             {page.title}
                           </Link>
-                          <div className="flex items-center gap-3 mt-1 font-mono-nu text-[9px] text-white/30 uppercase tracking-widest">
+                          <div className="flex items-center gap-2 mt-1 font-mono-nu text-[8px] text-white/30 uppercase tracking-widest flex-wrap">
                             <span className="flex items-center gap-1">
-                              <BookOpen size={9} /> {(page as any).topic?.name}
+                              <BookOpen size={8} /> {(page as any).topic?.name}
                             </span>
-                            <span>•</span>
+                            <span>·</span>
                             <span>v{page.version}</span>
-                            <span>•</span>
-                            <span>by {(page as any).author?.nickname || "Unknown"}</span>
-                            <span>•</span>
-                            <span>{new Date(page.updated_at).toLocaleDateString("ko")}</span>
+                            <span>·</span>
+                            <span>{(page as any).author?.nickname || "?"}</span>
+                            <span>·</span>
+                            <span>{new Date(page.updated_at).toLocaleDateString("ko", { month: "short", day: "numeric" })}</span>
                           </div>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <p className="text-white/30 text-xs italic py-4">최근 업데이트된 문서가 없습니다.</p>
+                    <p className="text-white/30 text-xs italic py-4">아직 등록된 페이지가 없습니다</p>
                   )}
                 </div>
               </div>
             </section>
 
-            {/* Weekly Insight Newsletter */}
+            {/* ── Section 6: Weekly Insight ──────────── */}
             <section>
-              <h2 className="font-head text-2xl font-extrabold text-nu-ink mb-6 flex items-center gap-3">
-                <BarChart3 size={24} className="text-nu-amber" /> 주간 인사이트 다이제스트
+              <h2 className="font-head text-xl font-extrabold text-nu-ink mb-5 flex items-center gap-2">
+                <BarChart3 size={20} className="text-nu-amber" /> 주간 인사이트
               </h2>
               <WeeklyInsightNewsletter groupId={id} isHost={isHost} />
             </section>
 
-            {/* Monthly Evolution Analysis */}
+            {/* ── Section 7: Monthly Evolution ──────── */}
             <section>
-              <h2 className="font-head text-2xl font-extrabold text-nu-ink mb-6 flex items-center gap-3">
-                <Zap size={24} className="text-purple-500" /> 월간 지식 진화 분석
+              <h2 className="font-head text-xl font-extrabold text-nu-ink mb-5 flex items-center gap-2">
+                <Zap size={20} className="text-purple-500" /> 월간 진화 분석
               </h2>
               <MonthlyEvolutionAnalysis groupId={id} isHost={isHost} />
             </section>
           </div>
 
           {/* ── Right Column (4 cols) ────────────────── */}
-          <div className="lg:col-span-4 space-y-12">
+          <div className="lg:col-span-4 space-y-8">
+
+            {/* Knowledge Metrics */}
+            <section className="bg-nu-ink text-white p-5 border-[2px] border-nu-ink">
+              <h3 className="font-mono-nu text-[9px] font-bold uppercase tracking-[0.2em] text-white/40 mb-4 flex items-center gap-2">
+                <Target size={13} className="text-nu-pink" /> 지식 지표
+              </h3>
+              <div className="space-y-3.5">
+                {[
+                  { label: "지식 커버리지", value: knowledgeCoverage, color: "bg-nu-pink", textColor: "text-nu-pink" },
+                  { label: "연결 밀도", value: linkDensity, color: "bg-nu-blue", textColor: "text-nu-blue" },
+                  { label: "참여 활성도", value: participationRate, color: "bg-nu-amber", textColor: "text-nu-amber" },
+                ].map(m => (
+                  <div key={m.label} className="flex items-center justify-between">
+                    <span className="text-[11px] text-white/60">{m.label}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-20 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                        <div className={`h-full ${m.color} rounded-full transition-all duration-500`} style={{ width: `${m.value}%` }} />
+                      </div>
+                      <span className={`font-mono-nu text-[10px] font-bold w-8 text-right ${m.textColor}`}>
+                        {m.value}%
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
 
             {/* Activity Feed */}
             <section className="bg-white border-[2px] border-nu-ink/[0.08]">
-              <div className="p-4 border-b border-nu-ink/5">
-                <h3 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
-                  <Sparkles size={14} className="text-nu-pink" /> 최근 활동 피드
+              <div className="p-4 border-b border-nu-ink/5 flex items-center justify-between">
+                <h3 className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
+                  <Sparkles size={12} className="text-nu-pink" /> 기여 활동
                 </h3>
+                <span className="font-mono-nu text-[7px] text-nu-muted uppercase">{activityFeed.length}건</span>
               </div>
               {activityFeed.length > 0 ? (
                 <div className="divide-y divide-nu-ink/5">
                   {activityFeed.map((a: any, i: number) => (
                     <div key={i} className="px-4 py-3 hover:bg-nu-cream/20 transition-colors">
                       <div className="flex items-center gap-2 mb-1">
-                        <div className="w-5 h-5 rounded-full bg-nu-pink/10 flex items-center justify-center font-head text-[8px] font-bold text-nu-pink shrink-0">
-                          {(a.contributor?.nickname || "U").charAt(0)}
-                        </div>
-                        <span className="font-head text-[11px] font-bold text-nu-ink">{a.contributor?.nickname || "Unknown"}</span>
+                        {a.contributor?.avatar_url ? (
+                          <img src={a.contributor.avatar_url} alt="" className="w-5 h-5 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full bg-nu-pink/10 flex items-center justify-center font-head text-[8px] font-bold text-nu-pink shrink-0">
+                            {(a.contributor?.nickname || "U").charAt(0)}
+                          </div>
+                        )}
+                        <span className="font-head text-[11px] font-bold text-nu-ink truncate">{a.contributor?.nickname || "?"}</span>
+                        {a.source_type === "ai_synthesis" && (
+                          <span className="font-mono-nu text-[7px] px-1 py-0.5 bg-nu-pink/10 text-nu-pink uppercase">AI</span>
+                        )}
                       </div>
                       {a.page && (
                         <Link
                           href={`/groups/${id}/wiki/pages/${a.page.id}`}
-                          className="text-xs text-nu-blue no-underline hover:underline truncate block"
+                          className="text-[11px] text-nu-blue no-underline hover:underline truncate block"
                         >
                           {a.page.title}
                         </Link>
                       )}
-                      <p className="font-mono-nu text-[8px] text-nu-muted mt-1">
-                        {a.change_summary || "편집"} · {new Date(a.created_at).toLocaleDateString("ko", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      <p className="font-mono-nu text-[8px] text-nu-muted mt-0.5 line-clamp-1">
+                        {a.change_summary || "편집"} · {new Date(a.created_at).toLocaleDateString("ko", { month: "short", day: "numeric" })}
                       </p>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="p-6 text-center">
-                  <p className="font-mono-nu text-[10px] text-nu-muted">최근 활동이 없습니다</p>
+                  <p className="font-mono-nu text-[10px] text-nu-muted">기여 활동을 시작해보세요</p>
                 </div>
               )}
             </section>
 
             {/* Knowledge Champions */}
             <section>
-              <h2 className="font-head text-lg font-extrabold text-nu-ink mb-6 flex items-center gap-2">
-                <Trophy size={18} className="text-yellow-500" /> 지식 챔피언
+              <h2 className="font-head text-base font-extrabold text-nu-ink mb-4 flex items-center gap-2">
+                <Trophy size={16} className="text-yellow-500" /> 지식 챔피언
               </h2>
               <ContributionLeaderboard groupId={id} />
             </section>
 
             {/* Human Capital */}
             <section>
-              <h2 className="font-head text-lg font-extrabold text-nu-ink mb-6 flex items-center gap-2">
-                <Users size={18} className="text-nu-pink" /> 인적 자원
+              <h2 className="font-head text-base font-extrabold text-nu-ink mb-4 flex items-center gap-2">
+                <Users size={16} className="text-nu-pink" /> 인적 자원
               </h2>
               <HumanCapitalVisual groupId={id} />
             </section>
 
-            {/* Wiki Strategy */}
-            <section className="bg-nu-cream p-6 border-[2px] border-nu-ink">
-              <h3 className="font-mono-nu text-[11px] font-bold text-nu-ink uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                <Sparkles size={14} className="text-nu-pink" /> 성장 프로토콜
+            {/* Weekly Growth Cycle Guide */}
+            <section className="bg-nu-cream p-5 border-[2px] border-nu-ink">
+              <h3 className="font-mono-nu text-[10px] font-bold text-nu-ink uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                <Calendar size={13} className="text-nu-pink" /> 주간 성장 사이클
               </h3>
-              <ul className="space-y-4 font-mono-nu text-[10px] text-nu-muted leading-relaxed">
-                <li className="flex gap-3">
-                  <span className="w-6 h-6 bg-nu-pink text-white flex items-center justify-center shrink-0 font-bold text-[9px]">01</span>
-                  <div>
-                    <span className="text-nu-ink font-bold block mb-0.5">Record → Analyze</span>
-                    미팅 기록을 AI가 분석하여 핵심 개념을 추출합니다.
-                  </div>
-                </li>
-                <li className="flex gap-3">
-                  <span className="w-6 h-6 bg-nu-blue text-white flex items-center justify-center shrink-0 font-bold text-[9px]">02</span>
-                  <div>
-                    <span className="text-nu-ink font-bold block mb-0.5">Structure → Connect</span>
-                    추출된 지식을 탭에 구조화하고 서로 연결합니다.
-                  </div>
-                </li>
-                <li className="flex gap-3">
-                  <span className="w-6 h-6 bg-nu-amber text-white flex items-center justify-center shrink-0 font-bold text-[9px]">03</span>
-                  <div>
-                    <span className="text-nu-ink font-bold block mb-0.5">Evolve → Grow</span>
-                    지속적인 업데이트로 팀의 뇌가 진화합니다.
-                  </div>
-                </li>
+              <ul className="space-y-3 font-mono-nu text-[10px] text-nu-muted leading-relaxed">
+                {[
+                  { num: "01", color: "bg-[#ff6f00]", title: "자료 공유", desc: "각자 발견한 아티클, 영상, 문서를 자료실에 올립니다" },
+                  { num: "02", color: "bg-nu-blue", title: "토론 & 회의", desc: "자료를 함께 읽고 회의에서 논의합니다" },
+                  { num: "03", color: "bg-nu-pink", title: "AI 지식 통합", desc: "자료와 회의 내용을 AI가 분석, 탭 페이지로 정리합니다" },
+                  { num: "04", color: "bg-green-600", title: "탭 축적 & 기록", desc: "정리된 지식이 탭에 저장되고, 기여자가 기록됩니다" },
+                  { num: "05", color: "bg-purple-600", title: "다음 주로 연결", desc: "이전 맥락 위에 새 지식을 쌓아 점진적으로 성장합니다" },
+                ].map(s => (
+                  <li key={s.num} className="flex gap-3">
+                    <span className={`w-5 h-5 ${s.color} text-white flex items-center justify-center shrink-0 font-bold text-[8px]`}>{s.num}</span>
+                    <div>
+                      <span className="text-nu-ink font-bold block text-[10px]">{s.title}</span>
+                      <span className="text-[9px]">{s.desc}</span>
+                    </div>
+                  </li>
+                ))}
               </ul>
-            </section>
-
-            {/* Quick Stats */}
-            <section className="bg-nu-ink text-white p-6 border-[2px] border-nu-ink">
-              <h3 className="font-mono-nu text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 mb-4 flex items-center gap-2">
-                <Target size={14} className="text-nu-pink" /> 지식 지표
-              </h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-white/60">지식 커버리지</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-24 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full bg-nu-pink rounded-full" style={{ width: `${Math.min((topics?.length || 0) * 15, 100)}%` }} />
-                    </div>
-                    <span className="font-mono-nu text-[10px] text-nu-pink font-bold">
-                      {Math.min((topics?.length || 0) * 15, 100)}%
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-white/60">연결 밀도</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-24 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full bg-nu-blue rounded-full" style={{ width: `${linkDensity}%` }} />
-                    </div>
-                    <span className="font-mono-nu text-[10px] text-nu-blue font-bold">{linkDensity}%</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-white/60">참여 활성도</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-24 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full bg-nu-amber rounded-full" style={{ width: `${participationRate}%` }} />
-                    </div>
-                    <span className="font-mono-nu text-[10px] text-nu-amber font-bold">{participationRate}%</span>
-                  </div>
-                </div>
-              </div>
             </section>
           </div>
         </div>

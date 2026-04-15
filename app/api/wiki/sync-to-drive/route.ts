@@ -22,9 +22,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "필수 정보가 부족합니다" }, { status: 400 });
     }
 
+    const supabase = await createClient();
+
+    // Verify user is a member or host of the group
+    const [{ data: membership }, { data: groupHost }] = await Promise.all([
+      supabase
+        .from("group_members")
+        .select("id")
+        .eq("group_id", groupId)
+        .eq("user_id", userId)
+        .eq("status", "active")
+        .maybeSingle(),
+      supabase
+        .from("groups")
+        .select("host_id")
+        .eq("id", groupId)
+        .single(),
+    ]);
+
+    const isHost = groupHost?.host_id === userId;
+    const isMember = !!membership;
+
+    if (!isHost && !isMember) {
+      return NextResponse.json(
+        { error: "이 그룹의 멤버만 위키를 동기화할 수 있습니다" },
+        { status: 403 }
+      );
+    }
+
     const auth = await getGoogleClient(userId);
     const drive = google.drive({ version: "v3", auth });
-    const supabase = await createClient();
 
     // Get group's wiki folder ID
     const { data: group } = await supabase

@@ -1,10 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { rateLimit } from "@/lib/rate-limit";
 
 // POST: 새 의뢰 제출
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
+
+    // Authentication required
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "로그인이 필요합니다." },
+        { status: 401 }
+      );
+    }
+
+    // Rate limit: 5 requests per 60 seconds per user
+    const { success: rateLimitOk } = rateLimit(`challenge-post:${user.id}`, 5, 60_000);
+    if (!rateLimitOk) {
+      return NextResponse.json(
+        { error: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
 
     const {
@@ -32,11 +55,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "올바른 이메일 형식이 아닙니다" }, { status: 400 });
     }
 
-    // Check if user is logged in (optional)
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
     const { data, error } = await supabase
       .from("challenge_proposals")
       .insert({
@@ -50,7 +68,7 @@ export async function POST(request: NextRequest) {
         timeline: timeline || null,
         required_skills: requiredSkills || [],
         status: "submitted",
-        submitted_by: user?.id || null,
+        submitted_by: user.id,
       })
       .select("id, status, created_at")
       .single();

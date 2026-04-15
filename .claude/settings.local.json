@@ -119,7 +119,16 @@
       "mcp__Control_Chrome__execute_javascript",
       "mcp__Claude_in_Chrome__tabs_context_mcp",
       "Bash(ls /Users/TaiNa0/Desktop/nutunion/app/favicon* /Users/TaiNa0/Desktop/nutunion/app/icon* /Users/TaiNa0/Desktop/nutunion/app/apple-icon*)",
-      "Bash(grep -r \"google_drive_folder_id\\\\|google_drive_wiki_folder_id\\\\|google_drive_meetings_folder_id\\\\|google_drive_resources_folder_id\" /Users/TaiNa0/Desktop/nutunion/supabase/migrations/*.sql)"
+      "Bash(grep -r \"google_drive_folder_id\\\\|google_drive_wiki_folder_id\\\\|google_drive_meetings_folder_id\\\\|google_drive_resources_folder_id\" /Users/TaiNa0/Desktop/nutunion/supabase/migrations/*.sql)",
+      "Bash(npx madge:*)",
+      "Bash([ -f \"/Users/TaiNa0/Desktop/nutunion/app/$group/error.tsx\" ])",
+      "Bash(node -e ':*)",
+      "Bash(node -e \"try { require\\('googleapis'\\); console.log\\('googleapis: OK'\\); } catch\\(e\\) { console.log\\('googleapis: MISSING'\\); }\")",
+      "Bash(vercel logs:*)",
+      "Bash(npm i:*)",
+      "Bash(curl -s \"https://api.github.com/repos/hellodesignthinking-png/nutunion/deployments?per_page=3\")",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")"
     ]
   }
 }

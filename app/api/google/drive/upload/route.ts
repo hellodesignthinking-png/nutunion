@@ -19,6 +19,52 @@ export async function POST(req: NextRequest) {
     const targetId = formData.get("targetId") as string | null;
     const stage = formData.get("stage") as string | null;
 
+    // Membership verification for group/project uploads
+    if (targetType && targetId) {
+      const supabase = await createClient();
+
+      if (targetType === "group") {
+        // Check if user is an active member or the host of the group
+        const { data: membership } = await supabase
+          .from("group_members")
+          .select("id")
+          .eq("group_id", targetId)
+          .eq("user_id", userId)
+          .eq("status", "active")
+          .maybeSingle();
+
+        if (!membership) {
+          const { data: group } = await supabase
+            .from("groups")
+            .select("host_id")
+            .eq("id", targetId)
+            .single();
+
+          if (!group || group.host_id !== userId) {
+            return NextResponse.json(
+              { error: "그룹 멤버만 파일을 업로드할 수 있습니다" },
+              { status: 403 }
+            );
+          }
+        }
+      } else if (targetType === "project") {
+        // Check if user is a member of the project
+        const { data: membership } = await supabase
+          .from("project_members")
+          .select("id")
+          .eq("project_id", targetId)
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (!membership) {
+          return NextResponse.json(
+            { error: "프로젝트 멤버만 파일을 업로드할 수 있습니다" },
+            { status: 403 }
+          );
+        }
+      }
+    }
+
     if (!file) {
       return NextResponse.json({ error: "파일이 없습니다" }, { status: 400 });
     }

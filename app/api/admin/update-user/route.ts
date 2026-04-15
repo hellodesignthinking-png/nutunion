@@ -83,8 +83,7 @@ export async function POST(req: NextRequest) {
           success: true,
           gradeSaved: false,
           gradeError: "grade 컬럼이 없습니다. SQL 마이그레이션을 먼저 실행하세요.",
-          usedServiceKey: !!serviceKey,
-        });
+                  });
       }
 
       return NextResponse.json(
@@ -97,8 +96,7 @@ export async function POST(req: NextRequest) {
       success: true,
       gradeSaved: true,
       gradeError: null,
-      usedServiceKey: !!serviceKey,
-    });
+          });
 
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
