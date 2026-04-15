@@ -79,6 +79,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
   const [history, setHistory] = useState<SynthesisLog[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [createdPages, setCreatedPages] = useState<CreatedPage[]>([]);
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadHistory() {
@@ -96,6 +97,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
   async function runSynthesis() {
     setPhase("synthesizing");
     setCreatedPages([]);
+    setErrorDetail(null);
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 60_000);
@@ -109,8 +111,14 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
       clearTimeout(timeout);
 
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "통합 실패");
+        let errMsg = `HTTP ${res.status}`;
+        try {
+          const err = await res.json();
+          errMsg = err.error || errMsg;
+        } catch {
+          errMsg = `HTTP ${res.status} — ${await res.text().catch(() => "응답 없음")}`;
+        }
+        throw new Error(errMsg);
       }
       const data: SynthesisResult = await res.json();
       setResult(data);
@@ -122,7 +130,8 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
         setPhase("done");
       }
     } catch (e: any) {
-      const msg = e.name === "AbortError" ? "요청 시간이 초과되었습니다. 다시 시도해주세요." : (e.message || "통합 실패");
+      const msg = e.name === "AbortError" ? "요청 시간이 초과되었습니다 (60초). 다시 시도해주세요." : (e.message || "통합 실패");
+      setErrorDetail(msg);
       toast.error(msg);
       setPhase("idle");
     }
@@ -311,6 +320,16 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
             <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
               호스트만 지식 통합을 실행할 수 있습니다
             </p>
+          )}
+
+          {/* Error detail display */}
+          {errorDetail && (
+            <div className="mt-4 mx-auto max-w-md bg-red-50 border border-red-200 p-3 text-left">
+              <p className="font-mono-nu text-[9px] font-bold text-red-600 uppercase tracking-widest mb-1 flex items-center gap-1">
+                <AlertCircle size={10} /> 오류 상세
+              </p>
+              <p className="text-xs text-red-700 break-all">{errorDetail}</p>
+            </div>
           )}
 
           {/* Synthesis History */}
