@@ -442,25 +442,25 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
         <div className="flex items-center justify-between mb-3">
           <div>
             <h3 className="font-head text-lg font-extrabold text-nu-ink flex items-center gap-2">
-              <Link2 size={18} className="text-nu-blue" />
+              <Link2 size={18} className="text-[#ff6f00]" />
               주간 리소스 피드
             </h3>
             <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest mt-1">
-              Shared Resources · {resources.length} items
+              {resources.length > 0 ? `${resources.length}개 자료 공유됨` : "이번 주 자료를 공유하세요"}
             </p>
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2 bg-nu-blue text-white hover:bg-nu-blue/90 transition-colors flex items-center gap-1.5"
+            className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 bg-[#ff6f00] text-white hover:bg-[#ff6f00]/90 transition-colors flex items-center gap-1.5 shadow-[2px_2px_0px_rgba(255,111,0,0.2)]"
           >
-            <Plus size={12} /> 리소스 공유
+            <Plus size={12} /> 자료 공유
           </button>
         </div>
         {/* Action buttons row */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
             onClick={openLibrary}
-            className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-ink/15 text-nu-ink hover:border-nu-blue hover:text-nu-blue transition-colors flex items-center gap-1.5 bg-white"
+            className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-ink/15 text-nu-ink hover:border-[#ff6f00] hover:text-[#ff6f00] transition-colors flex items-center gap-1.5 bg-white"
           >
             <FolderOpen size={12} /> 자료실에서 가져오기
           </button>
@@ -468,7 +468,7 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
             onClick={() => setShowUpload(true)}
             className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-ink/15 text-nu-ink hover:border-nu-pink hover:text-nu-pink transition-colors flex items-center gap-1.5 bg-white"
           >
-            <Upload size={12} /> 자료 업로드
+            <Upload size={12} /> 파일 업로드
           </button>
         </div>
       </div>

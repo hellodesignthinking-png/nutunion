@@ -138,15 +138,27 @@ export function HumanCapitalVisual({ groupId }: { groupId: string }) {
 
   return (
     <div className="space-y-2">
+      {/* Summary header */}
+      {members.length > 0 && (
+        <div className="flex items-center justify-between px-1 mb-1">
+          <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">
+            {members.length}명 · {members.filter(m => m.contributionCount > 0).length}명 활동 중
+          </span>
+          <span className="font-mono-nu text-[7px] text-nu-muted/50">
+            레벨 기준 정렬
+          </span>
+        </div>
+      )}
       {members.map((m) => {
         const isExpanded = expandedId === m.userId;
         const initials = m.nickname.charAt(0).toUpperCase();
+        const hasActivity = m.contributionCount > 0;
 
         return (
           <div key={m.userId} className="group">
             <button
               onClick={() => setExpandedId(isExpanded ? null : m.userId)}
-              className="w-full text-left bg-white border-[2px] border-nu-ink/[0.08] hover:border-nu-pink/40 transition-all p-4"
+              className={`w-full text-left bg-white border-[2px] border-nu-ink/[0.08] hover:border-nu-pink/40 transition-all p-4 ${hasActivity ? "" : "opacity-70"}`}
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-nu-cream flex items-center justify-center font-head text-sm font-bold text-nu-ink border border-nu-ink/10 group-hover:border-nu-pink transition-colors shrink-0 overflow-hidden">

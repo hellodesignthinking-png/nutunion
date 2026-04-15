@@ -355,28 +355,42 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
 
       {/* Idle State */}
       {phase === "idle" && (
-        <div className="p-6 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-nu-pink/5 flex items-center justify-center border-[2px] border-nu-pink/20">
-            <Sparkles size={28} className="text-nu-pink" />
+        <div className="p-6">
+          <div className="flex flex-col sm:flex-row items-center gap-6">
+            <div className="w-20 h-20 shrink-0 bg-gradient-to-br from-nu-pink/10 to-purple-500/10 flex items-center justify-center border-[2px] border-nu-pink/20 relative">
+              <Sparkles size={32} className="text-nu-pink" />
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-nu-ink flex items-center justify-center">
+                <Zap size={10} className="text-white" />
+              </div>
+            </div>
+            <div className="text-center sm:text-left flex-1">
+              <p className="text-sm font-bold text-nu-ink mb-1.5">
+                주간 지식 통합
+              </p>
+              <p className="text-xs text-nu-muted leading-relaxed mb-1">
+                새로 공유된 리소스와 회의 내용을 AI가 분석하여 탭 페이지로 정리합니다.
+              </p>
+              <p className="font-mono-nu text-[8px] text-nu-muted/60">
+                이전 통합 이후 새 데이터만 처리 · 토큰 절약 · 증분 방식
+              </p>
+            </div>
           </div>
-          <p className="text-sm font-medium text-nu-ink mb-2">
-            새로 공유된 리소스와 회의 내용을 분석하여 탭을 고도화합니다
-          </p>
-          <p className="text-xs text-nu-muted mb-6">
-            이미 탭으로 정리된 자료는 다시 검토하지 않아 토큰을 절약합니다
-          </p>
-          {isHost ? (
-            <button
-              onClick={runSynthesis}
-              className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-ink text-white hover:bg-nu-graphite transition-colors flex items-center gap-2 mx-auto"
-            >
-              <Zap size={14} /> 지식 통합 시작
-            </button>
-          ) : (
-            <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
-              호스트만 지식 통합을 실행할 수 있습니다
-            </p>
-          )}
+
+          {/* Action buttons */}
+          <div className="mt-5 flex items-center justify-center gap-3">
+            {isHost ? (
+              <button
+                onClick={runSynthesis}
+                className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-ink text-white hover:bg-nu-pink transition-colors flex items-center gap-2 shadow-[3px_3px_0px_rgba(233,30,99,0.25)] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+              >
+                <Zap size={14} /> 지식 통합 시작
+              </button>
+            ) : (
+              <div className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest px-4 py-2.5 border border-nu-ink/10 bg-nu-cream/30">
+                호스트만 실행 가능
+              </div>
+            )}
+          </div>
 
           {/* Error detail display */}
           {errorDetail && (
@@ -431,10 +445,23 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
 
       {/* Synthesizing */}
       {phase === "synthesizing" && (
-        <div className="p-8 text-center">
-          <Loader2 size={32} className="animate-spin text-nu-pink mx-auto mb-4" />
-          <p className="text-sm font-bold text-nu-ink mb-1">AI가 새 자료를 분석하고 있습니다...</p>
-          <p className="font-mono-nu text-[9px] text-nu-muted">마지막 통합 이후 새로운 리소스와 회의만 검토합니다</p>
+        <div className="p-8">
+          <div className="flex flex-col items-center">
+            <div className="relative w-16 h-16 mb-5">
+              <div className="absolute inset-0 border-[3px] border-nu-pink/20 rounded-full" />
+              <div className="absolute inset-0 border-[3px] border-transparent border-t-nu-pink rounded-full animate-spin" />
+              <Brain size={24} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-nu-pink" />
+            </div>
+            <p className="text-sm font-bold text-nu-ink mb-2">AI가 지식을 통합하고 있습니다</p>
+            <div className="flex items-center gap-4 font-mono-nu text-[9px] text-nu-muted">
+              <span className="flex items-center gap-1"><FileText size={10} /> 자료 수집</span>
+              <span>→</span>
+              <span className="flex items-center gap-1"><Brain size={10} /> 분석 중</span>
+              <span>→</span>
+              <span className="flex items-center gap-1 text-nu-muted/40"><Sparkles size={10} /> 탭 생성</span>
+            </div>
+            <p className="font-mono-nu text-[8px] text-nu-muted/50 mt-3">최대 60초 소요될 수 있습니다</p>
+          </div>
         </div>
       )}
 
