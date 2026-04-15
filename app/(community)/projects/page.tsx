@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ProjectsGrid } from "@/components/projects/projects-grid";
 import { TemplateCard } from "@/components/groups/template-card";
 import { PageHero } from "@/components/shared/page-hero";
+import { AICommandBar } from "@/app/staff/ai-command-bar";
 import { Suspense } from "react";
 import { ProjectSkeleton } from "@/components/shared/skeletons";
 import { Star } from "lucide-react";
@@ -27,6 +28,13 @@ export default async function ProjectsPage() {
         description="너트들이 합쳐져 해결하는 과제, 볼트. 관심 있는 볼트에 참여하여 실질적인 비즈니스 경험을 쌓아보세요."
         action={{ label: "볼트 만들기", href: "/projects/create" }}
       />
+
+      {/* ── AI Command Bar ──────────────────────────────────────────── */}
+      {user && (
+        <div className="max-w-7xl mx-auto px-8 pt-8">
+          <AICommandBar />
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-8 py-10">
         {/* ── Featured Templates Section ─────────────────────────────── */}

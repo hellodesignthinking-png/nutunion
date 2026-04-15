@@ -3,6 +3,7 @@ import { Star } from "lucide-react";
 import { GroupsList } from "@/components/groups/groups-list";
 import { TemplateCard } from "@/components/groups/template-card";
 import { PageHero } from "@/components/shared/page-hero";
+import { AICommandBar } from "@/app/staff/ai-command-bar";
 import { Suspense } from "react";
 import { GroupSkeleton } from "@/components/shared/skeletons";
 import Link from "next/link";
@@ -27,6 +28,13 @@ export default async function GroupsPage() {
         description="변화를 만드는 최소 단위, 너트로 모여보세요. 관심사나 과제에 맞는 너트를 찾아 단단하게 결합하세요."
         action={user ? { label: "너트 만들기", href: "/groups/create" } : undefined}
       />
+
+      {/* ── AI Command Bar ──────────────────────────────────────────── */}
+      {user && (
+        <div className="max-w-7xl mx-auto px-8 pt-8">
+          <AICommandBar />
+        </div>
+      )}
 
       {/* ── Featured Templates Section ─────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-8 py-10">

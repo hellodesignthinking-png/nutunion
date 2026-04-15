@@ -55,12 +55,14 @@ export function WikiSearchBar({ groupId }: { groupId: string }) {
       const topicIds = (topics || []).map(t => t.id);
       if (topicIds.length === 0) { setResults([]); return; }
 
-      // Search pages by title or content (ilike)
+      // Search pages by title or content (ilike) — sanitize query to prevent PostgREST filter injection
+      const safeQ = q.replace(/[%_\\(),.*]/g, "");
+      if (!safeQ.trim()) { setResults([]); return; }
       const { data: pages } = await supabase
         .from("wiki_pages")
         .select("id, title, content, topic:wiki_topics(name)")
         .in("topic_id", topicIds)
-        .or(`title.ilike.%${q}%,content.ilike.%${q}%`)
+        .or(`title.ilike.%${safeQ}%,content.ilike.%${safeQ}%`)
         .limit(8);
 
       // Also search topic names that match

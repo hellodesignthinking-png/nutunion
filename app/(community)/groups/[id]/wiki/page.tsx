@@ -151,11 +151,9 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
     }
   }
 
-  // If no topics, still need memberCount
-  let memberCountFinalVal = 0;
-  if (topicIds.length > 0) {
-    memberCountFinalVal = memberCountFinal;
-  } else {
+  // If no topics, still need memberCount (reuse if already fetched)
+  let memberCountFinalVal = memberCountFinal;
+  if (topicIds.length === 0) {
     const { count: mc } = await supabase
       .from("group_members")
       .select("user_id", { count: "exact", head: true })
@@ -226,6 +224,12 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
           <div className="mt-8 flex flex-col sm:flex-row gap-3">
             <WikiSearchBar groupId={id} />
             <WikiTopicCreator groupId={id} />
+            <Link
+              href={`/groups/${id}/wiki/guide`}
+              className="flex items-center gap-2 px-4 py-2.5 bg-nu-ink/5 border border-nu-ink/10 hover:bg-nu-ink/10 transition-colors no-underline font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink shrink-0"
+            >
+              <BookOpen size={14} /> 사용 가이드
+            </Link>
           </div>
         </div>
       </div>
@@ -376,7 +380,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
               <h2 className="font-head text-2xl font-extrabold text-nu-ink mb-6 flex items-center gap-3">
                 <BarChart3 size={24} className="text-nu-amber" /> 주간 인사이트 다이제스트
               </h2>
-              <WeeklyInsightNewsletter groupId={id} />
+              <WeeklyInsightNewsletter groupId={id} isHost={isHost} />
             </section>
 
             {/* Monthly Evolution Analysis */}
@@ -384,7 +388,7 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
               <h2 className="font-head text-2xl font-extrabold text-nu-ink mb-6 flex items-center gap-3">
                 <Zap size={24} className="text-purple-500" /> 월간 지식 진화 분석
               </h2>
-              <MonthlyEvolutionAnalysis groupId={id} />
+              <MonthlyEvolutionAnalysis groupId={id} isHost={isHost} />
             </section>
           </div>
 

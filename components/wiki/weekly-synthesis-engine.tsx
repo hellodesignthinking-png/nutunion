@@ -9,6 +9,7 @@ import {
   Zap, TrendingUp, AlertCircle, Link as LinkIcon,
   FileText, RefreshCw, Plus, History, Clock,
 } from "lucide-react";
+import Link from "next/link";
 
 interface WikiPageSuggestion {
   title: string;
@@ -62,6 +63,13 @@ interface SynthesisLog {
   inputSummary: { newResourceCount?: number; newMeetingCount?: number; newNoteCount?: number };
 }
 
+interface CreatedPage {
+  id: string;
+  title: string;
+  topicName: string;
+  action: "create" | "update";
+}
+
 export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; isHost: boolean }) {
   const [phase, setPhase] = useState<"idle" | "synthesizing" | "reviewing" | "applying" | "done">("idle");
   const [result, setResult] = useState<SynthesisResult | null>(null);
@@ -70,6 +78,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
   const [applyingIndex, setApplyingIndex] = useState<number | null>(null);
   const [history, setHistory] = useState<SynthesisLog[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [createdPages, setCreatedPages] = useState<CreatedPage[]>([]);
 
   useEffect(() => {
     async function loadHistory() {
@@ -82,10 +91,11 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
       } catch { /* silent */ }
     }
     loadHistory();
-  }, [groupId, phase]);
+  }, [groupId]); // eslint-disable-line react-hooks/exhaustive-deps — reload history only on groupId change, not phase
 
   async function runSynthesis() {
     setPhase("synthesizing");
+    setCreatedPages([]);
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 60_000);
@@ -125,10 +135,17 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
     const supabase = createClient();
     let created = 0;
     let failed = 0;
+    const newlyCreated: CreatedPage[] = [];
 
-    for (const idx of Array.from(selectedPages).sort()) {
+    // Get user once before loop (avoid repeated auth calls)
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { toast.error("로그인이 필요합니다"); setPhase("idle"); return; }
+
+    const sortedIndices = Array.from(selectedPages).sort();
+    for (let i = 0; i < sortedIndices.length; i++) {
+      const idx = sortedIndices[i];
       const suggestion = result.wikiPageSuggestions[idx];
-      setApplyingIndex(idx);
+      setApplyingIndex(i);
 
       try {
         // Find or create topic
@@ -153,19 +170,17 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
 
         if (!topicId) { failed++; continue; }
 
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { failed++; continue; }
-
         if (suggestion.action === "create") {
-          const { error } = await supabase.from("wiki_pages").insert({
+          const { data: inserted, error } = await supabase.from("wiki_pages").insert({
             topic_id: topicId,
             title: suggestion.title,
             content: suggestion.content,
             created_by: user.id,
             last_updated_by: user.id,
             version: 1,
-          });
-          if (error) { failed++; continue; }
+          }).select("id").single();
+          if (error || !inserted) { failed++; continue; }
+          newlyCreated.push({ id: inserted.id, title: suggestion.title, topicName: suggestion.topicName, action: "create" });
           created++;
         } else {
           // Update: find existing page by title and append content
@@ -175,25 +190,29 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
             .eq("topic_id", topicId)
             .ilike("title", suggestion.title)
             .limit(1)
-            .single();
+            .maybeSingle();
 
           if (existingPage) {
-            await supabase.from("wiki_pages").update({
+            const { error: updateError } = await supabase.from("wiki_pages").update({
               content: existingPage.content + "\n\n---\n\n" + suggestion.content,
               version: existingPage.version + 1,
               last_updated_by: user.id,
             }).eq("id", existingPage.id);
+            if (updateError) { failed++; continue; }
+            newlyCreated.push({ id: existingPage.id, title: suggestion.title, topicName: suggestion.topicName, action: "update" });
             created++;
           } else {
             // Page not found, create new
-            await supabase.from("wiki_pages").insert({
+            const { data: inserted, error: insertError } = await supabase.from("wiki_pages").insert({
               topic_id: topicId,
               title: suggestion.title,
               content: suggestion.content,
               created_by: user.id,
               last_updated_by: user.id,
               version: 1,
-            });
+            }).select("id").single();
+            if (insertError || !inserted) { failed++; continue; }
+            newlyCreated.push({ id: inserted.id, title: suggestion.title, topicName: suggestion.topicName, action: "create" });
             created++;
           }
         }
@@ -202,9 +221,50 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
       }
     }
 
+    // ── Auto-create cross-references from AI suggestions ──
+    let linkedCount = 0;
+    if (result.crossReferences && result.crossReferences.length > 0) {
+      try {
+        // Fetch all pages for this group to resolve titles → ids
+        const { data: allTopics } = await supabase
+          .from("wiki_topics")
+          .select("id")
+          .eq("group_id", groupId);
+        const tIds = (allTopics || []).map(t => t.id);
+        if (tIds.length > 0) {
+          const { data: allPages } = await supabase
+            .from("wiki_pages")
+            .select("id, title")
+            .in("topic_id", tIds);
+          const titleMap = new Map((allPages || []).map(p => [p.title.toLowerCase(), p.id]));
+
+          for (const ref of result.crossReferences) {
+            const sourceId = titleMap.get(ref.fromPage.toLowerCase());
+            const targetId = titleMap.get(ref.toPage.toLowerCase());
+            if (sourceId && targetId && sourceId !== targetId) {
+              const linkType = (["reference", "extends", "contradicts", "prerequisite"].includes(ref.linkType))
+                ? ref.linkType : "reference";
+              await supabase.from("wiki_page_links").upsert({
+                source_page_id: sourceId,
+                target_page_id: targetId,
+                link_type: linkType,
+              }, { onConflict: "source_page_id,target_page_id" });
+              linkedCount++;
+            }
+          }
+        }
+      } catch {
+        // Cross-reference creation is best-effort, don't fail the whole operation
+      }
+    }
+
+    setCreatedPages(newlyCreated);
     setApplyingIndex(null);
     setPhase("done");
-    toast.success(`${created}개 탭 페이지가 생성/업데이트 되었습니다${failed > 0 ? ` (${failed}개 실패)` : ""}`);
+    const parts = [`${created}개 탭 페이지가 생성/업데이트 되었습니다`];
+    if (linkedCount > 0) parts.push(`${linkedCount}개 교차 참조가 연결되었습니다`);
+    if (failed > 0) parts.push(`${failed}개 실패`);
+    toast.success(parts.join(" · "));
   }
 
   function togglePage(idx: number) {
@@ -240,12 +300,18 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
           <p className="text-xs text-nu-muted mb-6">
             이미 탭으로 정리된 자료는 다시 검토하지 않아 토큰을 절약합니다
           </p>
-          <button
-            onClick={runSynthesis}
-            className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-ink text-white hover:bg-nu-graphite transition-colors flex items-center gap-2 mx-auto"
-          >
-            <Zap size={14} /> 지식 통합 시작
-          </button>
+          {isHost ? (
+            <button
+              onClick={runSynthesis}
+              className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-ink text-white hover:bg-nu-graphite transition-colors flex items-center gap-2 mx-auto"
+            >
+              <Zap size={14} /> 지식 통합 시작
+            </button>
+          ) : (
+            <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
+              호스트만 지식 통합을 실행할 수 있습니다
+            </p>
+          )}
 
           {/* Synthesis History */}
           {history.length > 0 && (
@@ -511,7 +577,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
           <p className="text-sm font-bold text-nu-ink mb-1">탭 페이지를 생성하고 있습니다...</p>
           {applyingIndex !== null && result && (
             <p className="font-mono-nu text-[9px] text-nu-muted">
-              {applyingIndex + 1} / {selectedPages.size}: {result.wikiPageSuggestions[applyingIndex]?.title}
+              {applyingIndex + 1} / {selectedPages.size}
             </p>
           )}
         </div>
@@ -519,18 +585,77 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
 
       {/* Done */}
       {phase === "done" && result && (
-        <div className="p-6 text-center">
-          <CheckCircle2 size={32} className="text-green-500 mx-auto mb-3" />
-          <p className="text-sm font-bold text-nu-ink mb-1">
-            {result.wikiPageSuggestions.length > 0 ? "지식 통합 완료!" : result.weeklyTheme}
-          </p>
-          <p className="text-xs text-nu-muted mb-4">{result.compactionNote || result.consolidatedSummary}</p>
-          <button
-            onClick={() => { setPhase("idle"); setResult(null); }}
-            className="font-mono-nu text-[10px] text-nu-blue hover:text-nu-pink transition-colors flex items-center gap-1 mx-auto"
-          >
-            <RefreshCw size={11} /> 다시 실행
-          </button>
+        <div className="p-6">
+          <div className="text-center mb-4">
+            <CheckCircle2 size={32} className="text-green-500 mx-auto mb-3" />
+            <p className="text-sm font-bold text-nu-ink mb-1">
+              {createdPages.length > 0 ? `${createdPages.length}개 탭 페이지가 저장되었습니다!` : result.wikiPageSuggestions.length > 0 ? "지식 통합 완료!" : result.weeklyTheme}
+            </p>
+            <p className="text-xs text-nu-muted">{result.compactionNote || result.consolidatedSummary}</p>
+          </div>
+
+          {/* Created pages list with links */}
+          {createdPages.length > 0 && (
+            <div className="bg-green-50/50 border border-green-200/50 p-4 mb-4">
+              <p className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-green-700 mb-3 flex items-center gap-1.5">
+                <BookOpen size={11} /> 저장된 탭 페이지
+              </p>
+              <div className="space-y-2">
+                {createdPages.map(page => (
+                  <Link
+                    key={page.id}
+                    href={`/groups/${groupId}/wiki/pages/${page.id}`}
+                    className="flex items-center gap-2 p-2 bg-white border border-green-100 hover:border-nu-blue/30 transition-colors no-underline group"
+                  >
+                    <span className={`font-mono-nu text-[7px] font-bold uppercase px-1.5 py-0.5 shrink-0 ${
+                      page.action === "create" ? "bg-green-100 text-green-600" : "bg-nu-amber/10 text-nu-amber"
+                    }`}>
+                      {page.action === "create" ? "NEW" : "UPD"}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-bold text-nu-ink group-hover:text-nu-blue transition-colors truncate block">
+                        {page.title}
+                      </span>
+                      <span className="font-mono-nu text-[8px] text-nu-muted">{page.topicName}</span>
+                    </div>
+                    <ArrowRight size={12} className="text-nu-muted group-hover:text-nu-blue transition-colors shrink-0" />
+                  </Link>
+                ))}
+              </div>
+              <p className="font-mono-nu text-[8px] text-nu-muted mt-3">
+                아래 &ldquo;주제별 탭&rdquo; 섹션에서도 확인할 수 있습니다
+              </p>
+            </div>
+          )}
+
+          {/* No new data case */}
+          {createdPages.length === 0 && result.wikiPageSuggestions.length === 0 && (
+            <div className="bg-nu-cream/50 border border-nu-ink/10 p-4 mb-4 text-center">
+              <p className="text-xs text-nu-muted mb-2">
+                마지막 통합 이후 새로 공유된 리소스나 회의가 없습니다.
+              </p>
+              <p className="font-mono-nu text-[9px] text-nu-muted/70">
+                좌측 &ldquo;지식 수집&rdquo;에서 리소스를 추가하거나 미팅을 진행한 후 다시 실행하세요.
+              </p>
+            </div>
+          )}
+
+          <div className="flex items-center justify-center gap-3">
+            <button
+              onClick={() => { setPhase("idle"); setResult(null); setCreatedPages([]); }}
+              className="font-mono-nu text-[10px] text-nu-blue hover:text-nu-pink transition-colors flex items-center gap-1"
+            >
+              <RefreshCw size={11} /> 다시 실행
+            </button>
+            {createdPages.length > 0 && (
+              <button
+                onClick={() => window.location.reload()}
+                className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2 bg-nu-ink text-white hover:bg-nu-graphite transition-colors flex items-center gap-1.5"
+              >
+                <BookOpen size={11} /> 탭 새로고침
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

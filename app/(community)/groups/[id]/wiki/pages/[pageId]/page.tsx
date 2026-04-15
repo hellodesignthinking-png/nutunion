@@ -44,27 +44,41 @@ export default async function WikiPageDetailPage({ params }: { params: Promise<{
 
   if (!page) notFound();
 
-  // Fetch version history
-  const { data: versions } = await supabase
-    .from("wiki_page_versions")
-    .select("*, editor:profiles!wiki_page_versions_edited_by_fkey(nickname)")
-    .eq("page_id", pageId)
-    .order("version", { ascending: false })
-    .limit(20);
+  // Fetch version history + contributions + record view — all in parallel
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
 
-  // Fetch contributions
-  const { data: contributions } = await supabase
-    .from("wiki_contributions")
-    .select("*, contributor:profiles!wiki_contributions_user_id_fkey(nickname)")
-    .eq("page_id", pageId)
-    .order("created_at", { ascending: false })
-    .limit(20);
+  const [versionsResult, contribsResult] = await Promise.all([
+    supabase
+      .from("wiki_page_versions")
+      .select("*, editor:profiles!wiki_page_versions_edited_by_fkey(nickname)")
+      .eq("page_id", pageId)
+      .order("version", { ascending: false })
+      .limit(20),
+    supabase
+      .from("wiki_contributions")
+      .select("*, contributor:profiles!wiki_contributions_user_id_fkey(nickname)")
+      .eq("page_id", pageId)
+      .order("created_at", { ascending: false })
+      .limit(20),
+  ]);
 
-  // Record page view (safe fire-and-forget)
+  const versions = versionsResult.data;
+  const contributions = contribsResult.data;
+
+  // Record page view — deduplicate: max 1 view per user per page per day (fire-and-forget)
   try {
-    await supabase.from("wiki_page_views").insert({ page_id: pageId, user_id: user.id });
-  } catch (_) {
-    // Non-critical: silently ignore view recording failures
+    const { count: viewedToday } = await supabase
+      .from("wiki_page_views")
+      .select("id", { count: "exact", head: true })
+      .eq("page_id", pageId)
+      .eq("user_id", user.id)
+      .gte("created_at", todayStart.toISOString());
+    if (!viewedToday || viewedToday === 0) {
+      await supabase.from("wiki_page_views").insert({ page_id: pageId, user_id: user.id });
+    }
+  } catch {
+    // Non-critical
   }
 
   return (

@@ -62,10 +62,11 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
   const linkSearchAbort = useRef<AbortController | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Add copy buttons to code blocks after render
+  // Add copy buttons to code blocks after render (with cleanup to prevent memory leak)
   useEffect(() => {
     const el = contentRef.current;
     if (!el) return;
+    const addedButtons: { btn: HTMLButtonElement; handler: () => void; pre: HTMLElement }[] = [];
     el.querySelectorAll("pre").forEach(pre => {
       if (pre.querySelector(".copy-btn")) return;
       pre.style.position = "relative";
@@ -73,15 +74,23 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
       btn.className = "copy-btn";
       btn.textContent = "Copy";
       btn.style.cssText = "position:absolute;top:8px;right:8px;padding:2px 8px;font-size:10px;font-family:monospace;background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.2);cursor:pointer;letter-spacing:0.05em;text-transform:uppercase;";
-      btn.addEventListener("click", () => {
+      const handler = () => {
         const code = pre.querySelector("code")?.textContent || pre.textContent || "";
         navigator.clipboard.writeText(code).then(() => {
           btn.textContent = "Copied!";
           setTimeout(() => { btn.textContent = "Copy"; }, 1500);
         });
-      });
+      };
+      btn.addEventListener("click", handler);
       pre.appendChild(btn);
+      addedButtons.push({ btn, handler, pre: pre as HTMLElement });
     });
+    return () => {
+      addedButtons.forEach(({ btn, handler, pre }) => {
+        btn.removeEventListener("click", handler);
+        if (pre.contains(btn)) pre.removeChild(btn);
+      });
+    };
   }, [page.content, isEditing]);
 
   // Reading time (Korean ~500 chars/min, English ~200 words/min)
@@ -126,7 +135,7 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
             .select("id, title")
             .in("topic_id", topicIds)
             .neq("id", page.id)
-            .ilike("title", `%${q}%`)
+            .ilike("title", `%${q.replace(/[%_\\]/g, "")}%`)
             .limit(6)
             .abortSignal(controller.signal);
           if (!controller.signal.aborted) {
@@ -277,11 +286,14 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
     html = html.replace(/^&gt; (.+)/gm, '<blockquote class="border-l-4 border-nu-blue/30 pl-4 my-3 text-nu-muted italic text-sm">$1</blockquote>');
     // Horizontal rules
     html = html.replace(/^---$/gm, '<hr class="my-6 border-nu-ink/10" />');
-    // Headers with TOC IDs
-    html = html
-      .replace(/### (.+)/g, (_m, p1) => { const id = `toc-${headingIndex++}`; return `<h3 id="${id}" class="font-head text-base font-bold mt-5 mb-2 text-nu-ink scroll-mt-20">${p1}</h3>`; })
-      .replace(/## (.+)/g, (_m, p1) => { const id = `toc-${headingIndex++}`; return `<h2 id="${id}" class="font-head text-lg font-extrabold mt-7 mb-3 text-nu-ink border-b border-nu-ink/10 pb-2 scroll-mt-20">${p1}</h2>`; })
-      .replace(/# (.+)/g, (_m, p1) => { const id = `toc-${headingIndex++}`; return `<h1 id="${id}" class="font-head text-2xl font-extrabold mt-8 mb-4 text-nu-ink scroll-mt-20">${p1}</h1>`; });
+    // Headers with TOC IDs — single pass to assign IDs in document order (matching tocItems)
+    html = html.replace(/^(#{1,3}) (.+)/gm, (_m, hashes, text) => {
+      const id = `toc-${headingIndex++}`;
+      const level = hashes.length;
+      if (level === 3) return `<h3 id="${id}" class="font-head text-base font-bold mt-5 mb-2 text-nu-ink scroll-mt-20">${text}</h3>`;
+      if (level === 2) return `<h2 id="${id}" class="font-head text-lg font-extrabold mt-7 mb-3 text-nu-ink border-b border-nu-ink/10 pb-2 scroll-mt-20">${text}</h2>`;
+      return `<h1 id="${id}" class="font-head text-2xl font-extrabold mt-8 mb-4 text-nu-ink scroll-mt-20">${text}</h1>`;
+    });
     // Inline formatting
     html = html
       .replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold text-nu-ink">$1</strong>')
@@ -493,11 +505,15 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
                     key={r.id}
                     onClick={async () => {
                       const supabase = createClient();
-                      await supabase.from("wiki_page_links").insert({
+                      const { error } = await supabase.from("wiki_page_links").insert({
                         source_page_id: page.id,
                         target_page_id: r.id,
                         link_type: "reference",
                       });
+                      if (error) {
+                        toast.error("연결에 실패했습니다");
+                        return;
+                      }
                       setLinkedPages(prev => [...prev, { id: r.id, title: r.title, direction: 'outgoing' }]);
                       setLinkSearch("");
                       setLinkSearchResults([]);
@@ -518,17 +534,41 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
         {linkedPages.length > 0 && (
           <div className="border-t border-nu-ink/5 bg-white p-3 space-y-1">
             {linkedPages.map((lp, i) => (
-              <Link
-                key={`${lp.id}-${i}`}
-                href={`/groups/${groupId}/wiki/pages/${lp.id}`}
-                className="flex items-center gap-2 px-3 py-2 no-underline hover:bg-nu-cream/30 transition-colors group"
-              >
-                <div className={`w-1.5 h-1.5 rounded-full ${lp.direction === 'outgoing' ? 'bg-nu-blue' : 'bg-nu-pink'}`} />
-                <span className="text-xs text-nu-graphite group-hover:text-nu-pink transition-colors font-medium">{lp.title}</span>
-                <span className="font-mono-nu text-[7px] text-nu-muted uppercase tracking-widest ml-auto">
+              <div key={`${lp.id}-${i}`} className="flex items-center gap-2 px-3 py-2 hover:bg-nu-cream/30 transition-colors group">
+                <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${lp.direction === 'outgoing' ? 'bg-nu-blue' : 'bg-nu-pink'}`} />
+                <Link
+                  href={`/groups/${groupId}/wiki/pages/${lp.id}`}
+                  className="text-xs text-nu-graphite group-hover:text-nu-pink transition-colors font-medium no-underline flex-1"
+                >
+                  {lp.title}
+                </Link>
+                <span className="font-mono-nu text-[7px] text-nu-muted uppercase tracking-widest">
                   {lp.direction === 'outgoing' ? '→ outgoing' : '← incoming'}
                 </span>
-              </Link>
+                {lp.direction === 'outgoing' && (
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      const supabase = createClient();
+                      const { error } = await supabase
+                        .from("wiki_page_links")
+                        .delete()
+                        .eq("source_page_id", page.id)
+                        .eq("target_page_id", lp.id);
+                      if (error) {
+                        toast.error("연결 해제에 실패했습니다");
+                        return;
+                      }
+                      setLinkedPages(prev => prev.filter((_, idx) => idx !== i));
+                      toast.success("연결이 해제되었습니다");
+                    }}
+                    className="opacity-0 group-hover:opacity-100 text-nu-muted hover:text-red-500 transition-all p-0.5"
+                    title="연결 해제"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         )}

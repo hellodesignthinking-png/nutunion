@@ -1,5 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { SupabaseClient } from "@supabase/supabase-js";
+import { rateLimit } from "@/lib/rate-limit";
+
+async function verifyGroupMembership(
+  supabase: SupabaseClient,
+  userId: string,
+  groupId: string
+): Promise<boolean> {
+  // Check if user is the group host
+  const { data: group } = await supabase
+    .from("groups")
+    .select("host_id")
+    .eq("id", groupId)
+    .single();
+
+  if (group?.host_id === userId) return true;
+
+  // Check if user is an active member
+  const { data: member } = await supabase
+    .from("group_members")
+    .select("id")
+    .eq("group_id", groupId)
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .single();
+
+  return !!member;
+}
 
 function getWeekStart(): string {
   const now = new Date();
@@ -40,6 +68,12 @@ export async function GET(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "로그인 필요" }, { status: 401 });
 
+  // Verify group membership
+  const isMember = await verifyGroupMembership(supabase, user.id, groupId);
+  if (!isMember) {
+    return NextResponse.json({ error: "그룹 멤버만 접근할 수 있습니다" }, { status: 403 });
+  }
+
   // 1) Fetch wiki_weekly_resources (gracefully skip if table doesn't exist)
   let weeklyResources: any[] = [];
   try {
@@ -67,16 +101,27 @@ export async function GET(request: NextRequest) {
     // wiki_weekly_resources table may not exist yet — silently skip
   }
 
-  // 2) Fetch file_attachments for the same group
+  // 2) Fetch file_attachments for the same group (with optional week filter)
   let fileAttachments: any[] = [];
   try {
-    const { data: faData, error: faError } = await supabase
+    let faQuery = supabase
       .from("file_attachments")
       .select("*, uploader:profiles!file_attachments_uploaded_by_fkey(id, nickname, avatar_url)")
       .eq("target_type", "group")
       .eq("target_id", groupId)
       .order("created_at", { ascending: false })
       .limit(limit);
+
+    // Apply week filter to file_attachments too
+    if (weekStart) {
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 7);
+      faQuery = faQuery
+        .gte("created_at", new Date(weekStart).toISOString())
+        .lt("created_at", weekEnd.toISOString());
+    }
+
+    const { data: faData, error: faError } = await faQuery;
 
     if (!faError && faData) {
       fileAttachments = faData.map((fa: any) => ({
@@ -119,11 +164,31 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "로그인 필요" }, { status: 401 });
   }
 
+  // Rate limit: 30 resources per hour per user
+  const { success: rlOk } = rateLimit(`resource:${user.id}`, 30, 3600_000);
+  if (!rlOk) {
+    return NextResponse.json({ error: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." }, { status: 429 });
+  }
+
   const body = await request.json();
   const { groupId, title, url, resourceType, description } = body;
 
   if (!groupId || !url) {
     return NextResponse.json({ error: "groupId, url 필요" }, { status: 400 });
+  }
+
+  // Input length validation
+  if (url.length > 2048) {
+    return NextResponse.json({ error: "URL이 너무 깁니다 (최대 2048자)" }, { status: 400 });
+  }
+  if (title && title.length > 500) {
+    return NextResponse.json({ error: "제목이 너무 깁니다 (최대 500자)" }, { status: 400 });
+  }
+
+  // Verify group membership
+  const isMember = await verifyGroupMembership(supabase, user.id, groupId);
+  if (!isMember) {
+    return NextResponse.json({ error: "그룹 멤버만 접근할 수 있습니다" }, { status: 403 });
   }
 
   try {
@@ -183,31 +248,9 @@ export async function POST(request: NextRequest) {
     // wiki_weekly_resources table may not exist — continue with file_attachments
   }
 
-  // Also register in file_attachments so it shows up in 자료실
-  let fileAttachmentId: string | null = null;
-  try {
-    let faFileType = "url-link";
-    const lowerUrl2 = url.toLowerCase();
-    if (lowerUrl2.includes("docs.google") || lowerUrl2.includes("sheets.google") || lowerUrl2.includes("slides.google") || lowerUrl2.includes("drive.google")) {
-      faFileType = "drive-link";
-    }
-
-    const { data: faData } = await supabase.from("file_attachments").insert({
-      target_type: "group",
-      target_id: groupId,
-      uploaded_by: user.id,
-      file_name: title || url,
-      file_url: url,
-      file_size: null,
-      file_type: faFileType,
-    }).select("id").single();
-
-    if (faData) fileAttachmentId = faData.id;
-  } catch {
-    // Non-critical
-  }
-
-  const resultId = weeklyResourceId || fileAttachmentId;
+  // Skip duplicate file_attachments insert — wiki_weekly_resources is the primary table.
+  // file_attachments are fetched separately in GET and merged, so dual-insert causes duplicates.
+  const resultId = weeklyResourceId;
   if (!resultId) {
     return NextResponse.json({ error: "리소스 등록에 실패했습니다" }, { status: 500 });
   }
@@ -224,7 +267,19 @@ export async function PATCH(request: NextRequest) {
   const { resourceId, wikiPageId } = await request.json();
   if (!resourceId) return NextResponse.json({ error: "resourceId 필요" }, { status: 400 });
 
+  // Verify membership via resource's group
   try {
+    const { data: resource } = await supabase
+      .from("wiki_weekly_resources")
+      .select("id, group_id")
+      .eq("id", resourceId)
+      .single();
+
+    if (!resource) return NextResponse.json({ error: "리소스를 찾을 수 없습니다" }, { status: 404 });
+
+    const isMember = await verifyGroupMembership(supabase, user.id, resource.group_id);
+    if (!isMember) return NextResponse.json({ error: "그룹 멤버만 접근할 수 있습니다" }, { status: 403 });
+
     const { error } = await supabase
       .from("wiki_weekly_resources")
       .update({ linked_wiki_page_id: wikiPageId || null })
@@ -260,6 +315,12 @@ export async function DELETE(request: NextRequest) {
       .single();
 
     if (resource) {
+      // Verify membership
+      const isMember = await verifyGroupMembership(supabase, user.id, resource.group_id);
+      if (!isMember) {
+        return NextResponse.json({ error: "그룹 멤버만 접근할 수 있습니다" }, { status: 403 });
+      }
+
       if (resource.shared_by !== user.id) {
         const { data: group } = await supabase
           .from("groups")

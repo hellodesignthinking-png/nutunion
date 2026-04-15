@@ -270,6 +270,13 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
   async function importFromLibrary(file: FileAttachmentRow) {
     setImportingIds(prev => new Set(prev).add(file.id));
     try {
+      // Check if this URL already exists in current week's resources to prevent duplicates
+      const existing = resources.find(r => r.url === file.file_url);
+      if (existing) {
+        toast.info("이미 이번 주 리소스에 등록된 자료입니다");
+        return;
+      }
+
       const detectedType = detectResourceType(file.file_url);
       const finalType = file.file_type === "drive-link" ? "drive"
         : file.file_type === "url-link" ? detectedType
@@ -346,26 +353,10 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
         else if (mime.includes("spreadsheet") || mime.includes("excel")) resourceType = "sheet";
         else if (mime.includes("presentation") || mime.includes("slide")) resourceType = "slide";
       } else {
-        // URL-based upload
+        // URL-based upload — wiki_weekly_resources only (GET merges file_attachments separately)
         fileUrl = uploadUrl.trim();
         fileName = fileName || fileUrl;
         resourceType = detectResourceType(fileUrl);
-
-        // Also save to file_attachments for 자료실
-        try {
-          const supabase = createClient();
-          await supabase.from("file_attachments").insert({
-            target_type: "group",
-            target_id: groupId,
-            uploaded_by: userId,
-            file_name: fileName,
-            file_url: fileUrl,
-            file_size: null,
-            file_type: "url-link",
-          });
-        } catch {
-          // Non-critical: wiki resource is the primary target
-        }
       }
 
       // Save to wiki_weekly_resources

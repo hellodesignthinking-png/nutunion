@@ -7,7 +7,7 @@ function generateSlug(name: string): string {
     .replace(/[^a-z0-9가-힣\s-]/g, "")
     .replace(/\s+/g, "-")
     .slice(0, 50);
-  const hash = Math.random().toString(36).slice(2, 8);
+  const hash = crypto.randomUUID().slice(0, 12);
   return `${base}-${hash}`;
 }
 

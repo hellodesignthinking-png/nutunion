@@ -37,7 +37,7 @@ interface EvolutionAnalysis {
   };
 }
 
-export function MonthlyEvolutionAnalysis({ groupId }: { groupId: string }) {
+export function MonthlyEvolutionAnalysis({ groupId, isHost = false }: { groupId: string; isHost?: boolean }) {
   const [analysis, setAnalysis] = useState<EvolutionAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -268,14 +268,20 @@ export function MonthlyEvolutionAnalysis({ groupId }: { groupId: string }) {
         <p className="font-mono-nu text-[9px] text-white/25 uppercase tracking-widest mb-8">
           최소 1개 이상의 토픽과 문서가 필요합니다
         </p>
-        <button
-          onClick={runAnalysis}
-          disabled={loading}
-          className="bg-nu-pink text-white px-10 py-4 font-mono-nu text-xs font-bold uppercase tracking-widest hover:bg-nu-pink/80 transition-all shadow-[0_0_30px_rgba(233,30,99,0.3)] hover:shadow-[0_0_50px_rgba(233,30,99,0.5)] flex items-center gap-3 mx-auto disabled:opacity-50"
-        >
-          {loading ? <Loader2 size={16} className="animate-spin" /> : <Brain size={16} />}
-          교차 분석 실행
-        </button>
+        {isHost ? (
+          <button
+            onClick={runAnalysis}
+            disabled={loading}
+            className="bg-nu-pink text-white px-10 py-4 font-mono-nu text-xs font-bold uppercase tracking-widest hover:bg-nu-pink/80 transition-all shadow-[0_0_30px_rgba(233,30,99,0.3)] hover:shadow-[0_0_50px_rgba(233,30,99,0.5)] flex items-center gap-3 mx-auto disabled:opacity-50"
+          >
+            {loading ? <Loader2 size={16} className="animate-spin" /> : <Brain size={16} />}
+            교차 분석 실행
+          </button>
+        ) : (
+          <p className="font-mono-nu text-[10px] text-white/40 uppercase tracking-widest">
+            호스트만 월간 분석을 실행할 수 있습니다
+          </p>
+        )}
         {loading && (
           <div className="mt-6 space-y-2">
             <div className="flex items-center justify-center gap-3 text-xs text-white/40 font-mono-nu">

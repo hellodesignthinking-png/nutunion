@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { google } from "googleapis";
-import { getGoogleClient } from "@/lib/google/auth";
 import { rateLimit } from "@/lib/rate-limit";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -60,7 +58,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "GEMINI_API_KEY가 설정되지 않았습니다." }, { status: 500 });
   }
 
+  let step = "init";
   try {
+    // ── Auth & validation ──
+    step = "parse-body";
     const body = await request.json();
     const { groupId } = body;
 
@@ -68,23 +69,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "groupId가 필요합니다" }, { status: 400 });
     }
 
+    step = "auth";
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: "로그인 필요" }, { status: 401 });
     }
 
-    // Verify requester is a member or host of the group
-    const [{ data: membership }, { data: groupRow }] = await Promise.all([
-      supabase.from("group_members").select("status").eq("group_id", groupId).eq("user_id", user.id).maybeSingle(),
-      supabase.from("groups").select("host_id").eq("id", groupId).single(),
-    ]);
+    // Verify requester is host of the group
+    step = "verify-host";
+    const { data: groupRow, error: groupError } = await supabase
+      .from("groups")
+      .select("host_id")
+      .eq("id", groupId)
+      .single();
 
-    const isHost = groupRow?.host_id === user.id;
-    const isMember = membership?.status === "active";
+    if (groupError || !groupRow) {
+      return NextResponse.json({ error: "그룹을 찾을 수 없습니다" }, { status: 404 });
+    }
 
-    if (!isHost && !isMember) {
-      return NextResponse.json({ error: "그룹 멤버만 접근할 수 있습니다" }, { status: 403 });
+    if (groupRow.host_id !== user.id) {
+      return NextResponse.json({ error: "호스트만 지식 통합을 실행할 수 있습니다" }, { status: 403 });
     }
 
     const { success } = rateLimit(`ai:${user.id}`, 20, 60_000);
@@ -92,117 +97,145 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." }, { status: 429 });
     }
 
-    // ── 1. Find last synthesis timestamp (incremental boundary) ──
-    const { data: prevSynthesisArr } = await supabase
+    // ── 1. Find last synthesis timestamp ──
+    step = "fetch-prev-synthesis";
+    let lastSynthesisAt = new Date(0).toISOString();
+    let prevOutput: any = null;
+
+    const { data: prevSynthesisArr, error: prevError } = await supabase
       .from("wiki_synthesis_logs")
       .select("created_at, output_data")
       .eq("group_id", groupId)
       .order("created_at", { ascending: false })
       .limit(1);
 
-    const prevSynthesis = prevSynthesisArr?.[0];
-    const lastSynthesisAt = prevSynthesis?.created_at || new Date(0).toISOString();
-    const prevOutput = prevSynthesis?.output_data;
+    if (prevError) {
+      // Table might not exist — treat as first synthesis
+      console.warn("wiki_synthesis_logs query failed (table may not exist):", prevError.message);
+    } else if (prevSynthesisArr && prevSynthesisArr.length > 0) {
+      lastSynthesisAt = prevSynthesisArr[0].created_at;
+      prevOutput = prevSynthesisArr[0].output_data;
+    }
 
     const now = new Date().toISOString();
 
-    // ── 2. Fetch ONLY new data since last synthesis ──
-    const [resourcesRes, meetingsRes, topicsRes] = await Promise.all([
-      // Resources shared AFTER last synthesis
-      supabase.from("wiki_weekly_resources")
-        .select("title, url, resource_type, description, auto_summary")
-        .eq("group_id", groupId)
-        .gt("created_at", lastSynthesisAt)
-        .order("created_at"),
-      // Meetings completed AFTER last synthesis
-      supabase.from("meetings")
-        .select("id, title, summary, next_topic, scheduled_at")
-        .eq("group_id", groupId)
-        .gt("scheduled_at", lastSynthesisAt)
-        .order("scheduled_at"),
-      // All topics (lightweight, for context)
-      supabase.from("wiki_topics")
-        .select("id, name")
-        .eq("group_id", groupId),
-    ]);
+    // ── 2. Fetch new data since last synthesis ──
+    step = "fetch-resources";
+    const { data: rawResources, error: resErr } = await supabase
+      .from("wiki_weekly_resources")
+      .select("title, url, resource_type, description, auto_summary")
+      .eq("group_id", groupId)
+      .gt("created_at", lastSynthesisAt)
+      .order("created_at");
 
-    const newResources = resourcesRes.data || [];
-    const newMeetings = meetingsRes.data || [];
-    const topics = topicsRes.data || [];
+    if (resErr) {
+      console.warn("wiki_weekly_resources query failed:", resErr.message);
+    }
+    const newResources = rawResources || [];
 
-    // Fetch notes only for NEW meetings
+    step = "fetch-meetings";
+    const { data: rawMeetings, error: meetErr } = await supabase
+      .from("meetings")
+      .select("id, title, summary, next_topic, scheduled_at")
+      .eq("group_id", groupId)
+      .gt("scheduled_at", lastSynthesisAt)
+      .order("scheduled_at");
+
+    if (meetErr) {
+      console.warn("meetings query failed:", meetErr.message);
+    }
+    const newMeetings = rawMeetings || [];
+
+    step = "fetch-topics";
+    const { data: rawTopics } = await supabase
+      .from("wiki_topics")
+      .select("id, name")
+      .eq("group_id", groupId);
+    const topics = rawTopics || [];
+
+    // Fetch notes for new meetings
+    step = "fetch-notes";
     const meetingIds = newMeetings.map(m => m.id);
     let newNotes: any[] = [];
     if (meetingIds.length > 0) {
-      const { data } = await supabase.from("meeting_notes")
+      const { data } = await supabase
+        .from("meeting_notes")
         .select("content, type, status")
         .in("meeting_id", meetingIds);
       newNotes = data || [];
     }
 
-    // Fetch existing wiki page TITLES only (not full content - saves tokens)
+    // Fetch existing wiki page TITLES
+    step = "fetch-page-titles";
     const topicIds = topics.map(t => t.id);
     let existingPageTitles: string[] = [];
     if (topicIds.length > 0) {
-      const { data } = await supabase.from("wiki_pages")
+      const { data } = await supabase
+        .from("wiki_pages")
         .select("title")
         .in("topic_id", topicIds);
       existingPageTitles = (data || []).map(p => p.title);
     }
 
-    // ── 2b. Fetch Drive-linked files since last synthesis ──
-    const driveQuery = supabase
-      .from("file_attachments")
-      .select("id, file_name, file_url, created_at")
-      .eq("target_type", "group")
-      .eq("target_id", groupId)
-      .eq("file_type", "drive-link");
-
-    if (lastSynthesisAt > new Date(0).toISOString()) {
-      driveQuery.gte("created_at", lastSynthesisAt);
-    }
-
-    const { data: driveFiles } = await driveQuery.order("created_at", { ascending: false }).limit(10);
-
-    // Try to extract content from Google Docs
+    // ── 2b. Fetch Drive-linked files ──
+    step = "fetch-drive-files";
     let driveDocContents: { name: string; content: string }[] = [];
-    if (driveFiles && driveFiles.length > 0) {
-      try {
-        const auth = await getGoogleClient(user.id);
-        const docs = google.docs({ version: "v1", auth });
+    try {
+      const driveQueryBuilder = supabase
+        .from("file_attachments")
+        .select("id, file_name, file_url, created_at")
+        .eq("target_type", "group")
+        .eq("target_id", groupId)
+        .eq("file_type", "drive-link");
 
-        for (const df of driveFiles) {
-          // Extract doc ID from Google Docs URL
-          const docIdMatch = df.file_url?.match(/\/document\/d\/([a-zA-Z0-9_-]+)/);
-          if (!docIdMatch) continue;
-
-          try {
-            const docRes = await docs.documents.get({ documentId: docIdMatch[1] });
-            const docContent = docRes.data.body?.content
-              ?.map((block: any) => {
-                if (block.paragraph) {
-                  return block.paragraph.elements
-                    ?.map((el: any) => el.textRun?.content || "")
-                    .join("");
-                }
-                return "";
-              })
-              .join("")
-              .trim();
-
-            if (docContent && docContent.length > 0) {
-              driveDocContents.push({
-                name: df.file_name || "Untitled",
-                content: docContent.substring(0, 3000), // Limit per doc
-              });
-            }
-          } catch {
-            // Skip docs that can't be read (permission issues etc)
-          }
-        }
-      } catch {
-        // Google not connected — skip Drive content extraction
+      if (lastSynthesisAt > new Date(0).toISOString()) {
+        driveQueryBuilder.gte("created_at", lastSynthesisAt);
       }
+
+      const { data: driveFiles } = await driveQueryBuilder
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (driveFiles && driveFiles.length > 0) {
+        try {
+          const { getGoogleClient } = await import("@/lib/google/auth");
+          const { google } = await import("googleapis");
+          const auth = await getGoogleClient(user.id);
+          const docs = google.docs({ version: "v1", auth });
+
+          for (const df of driveFiles) {
+            const docIdMatch = df.file_url?.match(/\/document\/d\/([a-zA-Z0-9_-]+)/);
+            if (!docIdMatch) continue;
+            try {
+              const docRes = await docs.documents.get({ documentId: docIdMatch[1] });
+              const docContent = docRes.data.body?.content
+                ?.map((block: any) => {
+                  if (block.paragraph) {
+                    return block.paragraph.elements
+                      ?.map((el: any) => el.textRun?.content || "")
+                      .join("");
+                  }
+                  return "";
+                })
+                .join("")
+                .trim();
+              if (docContent && docContent.length > 0) {
+                driveDocContents.push({
+                  name: df.file_name || "Untitled",
+                  content: docContent.substring(0, 3000),
+                });
+              }
+            } catch {
+              // Skip individual docs that can't be read
+            }
+          }
+        } catch {
+          // Google not connected — skip Drive content extraction entirely
+        }
+      }
+    } catch (driveErr: any) {
+      console.warn("Drive file fetch failed:", driveErr.message);
+      // Non-critical, continue without Drive content
     }
 
     // If no new data, return early
@@ -216,29 +249,35 @@ export async function POST(request: NextRequest) {
         growthMetrics: { newConceptsIntroduced: 0, conceptsDeepened: 0, connectionsDiscovered: 0 },
         nextWeekSuggestions: [],
         compactionNote: "변경 없음",
-        _meta: { resourceCount: 0, meetingCount: 0, noteCount: 0, driveDocsProcessed: 0, isIncremental: true, lastSynthesisAt },
+        _meta: {
+          newResourceCount: 0,
+          meetingCount: 0,
+          noteCount: 0,
+          driveDocsProcessed: 0,
+          isIncremental: true,
+          lastSynthesisAt,
+        },
       });
     }
 
-    // ── 3. Build INCREMENTAL prompt ──
+    // ── 3. Build prompt ──
+    step = "build-prompt";
     let prompt = `## 증분 지식 통합\n\n`;
     prompt += `**마지막 통합**: ${new Date(lastSynthesisAt).toLocaleDateString("ko")}\n`;
     prompt += `**이번 분석 범위**: 그 이후 ~ 현재\n\n`;
 
-    // Previous synthesis summary (compressed context — NOT full data)
     if (prevOutput) {
       const prev = typeof prevOutput === "string" ? JSON.parse(prevOutput) : prevOutput;
-      prompt += `### 📌 이전까지의 지식 요약 (이미 정리됨, 재검토 불필요)\n`;
+      prompt += `### 이전까지의 지식 요약 (이미 정리됨, 재검토 불필요)\n`;
       prompt += `${prev.consolidatedSummary || prev.weeklyTheme || "첫 통합"}\n`;
       if (prev.compactionNote) prompt += `최근 변화: ${prev.compactionNote}\n`;
       prompt += "\n";
     } else {
-      prompt += `### 📌 첫 번째 통합입니다. 기초 지식 체계를 구축해주세요.\n\n`;
+      prompt += `### 첫 번째 통합입니다. 기초 지식 체계를 구축해주세요.\n\n`;
     }
 
-    // NEW resources only
     if (newResources.length > 0) {
-      prompt += `### 🆕 새로 공유된 리소스 (${newResources.length}건, 이번에 처음 분석)\n`;
+      prompt += `### 새로 공유된 리소스 (${newResources.length}건)\n`;
       newResources.forEach(r => {
         prompt += `- [${r.resource_type}] **${r.title}** — ${r.url}\n`;
         if (r.description) prompt += `  설명: ${r.description}\n`;
@@ -247,9 +286,8 @@ export async function POST(request: NextRequest) {
       prompt += "\n";
     }
 
-    // NEW meetings only
     if (newMeetings.length > 0) {
-      prompt += `### 🆕 새 미팅 (${newMeetings.length}건)\n`;
+      prompt += `### 새 미팅 (${newMeetings.length}건)\n`;
       newMeetings.forEach(m => {
         prompt += `- **${m.title}** (${new Date(m.scheduled_at).toLocaleDateString("ko")})\n`;
         if (m.summary) prompt += `  요약: ${m.summary}\n`;
@@ -258,34 +296,30 @@ export async function POST(request: NextRequest) {
       prompt += "\n";
     }
 
-    // NEW notes only
     if (newNotes.length > 0) {
       const decisions = newNotes.filter(n => n.type === "decision");
       const actions = newNotes.filter(n => n.type === "action_item");
       const memos = newNotes.filter(n => n.type === "note");
-
       if (decisions.length > 0) {
-        prompt += `### 🆕 새 결정 사항\n${decisions.map(d => `- ${d.content}`).join("\n")}\n\n`;
+        prompt += `### 새 결정 사항\n${decisions.map(d => `- ${d.content}`).join("\n")}\n\n`;
       }
       if (actions.length > 0) {
-        prompt += `### 🆕 새 액션 아이템\n${actions.map(a => `- ${a.status === "done" ? "✅" : "⬜"} ${a.content}`).join("\n")}\n\n`;
+        prompt += `### 새 액션 아이템\n${actions.map(a => `- ${a.status === "done" ? "✅" : "⬜"} ${a.content}`).join("\n")}\n\n`;
       }
       if (memos.length > 0) {
-        prompt += `### 🆕 새 미팅 메모\n${memos.slice(0, 15).map(n => `- ${n.content}`).join("\n")}\n\n`;
+        prompt += `### 새 미팅 메모\n${memos.slice(0, 15).map(n => `- ${n.content}`).join("\n")}\n\n`;
       }
     }
 
-    // NEW Drive document contents
     if (driveDocContents.length > 0) {
-      prompt += `### 🆕 Google Drive 문서 (${driveDocContents.length}개)\n`;
+      prompt += `### Google Drive 문서 (${driveDocContents.length}개)\n`;
       driveDocContents.forEach((d, i) => {
         prompt += `#### 문서 ${i + 1}: ${d.name}\n${d.content}\n\n`;
       });
     }
 
-    // Existing page titles (for cross-reference, no full content)
     if (existingPageTitles.length > 0) {
-      prompt += `### 기존 탭 페이지 목록 (제목만, 내용은 이미 정리됨)\n`;
+      prompt += `### 기존 탭 페이지 목록 (제목만)\n`;
       prompt += existingPageTitles.map(t => `- ${t}`).join("\n") + "\n\n";
     }
     if (topics.length > 0) {
@@ -296,6 +330,7 @@ export async function POST(request: NextRequest) {
     prompt += `이전에 정리된 내용을 반복하지 마세요. 새로운 지식만 추가하세요.`;
 
     // ── 4. Call Gemini ──
+    step = "call-gemini";
     const geminiBody = {
       contents: [{ parts: [{ text: SYSTEM_PROMPT }, { text: prompt }] }],
       generationConfig: {
@@ -316,7 +351,8 @@ export async function POST(request: NextRequest) {
           body: JSON.stringify(geminiBody),
         });
         if (response.ok) break;
-        lastError = `HTTP ${response.status}`;
+        const errBody = await response.text();
+        lastError = `HTTP ${response.status}: ${errBody.slice(0, 200)}`;
         if (response.status === 429 || response.status >= 500) {
           await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
           continue;
@@ -329,29 +365,49 @@ export async function POST(request: NextRequest) {
     }
 
     if (!response || !response.ok) {
-      return NextResponse.json({ error: `Gemini API 오류: ${lastError}` }, { status: 502 });
+      console.error("Gemini API failed:", lastError);
+      return NextResponse.json({ error: `AI 모델 호출 실패: ${lastError}` }, { status: 502 });
     }
 
+    // ── 5. Parse Gemini response ──
+    step = "parse-gemini";
     const data = await response.json();
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+    if (!text) {
+      const finishReason = data?.candidates?.[0]?.finishReason;
+      console.error("Gemini returned empty text, finishReason:", finishReason, "full response:", JSON.stringify(data).slice(0, 500));
+      return NextResponse.json({
+        error: `AI가 빈 응답을 반환했습니다. (reason: ${finishReason || "unknown"})`,
+      }, { status: 502 });
+    }
 
     let result;
     try {
       result = JSON.parse(text);
     } catch {
+      // Try extracting JSON from markdown code blocks
       const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (jsonMatch) result = JSON.parse(jsonMatch[1].trim());
-      else {
+      if (jsonMatch) {
+        result = JSON.parse(jsonMatch[1].trim());
+      } else {
         const braceMatch = text.match(/\{[\s\S]*\}/);
-        if (braceMatch) result = JSON.parse(braceMatch[0]);
-        else throw new Error("AI 응답에서 JSON을 파싱할 수 없습니다");
+        if (braceMatch) {
+          result = JSON.parse(braceMatch[0]);
+        } else {
+          console.error("Failed to parse Gemini JSON:", text.slice(0, 500));
+          return NextResponse.json({ error: "AI 응답에서 JSON을 파싱할 수 없습니다" }, { status: 502 });
+        }
       }
     }
 
-    // ── 5. Save synthesis log (marks boundary for next incremental run) ──
-    const weekStartDate = new Date(lastSynthesisAt > new Date(0).toISOString() ? lastSynthesisAt : now).toISOString().split("T")[0];
+    // ── 6. Save synthesis log ──
+    step = "save-log";
+    const weekStartDate = new Date(
+      lastSynthesisAt > new Date(0).toISOString() ? lastSynthesisAt : now,
+    ).toISOString().split("T")[0];
 
-    await supabase.from("wiki_synthesis_logs").insert({
+    const { error: logError } = await supabase.from("wiki_synthesis_logs").insert({
       group_id: groupId,
       week_start: weekStartDate,
       week_end: now.split("T")[0],
@@ -363,11 +419,16 @@ export async function POST(request: NextRequest) {
         driveDocsProcessed: driveDocContents.length,
         existingPageCount: existingPageTitles.length,
         lastSynthesisAt,
-        isIncremental: !!prevSynthesis,
+        isIncremental: !!prevOutput,
       },
       output_data: result,
       created_by: user.id,
     });
+
+    if (logError) {
+      // Non-critical: log failed but synthesis result is still valid
+      console.warn("Failed to save synthesis log:", logError.message);
+    }
 
     return NextResponse.json({
       ...result,
@@ -377,12 +438,15 @@ export async function POST(request: NextRequest) {
         newNoteCount: newNotes.length,
         driveDocsProcessed: driveDocContents.length,
         existingPageCount: existingPageTitles.length,
-        isIncremental: !!prevSynthesis,
+        isIncremental: !!prevOutput,
         lastSynthesisAt,
       },
     });
   } catch (error: any) {
-    console.error("Wiki synthesis error:", error);
-    return NextResponse.json({ error: error.message || "통합 중 오류 발생" }, { status: 500 });
+    console.error(`Wiki synthesis error at step [${step}]:`, error);
+    return NextResponse.json(
+      { error: `통합 중 오류 발생 (${step}): ${error.message || "알 수 없는 오류"}` },
+      { status: 500 },
+    );
   }
 }

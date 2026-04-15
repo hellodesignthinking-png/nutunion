@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
   if (!resourceId) return NextResponse.json({ error: "resourceId 필요" }, { status: 400 });
 
   let resource: any = null;
+  let resourceSource: "weekly" | "file_attachment" = "weekly";
   try {
     const { data } = await supabase
       .from("wiki_weekly_resources")
@@ -36,7 +37,30 @@ export async function POST(request: NextRequest) {
     // Table may not exist if migration 028 not run
   }
 
-  if (!resource) return NextResponse.json({ error: "리소스를 찾을 수 없습니��" }, { status: 404 });
+  // Fallback: check file_attachments if not found in wiki_weekly_resources
+  if (!resource) {
+    try {
+      const { data: faData } = await supabase
+        .from("file_attachments")
+        .select("id, file_name, file_url, file_type")
+        .eq("id", resourceId)
+        .single();
+      if (faData) {
+        resource = {
+          id: faData.id,
+          title: faData.file_name,
+          url: faData.file_url,
+          resource_type: faData.file_type || "other",
+          description: null,
+        };
+        resourceSource = "file_attachment";
+      }
+    } catch {
+      // Table may not exist
+    }
+  }
+
+  if (!resource) return NextResponse.json({ error: "리소스를 찾을 수 없습니다" }, { status: 404 });
 
   // Already has summary
   if (resource.description && resource.description.length > 100) {
@@ -70,10 +94,13 @@ ${resource.description ? `설명: ${resource.description}` : ""}
     const summary = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
 
     if (summary) {
-      await supabase
-        .from("wiki_weekly_resources")
-        .update({ auto_summary: summary })
-        .eq("id", resourceId);
+      if (resourceSource === "weekly") {
+        await supabase
+          .from("wiki_weekly_resources")
+          .update({ auto_summary: summary })
+          .eq("id", resourceId);
+      }
+      // file_attachments doesn't have auto_summary column — skip persistence
     }
 
     return NextResponse.json({ summary });

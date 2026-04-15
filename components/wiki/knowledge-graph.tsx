@@ -66,9 +66,17 @@ export function KnowledgeGraph({ groupId }: { groupId: string }) {
         .select("id, title, topic_id")
         .in("topic_id", topicIds);
 
-      const { data: links } = await supabase
-        .from("wiki_page_links")
-        .select("source_page_id, target_page_id, link_type");
+      const pageIds = (pages || []).map(p => p.id);
+
+      // Only fetch links where source belongs to this group's pages
+      let links: any[] = [];
+      if (pageIds.length > 0) {
+        const { data } = await supabase
+          .from("wiki_page_links")
+          .select("source_page_id, target_page_id, link_type")
+          .in("source_page_id", pageIds);
+        links = (data || []).filter(l => pageIds.includes(l.target_page_id));
+      }
 
       // Count pages per topic
       const pageCountByTopic: Record<string, number> = {};
@@ -160,9 +168,11 @@ export function KnowledgeGraph({ groupId }: { groupId: string }) {
       }
     }
 
+    // Build node lookup map for O(1) edge resolution
+    const nodeMap = new Map(ns.map(n => [n.id, n]));
     edges.forEach(e => {
-      const s = ns.find(n => n.id === e.source);
-      const t = ns.find(n => n.id === e.target);
+      const s = nodeMap.get(e.source);
+      const t = nodeMap.get(e.target);
       if (!s || !t) return;
       const dx = t.x - s.x;
       const dy = t.y - s.y;

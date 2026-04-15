@@ -82,6 +82,12 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "로그인 필요" }, { status: 401 });
     }
+    // Only host can generate weekly digest
+    const { data: groupRow } = await supabase.from("groups").select("host_id").eq("id", groupId).single();
+    if (!groupRow || groupRow.host_id !== user.id) {
+      return NextResponse.json({ error: "호스트만 주간 다이제스트를 생성할 수 있습니다" }, { status: 403 });
+    }
+
     const { success } = rateLimit(`ai:${user.id}`, 20, 60_000);
     if (!success) {
       return NextResponse.json({ error: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." }, { status: 429 });
@@ -167,9 +173,10 @@ export async function POST(request: NextRequest) {
 
     let userPrompt = `## 주간 데이터 (${new Date(startISO).toLocaleDateString("ko")} ~ ${new Date(endISO).toLocaleDateString("ko")})\n\n`;
 
-    // Previous digest context (knowledge chain)
-    if (previousDigest) {
-      userPrompt += `### 📌 이전 주간 다이제스트 (이어서 작성)\n${previousDigest}\n\n`;
+    // Previous digest context (knowledge chain) — sanitize to prevent prompt injection
+    if (previousDigest && typeof previousDigest === "string") {
+      const sanitized = previousDigest.slice(0, 5000).replace(/```/g, "");
+      userPrompt += `### 📌 이전 주간 다이제스트 (이어서 작성)\n${sanitized}\n\n`;
     }
 
     // Meetings

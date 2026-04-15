@@ -28,7 +28,7 @@ interface WeeklyDigestData {
   dailyActivity: { day: string; edits: number; views: number }[];
 }
 
-export function WeeklyInsightNewsletter({ groupId }: { groupId: string }) {
+export function WeeklyInsightNewsletter({ groupId, isHost = false }: { groupId: string; isHost?: boolean }) {
   const [digest, setDigest] = useState<WeeklyDigestData | null>(null);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -287,14 +287,20 @@ export function WeeklyInsightNewsletter({ groupId }: { groupId: string }) {
         <p className="font-mono-nu text-[9px] text-nu-pink uppercase tracking-widest mb-8">
           Real Data Analysis · No Mock
         </p>
-        <button
-          onClick={generateDigest}
-          disabled={generating}
-          className="bg-nu-ink text-white px-10 py-4 font-mono-nu text-xs font-bold uppercase tracking-widest hover:bg-nu-pink transition-all shadow-[4px_4px_0px_rgba(233,30,99,0.3)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] flex items-center gap-3 mx-auto disabled:opacity-50"
-        >
-          {generating ? <Loader2 size={16} className="animate-spin" /> : <Brain size={16} />}
-          이번 주 다이제스트 생성
-        </button>
+        {isHost ? (
+          <button
+            onClick={generateDigest}
+            disabled={generating}
+            className="bg-nu-ink text-white px-10 py-4 font-mono-nu text-xs font-bold uppercase tracking-widest hover:bg-nu-pink transition-all shadow-[4px_4px_0px_rgba(233,30,99,0.3)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] flex items-center gap-3 mx-auto disabled:opacity-50"
+          >
+            {generating ? <Loader2 size={16} className="animate-spin" /> : <Brain size={16} />}
+            이번 주 다이제스트 생성
+          </button>
+        ) : (
+          <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
+            호스트만 다이제스트를 생성할 수 있습니다
+          </p>
+        )}
       </div>
     );
   }
@@ -312,15 +318,17 @@ export function WeeklyInsightNewsletter({ groupId }: { groupId: string }) {
               {digest.weekStart} → {digest.weekEnd}
             </h3>
           </div>
-          <button
-            onClick={generateDigest}
-            disabled={generating}
-            className="p-2 bg-white/10 border border-white/20 hover:bg-white/20 transition-colors disabled:opacity-50"
-            title="다이제스트 재생성"
-          >
-            {generating ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-          </button>
-          {!published ? (
+          {isHost && (
+            <button
+              onClick={generateDigest}
+              disabled={generating}
+              className="p-2 bg-white/10 border border-white/20 hover:bg-white/20 transition-colors disabled:opacity-50"
+              title="다이제스트 재생성"
+            >
+              {generating ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+            </button>
+          )}
+          {isHost && (!published ? (
             <button
               onClick={handlePublish}
               disabled={publishing}
@@ -333,7 +341,7 @@ export function WeeklyInsightNewsletter({ groupId }: { groupId: string }) {
             <span className="px-4 py-2 bg-green-500/20 border border-green-400/30 font-mono-nu text-[9px] font-bold uppercase tracking-widest text-green-300 flex items-center gap-1.5">
               ✓ Published
             </span>
-          )}
+          ))}
         </div>
 
         {/* KPI Cards */}
