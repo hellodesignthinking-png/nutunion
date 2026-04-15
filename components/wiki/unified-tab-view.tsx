@@ -36,7 +36,17 @@ interface MeetingLog {
   linkedSections: string[];
 }
 
-export function UnifiedTabView({ groupId, groupName }: { groupId: string; groupName: string }) {
+export function UnifiedTabView({
+  groupId,
+  groupName,
+  isHost = false,
+  groupId2,
+}: {
+  groupId: string;
+  groupName: string;
+  isHost?: boolean;
+  groupId2?: string;
+}) {
   const [sections, setSections] = useState<Section[]>([]);
   const [meetings, setMeetings] = useState<MeetingLog[]>([]);
   const [loading, setLoading] = useState(true);
