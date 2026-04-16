@@ -14,7 +14,9 @@ import {
 import DOMPurify from "isomorphic-dompurify";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 // ── Types ─────────────────────────────────────────────────────
 interface Section {
   topicId: string;
@@ -784,13 +786,17 @@ export function UnifiedTabView({
                                             prose-img:rounded-sm prose-img:border prose-img:border-nu-ink/10 prose-img:w-full
                                             prose-blockquote:border-l-4 prose-blockquote:border-purple-300 prose-blockquote:bg-purple-50 prose-blockquote:p-4 prose-blockquote:italic
                                             prose-li:marker:text-nu-pink"
-                                  dangerouslySetInnerHTML={{ 
-                                    __html: DOMPurify.sanitize(applyBacklinks(combinedHtml), { 
+                                >
+                                  <ReactMarkdown 
+                                    remarkPlugins={[remarkGfm]} 
+                                    rehypePlugins={[rehypeRaw]}
+                                  >
+                                    {DOMPurify.sanitize(applyBacklinks(combinedHtml), { 
                                       ADD_TAGS: ['iframe', 'video', 'source'], 
                                       ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'target', 'class', 'style', 'controls'] 
-                                    }) 
-                                  }}
-                                />
+                                    })}
+                                  </ReactMarkdown>
+                                </div>
 
                                 {/* Document Meta Footer */}
                                 <div className="mt-8 pt-4 border-t-[2px] border-nu-ink/5 flex items-center justify-between gap-3 flex-wrap bg-nu-paper/30 -mx-5 -mb-5 px-5 py-3">
