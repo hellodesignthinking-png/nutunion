@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy } from "lucide-react";
 import { toast } from "sonner";
