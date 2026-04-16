@@ -134,6 +134,7 @@ function OpenLogoArtwork({ variant, size }: { variant: LogoVariant; size: number
   const { bg, panel, ink, accent: a1, accentTwo: a2, soft } = palette;
   const sl = label.split(" ")[0] || "NU";
   const N = sl[0] || "N";
+  const uId = `grad-${seed}`;
 
   let bgLayer: React.ReactNode = null;
   let fgLayer: React.ReactNode = null;
@@ -141,54 +142,61 @@ function OpenLogoArtwork({ variant, size }: { variant: LogoVariant; size: number
 
   // 1. DYNAMIC BACKGROUND (12 variants)
   const bgType = ri(0, 11);
-  if (bgType === 0) bgLayer = <rect x="0" y="0" width="100" height="100" fill={bg} />;
-  else if (bgType === 1) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/><polygon points={`0,0 100,0 ${rx(50, 100)},100 0,${rx(50, 100)}`} fill={soft}/></>;
-  else if (bgType === 2) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/>{Array.from({length: ri(5, 12)}, (_,i)=><rect key={i} x="0" y={i*(100/ri(5,12))} width="100" height={rx(1, 8)} fill={soft} opacity="0.7"/>)}</>;
-  else if (bgType === 3) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/>{Array.from({length: ri(4, 9)}, (_,i)=><circle key={i} cx="50" cy="50" r={10+i*rx(8,15)} fill="none" stroke={soft} strokeWidth={rx(1, 4)} opacity="0.8"/>)}</>;
-  else if (bgType === 4) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/><circle cx="50" cy="50" r={rx(35, 48)} fill={panel}/></>;
-  else if (bgType === 5) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/>{Array.from({length: 6}, (_,i)=><line key={i} x1={10+i*16} y1="0" x2={10+i*16} y2="100" stroke={soft} strokeWidth={rx(4, 12)} />)}</>;
-  else if (bgType === 6) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/>{Array.from({length: 5}, (_,i)=><path key={i} d={`M0 ${20+i*15} Q ${rx(30, 70)} ${rx(-20, 120)} 100 ${20+i*15}`} fill="none" stroke={soft} strokeWidth={rx(2, 6)}/>)}</>;
-  else if (bgType === 7) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/><rect x={rx(5,15)} y={rx(5,15)} width={rx(70,90)} height={rx(70,90)} fill={panel} stroke={soft} strokeWidth="3" strokeDasharray={`${rx(2,10)} ${rx(2,10)}`}/></>;
-  else if (bgType === 8) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/><polygon points="0,50 50,0 100,50 50,100" fill={soft} opacity="0.6"/></>;
-  else if (bgType === 9) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/>{Array.from({length: ri(20,50)}, (_,i)=><circle key={i} cx={rx(0,100)} cy={rx(0,100)} r={rx(0.5, 2.5)} fill={ink} opacity="0.2"/>)}</>;
-  else if (bgType === 10) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/><circle cx={rx(20,80)} cy={rx(20,80)} r={rx(30,80)} fill={a1} opacity="0.15"/><circle cx={rx(20,80)} cy={rx(20,80)} r={rx(30,80)} fill={a2} opacity="0.15"/></>;
-  else bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/><path d={`M 0 0 L ${rx(40,60)} 100 L 100 0 Z`} fill={soft} opacity="0.7"/></>;
+  if (bgType === 0) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/><circle cx="50" cy="50" r="48" fill="none" stroke={soft} strokeWidth="0.5"/><line x1="50" y1="0" x2="50" y2="100" stroke={soft} strokeWidth="0.5"/><line x1="0" y1="50" x2="100" y2="50" stroke={soft} strokeWidth="0.5"/></>;
+  else if (bgType === 1) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={`url(#${uId}-bg)`}/><linearGradient id={`${uId}-bg`} x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor={bg}/><stop offset="100%" stopColor={soft}/></linearGradient></>;
+  else if (bgType === 2) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/>{Array.from({length: 20}, (_,i)=><line key={i} x1="0" y1={i*5} x2="100" y2={i*5} stroke={soft} strokeWidth={rx(0.2, 1.5)} opacity="0.6"/>)}</>;
+  else if (bgType === 3) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/>{Array.from({length: 10}, (_,i)=><circle key={i} cx="50" cy="50" r={i*7} fill="none" stroke={soft} strokeWidth={rx(0.5, 2)} strokeDasharray={`${rx(2,10)} ${rx(2,10)}`} opacity="0.7"/>)}</>;
+  else if (bgType === 4) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/><path d={`M 0 0 L 100 0 L 100 ${rx(30,70)} Q 50 ${rx(80,120)} 0 ${rx(30,70)} Z`} fill={soft} opacity="0.5"/></>;
+  else if (bgType === 5) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/>{Array.from({length: 10}, (_,i)=><rect key={i} x={i*10} y="0" width="5" height="100" fill={soft} opacity="0.3"/>)}</>;
+  else if (bgType === 6) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/><circle cx={rx(20,80)} cy={rx(20,80)} r={rx(30,60)} fill={`url(#${uId}-rad)`}/><radialGradient id={`${uId}-rad`}><stop offset="0%" stopColor={a1} stopOpacity="0.15"/><stop offset="100%" stopColor={bg} stopOpacity="0"/></radialGradient></>;
+  else if (bgType === 7) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/>{Array.from({length: 6}, (_,i)=><path key={i} d={`M 0 ${10+i*15} C 30 ${rx(0,50)}, 70 ${rx(50,100)}, 100 ${10+i*15}`} fill="none" stroke={soft} strokeWidth="1.5" opacity="0.8"/>)}</>;
+  else if (bgType === 8) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/><polygon points={`0,0 ${rx(40,60)},0 100,100 0,100`} fill={soft} opacity="0.4"/></>;
+  else if (bgType === 9) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/><rect x="10" y="10" width="80" height="80" fill="none" stroke={panel} strokeWidth="4"/><rect x="14" y="14" width="72" height="72" fill="none" stroke={soft} strokeWidth="1"/></>;
+  else if (bgType === 10) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/>{Array.from({length: 25}, (_,i)=><circle key={i} cx={rx(0,100)} cy={rx(0,100)} r={rx(1,3)} fill={a1} opacity="0.2"/>)}</>;
+  else bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/><polygon points="50,0 100,50 50,100 0,50" fill={soft} opacity="0.5"/></>;
 
   // 2. DYNAMIC FOREGROUND GRAPHIC (12 variants)
   const fgType = ri(0, 11);
-  if (fgType === 0) fgLayer = <circle cx="50" cy="50" r={rx(20, 38)} fill={a1} opacity="0.95"/>;
-  else if (fgType === 1) fgLayer = <rect x={rx(20,35)} y={rx(20,35)} width={rx(30,50)} height={rx(30,50)} fill={a2} transform={`rotate(${rx(0,90)} 50 50)`} opacity="0.95"/>;
-  else if (fgType === 2) fgLayer = <><circle cx={rx(35,45)} cy="50" r={rx(15,28)} fill={a1}/><circle cx={rx(55,65)} cy="50" r={rx(15,28)} fill={a2} opacity="0.85"/></>;
-  else if (fgType === 3) fgLayer = <polygon points={`50,${rx(5,25)} ${rx(75,95)},${rx(75,95)} ${rx(5,25)},${rx(75,95)}`} fill={a1} opacity="0.95"/>;
-  else if (fgType === 4) fgLayer = <><rect x={rx(20,35)} y={rx(15,25)} width={rx(8,16)} height={rx(50,70)} fill={a1}/><rect x={rx(55,70)} y={rx(15,25)} width={rx(8,16)} height={rx(50,70)} fill={a2}/><rect x="30" y={rx(40,60)} width="40" height={rx(8,16)} fill={ink}/></>;
-  else if (fgType === 5) fgLayer = <>{Array.from({length: ri(4, 9)}, (_,i)=><circle key={i} cx={rx(20,80)} cy={rx(20,80)} r={rx(4,18)} fill={i%2===0?a1: (i%3===0?ink:a2)} opacity="0.9"/>)}</>;
-  else if (fgType === 6) fgLayer = <path d={`M ${rx(10,30)} ${rx(30,70)} Q 50 ${rx(-10,30)} ${rx(70,90)} ${rx(30,70)} Q 50 ${rx(70,110)} ${rx(10,30)} ${rx(30,70)}Z`} fill={rng()>0.5?a1:a2} opacity="0.95"/>;
-  else if (fgType === 7) fgLayer = <text x="50" y={rx(65,85)} textAnchor="middle" fontSize={rx(45,80)} fontWeight="900" fontFamily={fontStack} fill={a1} opacity="0.25">{N}</text>;
-  else if (fgType === 8) fgLayer = <><ellipse cx="50" cy="50" rx={rx(25,45)} ry={rx(8,25)} fill={a2} transform={`rotate(${rx(0,180)} 50 50)`}/><circle cx="50" cy="50" r={rx(6,15)} fill={ink}/></>;
-  else if (fgType === 9) fgLayer = <><rect x="0" y={rx(30,50)} width="100" height={rx(10,25)} fill={ink} opacity="0.9"/><rect x={rx(20,60)} y="0" width={rx(10,25)} height="100" fill={a1} opacity="0.9"/></>;
-  else if (fgType === 10) fgLayer = <polygon points={`0,0 ${rx(30,70)},0 ${rx(70,100)},100 0,100`} fill={rng()>0.5?a1:ink} opacity={rx(0.4, 0.8)}/>;
-  else fgLayer = <polyline points={`15,${rx(20,80)} 35,${rx(20,80)} 65,${rx(20,80)} 85,${rx(20,80)}`} fill="none" stroke={a2} strokeWidth={rx(4, 12)} strokeLinejoin="round"/>;
+  if (fgType === 0) fgLayer = <><circle cx="50" cy="50" r={rx(25, 38)} fill={a1} style={{mixBlendMode: "multiply"}} opacity="0.9"/><circle cx={rx(40,60)} cy={rx(40,60)} r={rx(15, 25)} fill={a2} style={{mixBlendMode: "multiply"}} opacity="0.9"/></>;
+  else if (fgType === 1) fgLayer = <><rect x={rx(20,40)} y="20" width={rx(20,40)} height="60" fill={a1}/><rect x={rx(40,60)} y="20" width={rx(20,40)} height="60" fill={a2} opacity="0.85"/><line x1="10" y1="50" x2="90" y2="50" stroke={ink} strokeWidth="2"/></>;
+  else if (fgType === 2) fgLayer = <polygon points={`50,${rx(10,20)} ${rx(70,90)},${rx(80,90)} ${rx(10,30)},${rx(80,90)}`} fill={a1} stroke={a2} strokeWidth="4" strokeLinejoin="round"/>;
+  else if (fgType === 3) fgLayer = <><path d={`M 20 50 Q 50 ${rx(-20,20)} 80 50 T 80 90`} fill="none" stroke={a1} strokeWidth={rx(6,12)} strokeLinecap="round"/><circle cx="80" cy="50" r="5" fill={ink}/></>;
+  else if (fgType === 4) fgLayer = <div style={{mixBlendMode:"hard-light"}}><rect x="25" y="25" width="50" height="50" fill={a1} rx={rx(0,25)} transform={`rotate(${rx(0,45)} 50 50)`}/><rect x="35" y="35" width="30" height="30" fill={a2} rx={rx(0,15)} transform={`rotate(${rx(0,-45)} 50 50)`}/></div>;
+  else if (fgType === 5) fgLayer = <>{Array.from({length: 5}, (_,i)=><circle key={i} cx={50+Math.cos(i*1.25)*rx(10,25)} cy={50+Math.sin(i*1.25)*rx(10,25)} r={rx(8,16)} fill={i%2===0?a1:a2} opacity="0.8"/>)}</>;
+  else if (fgType === 6) fgLayer = <><path d="M 50 15 L 85 85 L 15 85 Z" fill="none" stroke={a1} strokeWidth="5"/><path d="M 50 25 L 75 75 L 25 75 Z" fill={a2}/><circle cx="50" cy="58" r="8" fill={panel}/></>;
+  else if (fgType === 7) fgLayer = <><text x="50" y={rx(65,85)} textAnchor="middle" fontSize={rx(50,80)} fontWeight="900" fontFamily={fontStack} fill={ink} opacity="0.15" letterSpacing="-4">{label.substring(0,3)}</text><rect x="0" y="45" width="100" height="10" fill={a1}/></>;
+  else if (fgType === 8) fgLayer = <><circle cx="50" cy="50" r={rx(30,40)} fill={bg} stroke={a1} strokeWidth="4" strokeDasharray="12 6"/><circle cx="50" cy="50" r={rx(20,26)} fill={a2}/><path d="M 50 30 L 50 70 M 30 50 L 70 50" stroke={panel} strokeWidth="2"/></>;
+  else if (fgType === 9) fgLayer = <><rect x="0" y={rx(30,50)} width="100" height={rx(15,30)} fill={a1}/><rect x={rx(20,60)} y="0" width={rx(15,30)} height="100" fill={a2} style={{mixBlendMode:"multiply"}} opacity="0.9"/></>;
+  else if (fgType === 10) fgLayer = <><polygon points="20,20 80,20 50,80" fill={a1}/><polygon points="20,80 80,80 50,20" fill={a2} opacity="0.8" style={{mixBlendMode:"overlay"}}/></>;
+  else fgLayer = <path d={`M 15 ${rx(30,70)} C ${rx(20,40)} ${rx(0,40)}, ${rx(60,80)} ${rx(60,100)}, 85 ${rx(30,70)}`} fill="none" stroke={a1} strokeWidth={rx(8,16)} strokeLinecap="round"/>;
 
   // 3. DYNAMIC TYPOGRAPHY (12 variants)
   const tyType = ri(0, 11);
-  if (tyType === 0) txtLayer = <><text x="50" y="47" textAnchor="middle" fontSize="13" fontWeight="900" fontFamily={fontStack} fill={ink}>{sl}</text><rect x="35" y="55" width="30" height="2" fill={a1}/><text x="50" y="65" textAnchor="middle" fontSize="6.5" fontFamily={fontStack} fill={ink} letterSpacing="2">UNION</text></>;
-  else if (tyType === 1) txtLayer = <><text x="8" y="24" fontSize="18" fontWeight="900" fontFamily={fontStack} fill={ink}>{sl}</text><text x="8" y="36" fontSize="6" fontFamily={fontStack} fill={ink} opacity="0.8">{energy}</text></>;
-  else if (tyType === 2) txtLayer = <><rect x="0" y="76" width="100" height="24" fill={ink}/><text x="50" y="91" textAnchor="middle" fontSize="10" fontWeight="900" fontFamily={fontStack} fill={panel}>{sl} UNION</text></>;
-  else if (tyType === 3) txtLayer = <><text x="90" y="50" textAnchor="middle" fontSize="14" fontWeight="900" fontFamily={fontStack} fill={ink} transform="rotate(-90 90 50)">{sl}</text><text x="10" y="90" fontSize="7" fontFamily={fontStack} fill={ink}>{subtitle}</text></>;
-  else if (tyType === 4) txtLayer = <><text x="8" y="16" fontSize="10" fontWeight="900" fontFamily={fontStack} fill={ink}>{sl}</text><text x="92" y="92" textAnchor="end" fontSize="10" fontWeight="900" fontFamily={fontStack} fill={ink}>UNION</text></>;
-  else if (tyType === 5) txtLayer = <><rect x="12" y="38" width="76" height="24" fill={panel} stroke={ink} strokeWidth="2.5"/><text x="50" y="54" textAnchor="middle" fontSize="12" fontWeight="900" fontFamily={fontStack} fill={ink}>{sl}</text></>;
-  else if (tyType === 6) txtLayer = <><text x="50" y="18" textAnchor="middle" fontSize="10" fontWeight="900" fontFamily={fontStack} fill={ink} letterSpacing="4">{sl}</text><text x="50" y="92" textAnchor="middle" fontSize="6" fontFamily={fontStack} fill={ink} letterSpacing="1">{energy}</text></>;
-  else if (tyType === 7) txtLayer = <><text x="50" y="56" textAnchor="middle" fontSize="28" fontWeight="900" fontFamily={fontStack} fill={ink}>{N}</text><text x="50" y="70" textAnchor="middle" fontSize="6" fontFamily={fontStack} fill={ink} opacity="0.9" letterSpacing="1.5">{label}</text></>;
-  else if (tyType === 8) txtLayer = <><circle cx="50" cy="50" r="32" fill="none" stroke={ink} strokeWidth="2.5" strokeDasharray="5 5"/><text x="50" y="48" textAnchor="middle" fontSize="11" fontWeight="900" fontFamily={fontStack} fill={ink}>{sl}</text><text x="50" y="60" textAnchor="middle" fontSize="7" fontFamily={fontStack} fill={a1}>UNION</text></>;
-  else if (tyType === 9) txtLayer = <><rect x="0" y="80" width="100" height="20" fill={a1}/><text x="50" y="93" textAnchor="middle" fontSize="9" fontWeight="900" fontFamily={fontStack} fill={panel}>{label}</text><text x="8" y="14" fontSize="6" fontFamily={fontStack} fill={ink}>{energy}</text></>;
-  else if (tyType === 10) txtLayer = <><text x="10" y="55" fontSize="20" fontWeight="900" fontFamily={fontStack} fill={panel} stroke={ink} strokeWidth="1.5">{sl}</text><rect x="10" y="62" width="40" height="4" fill={a2}/></>;
-  else txtLayer = <><rect x="6" y="84" width="24" height="10" fill={a1}/><text x="34" y="92" fontSize="7.5" fontWeight="900" fontFamily={fontStack} fill={ink}>{label}</text></>;
+  if (tyType === 0) txtLayer = <><text x="50" y="52" textAnchor="middle" fontSize="16" fontWeight="900" fontFamily={fontStack} fill={ink} letterSpacing="-0.5">{sl}</text><rect x="40" y="58" width="20" height="2" fill={ink}/><text x="50" y="68" textAnchor="middle" fontSize="6" fontFamily={fontStack} fill={ink} letterSpacing="3">UNION</text></>;
+  else if (tyType === 1) txtLayer = <><text x="10" y="24" fontSize="18" fontWeight="900" fontFamily={fontStack} fill={ink}>{sl}</text><text x="10" y="34" fontSize="6" fontFamily={fontStack} fill={ink} opacity="0.8">{energy}</text><line x1="10" y1="38" x2="40" y2="38" stroke={ink} strokeWidth="1"/></>;
+  else if (tyType === 2) txtLayer = <><rect x="0" y="72" width="100" height="28" fill={ink}/><text x="50" y="86" textAnchor="middle" fontSize="11" fontWeight="900" fontFamily={fontStack} fill={panel}>{label}</text><text x="50" y="94" textAnchor="middle" fontSize="5" fontFamily={fontStack} fill={a1} letterSpacing="2">{subtitle.toUpperCase()}</text></>;
+  else if (tyType === 3) txtLayer = <><text x="90" y="50" textAnchor="middle" fontSize="14" fontWeight="900" fontFamily={fontStack} fill={ink} transform="rotate(-90 90 50)" letterSpacing="1">{sl}</text><circle cx="90" cy="15" r="3" fill={a1}/></>;
+  else if (tyType === 4) txtLayer = <><text x="8" y="16" fontSize="11" fontWeight="900" fontFamily={fontStack} fill={ink}>{sl}</text><text x="92" y="92" textAnchor="end" fontSize="11" fontWeight="900" fontFamily={fontStack} fill={ink}>UNION</text><path d="M 10 20 L 90 85" stroke={ink} strokeWidth="0.5" strokeDasharray="3 3"/></>;
+  else if (tyType === 5) txtLayer = <><rect x="10" y="36" width="80" height="28" fill={panel} stroke={ink} strokeWidth="2"/><text x="50" y="52" textAnchor="middle" fontSize="13" fontWeight="900" fontFamily={fontStack} fill={ink}>{label}</text><circle cx="15" cy="50" r="2" fill={a1}/><circle cx="85" cy="50" r="2" fill={a1}/></>;
+  else if (tyType === 6) txtLayer = <><path id={`${uId}-arc`} d="M 20 60 A 30 30 0 0 1 80 60" fill="none"/><text fontSize="8" fontWeight="bold" fontFamily={fontStack} fill={ink}><textPath href={`#${uId}-arc`} startOffset="50%" textAnchor="middle">{label}</textPath></text><text x="50" y="65" textAnchor="middle" fontSize="6" fontFamily={fontStack} fill={a1}>{energy}</text></>;
+  else if (tyType === 7) txtLayer = <><text x="50" y="56" textAnchor="middle" fontSize="32" fontWeight="900" fontFamily={fontStack} fill={ink} letterSpacing="-2">{N}</text><text x="50" y="72" textAnchor="middle" fontSize="6" fontFamily={fontStack} fill={ink} opacity="0.9" letterSpacing="1.5">{subtitle}</text></>;
+  else if (tyType === 8) txtLayer = <><circle cx="50" cy="50" r="32" fill="none" stroke={ink} strokeWidth="1.5"/><circle cx="50" cy="50" r="36" fill="none" stroke={ink} strokeWidth="0.5" strokeDasharray="2 4"/><text x="50" y="48" textAnchor="middle" fontSize="12" fontWeight="900" fontFamily={fontStack} fill={ink}>{sl}</text><text x="50" y="60" textAnchor="middle" fontSize="7" fontFamily={fontStack} fill={a1}>UNION</text></>;
+  else if (tyType === 9) txtLayer = <><rect x="8" y="8" width="84" height="20" fill={a1}/><text x="50" y="22" textAnchor="middle" fontSize="10" fontWeight="900" fontFamily={fontStack} fill={panel}>{label}</text><text x="12" y="90" fontSize="6" fontFamily={fontStack} fill={ink}>{energy}</text></>;
+  else if (tyType === 10) txtLayer = <><text x="12" y="52" fontSize="22" fontWeight="900" fontFamily={fontStack} fill={panel} stroke={ink} strokeWidth="2" paintOrder="stroke">{sl}</text><rect x="12" y="58" width="45" height="5" fill={a2}/></>;
+  else txtLayer = <><rect x="6" y="80" width="28" height="12" fill={a1}/><text x="38" y="90" fontSize="8" fontWeight="900" fontFamily={fontStack} fill={ink}>{label}</text><line x1="6" y1="96" x2="34" y2="96" stroke={ink} strokeWidth="1"/></>;
 
   return (
-    <svg viewBox="0 0 100 100" width={size} height={size} role="img" aria-label={label}>
-      {bgLayer}
-      {fgLayer}
-      {txtLayer}
+    <svg viewBox="0 0 100 100" width={size} height={size} role="img" aria-label={label} className="overflow-hidden">
+      <defs>
+        <clipPath id={`${uId}-clip`}>
+          <rect x="0" y="0" width="100" height="100" rx={rx(0, 8)} />
+        </clipPath>
+      </defs>
+      <g clipPath={`url(#${uId}-clip)`}>
+        {bgLayer}
+        {fgLayer}
+        {txtLayer}
+      </g>
     </svg>
   );
 }
