@@ -755,56 +755,55 @@ export function UnifiedTabView({
                     {section.pages.length > 0 ? (
                       <div className="space-y-5 pl-12">
                         {(() => {
-                          // Merge all pages into one body for excerpt + bullet points
                           const combinedHtml = section.pages.map(p => p.content).join("\n\n");
-                          const excerpt = extractExcerpt(combinedHtml, 300);
-                          const bullets = extractBulletPoints(combinedHtml, 3);
                           const lastPage = section.pages[section.pages.length - 1];
+                          const wc = wordCount(combinedHtml);
+
                           return (
                             <article className="relative">
-                              {/* Excerpt */}
-                              <p className="text-[14px] text-nu-graphite leading-relaxed">{excerpt}</p>
-
-                              {/* Key points (bullet list from content) */}
-                              {bullets.length > 0 && (
-                                <ul className="mt-3 space-y-1.5 border-l-[3px] border-nu-pink/20 pl-4">
-                                  {bullets.map((b, bi) => (
-                                    <li key={bi} className="text-[13px] text-nu-graphite flex items-start gap-2">
-                                      <span className="text-nu-pink mt-0.5 shrink-0">▸</span>
-                                      <span>{b}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              )}
-
-                              {/* Page list (if multiple pages) */}
-                              {section.pages.length > 1 && (
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                  {section.pages.map(p => (
-                                    <Link
-                                      key={p.id}
-                                      href={`/groups/${groupId}/wiki/pages/${p.id}`}
-                                      className="inline-flex items-center gap-1 font-mono-nu text-[10px] text-nu-blue border border-nu-blue/20 px-2 py-1 no-underline hover:bg-nu-blue/10 transition-colors"
-                                    >
-                                      <FileText size={9} /> {p.title}
-                                    </Link>
-                                  ))}
-                                </div>
-                              )}
-
-                              {/* Read more + author */}
-                              <div className="mt-4 flex items-center justify-between gap-3 flex-wrap">
-                                {lastPage.updatedBy && (
-                                  <span className="font-mono-nu text-[10px] text-nu-muted/50">
-                                    최근 수정: {lastPage.updatedBy} · {new Date(lastPage.updatedAt).toLocaleDateString("ko", { month: "short", day: "numeric" })}
+                              {/* NotebookLM Style Synthesis Info */}
+                              <div className="bg-[#fbfcff] border-[2px] border-nu-ink/[0.08] p-5 sm:p-7 mb-6 shadow-sm">
+                                <div className="flex items-center gap-2 mb-5 pb-3 border-b-[2px] border-nu-ink/5">
+                                  <div className="w-6 h-6 bg-gradient-to-br from-nu-pink to-purple-500 flex items-center justify-center">
+                                    <Brain size={12} className="text-white" />
+                                  </div>
+                                  <span className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-[#bb2277]">
+                                    AI-Synthesized Notebook
                                   </span>
-                                )}
-                                <Link
-                                  href={`/groups/${groupId}/wiki/topics/${section.topicId}`}
-                                  className="inline-flex items-center gap-1.5 font-mono-nu text-[11px] font-bold text-nu-pink no-underline hover:underline"
-                                >
-                                  전체 내용 읽기 <ArrowRight size={10} />
-                                </Link>
+                                  <span className="font-mono-nu text-[10px] text-nu-muted ml-auto bg-white px-2 py-1 border border-nu-ink/10">
+                                    통합: {section.pages.length} 문서 · {section.meetingLinks.length} 회의 · {section.resources.length} 자료
+                                  </span>
+                                </div>
+                                
+                                {/* Full Document Rendering */}
+                                <div 
+                                  className="text-[15px] sm:text-[16px] leading-8 sm:leading-9 text-nu-ink space-y-5
+                                            [&>p]:mb-5 [&>p]:text-justify [&>p]:break-keep
+                                            [&>h1]:text-2xl [&>h1]:font-extrabold [&>h1]:text-nu-ink [&>h1]:mt-8 [&>h1]:mb-4
+                                            [&>h2]:text-xl [&>h2]:font-extrabold [&>h2]:text-nu-ink [&>h2]:mt-8 [&>h2]:mb-3
+                                            [&>h3]:text-lg [&>h3]:font-bold [&>h3]:text-nu-ink [&>h3]:mt-6 [&>h3]:mb-2
+                                            [&>ul]:list-disc [&>ul]:ml-6 [&>ul]:mb-5 [&>ul>li]:mb-2 [&>ul>li]:pl-1
+                                            [&>ol]:list-decimal [&>ol]:ml-6 [&>ol]:mb-5 [&>ol>li]:mb-2 [&>ol>li]:pl-1
+                                            [&>blockquote]:border-l-4 [&>blockquote]:border-purple-300 [&>blockquote]:pl-4 [&>blockquote]:italic [&>blockquote]:text-nu-muted
+                                            [&>pre]:bg-nu-cream [&>pre]:p-4 [&>pre]:overflow-x-auto [&>pre]:text-sm
+                                            [&>code]:bg-nu-cream/50 [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:text-nu-pink [&>code]:font-mono-nu"
+                                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(applyBacklinks(combinedHtml)) }}
+                                />
+
+                                {/* Document Meta Footer */}
+                                <div className="mt-8 pt-4 border-t-[2px] border-nu-ink/5 flex items-center justify-between gap-3 flex-wrap bg-nu-paper/30 -mx-5 -mb-5 px-5 py-3">
+                                  {lastPage.updatedBy && (
+                                    <span className="font-mono-nu text-[11px] text-nu-muted shrink-0">
+                                      최근 편집: <strong>{lastPage.updatedBy}</strong> · {new Date(lastPage.updatedAt).toLocaleDateString("ko", { year: "numeric", month: "long", day: "numeric" })}
+                                    </span>
+                                  )}
+                                  <Link
+                                    href={`/groups/${groupId}/wiki/topics/${section.topicId}`}
+                                    className="inline-flex items-center gap-1.5 font-mono-nu text-[11px] uppercase tracking-widest text-nu-blue no-underline hover:underline ml-auto font-bold bg-white px-3 py-1.5 border border-nu-blue/20"
+                                  >
+                                    원문 수정 / 페이지 관리 <ArrowRight size={10} />
+                                  </Link>
+                                </div>
                               </div>
                             </article>
                           );
