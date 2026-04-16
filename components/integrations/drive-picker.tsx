@@ -50,8 +50,11 @@ export function DrivePicker({ onFilePicked }: DrivePickerProps) {
   const [search, setSearch] = useState("");
   const [searching, setSearching] = useState(false);
   const [connected, setConnected] = useState<boolean | null>(null);
+  
+  // Folder navigation state
+  const [folderStack, setFolderStack] = useState<{id: string; name: string}[]>([]);
+  const currentFolder = folderStack.length > 0 ? folderStack[folderStack.length - 1] : null;
 
-  // Check Google connection status
   useEffect(() => {
     fetch("/api/google/status")
       .then((r) => r.json())
@@ -59,12 +62,13 @@ export function DrivePicker({ onFilePicked }: DrivePickerProps) {
       .catch(() => setConnected(false));
   }, []);
 
-  const loadFiles = useCallback(async (query?: string) => {
+  const loadFiles = useCallback(async (query: string = "", folderId?: string) => {
     setLoading(true);
     try {
-      const url = query
-        ? `/api/google/drive?q=${encodeURIComponent(query)}`
-        : "/api/google/drive";
+      let url = `/api/google/drive?`;
+      if (query) url += `q=${encodeURIComponent(query)}&`;
+      if (folderId) url += `folderId=${encodeURIComponent(folderId)}&`;
+      
       const res = await fetch(url);
       const data = await res.json();
 
@@ -76,7 +80,6 @@ export function DrivePicker({ onFilePicked }: DrivePickerProps) {
         return;
       }
 
-      // Filter out symlinks and show only real files
       const realFiles = (data.files || []).filter(
         (f: DriveItem) => f.mimeType !== "inode/symlink"
       );
@@ -90,21 +93,18 @@ export function DrivePicker({ onFilePicked }: DrivePickerProps) {
 
   function handleOpen() {
     if (!connected) {
-      // Redirect to Google OAuth
       window.location.href = "/api/auth/google";
       return;
     }
     setOpen(true);
+    setFolderStack([]);
+    setSearch("");
     loadFiles();
   }
 
   function handleSearch() {
-    if (!search.trim()) {
-      loadFiles();
-      return;
-    }
     setSearching(true);
-    loadFiles(search.trim()).finally(() => setSearching(false));
+    loadFiles(search.trim(), search.trim() ? undefined : currentFolder?.id).finally(() => setSearching(false));
   }
 
   function handlePick(file: DriveItem) {
@@ -114,107 +114,153 @@ export function DrivePicker({ onFilePicked }: DrivePickerProps) {
       mimeType: file.mimeType,
     });
     setOpen(false);
-    toast.success(`"${file.name}" 추가됨`);
+  }
+
+  function handleItemClick(file: DriveItem) {
+    if (file.mimeType === "application/vnd.google-apps.folder") {
+      setFolderStack(prev => [...prev, { id: file.id, name: file.name }]);
+      setSearch("");
+      loadFiles("", file.id);
+    } else {
+      handlePick(file);
+    }
+  }
+
+  function handleBack() {
+    if (folderStack.length === 0) return;
+    const newStack = [...folderStack];
+    newStack.pop();
+    setFolderStack(newStack);
+    const parent = newStack.length > 0 ? newStack[newStack.length - 1].id : undefined;
+    loadFiles("", parent);
+  }
+
+  function handleSelectCurrentFolder() {
+    if (!currentFolder) return;
+    // We need webViewLink, but we only have id and name. 
+    // Drive API builds it like this:
+    const webViewLink = `https://drive.google.com/drive/folders/${currentFolder.id}`;
+    onFilePicked({
+      name: currentFolder.name,
+      url: webViewLink,
+      mimeType: "application/vnd.google-apps.folder",
+    });
+    setOpen(false);
   }
 
   return (
     <>
       <button
         onClick={handleOpen}
-        className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-4 py-2.5 bg-green-600 text-white hover:bg-green-700 transition-colors inline-flex items-center gap-2"
+        className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-4 py-2.5 border-[2px] border-green-600 bg-white text-green-700 hover:bg-green-50 transition-colors inline-flex items-center gap-2"
       >
         <HardDrive size={13} />
-        {connected === false ? "Drive 연결" : "Drive 연결"}
+        {connected === false ? "Drive 연결" : "Drive 파일/폴더 선택"}
       </button>
 
-      {/* Modal */}
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-nu-paper w-full max-w-2xl max-h-[80vh] flex flex-col border-2 border-nu-ink shadow-2xl">
+          <div className="bg-nu-paper w-full max-w-2xl max-h-[85vh] flex flex-col border-2 border-nu-ink shadow-2xl">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-nu-ink/10">
               <div className="flex items-center gap-2">
                 <HardDrive size={18} className="text-green-600" />
-                <h3 className="font-head text-lg font-extrabold text-nu-ink">Google Drive</h3>
-                <span className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">파일 선택</span>
+                <h3 className="font-head text-lg font-extrabold text-nu-ink">
+                  {currentFolder ? currentFolder.name : "Google Drive"}
+                </h3>
               </div>
               <button onClick={() => setOpen(false)} className="text-nu-muted hover:text-nu-ink transition-colors">
                 <X size={18} />
               </button>
             </div>
 
-            {/* Search */}
-            <div className="px-5 py-3 border-b border-nu-ink/5">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-nu-muted" />
-                  <input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                    placeholder="파일명 검색..."
-                    className="w-full pl-9 pr-3 py-2 text-sm border border-nu-ink/10 bg-nu-white focus:outline-none focus:border-nu-pink"
-                  />
-                </div>
+            {/* Path / Toolbar */}
+            <div className="px-5 py-3 border-b border-nu-ink/5 bg-nu-cream/30 flex items-center gap-3">
+              {folderStack.length > 0 && (
                 <button
-                  onClick={handleSearch}
-                  disabled={searching}
-                  className="px-4 py-2 bg-nu-ink text-white text-xs font-mono-nu uppercase tracking-widest hover:bg-nu-pink transition-colors"
+                  onClick={handleBack}
+                  className="font-mono-nu text-[12px] uppercase tracking-widest px-3 py-1.5 border border-nu-ink/20 hover:bg-nu-white transition-colors flex items-center gap-1"
                 >
-                  {searching ? <Loader2 size={12} className="animate-spin" /> : "검색"}
+                  <ChevronRight size={12} className="rotate-180" /> 뒤로
                 </button>
+              )}
+              <div className="relative flex-1">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-nu-muted" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  placeholder={currentFolder ? "현재 폴더 내 검색..." : "내 드라이브 검색..."}
+                  className="w-full pl-9 pr-3 py-1.5 text-sm border border-nu-ink/10 bg-nu-white focus:outline-none focus:border-nu-pink"
+                />
               </div>
+              {currentFolder && !search && (
+                <button
+                  onClick={handleSelectCurrentFolder}
+                  className="font-mono-nu text-[12px] uppercase tracking-widest px-4 py-1.5 bg-nu-ink text-white hover:bg-nu-pink transition-colors"
+                >
+                  이 폴더 공유하기
+                </button>
+              )}
             </div>
 
-            {/* File list */}
-            <div className="flex-1 overflow-y-auto p-3">
+            {/* List */}
+            <div className="flex-1 overflow-y-auto p-3 bg-nu-white">
               {loading ? (
                 <div className="flex items-center justify-center py-16">
                   <Loader2 size={24} className="animate-spin text-nu-muted" />
-                  <span className="ml-3 text-sm text-nu-muted">파일 불러오는 중...</span>
                 </div>
               ) : files.length === 0 ? (
                 <div className="text-center py-16">
                   <HardDrive size={40} className="text-nu-muted/20 mx-auto mb-3" />
                   <p className="text-nu-gray text-sm">
-                    {search ? "검색 결과가 없습니다" : "Drive에 파일이 없습니다"}
+                    {search ? "검색 결과가 없습니다" : "폴더가 비어 있습니다"}
                   </p>
                 </div>
               ) : (
-                <div className="space-y-1">
+                <div className="grid grid-cols-1 gap-1">
                   {files.map((file) => (
-                    <button
+                    <div
                       key={file.id}
-                      onClick={() => handlePick(file)}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-nu-cream/50 transition-colors text-left group"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-nu-cream/50 transition-colors group border border-transparent hover:border-nu-ink/10 cursor-pointer"
+                      onClick={() => handleItemClick(file)}
                     >
-                      <div className="w-9 h-9 flex items-center justify-center bg-nu-cream/50 border border-nu-ink/5 shrink-0">
+                      <div className="w-8 h-8 flex items-center justify-center bg-white border border-nu-ink/10 shrink-0">
                         {getMimeIcon(file.mimeType)}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-nu-ink truncate group-hover:text-nu-pink transition-colors">
+                        <p className="text-sm font-medium text-nu-ink truncate group-hover:text-nu-blue transition-colors">
                           {file.name}
                         </p>
-                        <p className="text-[12px] text-nu-muted font-mono-nu">
+                        <p className="text-[12px] text-nu-muted/70 font-mono-nu">
                           {new Date(file.modifiedTime).toLocaleDateString("ko-KR")}
                           {file.size ? ` · ${formatSize(file.size)}` : ""}
                         </p>
                       </div>
-                      <ChevronRight size={14} className="text-nu-muted/30 group-hover:text-nu-pink transition-colors shrink-0" />
-                    </button>
+                      {file.mimeType === "application/vnd.google-apps.folder" ? (
+                        <ChevronRight size={14} className="text-nu-muted/30 group-hover:text-nu-pink transition-colors shrink-0" />
+                      ) : (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handlePick(file); }}
+                          className="opacity-0 group-hover:opacity-100 font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 bg-nu-blue text-white hover:bg-nu-pink transition-all shrink-0"
+                        >
+                          선택
+                        </button>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}
             </div>
 
             {/* Footer */}
-            <div className="px-5 py-3 border-t border-nu-ink/10 flex items-center justify-between">
+            <div className="px-5 py-3 border-t border-nu-ink/10 bg-nu-paper flex items-center justify-between">
               <span className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest">
-                {files.length}개 파일
+                {files.length}개 항목
               </span>
               <button
                 onClick={() => setOpen(false)}
-                className="font-mono-nu text-[12px] uppercase tracking-widest px-4 py-1.5 border border-nu-ink/15 hover:bg-nu-cream transition-colors"
+                className="font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2 text-nu-muted hover:text-nu-ink transition-colors"
               >
                 닫기
               </button>

@@ -122,7 +122,15 @@ function getEmbedUrl(url: string | null): string {
     if (url.includes("/view")) return url.replace("/view", "/preview");
     return url;
   }
-  if (url.includes("drive.google.com/file/d/")) return url.replace(/\/view.*$/, "/preview");
+  if (url.includes("drive.google.com/file/d/")) {
+    return url.replace(/\/view.*$/, "/preview");
+  }
+  if (url.includes("drive.google.com/drive/folders/")) {
+    const match = url.match(/folders\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+      return `https://drive.google.com/embeddedfolderview?id=${match[1]}#grid`;
+    }
+  }
   return url;
 }
 

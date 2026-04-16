@@ -1820,16 +1820,25 @@ function getWikiResourceTypeLabel(resourceType: string, url: string): string {
 function getEmbedUrl(url: string | null) {
   if (!url) return "";
   if (url.includes("notion.so")) {
-    const notionUrl = new URL(url);
-    if (!notionUrl.searchParams.has("pvs")) {
-      notionUrl.searchParams.set("pvs", "4");
-    }
-    return notionUrl.toString();
+    try {
+      const notionUrl = new URL(url);
+      if (!notionUrl.searchParams.has("pvs")) notionUrl.searchParams.set("pvs", "4");
+      return notionUrl.toString();
+    } catch { return url; }
   }
   if (url.includes("docs.google.com")) {
     if (url.includes("/edit")) return url.replace("/edit", "/preview");
     if (url.includes("/view")) return url.replace("/view", "/preview");
     return url;
+  }
+  if (url.includes("drive.google.com/file/d/")) {
+    return url.replace(/\/view.*$/, "/preview");
+  }
+  if (url.includes("drive.google.com/drive/folders/")) {
+    const match = url.match(/folders\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+      return `https://drive.google.com/embeddedfolderview?id=${match[1]}#grid`;
+    }
   }
   return url;
 }
