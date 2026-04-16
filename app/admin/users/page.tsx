@@ -58,16 +58,31 @@ const GRADE_GUIDE = [
 export default async function AdminUsersPage() {
   const supabase = await createClient();
 
-  const [{ data: users }, { data: memberships }] = await Promise.all([
-    supabase
+  // Try full query (with grade/can_create_project) first; fall back to base columns
+  // if those columns don't exist yet in production (migration 038 not applied).
+  let users: any[] | null = null;
+  {
+    const { data, error } = await supabase
       .from("profiles")
       .select("id, name, nickname, email, avatar_url, bio, grade, role, can_create_crew, can_create_project, specialty, interests, created_at, updated_at")
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("group_members")
-      .select("user_id, group_id, role, group:groups!group_members_group_id_fkey(name)")
-      .eq("status", "active"),
-  ]);
+      .order("created_at", { ascending: false });
+
+    if (!error) {
+      users = data;
+    } else {
+      // Fallback: select only guaranteed columns (migration 001 + 003)
+      const { data: fallback } = await supabase
+        .from("profiles")
+        .select("id, name, nickname, email, avatar_url, bio, role, can_create_crew, specialty, interests, created_at")
+        .order("created_at", { ascending: false });
+      users = fallback;
+    }
+  }
+
+  const { data: memberships } = await supabase
+    .from("group_members")
+    .select("user_id, group_id, role, group:groups!group_members_group_id_fkey(name)")
+    .eq("status", "active");
 
   const crewMap: Record<string, { group_id: string; group_name: string; role: string }[]> = {};
   (memberships || []).forEach((m: any) => {
