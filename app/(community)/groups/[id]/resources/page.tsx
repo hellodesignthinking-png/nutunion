@@ -150,6 +150,8 @@ export default function ResourcesPage() {
   const [postingComment, setPostingComment] = useState<string | null>(null);
   const [tagsByResource, setTagsByResource] = useState<Record<string, ResourceTag[]>>({});
   const [addingWikiResource, setAddingWikiResource] = useState<string | null>(null);
+  const [sharedFolder, setSharedFolder] = useState<{ id: string; url: string } | null>(null);
+  const [creatingFolder, setCreatingFolder] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Mock AI summary generator
@@ -174,6 +176,15 @@ export default function ResourcesPage() {
       setHostId(grp.host_id || null);
       setIsManager(grp.host_id === user.id || membership?.role === "moderator" || membership?.role === "host");
     }
+
+    // Fetch shared Google Drive folder info
+    try {
+      const folderRes = await fetch(`/api/google/drive/shared-folder?targetType=group&targetId=${groupId}`);
+      if (folderRes.ok) {
+        const folderData = await folderRes.json();
+        setSharedFolder(folderData.folder || null);
+      }
+    } catch { /* ignore */ }
 
     const { data: filesData } = await supabase
       .from("file_attachments")
@@ -252,6 +263,26 @@ export default function ResourcesPage() {
   }, [groupId]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // ── Shared Folder ──
+  const createSharedFolder = useCallback(async () => {
+    setCreatingFolder(true);
+    try {
+      const res = await fetch("/api/google/drive/shared-folder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetType: "group", targetId: groupId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "폴더 생성 실패");
+      setSharedFolder({ id: data.folderId, url: data.folderUrl });
+      toast.success(`공유 폴더 "${data.folderName}" 생성 완료!`);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setCreatingFolder(false);
+    }
+  }, [groupId]);
 
   // ── Comments ──
   const loadComments = useCallback(async (resourceId: string) => {
@@ -510,7 +541,7 @@ export default function ResourcesPage() {
       <div className={`flex flex-col lg:flex-row gap-8 ${isSplitView ? "lg:items-start" : ""}`}>
         
         <div className={`transition-all duration-500 ${isSplitView ? "lg:w-[60%] xl:w-[55%] shrink-0" : "w-full"}`}>
-          <nav className="flex items-center gap-1.5 mb-6 font-mono-nu text-[11px] uppercase tracking-widest">
+          <nav className="flex items-center gap-1.5 mb-6 font-mono-nu text-[13px] uppercase tracking-widest">
             <Link href={`/groups/${groupId}`}
               className="text-nu-muted hover:text-nu-ink no-underline flex items-center gap-1 transition-colors">
               <ArrowLeft size={12} /> {groupName || "너트"}
@@ -523,8 +554,8 @@ export default function ResourcesPage() {
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                 <div className="px-2 py-0.5 bg-nu-blue text-nu-paper font-mono-nu text-[9px] font-black uppercase tracking-[0.2em] rounded">Unified_Atlas</div>
-                 <div className="px-2 py-0.5 bg-nu-pink/10 text-nu-pink font-mono-nu text-[9px] font-black uppercase tracking-[0.2em] rounded flex items-center gap-1">
+                 <div className="px-2 py-0.5 bg-nu-blue text-nu-paper font-mono-nu text-[11px] font-black uppercase tracking-[0.2em] rounded">Unified_Atlas</div>
+                 <div className="px-2 py-0.5 bg-nu-pink/10 text-nu-pink font-mono-nu text-[11px] font-black uppercase tracking-[0.2em] rounded flex items-center gap-1">
                    <Sparkles size={8} /> AI_Enabled
                  </div>
               </div>
@@ -534,7 +565,7 @@ export default function ResourcesPage() {
             <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
               <button
                 onClick={() => setShowAiSummary(!showAiSummary)}
-                className={`font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-2.5 border-[2px] transition-all flex items-center gap-2 ${
+                className={`font-mono-nu text-[12px] font-bold uppercase tracking-widest px-3 py-2.5 border-[2px] transition-all flex items-center gap-2 ${
                   showAiSummary ? "bg-nu-blue text-nu-paper border-nu-blue" : "bg-nu-white border-nu-ink/10 text-nu-muted hover:border-nu-ink"
                 }`}
               >
@@ -604,7 +635,7 @@ export default function ResourcesPage() {
                 <>
                   <div className="flex items-center gap-2 text-nu-muted flex-shrink-0">
                     <Upload size={16} />
-                    <span className="font-mono-nu text-[10px] uppercase tracking-widest font-bold">Quick Add</span>
+                    <span className="font-mono-nu text-[12px] uppercase tracking-widest font-bold">Quick Add</span>
                   </div>
                   <div className="flex-1 flex items-center gap-2 flex-wrap sm:flex-nowrap">
                     {/* File Upload */}
@@ -612,7 +643,7 @@ export default function ResourcesPage() {
                     <button
                       onClick={() => fileInputRef.current?.click()}
                       disabled={uploading}
-                      className="flex items-center gap-2 font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-all disabled:opacity-50"
+                      className="flex items-center gap-2 font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-all disabled:opacity-50"
                     >
                       <Plus size={14} /> {uploading ? "업로드 중..." : "파일 선택"}
                     </button>
@@ -620,7 +651,7 @@ export default function ResourcesPage() {
                     {/* Link Add */}
                     <button
                       onClick={() => setShowLinkInput(!showLinkInput)}
-                      className={`flex items-center gap-2 font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 border-[2px] transition-all ${
+                      className={`flex items-center gap-2 font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2.5 border-[2px] transition-all ${
                         showLinkInput ? "bg-nu-blue text-white border-nu-blue" : "border-nu-ink/10 text-nu-muted hover:border-nu-ink"
                       }`}
                     >
@@ -630,7 +661,7 @@ export default function ResourcesPage() {
                     {/* New Document */}
                     <button
                       onClick={() => setShowNewDocModal(true)}
-                      className="flex items-center gap-2 font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-pink text-white hover:bg-nu-pink/90 transition-all cursor-pointer border-none"
+                      className="flex items-center gap-2 font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-pink text-white hover:bg-nu-pink/90 transition-all cursor-pointer border-none"
                     >
                       <FileText size={14} /> 새 문서
                     </button>
@@ -638,18 +669,38 @@ export default function ResourcesPage() {
                     {/* Drive */}
                     <DrivePicker onFilePicked={handleDriveFilePicked} />
 
-                    {/* Drive Upload */}
+                    {/* Drive Upload (shared folder aware) */}
                     <DriveUploader
-                      onUploaded={(file) => {
-                        // DB insert already done in API route when targetType/targetId are passed
-                        // Just refresh the list
-                        loadData();
-                      }}
+                      onUploaded={() => loadData()}
                       targetType="group"
                       targetId={groupId}
+                      sharedFolder={sharedFolder}
                     />
 
-                    <span className="hidden sm:block font-mono-nu text-[9px] text-nu-muted/40 ml-auto">또는 파일을 이 영역에 드래그하세요</span>
+                    {/* Shared folder badge / create button for managers */}
+                    {sharedFolder ? (
+                      <a
+                        href={sharedFolder.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 font-mono-nu text-[11px] uppercase tracking-widest text-green-700 border border-green-600/30 px-3 py-2 hover:bg-green-600/10 transition-all"
+                        title="공유 Drive 폴더 열기"
+                      >
+                        <FolderOpen size={12} /> 공유 폴더
+                      </a>
+                    ) : isManager && (
+                      <button
+                        onClick={createSharedFolder}
+                        disabled={creatingFolder}
+                        className="flex items-center gap-1.5 font-mono-nu text-[11px] uppercase tracking-widest px-3 py-2 bg-green-600/10 text-green-700 border border-green-600/30 hover:bg-green-600/20 transition-all disabled:opacity-50 cursor-pointer"
+                        title="구성원 모두가 업로드할 수 있는 공유 Drive 폴더를 만듭니다"
+                      >
+                        {creatingFolder ? <Loader2 size={11} className="animate-spin" /> : <HardDrive size={11} />}
+                        {creatingFolder ? "생성 중..." : "공유 폴더 만들기"}
+                      </button>
+                    )}
+
+                    <span className="hidden sm:block font-mono-nu text-[11px] text-nu-muted/40 ml-auto">또는 파일을 이 영역에 드래그하세요</span>
                   </div>
                 </>
               )}
@@ -685,7 +736,7 @@ export default function ResourcesPage() {
                       else { toast.success("✅ 링크가 추가되었습니다!"); setLinkName(""); setLinkUrl(""); setShowLinkInput(false); await loadData(); }
                       setAddingLink(false);
                     }}
-                    className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-2 bg-nu-blue text-white hover:bg-nu-blue/80 transition-all disabled:opacity-30"
+                    className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-5 py-2 bg-nu-blue text-white hover:bg-nu-blue/80 transition-all disabled:opacity-30"
                   >
                     {addingLink ? "저장 중..." : "등록"}
                   </button>
@@ -698,7 +749,7 @@ export default function ResourcesPage() {
           <div className="flex gap-0 border-b-[2px] border-nu-ink/[0.08] mb-6 overflow-x-auto whitespace-nowrap scrollbar-hide">
             <button
               onClick={() => setActiveTab("all")}
-              className={`font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-3 border-b-[3px] transition-all whitespace-nowrap ${
+              className={`font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-3 border-b-[3px] transition-all whitespace-nowrap ${
                 activeTab === "all" ? "border-nu-ink text-nu-ink" : "border-transparent text-nu-muted hover:text-nu-ink"
               }`}
             >
@@ -713,21 +764,21 @@ export default function ResourcesPage() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-2 font-mono-nu text-[11px] uppercase tracking-widest px-5 py-3 border-b-[3px] transition-all ${
+                className={`flex items-center gap-2 font-mono-nu text-[13px] uppercase tracking-widest px-5 py-3 border-b-[3px] transition-all ${
                   activeTab === tab.key
                     ? "border-nu-pink text-nu-ink font-bold"
                     : "border-transparent text-nu-muted hover:text-nu-graphite"
                 }`}
               >
                 {tab.icon} {tab.label}
-                <span className={`ml-1 px-1.5 py-0.5 text-[9px] rounded ${activeTab === tab.key ? "bg-nu-pink/10 text-nu-pink" : "bg-nu-ink/5 text-nu-muted"}`}>
+                <span className={`ml-1 px-1.5 py-0.5 text-[11px] rounded ${activeTab === tab.key ? "bg-nu-pink/10 text-nu-pink" : "bg-nu-ink/5 text-nu-muted"}`}>
                   {tab.count}
                 </span>
               </button>
             ))}
             <button
               onClick={() => setActiveTab("wiki")}
-              className={`font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-3 border-b-[3px] transition-all whitespace-nowrap ${
+              className={`font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-3 border-b-[3px] transition-all whitespace-nowrap ${
                 activeTab === "wiki" ? "border-nu-pink text-nu-pink" : "border-transparent text-nu-muted hover:text-nu-ink"
               }`}
             >
@@ -748,10 +799,10 @@ export default function ResourcesPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono-nu text-[8px] uppercase tracking-widest px-1.5 py-0.5 bg-nu-pink/10 text-nu-pink">탭</span>
+                        <span className="font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 bg-nu-pink/10 text-nu-pink">탭</span>
                         <span className="text-sm font-medium text-nu-ink truncate group-hover:text-nu-pink transition-colors">{page.title}</span>
                       </div>
-                      <span className="font-mono-nu text-[9px] text-nu-muted/60">{new Date(page.updated_at).toLocaleDateString("ko")}</span>
+                      <span className="font-mono-nu text-[11px] text-nu-muted/60">{new Date(page.updated_at).toLocaleDateString("ko")}</span>
                     </div>
                   </Link>
                 ))}
@@ -764,7 +815,7 @@ export default function ResourcesPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono-nu text-[8px] uppercase tracking-widest px-1.5 py-0.5 bg-nu-blue/10 text-nu-blue">
+                          <span className="font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 bg-nu-blue/10 text-nu-blue">
                             {f.file_type === "drive-link" ? "드라이브" : f.file_type === "url-link" ? "링크" : "파일"}
                           </span>
                           {resolveTemplateContent(f.file_url, f.content) ? (
@@ -790,7 +841,7 @@ export default function ResourcesPage() {
                               {Array.from(new Set((tagsByResource[f.id] || []).map(t => t.tag))).map((tag) => {
                                 const opt = TAG_OPTIONS.find(o => o.label === tag);
                                 return opt ? (
-                                  <span key={tag} className={`font-mono-nu text-[7px] font-bold px-1.5 py-0.5 border rounded-sm ${opt.color}`}>
+                                  <span key={tag} className={`font-mono-nu text-[9px] font-bold px-1.5 py-0.5 border rounded-sm ${opt.color}`}>
                                     {opt.emoji} {opt.label}
                                   </span>
                                 ) : null;
@@ -798,7 +849,7 @@ export default function ResourcesPage() {
                             </div>
                           )}
                         </div>
-                        <span className="font-mono-nu text-[9px] text-nu-muted/60">{f.uploader?.nickname || ""} · {timeAgo(f.created_at)}</span>
+                        <span className="font-mono-nu text-[11px] text-nu-muted/60">{f.uploader?.nickname || ""} · {timeAgo(f.created_at)}</span>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <button
@@ -871,10 +922,10 @@ export default function ResourcesPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono-nu text-[8px] uppercase tracking-widest px-1.5 py-0.5 bg-nu-amber/10 text-nu-amber">미팅</span>
+                        <span className="font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 bg-nu-amber/10 text-nu-amber">미팅</span>
                         <span className="text-sm font-medium text-nu-ink truncate group-hover:text-nu-amber transition-colors">{r.name}</span>
                       </div>
-                      <span className="font-mono-nu text-[9px] text-nu-muted/60">{r.meetingTitle}</span>
+                      <span className="font-mono-nu text-[11px] text-nu-muted/60">{r.meetingTitle}</span>
                     </div>
                   </a>
                 ))}
@@ -895,7 +946,7 @@ export default function ResourcesPage() {
                     <FileText size={28} className="text-nu-muted/30 mx-auto mb-3" />
                     <p className="text-nu-gray text-sm mb-2">아직 탭 페이지가 없습니다</p>
                     <Link href={`/groups/${groupId}/wiki`}
-                      className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink hover:underline no-underline">
+                      className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-pink hover:underline no-underline">
                       탭에서 페이지 만들기 →
                     </Link>
                   </div>
@@ -908,9 +959,9 @@ export default function ResourcesPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="font-mono-nu text-[8px] uppercase tracking-widest px-2 py-0.5 bg-nu-pink/10 text-nu-pink">탭</span>
+                            <span className="font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 bg-nu-pink/10 text-nu-pink">탭</span>
                             {page.topic_name && (
-                              <span className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted">{page.topic_name}</span>
+                              <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">{page.topic_name}</span>
                             )}
                           </div>
                           <Link href={`/groups/${groupId}/wiki/pages/${page.id}`}
@@ -920,14 +971,14 @@ export default function ResourcesPage() {
                           <p className="text-xs text-nu-muted mt-1 line-clamp-2">{page.content}</p>
                           <div className="flex items-center gap-3 mt-2">
                             {page.author_nickname && (
-                              <span className="font-mono-nu text-[9px] text-nu-muted">by {page.author_nickname}</span>
+                              <span className="font-mono-nu text-[11px] text-nu-muted">by {page.author_nickname}</span>
                             )}
-                            <span className="font-mono-nu text-[9px] text-nu-muted/60">
+                            <span className="font-mono-nu text-[11px] text-nu-muted/60">
                               {new Date(page.updated_at).toLocaleDateString("ko")}
                             </span>
                             {page.google_doc_url && (
                               <a href={page.google_doc_url} target="_blank" rel="noopener noreferrer"
-                                className="font-mono-nu text-[9px] text-green-600 hover:underline flex items-center gap-1 no-underline">
+                                className="font-mono-nu text-[11px] text-green-600 hover:underline flex items-center gap-1 no-underline">
                                 <HardDrive size={10} /> Google Docs
                               </a>
                             )}
@@ -1068,7 +1119,7 @@ export default function ResourcesPage() {
                           <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-nu-ink truncate block no-underline hover:text-nu-pink">
                             {resource.name}
                           </a>
-                          <p className="font-mono-nu text-[10px] text-nu-muted mt-0.5 truncate">
+                          <p className="font-mono-nu text-[12px] text-nu-muted mt-0.5 truncate">
                             {resource.meetingTitle}
                           </p>
                         </div>
@@ -1117,7 +1168,7 @@ export default function ResourcesPage() {
                     <div className="flex items-center justify-between px-5 py-3 border-b-2 border-nu-ink bg-nu-cream/30">
                       <div className="min-w-0 pr-4">
                         <p className="font-head text-[13px] font-black text-nu-ink truncate uppercase tracking-tight">{previewData.name}</p>
-                        <p className="font-mono-nu text-[9px] text-nu-muted truncate uppercase tracking-widest mt-0.5">Live Document Integration</p>
+                        <p className="font-mono-nu text-[11px] text-nu-muted truncate uppercase tracking-widest mt-0.5">Live Document Integration</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <a href={previewData.url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-nu-muted hover:text-nu-ink" title="원본 보기">
@@ -1136,13 +1187,13 @@ export default function ResourcesPage() {
                             <span className="text-2xl">🔒</span>
                           </div>
                           <p className="font-head text-sm font-bold text-nu-ink mb-2">공유 설정을 확인해주세요</p>
-                          <p className="text-[11px] text-nu-muted leading-relaxed mb-4">
+                          <p className="text-[13px] text-nu-muted leading-relaxed mb-4">
                             이 문서가 보이지 않는다면 원본 문서의 공유 설정에서
                             <span className="font-bold text-nu-ink"> &quot;링크가 있는 모든 사용자에게 공개&quot;</span>로
                             변경해 주세요.
                           </p>
                           <a href={previewData.url} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors no-underline">
+                            className="inline-flex items-center gap-1.5 font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors no-underline">
                             <ExternalLink size={12} /> 원본에서 열기
                           </a>
                         </div>
@@ -1165,7 +1216,7 @@ export default function ResourcesPage() {
                     <Eye size={32} className="opacity-20" />
                   </div>
                   <p className="font-head text-sm font-bold text-nu-ink/40 uppercase tracking-widest">Select a document to preview</p>
-                  <p className="text-[11px] mt-2 max-w-[200px]">자료를 선택하면 이 사이드 패널에서 실시간으로 확인하면서 작업할 수 있습니다.</p>
+                  <p className="text-[13px] mt-2 max-w-[200px]">자료를 선택하면 이 사이드 패널에서 실시간으로 확인하면서 작업할 수 있습니다.</p>
                 </div>
               )}
             </div>
@@ -1242,7 +1293,7 @@ function InlineComments({
       {/* Tag buttons */}
       <div className="flex items-center gap-2 py-3 border-b border-nu-ink/[0.04]">
         <Tag size={12} className="text-nu-muted" />
-        <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mr-1">리뷰:</span>
+        <span className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mr-1">리뷰:</span>
         {TAG_OPTIONS.map((opt) => {
           const count = tags.filter(t => t.tag === opt.label).length;
           const isActive = userId ? tags.some(t => t.tag === opt.label && t.user_id === userId) : false;
@@ -1250,7 +1301,7 @@ function InlineComments({
             <button
               key={opt.label}
               onClick={() => onToggleTag(opt.label)}
-              className={`font-mono-nu text-[9px] font-bold px-2 py-1 border rounded-sm transition-all ${
+              className={`font-mono-nu text-[11px] font-bold px-2 py-1 border rounded-sm transition-all ${
                 isActive ? opt.color + " ring-1 ring-offset-1" : "border-nu-ink/10 text-nu-muted hover:border-nu-ink/30"
               }`}
             >
@@ -1262,11 +1313,11 @@ function InlineComments({
       {/* Comments */}
       <div className="mt-3 space-y-2.5 max-h-[200px] overflow-y-auto">
         {comments.length === 0 && (
-          <p className="text-[11px] text-nu-muted/50 text-center py-2">아직 댓글이 없습니다</p>
+          <p className="text-[13px] text-nu-muted/50 text-center py-2">아직 댓글이 없습니다</p>
         )}
         {comments.map((c) => (
           <div key={c.id} className="flex items-start gap-2">
-            <div className="w-6 h-6 bg-nu-cream rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold text-nu-muted">
+            <div className="w-6 h-6 bg-nu-cream rounded-full flex items-center justify-center shrink-0 text-[12px] font-bold text-nu-muted">
               {c.author?.avatar_url ? (
                 <img src={c.author.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" />
               ) : (
@@ -1275,12 +1326,12 @@ function InlineComments({
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-mono-nu text-[10px] font-bold text-nu-ink">{c.author?.nickname || "익명"}</span>
-                <span className="font-mono-nu text-[9px] text-nu-muted/50">{timeAgo(c.created_at)}</span>
+                <span className="font-mono-nu text-[12px] font-bold text-nu-ink">{c.author?.nickname || "익명"}</span>
+                <span className="font-mono-nu text-[11px] text-nu-muted/50">{timeAgo(c.created_at)}</span>
                 {userId && c.user_id === userId && onDelete && (
                   <button
                     onClick={() => onDelete(c.id)}
-                    className="font-mono-nu text-[9px] text-nu-muted/40 hover:text-nu-red transition-colors"
+                    className="font-mono-nu text-[11px] text-nu-muted/40 hover:text-nu-red transition-colors"
                     title="삭제"
                   >
                     ✕
@@ -1466,15 +1517,15 @@ function FileCard({
               </>
             )}
             {!isEditing && getDocTypeLabel(file.file_type) && (
-              <span className="shrink-0 font-mono-nu text-[7px] font-bold uppercase tracking-widest px-1.5 py-0.5 bg-nu-ink/5 text-nu-graphite border border-nu-ink/10">
+              <span className="shrink-0 font-mono-nu text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 bg-nu-ink/5 text-nu-graphite border border-nu-ink/10">
                 {getDocTypeLabel(file.file_type)}
               </span>
             )}
             {!isEditing && resolveTemplateContent(file.file_url, file.content) && (
-              <span className="shrink-0 font-mono-nu text-[7px] font-bold uppercase tracking-widest px-1.5 py-0.5 bg-nu-blue/10 text-nu-blue border border-nu-blue/20">편집</span>
+              <span className="shrink-0 font-mono-nu text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 bg-nu-blue/10 text-nu-blue border border-nu-blue/20">편집</span>
             )}
             {!isEditing && isNew && (
-              <span className="shrink-0 font-mono-nu text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 bg-nu-pink text-white animate-pulse">
+              <span className="shrink-0 font-mono-nu text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 bg-nu-pink text-white animate-pulse">
                 NEW
               </span>
             )}
@@ -1483,14 +1534,14 @@ function FileCard({
             {/* Status Badge */}
             <button
               onClick={cycleStatus}
-              className={`inline-flex items-center gap-1 font-mono-nu text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 border rounded-sm transition-all ${st.color} ${isOwner ? "cursor-pointer hover:scale-105" : "cursor-default"}`}
+              className={`inline-flex items-center gap-1 font-mono-nu text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 border rounded-sm transition-all ${st.color} ${isOwner ? "cursor-pointer hover:scale-105" : "cursor-default"}`}
               title={isOwner ? "클릭하여 상태 변경" : ""}
             >
               <span>{st.icon}</span> {st.label}
             </button>
-            <span className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">{(file as any).uploader?.nickname || "MEMBER"}</span>
+            <span className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest">{(file as any).uploader?.nickname || "MEMBER"}</span>
             <span className="w-1 h-1 bg-nu-ink/10 rounded-full" />
-            <span className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">{new Date(file.created_at).toLocaleDateString("ko")}</span>
+            <span className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest">{new Date(file.created_at).toLocaleDateString("ko")}</span>
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
@@ -1550,19 +1601,19 @@ function FileCard({
       {showDeleteConfirm && (
         <div className="px-4 pb-3 border-t-2 border-red-200 bg-red-50/50 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="flex items-center justify-between py-2.5">
-            <p className="font-mono-nu text-[11px] text-red-600 font-bold">
+            <p className="font-mono-nu text-[13px] text-red-600 font-bold">
               이 자료를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
             </p>
             <div className="flex items-center gap-2 ml-4 shrink-0">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-ink/10 text-nu-muted hover:border-nu-ink transition-all"
+                className="font-mono-nu text-[12px] uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-ink/10 text-nu-muted hover:border-nu-ink transition-all"
               >
                 취소
               </button>
               <button
                 onClick={() => { setShowDeleteConfirm(false); onDelete(file.id, file.file_url, file.file_type); }}
-                className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 bg-red-500 text-white border-[2px] border-red-500 hover:bg-red-600 hover:border-red-600 transition-all"
+                className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-3 py-1.5 bg-red-500 text-white border-[2px] border-red-500 hover:bg-red-600 hover:border-red-600 transition-all"
               >
                 삭제 확인
               </button>
@@ -1578,7 +1629,7 @@ function FileCard({
             const opt = TAG_OPTIONS.find(o => o.label === tag);
             const count = tags.filter(t => t.tag === tag).length;
             return opt ? (
-              <span key={tag} className={`font-mono-nu text-[8px] font-bold px-1.5 py-0.5 border rounded-sm ${opt.color}`}>
+              <span key={tag} className={`font-mono-nu text-[10px] font-bold px-1.5 py-0.5 border rounded-sm ${opt.color}`}>
                 {opt.emoji} {opt.label} ({count})
               </span>
             ) : null;
@@ -1595,18 +1646,18 @@ function FileCard({
               </div>
               <div className="flex items-center gap-2 mb-3">
                  <Sparkles size={12} className="text-nu-pink" />
-                 <span className="font-mono-nu text-[9px] font-black uppercase tracking-[0.2em] text-nu-pink">AI_Insight_Summary</span>
+                 <span className="font-mono-nu text-[11px] font-black uppercase tracking-[0.2em] text-nu-pink">AI_Insight_Summary</span>
               </div>
               <ul className="space-y-1.5">
                  {aiSummary.map((line, i) => (
-                   <li key={i} className="text-[11px] font-medium leading-relaxed opacity-90 flex items-start gap-2">
+                   <li key={i} className="text-[13px] font-medium leading-relaxed opacity-90 flex items-start gap-2">
                      <span className="text-nu-pink mt-1">∙</span> {line}
                    </li>
                  ))}
               </ul>
               <div className="mt-4 pt-3 border-t border-nu-paper/10 flex items-center justify-between">
-                 <span className="font-mono-nu text-[8px] text-nu-paper/30 uppercase tracking-widest">Model: Gemini-1.5-Pro</span>
-                 <button className="text-[8px] font-black uppercase tracking-widest text-nu-blue hover:text-nu-paper transition-colors">자세히 보기 →</button>
+                 <span className="font-mono-nu text-[10px] text-nu-paper/30 uppercase tracking-widest">Model: Gemini-1.5-Pro</span>
+                 <button className="text-[10px] font-black uppercase tracking-widest text-nu-blue hover:text-nu-paper transition-colors">자세히 보기 →</button>
               </div>
            </div>
         </div>

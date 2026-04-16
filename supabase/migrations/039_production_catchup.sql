@@ -215,3 +215,6 @@ CREATE INDEX IF NOT EXISTS idx_profiles_grade ON profiles(grade);
 
 -- ── 9. Refresh PostgREST schema cache ───────────────────────
 NOTIFY pgrst, 'reload schema';
+
+-- ── 10. groups.google_drive_folder_id (공유 드라이브 폴더) ──
+ALTER TABLE groups ADD COLUMN IF NOT EXISTS google_drive_folder_id text;

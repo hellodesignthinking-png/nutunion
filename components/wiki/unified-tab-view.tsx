@@ -57,6 +57,41 @@ function wordCount(text: string): number {
   return text.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim().split(" ").filter(Boolean).length;
 }
 
+// ── Plain text extractor ───────────────────────────────────────
+function toPlainText(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ").trim();
+}
+
+// ── First N meaningful chars (sentence-aware) ──────────────────
+function extractExcerpt(content: string, maxChars = 200): string {
+  const plain = toPlainText(content);
+  if (plain.length <= maxChars) return plain;
+  // Try to cut at a sentence boundary
+  const cutoff = plain.slice(0, maxChars);
+  const lastPeriod = Math.max(cutoff.lastIndexOf("다."), cutoff.lastIndexOf("요."), cutoff.lastIndexOf("."));
+  if (lastPeriod > maxChars * 0.6) return cutoff.slice(0, lastPeriod + 2) + "…";
+  return cutoff.trimEnd() + "…";
+}
+
+// ── Extract key bullet points from markdown content ─────────────
+function extractBulletPoints(content: string, maxItems = 3): string[] {
+  const plain = toPlainText(content);
+  // Match lines that look like list items (starting with - , ·, •, *, 숫자.)
+  const lines = plain.split(/(?<=[.!?다요])\s+|[\n\r]+/);
+  const bullets: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.replace(/^[-·•*\d]+[.)]\s*/, "").trim();
+    if (trimmed.length > 15 && trimmed.length < 120 && !bullets.includes(trimmed)) {
+      bullets.push(trimmed);
+    }
+    if (bullets.length >= maxItems) break;
+  }
+  return bullets;
+}
+
 // ── Gap analyzer ───────────────────────────────────────────────
 function analyzeGaps(sections: Section[]): Gap[] {
   const gaps: Gap[] = [];
@@ -430,18 +465,33 @@ export function UnifiedTabView({
             <span>{Math.round(progress.totalWords / 500)}분 분량</span>
           </div>
 
-          {/* Abstract — auto summary from first 200 chars of each section */}
+          {/* Abstract — curated summary from top completed sections */}
           <div className="bg-nu-cream/40 border border-nu-ink/10 p-5">
             <p className="font-mono-nu text-[11px] text-nu-ink font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
               <Quote size={12} className="text-nu-pink" /> 요약 (Abstract)
             </p>
-            <p className="text-sm text-nu-graphite leading-relaxed">
-              {sections
-                .filter(s => s.pages.length > 0)
-                .slice(0, 3)
-                .map(s => `${s.topicName}: ${s.pages[0]?.content?.replace(/<[^>]+>/g, "").slice(0, 80)}...`)
-                .join(" ") || "섹션 내용을 채우면 자동으로 요약이 생성됩니다."}
-            </p>
+            {(() => {
+              const filled = sections.filter(s => s.pages.length > 0 && wordCount(s.pages.map(p => p.content).join(" ")) >= 50);
+              if (filled.length === 0) {
+                return (
+                  <p className="text-sm text-nu-muted italic">섹션 내용을 채우면 자동으로 요약이 생성됩니다.</p>
+                );
+              }
+              return (
+                <div className="space-y-2">
+                  {filled.slice(0, 4).map(s => {
+                    const combined = s.pages.map(p => p.content).join(" ");
+                    const excerpt = extractExcerpt(combined, 120);
+                    return (
+                      <p key={s.topicId} className="text-sm text-nu-graphite leading-relaxed">
+                        <span className="font-bold text-nu-ink">{s.topicName}:</span>{" "}
+                        {excerpt}
+                      </p>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Progress bar */}
@@ -604,36 +654,64 @@ export function UnifiedTabView({
                       </div>
                     </div>
 
-                    {/* Content */}
+                    {/* Content — curated summary view, NOT raw dump */}
                     {section.pages.length > 0 ? (
-                      <div className="space-y-8 pl-12">
-                        {section.pages.map((page, pageIdx) => (
-                          <article key={page.id} className="relative">
-                            {section.pages.length > 1 && (
-                              <div className="flex items-center gap-2 mb-3">
-                                <Hash size={11} className="text-nu-muted/30" />
+                      <div className="space-y-5 pl-12">
+                        {(() => {
+                          // Merge all pages into one body for excerpt + bullet points
+                          const combinedHtml = section.pages.map(p => p.content).join("\n\n");
+                          const excerpt = extractExcerpt(combinedHtml, 300);
+                          const bullets = extractBulletPoints(combinedHtml, 3);
+                          const lastPage = section.pages[section.pages.length - 1];
+                          return (
+                            <article className="relative">
+                              {/* Excerpt */}
+                              <p className="text-[14px] text-nu-graphite leading-relaxed">{excerpt}</p>
+
+                              {/* Key points (bullet list from content) */}
+                              {bullets.length > 0 && (
+                                <ul className="mt-3 space-y-1.5 border-l-[3px] border-nu-pink/20 pl-4">
+                                  {bullets.map((b, bi) => (
+                                    <li key={bi} className="text-[13px] text-nu-graphite flex items-start gap-2">
+                                      <span className="text-nu-pink mt-0.5 shrink-0">▸</span>
+                                      <span>{b}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+
+                              {/* Page list (if multiple pages) */}
+                              {section.pages.length > 1 && (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  {section.pages.map(p => (
+                                    <Link
+                                      key={p.id}
+                                      href={`/groups/${groupId}/wiki/pages/${p.id}`}
+                                      className="inline-flex items-center gap-1 font-mono-nu text-[10px] text-nu-blue border border-nu-blue/20 px-2 py-1 no-underline hover:bg-nu-blue/10 transition-colors"
+                                    >
+                                      <FileText size={9} /> {p.title}
+                                    </Link>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Read more + author */}
+                              <div className="mt-4 flex items-center justify-between gap-3 flex-wrap">
+                                {lastPage.updatedBy && (
+                                  <span className="font-mono-nu text-[10px] text-nu-muted/50">
+                                    최근 수정: {lastPage.updatedBy} · {new Date(lastPage.updatedAt).toLocaleDateString("ko", { month: "short", day: "numeric" })}
+                                  </span>
+                                )}
                                 <Link
-                                  href={`/groups/${groupId}/wiki/pages/${page.id}`}
-                                  className="font-head text-sm font-bold text-nu-ink no-underline hover:text-nu-pink transition-colors"
+                                  href={`/groups/${groupId}/wiki/topics/${section.topicId}`}
+                                  className="inline-flex items-center gap-1.5 font-mono-nu text-[11px] font-bold text-nu-pink no-underline hover:underline"
                                 >
-                                  {page.title}
+                                  전체 내용 읽기 <ArrowRight size={10} />
                                 </Link>
-                                <span className="font-mono-nu text-[9px] text-nu-muted/40">v{page.version}</span>
                               </div>
-                            )}
-                            <div
-                              className="prose prose-sm max-w-none text-nu-graphite leading-relaxed text-[14px]"
-                              dangerouslySetInnerHTML={{
-                                __html: DOMPurify.sanitize(renderMarkdown(page.content, page.id)),
-                              }}
-                            />
-                            {page.updatedBy && (
-                              <p className="font-mono-nu text-[9px] text-nu-muted/40 mt-3 text-right">
-                                — {page.updatedBy}, {new Date(page.updatedAt).toLocaleDateString("ko", { year: "numeric", month: "short", day: "numeric" })}
-                              </p>
-                            )}
-                          </article>
-                        ))}
+                            </article>
+                          );
+                        })()}
 
                         {/* Section references */}
                         {section.resources.length > 0 && (

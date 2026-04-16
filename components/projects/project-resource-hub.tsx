@@ -179,8 +179,37 @@ export function ProjectResourceHub({
     name: "", url: "", stage: "planning" as ResourceStage, description: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [sharedFolder, setSharedFolder] = useState<{ id: string; url: string } | null>(null);
+  const [creatingFolder, setCreatingFolder] = useState(false);
 
   const canEdit = isLead || isMember;
+
+  // ── Load shared folder info ──
+  useEffect(() => {
+    fetch(`/api/google/drive/shared-folder?targetType=project&targetId=${projectId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.folder) setSharedFolder(d.folder); })
+      .catch(() => {});
+  }, [projectId]);
+
+  async function createSharedFolder() {
+    setCreatingFolder(true);
+    try {
+      const res = await fetch("/api/google/drive/shared-folder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetType: "project", targetId: projectId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "폴더 생성 실패");
+      setSharedFolder({ id: data.folderId, url: data.folderUrl });
+      toast.success(`공유 폴더 "${data.folderName}" 생성 완료!`);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setCreatingFolder(false);
+    }
+  }
 
   // ── Load data ──
   useEffect(() => { loadResources(); }, [projectId]);
@@ -430,8 +459,8 @@ export function ProjectResourceHub({
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <div className="px-2 py-0.5 bg-nu-blue text-nu-paper font-mono-nu text-[9px] font-black uppercase tracking-[0.2em]">Resource_Hub</div>
-                <div className="px-2 py-0.5 bg-green-50 text-green-600 font-mono-nu text-[9px] font-black uppercase tracking-[0.2em] flex items-center gap-1">
+                <div className="px-2 py-0.5 bg-nu-blue text-nu-paper font-mono-nu text-[11px] font-black uppercase tracking-[0.2em]">Resource_Hub</div>
+                <div className="px-2 py-0.5 bg-green-50 text-green-600 font-mono-nu text-[11px] font-black uppercase tracking-[0.2em] flex items-center gap-1">
                   <HardDrive size={8} /> Zero_Storage
                 </div>
               </div>
@@ -465,29 +494,49 @@ export function ProjectResourceHub({
               <div className="px-4 py-3 flex flex-col sm:flex-row items-center gap-2">
                 <div className="flex items-center gap-2 text-nu-muted flex-shrink-0">
                   <Plus size={14} />
-                  <span className="font-mono-nu text-[10px] uppercase tracking-widest font-bold">Quick Add</span>
+                  <span className="font-mono-nu text-[12px] uppercase tracking-widest font-bold">Quick Add</span>
                 </div>
                 <div className="flex-1 flex items-center gap-2 flex-wrap sm:flex-nowrap">
                   {/* New Document */}
                   <button
                     onClick={() => setShowNewDocModal(true)}
-                    className="flex items-center gap-2 font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2 bg-nu-pink text-white hover:bg-nu-pink/90 transition-all cursor-pointer border-none"
+                    className="flex items-center gap-2 font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2 bg-nu-pink text-white hover:bg-nu-pink/90 transition-all cursor-pointer border-none"
                   >
                     <FileText size={13} /> 새 문서
                   </button>
                   <DrivePicker onFilePicked={handleDriveFile} />
                   <DriveUploader
-                    onUploaded={() => {
-                      // DB insert done in API route; just refresh
-                      loadResources();
-                    }}
+                    onUploaded={() => loadResources()}
                     targetType="project"
                     targetId={projectId}
                     stage={activeStage === "all" ? "evidence" : activeStage}
+                    sharedFolder={sharedFolder}
                   />
+                  {/* Shared folder badge / create button for leads */}
+                  {sharedFolder ? (
+                    <a
+                      href={sharedFolder.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 font-mono-nu text-[11px] uppercase tracking-widest text-green-700 border border-green-600/30 px-3 py-2 hover:bg-green-600/10 transition-all"
+                      title="공유 Drive 폴더 열기"
+                    >
+                      <HardDrive size={11} /> 공유 폴더
+                    </a>
+                  ) : isLead && (
+                    <button
+                      onClick={createSharedFolder}
+                      disabled={creatingFolder}
+                      className="flex items-center gap-1.5 font-mono-nu text-[11px] uppercase tracking-widest px-3 py-2 bg-green-600/10 text-green-700 border border-green-600/30 hover:bg-green-600/20 transition-all disabled:opacity-50 cursor-pointer"
+                      title="팀원 모두가 업로드할 수 있는 공유 Drive 폴더를 만듭니다"
+                    >
+                      {creatingFolder ? <Loader2 size={11} className="animate-spin" /> : <HardDrive size={11} />}
+                      {creatingFolder ? "생성 중..." : "공유 폴더 만들기"}
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowAddForm(!showAddForm)}
-                    className={`flex items-center gap-2 font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2 border-[2px] transition-all ${
+                    className={`flex items-center gap-2 font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2 border-[2px] transition-all ${
                       showAddForm ? "bg-nu-blue text-white border-nu-blue" : "border-nu-ink/10 text-nu-muted hover:border-nu-ink"
                     }`}
                   >
@@ -518,11 +567,11 @@ export function ProjectResourceHub({
                     </div>
                     <div className="flex gap-2">
                       <button type="submit" disabled={submitting}
-                        className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-2 bg-nu-ink text-white hover:bg-nu-pink transition-all disabled:opacity-30 flex items-center gap-2">
+                        className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-5 py-2 bg-nu-ink text-white hover:bg-nu-pink transition-all disabled:opacity-30 flex items-center gap-2">
                         {submitting ? <><Loader2 size={12} className="animate-spin" /> 저장 중...</> : "등록"}
                       </button>
                       <button type="button" onClick={() => setShowAddForm(false)}
-                        className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 text-nu-muted hover:text-nu-ink transition-colors">취소</button>
+                        className="font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2 text-nu-muted hover:text-nu-ink transition-colors">취소</button>
                     </div>
                   </form>
                 </div>
@@ -536,7 +585,7 @@ export function ProjectResourceHub({
               <button onClick={() => setActiveStage("all")}
                 className={`px-2 py-2 transition-all text-center ${activeStage === "all" ? "bg-nu-white text-nu-ink font-bold" : "bg-nu-ink/20 text-nu-white hover:bg-nu-ink/30"}`}>
                 <div className="font-head text-xs font-bold">전체</div>
-                <div className="font-mono-nu text-[9px] opacity-70">{resources.length}</div>
+                <div className="font-mono-nu text-[11px] opacity-70">{resources.length}</div>
               </button>
               {(Object.keys(stageConfig) as ResourceStage[]).map((stage) => {
                 const cfg = stageConfig[stage];
@@ -548,7 +597,7 @@ export function ProjectResourceHub({
                       <StageIcon size={11} />
                       <span className="font-head text-xs font-bold">{cfg.label}</span>
                     </div>
-                    <div className="font-mono-nu text-[9px] opacity-70">{byStage[stage].length}</div>
+                    <div className="font-mono-nu text-[11px] opacity-70">{byStage[stage].length}</div>
                   </button>
                 );
               })}
@@ -565,7 +614,7 @@ export function ProjectResourceHub({
               <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-10 text-center">
                 <FileText size={36} className="text-nu-gray/20 mx-auto mb-3" />
                 <p className="text-nu-gray text-sm mb-1">{searchQuery ? "검색 결과가 없습니다" : "아직 자료가 없습니다"}</p>
-                {canEdit && !searchQuery && <p className="text-[10px] text-nu-muted">Drive 연결 또는 링크 추가로 자료를 등록해보세요</p>}
+                {canEdit && !searchQuery && <p className="text-[12px] text-nu-muted">Drive 연결 또는 링크 추가로 자료를 등록해보세요</p>}
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-2.5">
@@ -599,7 +648,7 @@ export function ProjectResourceHub({
                   <button
                     key={tab.key}
                     onClick={() => setRightTab(tab.key)}
-                    className={`flex-1 px-3 py-2.5 font-mono-nu text-[9px] uppercase tracking-widest border-b-2 transition-colors flex items-center justify-center gap-1.5 ${
+                    className={`flex-1 px-3 py-2.5 font-mono-nu text-[11px] uppercase tracking-widest border-b-2 transition-colors flex items-center justify-center gap-1.5 ${
                       rightTab === tab.key
                         ? "border-nu-pink text-nu-pink"
                         : "border-transparent text-nu-white/50 hover:text-nu-white"
@@ -634,7 +683,7 @@ export function ProjectResourceHub({
                       <div className="flex items-center justify-between px-4 py-2.5 border-b-2 border-nu-ink bg-nu-cream/30 shrink-0">
                         <div className="min-w-0 pr-3">
                           <p className="font-head text-[12px] font-black text-nu-ink truncate uppercase tracking-tight">{previewData.name}</p>
-                          <p className="font-mono-nu text-[8px] text-nu-muted truncate uppercase tracking-widest mt-0.5">Live Preview</p>
+                          <p className="font-mono-nu text-[10px] text-nu-muted truncate uppercase tracking-widest mt-0.5">Live Preview</p>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
                           <a href={previewData.url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-nu-muted hover:text-nu-ink" title="원본 보기">
@@ -652,11 +701,11 @@ export function ProjectResourceHub({
                               <span className="text-xl">🔒</span>
                             </div>
                             <p className="font-head text-sm font-bold text-nu-ink mb-2">공유 설정을 확인해주세요</p>
-                            <p className="text-[10px] text-nu-muted leading-relaxed mb-3">
+                            <p className="text-[12px] text-nu-muted leading-relaxed mb-3">
                               원본 문서의 공유 설정에서 <span className="font-bold text-nu-ink">&quot;링크가 있는 모든 사용자에게 공개&quot;</span>로 변경해 주세요.
                             </p>
                             <a href={previewData.url} target="_blank" rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2 bg-nu-ink text-nu-paper no-underline">
+                              className="inline-flex items-center gap-1 font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2 bg-nu-ink text-nu-paper no-underline">
                               <ExternalLink size={11} /> 원본에서 열기
                             </a>
                           </div>
@@ -679,7 +728,7 @@ export function ProjectResourceHub({
                       <Eye size={28} className="opacity-20" />
                     </div>
                     <p className="font-head text-sm font-bold text-nu-ink/40 uppercase tracking-widest">Select a document</p>
-                    <p className="text-[11px] mt-2 max-w-[200px]">자료를 선택하면 여기서 실시간 미리보기가 표시됩니다.</p>
+                    <p className="text-[13px] mt-2 max-w-[200px]">자료를 선택하면 여기서 실시간 미리보기가 표시됩니다.</p>
                   </div>
                 )
               )}
@@ -690,7 +739,7 @@ export function ProjectResourceHub({
                   <div className="flex-1 overflow-y-auto p-4 space-y-3">
                     {previewData && (
                       <div className="bg-nu-blue/5 border border-nu-blue/20 px-3 py-2 mb-2">
-                        <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-blue">현재 문서에 대한 피드백</p>
+                        <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-blue">현재 문서에 대한 피드백</p>
                         <p className="text-xs font-bold text-nu-ink truncate">{previewData.name}</p>
                       </div>
                     )}
@@ -703,15 +752,15 @@ export function ProjectResourceHub({
                       currentFeedback.slice(0, 30).map((fb) => (
                         <div key={fb.id} className="border border-nu-ink/[0.08] p-3 bg-nu-cream/20">
                           <div className="flex items-start gap-2">
-                            <div className="w-6 h-6 rounded-full bg-nu-cream flex items-center justify-center font-head text-[9px] font-bold shrink-0">
+                            <div className="w-6 h-6 rounded-full bg-nu-cream flex items-center justify-center font-head text-[11px] font-bold shrink-0">
                               {(fb.author?.nickname || "U").charAt(0).toUpperCase()}
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <span className="font-medium text-[11px]">{fb.author?.nickname || "Unknown"}</span>
-                                <span className="font-mono-nu text-[7px] text-nu-muted">{timeAgo(fb.created_at)}</span>
+                                <span className="font-medium text-[13px]">{fb.author?.nickname || "Unknown"}</span>
+                                <span className="font-mono-nu text-[9px] text-nu-muted">{timeAgo(fb.created_at)}</span>
                               </div>
-                              <p className="text-[11px] text-nu-graphite mt-1 leading-relaxed whitespace-pre-wrap break-words">{fb.content}</p>
+                              <p className="text-[13px] text-nu-graphite mt-1 leading-relaxed whitespace-pre-wrap break-words">{fb.content}</p>
                             </div>
                           </div>
                         </div>
@@ -730,7 +779,7 @@ export function ProjectResourceHub({
                       <button
                         onClick={handlePostFeedback}
                         disabled={postingFeedback || !newFeedback.trim()}
-                        className="w-full font-mono-nu text-[9px] uppercase tracking-widest py-2 bg-nu-pink text-white hover:bg-nu-pink/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
+                        className="w-full font-mono-nu text-[11px] uppercase tracking-widest py-2 bg-nu-pink text-white hover:bg-nu-pink/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
                       >
                         {postingFeedback ? <Loader2 size={11} className="animate-spin" /> : <Send size={11} />}
                         게시
@@ -763,16 +812,16 @@ export function ProjectResourceHub({
                                 <CheckSquare size={15} />
                               </button>
                               <div className="flex-1 min-w-0">
-                                <p className={`text-[11px] font-medium ${item.status === "done" ? "line-through text-nu-muted" : "text-nu-ink"}`}>
+                                <p className={`text-[13px] font-medium ${item.status === "done" ? "line-through text-nu-muted" : "text-nu-ink"}`}>
                                   {item.title}
                                 </p>
                                 <div className="flex items-center gap-2 flex-wrap mt-1">
-                                  <span className={`font-mono-nu text-[7px] uppercase tracking-widest px-1.5 py-0.5 ${ps.bg} ${ps.text}`}>{ps.label}</span>
-                                  <span className="font-mono-nu text-[7px] text-nu-muted">{statusLabel}</span>
+                                  <span className={`font-mono-nu text-[9px] uppercase tracking-widest px-1.5 py-0.5 ${ps.bg} ${ps.text}`}>{ps.label}</span>
+                                  <span className="font-mono-nu text-[9px] text-nu-muted">{statusLabel}</span>
                                 </div>
                               </div>
                               {item.assignee && (
-                                <div className="w-5 h-5 rounded-full bg-nu-blue/20 flex items-center justify-center font-head text-[7px] font-bold text-nu-blue shrink-0" title={item.assignee.nickname}>
+                                <div className="w-5 h-5 rounded-full bg-nu-blue/20 flex items-center justify-center font-head text-[9px] font-bold text-nu-blue shrink-0" title={item.assignee.nickname}>
                                   {item.assignee.nickname.charAt(0).toUpperCase()}
                                 </div>
                               )}
@@ -791,14 +840,14 @@ export function ProjectResourceHub({
                       />
                       <div className="grid grid-cols-2 gap-2">
                         <select value={newActionPriority} onChange={(e) => setNewActionPriority(e.target.value as any)}
-                          className="px-2 py-1.5 bg-nu-white border border-nu-ink/[0.12] text-[11px] focus:outline-none focus:border-nu-pink">
+                          className="px-2 py-1.5 bg-nu-white border border-nu-ink/[0.12] text-[13px] focus:outline-none focus:border-nu-pink">
                           <option value="low">낮음</option>
                           <option value="medium">중간</option>
                           <option value="high">높음</option>
                           <option value="urgent">긴급</option>
                         </select>
                         <select value={newActionAssignee} onChange={(e) => setNewActionAssignee(e.target.value)}
-                          className="px-2 py-1.5 bg-nu-white border border-nu-ink/[0.12] text-[11px] focus:outline-none focus:border-nu-pink">
+                          className="px-2 py-1.5 bg-nu-white border border-nu-ink/[0.12] text-[13px] focus:outline-none focus:border-nu-pink">
                           <option value="">담당자 선택</option>
                           {members.map((m) => <option key={m.id} value={m.id}>{m.nickname}</option>)}
                         </select>
@@ -806,7 +855,7 @@ export function ProjectResourceHub({
                       <button
                         onClick={handleAddActionItem}
                         disabled={savingAction || !newActionTitle.trim()}
-                        className="w-full font-mono-nu text-[9px] uppercase tracking-widest py-2 bg-nu-ink text-white hover:bg-nu-ink/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
+                        className="w-full font-mono-nu text-[11px] uppercase tracking-widest py-2 bg-nu-ink text-white hover:bg-nu-ink/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
                       >
                         {savingAction ? <Loader2 size={11} className="animate-spin" /> : <Plus size={11} />}
                         액션 아이템 추가
@@ -893,20 +942,20 @@ function ResourceCard({ resource, canEdit, isSelected, onPreview, onDelete }: {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
             <h3 className="text-[12px] font-black text-nu-ink truncate uppercase tracking-tight">{resource.name}</h3>
-            {resolveTemplateContent(resource.url, resource.content) && <span className="shrink-0 font-mono-nu text-[7px] font-bold uppercase tracking-widest px-1.5 py-0.5 bg-nu-blue/10 text-nu-blue border border-nu-blue/20">편집</span>}
-            {isNew && <span className="shrink-0 font-mono-nu text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 bg-nu-pink text-white animate-pulse">NEW</span>}
+            {resolveTemplateContent(resource.url, resource.content) && <span className="shrink-0 font-mono-nu text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 bg-nu-blue/10 text-nu-blue border border-nu-blue/20">편집</span>}
+            {isNew && <span className="shrink-0 font-mono-nu text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 bg-nu-pink text-white animate-pulse">NEW</span>}
           </div>
           <div className="flex items-center gap-1.5 mt-0.5">
-            <span className={`font-mono-nu text-[7px] font-bold uppercase tracking-widest px-1.5 py-0.5 border ${stageCfg.badge}`}>{stageCfg.label}</span>
-            <span className={`font-mono-nu text-[8px] uppercase tracking-widest ${typeCfg.color}`}>{typeCfg.label}</span>
+            <span className={`font-mono-nu text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 border ${stageCfg.badge}`}>{stageCfg.label}</span>
+            <span className={`font-mono-nu text-[10px] uppercase tracking-widest ${typeCfg.color}`}>{typeCfg.label}</span>
             {resource.uploader?.nickname && (
               <>
                 <span className="w-0.5 h-0.5 bg-nu-ink/10 rounded-full" />
-                <span className="font-mono-nu text-[8px] text-nu-muted">{resource.uploader.nickname}</span>
+                <span className="font-mono-nu text-[10px] text-nu-muted">{resource.uploader.nickname}</span>
               </>
             )}
             <span className="w-0.5 h-0.5 bg-nu-ink/10 rounded-full" />
-            <span className="font-mono-nu text-[8px] text-nu-muted">
+            <span className="font-mono-nu text-[10px] text-nu-muted">
               {new Date(resource.created_at).toLocaleDateString("ko", { month: "short", day: "numeric" })}
             </span>
           </div>
