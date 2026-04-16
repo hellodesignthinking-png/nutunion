@@ -23,6 +23,50 @@ import {
 } from "lucide-react";
 import type { ProjectMilestone, ProjectTask, MilestoneStatus, TaskStatus } from "@/lib/types";
 import { ResourceInteractions } from "@/components/shared/resource-interactions";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical } from "lucide-react";
+
+function SortableMilestoneWrapper({ id, children, canEdit }: { id: string, children: React.ReactNode, canEdit: boolean }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : 1,
+    position: isDragging ? ("relative" as const) : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className={`relative group/dnd ${isDragging ? "shadow-2xl ring-2 ring-nu-pink" : ""}`}>
+      {canEdit && (
+        <div
+          {...attributes}
+          {...listeners}
+          className="absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center cursor-grab hover:bg-nu-cream/50 transition-colors opacity-0 group-hover/dnd:opacity-100 touch-none z-10"
+        >
+          <GripVertical size={14} className="text-nu-muted hover:text-nu-ink" />
+        </div>
+      )}
+      <div className={canEdit ? "pl-8" : ""}>{children}</div>
+    </div>
+  );
+}
 
 const msStatusColors: Record<string, { bg: string; text: string; label: string }> = {
   pending: { bg: "bg-nu-gray/10", text: "text-nu-gray", label: "대기" },
@@ -107,6 +151,41 @@ export function MilestoneList({
   const [availableResources, setAvailableResources] = useState<any[]>([]);
   const [showResourceSelector, setShowResourceSelector] = useState<string | null>(null);
   const [savingResourceLink, setSavingResourceLink] = useState(false);
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setMilestones((items) => {
+        const oldIndex = items.findIndex((i) => i.id === active.id);
+        const newIndex = items.findIndex((i) => i.id === over.id);
+        const newItems = arrayMove(items, oldIndex, newIndex);
+        
+        // Push the new sort_order to Supabase in the background
+        const supabase = createClient();
+        const promises = newItems.map((item, idx) => {
+          return supabase.from("project_milestones").update({ sort_order: idx }).eq("id", item.id);
+        });
+        
+        Promise.all(promises).then(() => {
+          onTaskChange?.(); // To trigger roadmap update 
+        });
+
+        return newItems;
+      });
+    }
+  }
 
   // ─── Fetch FRESH milestones from DB on mount ───
   const fetchMilestones = useCallback(async () => {
@@ -572,20 +651,24 @@ export function MilestoneList({
   }
 
   return (
-    <div className="space-y-4">
-      {milestones.map((ms) => {
-        const isExpanded = expanded[ms.id] ?? false;
-        const tasks = ms.tasks || [];
-        const doneCount = tasks.filter((t) => t.status === "done").length;
-        const statusStyle = msStatusColors[ms.status] || msStatusColors.pending;
-        const progressPct = tasks.length > 0 ? Math.round((doneCount / tasks.length) * 100) : 0;
-        const section = activeSection[ms.id] || "tasks";
-        const comments = msComments[ms.id] || [];
-        const links = msLinks[ms.id] || [];
-        const likes = msLikes[ms.id] || { count: 0, liked: false };
+    <div className="space-y-6">
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={milestones.map(m => m.id)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-4">
+          {milestones.map((ms) => {
+            const isExpanded = expanded[ms.id] ?? false;
+            const tasks = ms.tasks || [];
+            const doneCount = tasks.filter((t) => t.status === "done").length;
+            const statusStyle = msStatusColors[ms.status] || msStatusColors.pending;
+            const progressPct = tasks.length > 0 ? Math.round((doneCount / tasks.length) * 100) : 0;
+            const section = activeSection[ms.id] || "tasks";
+            const comments = msComments[ms.id] || [];
+            const links = msLinks[ms.id] || [];
+            const likes = msLikes[ms.id] || { count: 0, liked: false };
 
-        return (
-          <div key={ms.id} className="bg-nu-white border-2 border-nu-ink/[0.08] overflow-hidden">
+            return (
+              <SortableMilestoneWrapper key={ms.id} id={ms.id} canEdit={canEdit}>
+                <div className="bg-nu-white border-2 border-nu-ink/[0.08] overflow-hidden">
             {/* ── Milestone Header ── */}
             {editingMs === ms.id ? (
               <div className="p-5 space-y-3">
@@ -1079,8 +1162,12 @@ export function MilestoneList({
               </div>
             )}
           </div>
+          </SortableMilestoneWrapper>
         );
       })}
+      </div>
+      </SortableContext>
+    </DndContext>
 
       {/* ── Add milestone form ── */}
       {canEdit && (
