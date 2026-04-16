@@ -61,7 +61,7 @@ export default async function AdminUsersPage() {
   const [{ data: users }, { data: memberships }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, nickname, avatar_url, bio, grade, interests, created_at, updated_at")
+      .select("id, name, nickname, email, avatar_url, bio, grade, role, can_create_crew, can_create_project, specialty, interests, created_at, updated_at")
       .order("created_at", { ascending: false }),
     supabase
       .from("group_members")
@@ -123,10 +123,10 @@ export default async function AdminUsersPage() {
                 등급 선택은 새로고침 시 초기화됩니다.
               </p>
               <details className="cursor-pointer">
-                <summary className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-amber hover:text-nu-ink transition-colors">
+                <summary className="font-mono-nu text-[13px] uppercase tracking-widest text-nu-amber hover:text-nu-ink transition-colors">
                   SQL 보기 (클릭하여 펼치기)
                 </summary>
-                <pre className="mt-2 p-4 bg-nu-ink text-nu-paper text-[11px] overflow-x-auto leading-relaxed font-mono">{`-- 등급 컬럼 추가
+                <pre className="mt-2 p-4 bg-nu-ink text-nu-paper text-[13px] overflow-x-auto leading-relaxed font-mono">{`-- 등급 컬럼 추가
 alter table profiles add column if not exists grade text not null default 'bronze';
 -- 프로젝트 권한 컬럼 추가
 alter table profiles add column if not exists can_create_project boolean not null default false;
@@ -152,19 +152,19 @@ create index if not exists idx_profiles_grade on profiles(grade);`}</pre>
             <div key={g.grade} className={`border p-4 ${g.color}`}>
               <div className="flex items-center gap-2 mb-2">
                 <g.icon size={14} className={g.iconColor} />
-                <span className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 font-bold ${g.badgeColor}`}>
+                <span className={`font-mono-nu text-[12px] uppercase tracking-widest px-2 py-0.5 font-bold ${g.badgeColor}`}>
                   {g.grade}
                 </span>
               </div>
-              <p className="text-[11px] text-nu-muted mb-2.5">{g.desc}</p>
+              <p className="text-[13px] text-nu-muted mb-2.5">{g.desc}</p>
               <ul className="space-y-1">
                 {g.perms.map((p) => (
-                  <li key={p} className="text-[11px] text-nu-ink flex items-start gap-1.5">
+                  <li key={p} className="text-[13px] text-nu-ink flex items-start gap-1.5">
                     <span className="text-green-500 shrink-0">✓</span>{p}
                   </li>
                 ))}
                 {g.noperms.map((p) => (
-                  <li key={p} className="text-[11px] text-nu-muted/50 flex items-start gap-1.5">
+                  <li key={p} className="text-[13px] text-nu-muted/50 flex items-start gap-1.5">
                     <span className="shrink-0">✗</span>{p}
                   </li>
                 ))}
