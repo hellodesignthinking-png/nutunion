@@ -6,8 +6,188 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { seedProjectTemplate } from "@/lib/project-template-seeder";
 import { toast } from "sonner";
-import { Upload, Loader2, ArrowLeft, ChevronRight, Sparkles, Users, Clock, Check } from "lucide-react";
+import { Upload, Loader2, ArrowLeft, ChevronRight, Sparkles, Users, Clock, Check, Copy, Share2, UserPlus, Search, CheckCircle2 } from "lucide-react";
 import type { Specialty } from "@/lib/types";
+
+/* ── Invite user result ────────────────────────────────────────── */
+interface UserSearchResult {
+  id: string;
+  nickname: string;
+  avatar_url: string | null;
+  grade: string | null;
+}
+
+/* ── Project Invite Panel ─────────────────────────────────────── */
+function ProjectInvitePanel({
+  projectId,
+  projectTitle,
+  onDone,
+}: {
+  projectId: string;
+  projectTitle: string;
+  onDone: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<UserSearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [invited, setInvited] = useState<Set<string>>(new Set());
+  const [inviting, setInviting] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const shareUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/projects/${projectId}`
+      : `https://nutunion.co.kr/projects/${projectId}`;
+
+  const shareText = `너트유니온 볼트 "${projectTitle}"에 참여해보세요! 🚀`;
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (!query.trim() || query.length < 1) { setResults([]); return; }
+      setSearching(true);
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("profiles")
+          .select("id, nickname, avatar_url, grade")
+          .ilike("nickname", `%${query}%`)
+          .limit(8);
+        setResults((data || []) as UserSearchResult[]);
+      } finally { setSearching(false); }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  async function inviteUser(userId: string) {
+    setInviting(userId);
+    try {
+      const supabase = createClient();
+      // Create a project application with approved status (direct invite)
+      const { error } = await supabase.from("project_applications").upsert(
+        { project_id: projectId, user_id: userId, status: "invited", message: "리더가 직접 초대했습니다." },
+        { onConflict: "project_id,user_id" }
+      );
+      if (error) {
+        // Fallback: create member directly
+        await supabase.from("project_members").upsert(
+          { project_id: projectId, user_id: userId, role: "member" },
+          { onConflict: "project_id,user_id" }
+        );
+      }
+      await supabase.from("notifications").insert({
+        user_id: userId,
+        type: "project_invite",
+        content: `"${projectTitle}" 볼트에 초대받았습니다!`,
+        link: `/projects/${projectId}`,
+      });
+      setInvited((prev) => new Set([...prev, userId]));
+      toast.success("초대를 보냈습니다");
+    } catch (err: any) {
+      toast.error(err.message || "초대 실패");
+    } finally { setInviting(null); }
+  }
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast.success("링크가 복사되었습니다");
+    } catch { toast.error("복사 실패"); }
+  }
+
+  async function nativeShare() {
+    if (navigator.share) {
+      try { await navigator.share({ title: projectTitle, text: shareText, url: shareUrl }); } catch {}
+    } else { copyLink(); }
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto px-8 py-12">
+      <div className="text-center mb-10">
+        <div className="w-16 h-16 bg-nu-green/10 border-2 border-nu-green flex items-center justify-center mx-auto mb-4">
+          <CheckCircle2 size={28} className="text-nu-green" />
+        </div>
+        <h1 className="font-head text-2xl font-extrabold text-nu-ink mb-2">볼트가 생성되었습니다!</h1>
+        <p className="text-nu-gray text-sm">팀원을 초대해서 함께 시작해보세요</p>
+      </div>
+
+      {/* Share link */}
+      <div className="bg-nu-white border-2 border-nu-ink/[0.08] p-6 mb-6">
+        <h2 className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray mb-4">링크로 초대</h2>
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex-1 bg-nu-paper border border-nu-ink/15 px-3 py-2 font-mono text-[12px] text-nu-muted truncate">{shareUrl}</div>
+          <button onClick={copyLink} className="flex items-center gap-1.5 font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors">
+            {copied ? <Check size={12} /> : <Copy size={12} />}
+            {copied ? "복사됨" : "복사"}
+          </button>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={nativeShare} className="flex items-center gap-1.5 font-mono-nu text-[11px] uppercase tracking-widest px-3 py-2 border border-nu-ink/15 hover:bg-nu-paper transition-colors text-nu-gray">
+            <Share2 size={12} /> 공유
+          </button>
+          <button onClick={nativeShare} className="flex items-center gap-1.5 font-mono-nu text-[11px] uppercase tracking-widest px-3 py-2 border border-[#FEE500]/50 bg-[#FEE500]/10 hover:bg-[#FEE500]/20 transition-colors text-nu-ink">
+            💬 카카오톡
+          </button>
+          <button onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText + " " + shareUrl)}`, "_blank")} className="flex items-center gap-1.5 font-mono-nu text-[11px] uppercase tracking-widest px-3 py-2 border border-[#1DA1F2]/30 bg-[#1DA1F2]/10 hover:bg-[#1DA1F2]/20 transition-colors text-nu-ink">
+            𝕏 트위터
+          </button>
+        </div>
+        <p className="mt-3 text-[12px] text-nu-muted">링크를 받은 누구나 너트유니온에 가입하고 볼트에 지원할 수 있습니다.</p>
+      </div>
+
+      {/* Search existing members */}
+      <div className="bg-nu-white border-2 border-nu-ink/[0.08] p-6 mb-6">
+        <h2 className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray mb-4">기존 회원 초대</h2>
+        <div className="relative mb-3">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-nu-muted" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="닉네임으로 검색..."
+            className="w-full pl-9 pr-4 py-2.5 border border-nu-ink/15 bg-transparent text-[14px] focus:outline-none focus:border-nu-blue"
+          />
+          {searching && <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-nu-muted animate-spin" />}
+        </div>
+        {results.length > 0 && (
+          <div className="space-y-2">
+            {results.map((u) => (
+              <div key={u.id} className="flex items-center justify-between py-2 px-3 bg-nu-paper border border-nu-ink/05">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 bg-nu-ink/10 flex items-center justify-center font-bold text-[12px] text-nu-ink overflow-hidden">
+                    {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : u.nickname?.[0]?.toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-semibold text-nu-ink">{u.nickname}</p>
+                    {u.grade && <p className="text-[11px] text-nu-muted uppercase">{u.grade}</p>}
+                  </div>
+                </div>
+                {invited.has(u.id) ? (
+                  <span className="flex items-center gap-1 font-mono-nu text-[11px] text-nu-green"><Check size={11} /> 초대됨</span>
+                ) : (
+                  <button onClick={() => inviteUser(u.id)} disabled={inviting === u.id} className="flex items-center gap-1.5 font-mono-nu text-[11px] uppercase tracking-widest px-3 py-1.5 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors disabled:opacity-50">
+                    {inviting === u.id ? <Loader2 size={10} className="animate-spin" /> : <UserPlus size={10} />}
+                    초대
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        {query.length > 0 && results.length === 0 && !searching && (
+          <p className="text-[13px] text-nu-muted text-center py-4">검색 결과가 없습니다</p>
+        )}
+      </div>
+
+      <div className="flex justify-end">
+        <button onClick={onDone} className="font-mono-nu text-[13px] uppercase tracking-widest px-8 py-3 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors">
+          볼트 페이지로 이동 →
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const categories: { value: Specialty; label: string }[] = [
   { value: "space", label: "Space" },
@@ -113,6 +293,9 @@ export default function ProjectCreatePage() {
   const [endDate, setEndDate] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  // After creation invite step
+  const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
+  const [createdProjectTitle, setCreatedProjectTitle] = useState<string>("");
 
   useEffect(() => {
     async function checkPermission() {
@@ -236,12 +419,24 @@ export default function ProjectCreatePage() {
           ? `${template.title} 템플릿으로 볼트가 생성되었습니다!`
           : "볼트가 생성되었습니다!"
       );
-      router.push(`/projects/${project.id}`);
+      // Go to invite step
+      setCreatedProjectId(project.id);
+      setCreatedProjectTitle(title.trim());
     } catch (err: any) {
       toast.error(err.message || "볼트 생성 실패");
     } finally {
       setLoading(false);
     }
+  }
+
+  if (createdProjectId) {
+    return (
+      <ProjectInvitePanel
+        projectId={createdProjectId}
+        projectTitle={createdProjectTitle}
+        onDone={() => router.push(`/projects/${createdProjectId}`)}
+      />
+    );
   }
 
   if (checking) {
@@ -274,19 +469,19 @@ export default function ProjectCreatePage() {
             {/* Back link */}
             <Link
               href="/projects"
-              className="inline-flex items-center gap-1.5 font-mono-nu text-[10px] uppercase tracking-widest text-white/50 hover:text-white/80 transition-colors no-underline mb-8"
+              className="inline-flex items-center gap-1.5 font-mono-nu text-[12px] uppercase tracking-widest text-white/50 hover:text-white/80 transition-colors no-underline mb-8"
             >
               <ArrowLeft size={12} />
               볼트 탐색
             </Link>
 
             <div className="flex items-center gap-2 mb-5">
-              <span className="font-mono-nu text-[8px] font-black uppercase tracking-[0.2em] px-2.5 py-1 bg-white/10 text-white/90 border border-white/10">
+              <span className="font-mono-nu text-[10px] font-black uppercase tracking-[0.2em] px-2.5 py-1 bg-white/10 text-white/90 border border-white/10">
                 <Sparkles size={8} className="inline -mt-0.5 mr-1 opacity-70" />
                 TEMPLATE
               </span>
               <ChevronRight size={12} className="text-white/30" />
-              <span className="font-mono-nu text-[8px] font-black uppercase tracking-[0.2em] text-white/50">
+              <span className="font-mono-nu text-[10px] font-black uppercase tracking-[0.2em] text-white/50">
                 새 볼트 만들기
               </span>
             </div>
@@ -299,7 +494,7 @@ export default function ProjectCreatePage() {
                 <h1 className="font-head text-3xl font-black text-white tracking-tight">
                   {template.title}
                 </h1>
-                <p className="font-mono-nu text-[10px] text-white/40 uppercase tracking-[0.15em] mt-1">
+                <p className="font-mono-nu text-[12px] text-white/40 uppercase tracking-[0.15em] mt-1">
                   {template.subtitle}
                 </p>
               </div>
@@ -311,7 +506,7 @@ export default function ProjectCreatePage() {
 
             {/* Quick stats */}
             <div className="flex items-center gap-6 mt-6 ml-[72px]">
-              <span className="flex items-center gap-1.5 font-mono-nu text-[9px] text-white/40">
+              <span className="flex items-center gap-1.5 font-mono-nu text-[11px] text-white/40">
                 <Clock size={11} /> {template.duration}
               </span>
             </div>
@@ -327,13 +522,13 @@ export default function ProjectCreatePage() {
                 <h2 className="font-head text-lg font-bold text-nu-ink mb-1">
                   볼트 정보 입력
                 </h2>
-                <p className="text-[11px] text-nu-muted mb-6">
+                <p className="text-[13px] text-nu-muted mb-6">
                   템플릿 구조가 자동 적용됩니다. 기본 정보만 입력하세요.
                 </p>
 
                 <form onSubmit={handleSubmit} className="flex flex-col gap-5">
                   <div>
-                    <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray mb-1.5">
+                    <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray mb-1.5">
                       볼트 제목 *
                     </label>
                     <input
@@ -347,7 +542,7 @@ export default function ProjectCreatePage() {
                   </div>
 
                   <div>
-                    <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray mb-1.5">
+                    <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray mb-1.5">
                       카테고리
                     </label>
                     <select
@@ -364,7 +559,7 @@ export default function ProjectCreatePage() {
                   </div>
 
                   <div>
-                    <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray mb-1.5">
+                    <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray mb-1.5">
                       설명
                     </label>
                     <textarea
@@ -379,7 +574,7 @@ export default function ProjectCreatePage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray mb-1.5">
+                      <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray mb-1.5">
                         시작일
                       </label>
                       <input
@@ -390,7 +585,7 @@ export default function ProjectCreatePage() {
                       />
                     </div>
                     <div>
-                      <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray mb-1.5">
+                      <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray mb-1.5">
                         종료일
                       </label>
                       <input
@@ -403,7 +598,7 @@ export default function ProjectCreatePage() {
                   </div>
 
                   <div>
-                    <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray mb-1.5">
+                    <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray mb-1.5">
                       커버 이미지
                     </label>
                     <div className="border border-dashed border-nu-ink/20 p-6 text-center">
@@ -420,7 +615,7 @@ export default function ProjectCreatePage() {
                               setImageFile(null);
                               setImagePreview(null);
                             }}
-                            className="mt-2 font-mono-nu text-[10px] text-nu-red uppercase tracking-widest"
+                            className="mt-2 font-mono-nu text-[12px] text-nu-red uppercase tracking-widest"
                           >
                             삭제
                           </button>
@@ -446,7 +641,7 @@ export default function ProjectCreatePage() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="relative overflow-hidden font-mono-nu text-[11px] font-bold uppercase tracking-widest px-8 py-3 text-white border-0 transition-all hover:shadow-lg disabled:opacity-60"
+                      className="relative overflow-hidden font-mono-nu text-[13px] font-bold uppercase tracking-widest px-8 py-3 text-white border-0 transition-all hover:shadow-lg disabled:opacity-60"
                     >
                       <div
                         className={`absolute inset-0 bg-gradient-to-r ${template.gradient}`}
@@ -460,7 +655,7 @@ export default function ProjectCreatePage() {
                     <button
                       type="button"
                       onClick={() => router.back()}
-                      className="font-mono-nu text-[11px] uppercase tracking-widest px-8 py-3 border border-nu-ink text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-colors"
+                      className="font-mono-nu text-[13px] uppercase tracking-widest px-8 py-3 border border-nu-ink text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-colors"
                     >
                       취소
                     </button>
@@ -481,7 +676,7 @@ export default function ProjectCreatePage() {
                   }}
                 />
                 <div className="relative z-10">
-                  <h3 className="font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] text-white/40 mb-4">
+                  <h3 className="font-mono-nu text-[11px] font-bold uppercase tracking-[0.15em] text-white/40 mb-4">
                     자동 적용되는 기능
                   </h3>
                   <ul className="space-y-3">
@@ -497,7 +692,7 @@ export default function ProjectCreatePage() {
                         >
                           <Check size={10} />
                         </div>
-                        <span className="text-[11px] text-white/60 leading-snug">
+                        <span className="text-[13px] text-white/60 leading-snug">
                           {feature}
                         </span>
                       </li>
@@ -510,7 +705,7 @@ export default function ProjectCreatePage() {
                         size={12}
                         style={{ color: template.accent }}
                       />
-                      <span className="font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] text-white/50">
+                      <span className="font-mono-nu text-[11px] font-bold uppercase tracking-[0.15em] text-white/50">
                         템플릿 혜택
                       </span>
                     </div>
@@ -521,12 +716,12 @@ export default function ProjectCreatePage() {
                         borderColor: `${template.accent}40`,
                       }}
                     >
-                      <p className="text-[10px] text-white/70 leading-relaxed">
+                      <p className="text-[12px] text-white/70 leading-relaxed">
                         이 템플릿에는 <strong>{PROJECT_TEMPLATE_CONTENTS[template.id]?.milestones || 0}개의 마일스톤</strong>과{" "}
                         <strong>{PROJECT_TEMPLATE_CONTENTS[template.id]?.resources || 0}개의 기본 자료</strong>가 포함되어 있습니다.
                       </p>
                     </div>
-                    <p className="text-[10px] text-white/35 leading-relaxed">
+                    <p className="text-[12px] text-white/35 leading-relaxed">
                       볼트 생성 시 위 기능들이 자동으로 구성됩니다.
                       별도의 설정 없이 바로 운영을 시작할 수 있습니다.
                     </p>
@@ -553,7 +748,7 @@ export default function ProjectCreatePage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Title */}
         <div>
-          <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">
+          <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
             볼트 제목 *
           </label>
           <input
@@ -568,7 +763,7 @@ export default function ProjectCreatePage() {
 
         {/* Category */}
         <div>
-          <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">
+          <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
             카테고리 *
           </label>
           <select
@@ -586,7 +781,7 @@ export default function ProjectCreatePage() {
 
         {/* Description */}
         <div>
-          <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">
+          <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
             설명
           </label>
           <textarea
@@ -601,7 +796,7 @@ export default function ProjectCreatePage() {
         {/* Dates */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">
+            <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
               시작일
             </label>
             <input
@@ -612,7 +807,7 @@ export default function ProjectCreatePage() {
             />
           </div>
           <div>
-            <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">
+            <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
               종료일
             </label>
             <input
@@ -626,7 +821,7 @@ export default function ProjectCreatePage() {
 
         {/* Image upload */}
         <div>
-          <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">
+          <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
             커버 이미지
           </label>
           <div className="border border-dashed border-nu-ink/20 p-6 text-center">
@@ -643,7 +838,7 @@ export default function ProjectCreatePage() {
                     setImageFile(null);
                     setImagePreview(null);
                   }}
-                  className="mt-2 font-mono-nu text-[10px] text-nu-red uppercase tracking-widest"
+                  className="mt-2 font-mono-nu text-[12px] text-nu-red uppercase tracking-widest"
                 >
                   삭제
                 </button>
@@ -669,7 +864,7 @@ export default function ProjectCreatePage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full font-mono-nu text-[11px] font-bold uppercase tracking-[0.1em] py-4 bg-nu-pink text-nu-paper hover:bg-nu-pink/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full font-mono-nu text-[13px] font-bold uppercase tracking-[0.1em] py-4 bg-nu-pink text-nu-paper hover:bg-nu-pink/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {loading ? (
             <>
