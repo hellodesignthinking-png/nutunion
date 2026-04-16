@@ -83,6 +83,12 @@ export function MilestoneList({
   const [editMsReward, setEditMsReward] = useState(0);
   const [editingTask, setEditingTask] = useState<string | null>(null);
   const [editTaskTitle, setEditTaskTitle] = useState("");
+  const [editTaskDueDate, setEditTaskDueDate] = useState("");
+  const [editTaskAssignee, setEditTaskAssignee] = useState("");
+
+  const [newTaskDueDate, setNewTaskDueDate] = useState("");
+  const [newTaskAssignee, setNewTaskAssignee] = useState("");
+  const [projectMembers, setProjectMembers] = useState<{id: string; nickname: string}[]>([]);
 
   // Per-milestone comments & links
   const [msComments, setMsComments] = useState<Record<string, MilestoneComment[]>>({});
@@ -144,7 +150,18 @@ export function MilestoneList({
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) setUserId(data.user.id);
     });
-  }, [fetchMilestones]);
+    
+    // Fetch project members for assignment
+    supabase.from("project_members")
+      .select("user_id, member:profiles!project_members_user_id_fkey(id, nickname)")
+      .eq("project_id", projectId)
+      .then(({ data }) => {
+        if (data) {
+          const membersList = data.map((d: any) => d.member).filter(Boolean);
+          setProjectMembers(membersList);
+        }
+      });
+  }, [fetchMilestones, projectId]);
 
   // ─── Fetch comments & likes for expanded milestones ───
   async function fetchMilestoneInteractions(milestoneId: string) {
@@ -274,15 +291,19 @@ export function MilestoneList({
       const milestone = milestones.find((m) => m.id === milestoneId);
       const taskCount = milestone?.tasks?.length || 0;
 
+      const insertPayload: any = {
+        milestone_id: milestoneId,
+        project_id: projectId,
+        title: newTaskTitle.trim(),
+        status: "todo",
+        sort_order: taskCount,
+      };
+      if (newTaskAssignee) insertPayload.assigned_to = newTaskAssignee;
+      if (newTaskDueDate) insertPayload.due_date = newTaskDueDate;
+
       const { data, error } = await supabase
         .from("project_tasks")
-        .insert({
-          milestone_id: milestoneId,
-          project_id: projectId,
-          title: newTaskTitle.trim(),
-          status: "todo",
-          sort_order: taskCount,
-        })
+        .insert(insertPayload)
         .select("*, assignee:profiles!project_tasks_assigned_to_fkey(id, nickname, avatar_url)")
         .single();
 
@@ -294,6 +315,8 @@ export function MilestoneList({
         )
       );
       setNewTaskTitle("");
+      setNewTaskAssignee("");
+      setNewTaskDueDate("");
       setAddingTaskFor(null);
       toast.success("태스크가 추가되었습니다");
       onTaskChange?.();
@@ -350,11 +373,21 @@ export function MilestoneList({
   async function saveTaskEdit(milestoneId: string, taskId: string) {
     if (!editTaskTitle.trim()) return;
     const supabase = createClient();
-    const { error } = await supabase.from("project_tasks").update({ title: editTaskTitle.trim() }).eq("id", taskId);
+    const updatePayload: any = { title: editTaskTitle.trim() };
+    updatePayload.due_date = editTaskDueDate || null;
+    updatePayload.assigned_to = editTaskAssignee || null;
+
+    const { data, error } = await supabase
+      .from("project_tasks")
+      .update(updatePayload)
+      .eq("id", taskId)
+      .select("*, assignee:profiles!project_tasks_assigned_to_fkey(id, nickname, avatar_url)")
+      .single();
+
     if (error) { toast.error("태스크 수정 실패"); return; }
 
     setMilestones(prev => prev.map(ms => ms.id === milestoneId
-      ? { ...ms, tasks: (ms.tasks || []).map(t => t.id === taskId ? { ...t, title: editTaskTitle.trim() } : t) }
+      ? { ...ms, tasks: (ms.tasks || []).map(t => t.id === taskId ? data : t) }
       : ms));
     setEditingTask(null);
     toast.success("태스크가 수정되었습니다");
@@ -708,14 +741,36 @@ export function MilestoneList({
 
                       if (editingTask === task.id) {
                         return (
-                          <div key={task.id} className="flex items-center gap-2 px-5 py-3 border-b border-nu-ink/[0.04]">
-                            <input value={editTaskTitle} onChange={e => setEditTaskTitle(e.target.value)}
-                              className="flex-1 px-3 py-2 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink"
-                              autoFocus onKeyDown={e => { if (e.key === "Enter") saveTaskEdit(ms.id, task.id); if (e.key === "Escape") setEditingTask(null); }} />
-                            <button onClick={() => saveTaskEdit(ms.id, task.id)}
-                              className="font-mono-nu text-[12px] font-bold uppercase px-3 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors">저장</button>
-                            <button onClick={() => setEditingTask(null)}
-                              className="text-nu-muted hover:text-nu-ink text-sm px-2">취소</button>
+                          <div key={task.id} className="flex flex-col gap-2 px-5 py-3 border-b border-nu-ink/[0.04]">
+                            <div className="flex items-center gap-2">
+                              <input value={editTaskTitle} onChange={e => setEditTaskTitle(e.target.value)}
+                                className="flex-1 px-3 py-2 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink"
+                                autoFocus onKeyDown={e => { if (e.key === "Enter") saveTaskEdit(ms.id, task.id); if (e.key === "Escape") setEditingTask(null); }} />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {projectMembers.length > 0 && (
+                                <select 
+                                  value={editTaskAssignee} 
+                                  onChange={e => setEditTaskAssignee(e.target.value)}
+                                  className="px-3 py-2 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink flex-1"
+                                >
+                                  <option value="">담당자 없음</option>
+                                  {projectMembers.map(member => (
+                                    <option key={member.id} value={member.id}>{member.nickname}</option>
+                                  ))}
+                                </select>
+                              )}
+                              <input 
+                                type="date" 
+                                value={editTaskDueDate} 
+                                onChange={e => setEditTaskDueDate(e.target.value)}
+                                className="px-3 py-2 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink flex-1"
+                              />
+                              <button onClick={() => saveTaskEdit(ms.id, task.id)}
+                                className="font-mono-nu text-[12px] font-bold uppercase px-3 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors">저장</button>
+                              <button onClick={() => setEditingTask(null)}
+                                className="text-nu-muted hover:text-nu-ink text-sm px-2">취소</button>
+                            </div>
                           </div>
                         );
                       }
@@ -750,7 +805,12 @@ export function MilestoneList({
                           )}
                           {canEdit && (
                             <div className="hidden group-hover/task:flex items-center gap-0.5 shrink-0">
-                              <button onClick={() => { setEditingTask(task.id); setEditTaskTitle(task.title); }}
+                              <button onClick={() => { 
+                                setEditingTask(task.id); 
+                                setEditTaskTitle(task.title); 
+                                setEditTaskDueDate(task.due_date || "");
+                                setEditTaskAssignee(task.assigned_to || "");
+                              }}
                                 className="p-1 text-nu-muted hover:text-indigo-600 transition-colors" title="수정">
                                 <Edit3 size={11} />
                               </button>
@@ -768,25 +828,47 @@ export function MilestoneList({
                     {canEdit && (
                       <div className="px-5 py-3 border-t border-nu-ink/[0.06]">
                         {addingTaskFor === ms.id ? (
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              value={newTaskTitle}
-                              onChange={(e) => setNewTaskTitle(e.target.value)}
-                              placeholder="태스크 제목"
-                              className="flex-1 px-3 py-2 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink"
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") { e.preventDefault(); addTask(ms.id); }
-                                if (e.key === "Escape") { setAddingTaskFor(null); setNewTaskTitle(""); }
-                              }}
-                              autoFocus
-                            />
-                            <button onClick={() => addTask(ms.id)} disabled={savingTask}
-                              className="font-mono-nu text-[12px] font-bold uppercase px-3 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors disabled:opacity-50">
-                              {savingTask ? <Loader2 size={12} className="animate-spin" /> : "추가"}
-                            </button>
-                            <button onClick={() => { setAddingTaskFor(null); setNewTaskTitle(""); }}
-                              className="text-nu-muted hover:text-nu-ink text-sm px-2">취소</button>
+                          <div className="flex flex-col gap-2">
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={newTaskTitle}
+                                onChange={(e) => setNewTaskTitle(e.target.value)}
+                                placeholder="태스크 제목"
+                                className="flex-1 px-3 py-2 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink"
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") { e.preventDefault(); addTask(ms.id); }
+                                  if (e.key === "Escape") { setAddingTaskFor(null); setNewTaskTitle(""); setNewTaskDueDate(""); setNewTaskAssignee(""); }
+                                }}
+                                autoFocus
+                              />
+                            </div>
+                            <div className="flex gap-2 items-center">
+                              {projectMembers.length > 0 && (
+                                <select
+                                  value={newTaskAssignee}
+                                  onChange={(e) => setNewTaskAssignee(e.target.value)}
+                                  className="px-3 py-2 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink flex-1"
+                                >
+                                  <option value="">담당자 지정 (선택)</option>
+                                  {projectMembers.map(member => (
+                                    <option key={member.id} value={member.id}>{member.nickname}</option>
+                                  ))}
+                                </select>
+                              )}
+                              <input
+                                type="date"
+                                value={newTaskDueDate}
+                                onChange={(e) => setNewTaskDueDate(e.target.value)}
+                                className="px-3 py-2 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink flex-1"
+                              />
+                              <button onClick={() => addTask(ms.id)} disabled={savingTask}
+                                className="font-mono-nu text-[12px] font-bold uppercase px-3 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors disabled:opacity-50">
+                                {savingTask ? <Loader2 size={12} className="animate-spin" /> : "추가"}
+                              </button>
+                              <button onClick={() => { setAddingTaskFor(null); setNewTaskTitle(""); setNewTaskDueDate(""); setNewTaskAssignee(""); }}
+                                className="text-nu-muted hover:text-nu-ink text-sm px-2">취소</button>
+                            </div>
                           </div>
                         ) : (
                           <button onClick={() => { setAddingTaskFor(ms.id); setNewTaskTitle(""); }}
