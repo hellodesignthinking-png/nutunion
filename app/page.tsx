@@ -3,6 +3,8 @@ import { Nav } from "@/components/shared/nav";
 import { Hero } from "@/components/landing/hero";
 import { Ticker } from "@/components/landing/ticker";
 import { createClient } from "@/lib/supabase/server";
+// Footer는 개인정보처리방침 링크 포함 — Google 크롤러를 위해 static import
+import { Footer } from "@/components/landing/footer";
 
 const CustomCursor = dynamic(() => import("@/components/shared/custom-cursor").then(m => ({ default: m.CustomCursor })));
 const FullImageSection = dynamic(() => import("@/components/landing/full-image-section").then(m => ({ default: m.FullImageSection })));
@@ -17,7 +19,7 @@ const LiquidIdentitySection = dynamic(() => import("@/components/landing/liquid-
 const ProjectsPreview = dynamic(() => import("@/components/landing/projects-preview").then(m => ({ default: m.ProjectsPreview })));
 const TestimonialsSection = dynamic(() => import("@/components/landing/testimonials-section").then(m => ({ default: m.TestimonialsSection })));
 const JoinSection = dynamic(() => import("@/components/landing/join-section").then(m => ({ default: m.JoinSection })));
-const Footer = dynamic(() => import("@/components/landing/footer").then(m => ({ default: m.Footer })));
+// Footer는 위에서 static import됨 (개인정보처리방침 링크 크롤러 감지용)
 
 // ISR: cache page for 60 seconds, then revalidate in background
 export const revalidate = 60;
@@ -100,6 +102,11 @@ export default async function LandingPage() {
         <JoinSection content={content.join} />
       </main>
       <Footer content={content.footer} />
+      {/* Google OAuth 검수용: 크롤러가 반드시 감지할 수 있도록 서버 렌더링 링크 */}
+      <div className="sr-only" aria-hidden="true">
+        <a href="/privacy">개인정보처리방침</a>
+        <a href="/terms">이용약관</a>
+      </div>
     </>
   );
 }

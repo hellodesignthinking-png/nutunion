@@ -45,6 +45,8 @@ export const metadata: Metadata = {
   title: "너트유니온 — 너(You)와 너트(Nut)의 연합",
   description: "너트(Nut) + 볼트(Bolt) = 변화를 만드는 힘. 시티체인저들의 자율적 연합체.",
   manifest: "/manifest.json",
+  // Google OAuth 검수: 개인정보처리방침 URL 명시
+  metadataBase: new URL("https://nutunion.co.kr"),
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -55,6 +57,7 @@ export const metadata: Metadata = {
     description: "너트(Nut) + 볼트(Bolt) = 변화를 만드는 힘. 시티체인저들의 자율적 연합체.",
     siteName: "너트유니온",
     type: "website",
+    url: "https://nutunion.co.kr",
   },
 };
 
