@@ -95,6 +95,16 @@ export default async function LandingPage() {
       background-color: ${dailyVariant.palette.bg} !important;
       color: ${dailyVariant.palette.ink} !important;
     }
+    ::selection {
+      background-color: ${dailyVariant.palette.accent} !important;
+      color: ${dailyVariant.palette.bg} !important;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: ${dailyVariant.palette.accent} !important;
+    }
+    .text-nu-pink { color: ${dailyVariant.palette.accent} !important; }
+    .bg-nu-pink { background-color: ${dailyVariant.palette.accent} !important; }
+    .border-nu-pink { border-color: ${dailyVariant.palette.accent} !important; }
   `;
 
   return (

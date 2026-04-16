@@ -411,22 +411,40 @@ export function LiquidIdentitySection() {
 
             {/* Today's vibe header */}
             <div className="p-7 border-b" style={{ borderColor: `${cfg.colors.shell}30` }}>
-              <p className="font-mono-nu text-[12px] uppercase tracking-widest mb-1"
-                style={{ color: cfg.colors.accent, opacity: 0.7 }}>Today&apos;s Vibe</p>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 bg-black text-white"
+                  style={{ background: cfg.colors.text, color: cfg.colors.bg }}>
+                  Liquid Identity v3.0
+                </span>
+                <span className="font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1"
+                  style={{ background: `${cfg.colors.accent}20`, color: cfg.colors.accent }}>
+                  Multiverse Engine
+                </span>
+              </div>
               <h2 className="text-5xl md:text-6xl font-extrabold tracking-tight transition-all duration-500"
                 style={{ fontFamily: `'${cfg.font}', sans-serif`, color: cfg.colors.text }}>
                 {cfg.vibe.toUpperCase()}
               </h2>
               {vibe?.isHybrid && vibe.hybridGenres && (
-                <p className="font-mono-nu text-[12px] mt-2 flex items-center gap-2"
+                <p className="font-mono-nu text-[12px] mt-2 flex items-center gap-2 font-bold"
                   style={{ color: cfg.colors.accent }}>
                   <Layers size={10} />
-                  {GENRES[vibe.hybridGenres[0]].label} × {GENRES[vibe.hybridGenres[1]].label} 하이브리드
+                  {GENRES[vibe.hybridGenres[0]].label} × {GENRES[vibe.hybridGenres[1]].label} Hybrid
                 </p>
               )}
-              <p className="text-sm mt-3 leading-relaxed" style={{ color: cfg.colors.text, opacity: 0.55 }}>
-                {cfg.description}
-              </p>
+              
+              <div className="mt-5 p-4 border" style={{ borderColor: `${cfg.colors.accent}40`, background: `${cfg.colors.primary}08` }}>
+                <p className="font-mono-nu text-[11px] mb-1.5 uppercase tracking-widest" style={{ color: cfg.colors.accent }}>
+                  Generative Concept
+                </p>
+                <p className="text-sm leading-relaxed" style={{ color: cfg.colors.text, opacity: 0.9 }}>
+                  <strong>매일 스스로 진화하는 멀티버스 로고 시스템입니다.</strong><br/>
+                  오늘은 <strong>{cfg.labelKo} ({cfg.label})</strong> 스타일의 파장과 에너지가 감지되었습니다. 
+                  우측의 로고는 고정된 이미지가 아닌, 오늘의 날짜 값과 넛유니언의 활동 데이터를 수학적 난수로 변환하여 
+                  단 한 번만 계산되어 그려진 <strong>세상에 하나뿐인 기하학적 {cfg.labelKo} 엠블럼</strong>입니다.
+                  이 에너지에 동기화되어 현재 랜딩 페이지 전체의 포인트 컬러도 <strong>{cfg.vibe} 테마</strong>로 자동 변화했습니다.
+                </p>
+              </div>
             </div>
 
             {/* Data Insight */}
