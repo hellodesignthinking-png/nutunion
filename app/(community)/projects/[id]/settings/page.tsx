@@ -189,7 +189,7 @@ export default function ProjectSettingsPage() {
       .in("status", ["pending"])
       .order("created_at", { ascending: false });
 
-    setApplications((appsData || []) as ApplicationItem[]);
+    setApplications(((appsData || []) as unknown) as ApplicationItem[]);
 
     // Load all crews for dropdown
     const { data: crewsData } = await supabase

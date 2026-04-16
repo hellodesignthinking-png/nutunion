@@ -217,9 +217,10 @@ export function UnifiedTabView({
       }
 
       // 5. Shared resources (wiki_weekly_resources) — curated only (논문·자료)
+      // Columns: resource_type, auto_summary, shared_by (not added_by/type/summary)
       const { data: resources } = await supabase
         .from("wiki_weekly_resources")
-        .select("id, title, url, type, summary, contributor:profiles!wiki_weekly_resources_added_by_fkey(nickname), created_at, topic_id")
+        .select("id, title, url, resource_type, auto_summary, contributor:profiles!wiki_weekly_resources_shared_by_fkey(nickname), created_at, linked_wiki_page_id")
         .eq("group_id", groupId)
         .order("created_at", { ascending: false });
 
@@ -227,8 +228,8 @@ export function UnifiedTabView({
         id: r.id,
         title: r.title,
         url: r.url,
-        type: r.type || "link",
-        summary: r.summary || null,
+        type: r.resource_type || "link",
+        summary: r.auto_summary || null,
         contributor: r.contributor?.nickname || null,
         createdAt: r.created_at,
       }));
@@ -399,13 +400,13 @@ export function UnifiedTabView({
       // Refresh allResources so the references section updates
       const { data: fresh } = await supabase
         .from("wiki_weekly_resources")
-        .select("id, title, url, resource_type, auto_summary, contributor:profiles!wiki_weekly_resources_shared_by_fkey(nickname), created_at")
+        .select("id, title, url, resource_type, auto_summary, contributor:profiles!wiki_weekly_resources_shared_by_fkey(nickname), created_at, linked_wiki_page_id")
         .eq("group_id", groupId)
         .order("created_at", { ascending: false });
       if (fresh) {
         setAllResources(fresh.map((r: any) => ({
           id: r.id, title: r.title, url: r.url,
-          type: r.resource_type, summary: r.auto_summary || null,
+          type: r.resource_type || "link", summary: r.auto_summary || null,
           contributor: r.contributor?.nickname || null, createdAt: r.created_at,
         })));
       }

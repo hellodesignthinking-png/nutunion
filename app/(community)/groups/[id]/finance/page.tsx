@@ -149,18 +149,30 @@ export default function GroupFinancePage() {
           setIsManager(memberData.role === "host" || memberData.role === "moderator");
         }
 
-        // Fetch expenditures with payer info
-        const { data: expendituresData, error: expendError } = await supabase
-          .from("group_expenditures")
-          .select("*, payer:payer_id(id, nickname, avatar_url)")
-          .eq("group_id", groupId)
-          .order("date", { ascending: false });
+        // Fetch expenditures — use explicit FK hint or fallback to separate payer query
+        let expendituresData: any[] = [];
+        {
+          const { data, error: expendError } = await supabase
+            .from("group_expenditures")
+            .select("*, payer:profiles!group_expenditures_payer_id_fkey(id, nickname, avatar_url)")
+            .eq("group_id", groupId)
+            .order("date", { ascending: false });
 
-        if (expendError) {
-          console.error("Expenditure fetch error:", expendError);
-          setExpenditures([]);
-        } else {
-          const mapped = (expendituresData || []).map((item: any) => ({
+          if (expendError) {
+            // FK not yet in schema cache — fetch without join, then resolve payers separately
+            const { data: raw } = await supabase
+              .from("group_expenditures")
+              .select("*")
+              .eq("group_id", groupId)
+              .order("date", { ascending: false });
+            expendituresData = raw || [];
+          } else {
+            expendituresData = data || [];
+          }
+        }
+
+        {
+          const mapped = expendituresData.map((item: any) => ({
             id: item.id,
             date: item.date,
             category: item.category,
@@ -301,7 +313,7 @@ export default function GroupFinancePage() {
       // Refresh expenditures
       const { data: expendituresData } = await supabase
         .from("group_expenditures")
-        .select("*, payer:payer_id(id, nickname, avatar_url)")
+        .select("*, payer:profiles!group_expenditures_payer_id_fkey(id, nickname, avatar_url)")
         .eq("group_id", groupId)
         .order("date", { ascending: false });
 
@@ -354,7 +366,7 @@ export default function GroupFinancePage() {
           }`}
         >
           {/* Breadcrumb */}
-          <nav className="flex items-center gap-1.5 mb-6 font-mono-nu text-[11px] uppercase tracking-widest">
+          <nav className="flex items-center gap-1.5 mb-6 font-mono-nu text-[13px] uppercase tracking-widest">
             <Link
               href={`/groups/${groupId}`}
               className="text-nu-muted hover:text-nu-ink no-underline flex items-center gap-1 transition-colors"
@@ -390,19 +402,19 @@ export default function GroupFinancePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             <div className="bg-nu-ink text-nu-paper p-5 shadow-2xl relative overflow-hidden">
               <div className="relative z-10">
-                <p className="font-mono-nu text-[9px] uppercase tracking-[0.3em] opacity-40 mb-2">
+                <p className="font-mono-nu text-[11px] uppercase tracking-[0.3em] opacity-40 mb-2">
                   Total Project Liquidity
                 </p>
                 <p className="font-head text-3xl font-black">₩{totals.total.toLocaleString()}</p>
                 <div className="flex gap-4 mt-4">
                   <div className="flex flex-col">
-                    <span className="font-mono-nu text-[8px] text-nu-paper/40">미정산</span>
+                    <span className="font-mono-nu text-[10px] text-nu-paper/40">미정산</span>
                     <span className="text-sm font-bold text-nu-amber">
                       ₩{totals.pending.toLocaleString()}
                     </span>
                   </div>
                   <div className="flex flex-col border-l border-nu-paper/10 pl-4">
-                    <span className="font-mono-nu text-[8px] text-nu-paper/40">기여 포인트</span>
+                    <span className="font-mono-nu text-[10px] text-nu-paper/40">기여 포인트</span>
                     <span className="text-sm font-bold text-nu-blue">
                       {(totals.total / 100).toLocaleString()}P
                     </span>
@@ -418,7 +430,7 @@ export default function GroupFinancePage() {
               <div className="flex border-b border-nu-ink/5">
                 <button
                   onClick={() => setActiveTab("all")}
-                  className={`flex-1 py-3 font-mono-nu text-[10px] uppercase tracking-widest transition-all ${
+                  className={`flex-1 py-3 font-mono-nu text-[12px] uppercase tracking-widest transition-all ${
                     activeTab === "all"
                       ? "bg-nu-ink text-nu-paper"
                       : "text-nu-muted hover:bg-nu-cream/30"
@@ -428,7 +440,7 @@ export default function GroupFinancePage() {
                 </button>
                 <button
                   onClick={() => setActiveTab("my")}
-                  className={`flex-1 py-3 font-mono-nu text-[10px] uppercase tracking-widest transition-all ${
+                  className={`flex-1 py-3 font-mono-nu text-[12px] uppercase tracking-widest transition-all ${
                     activeTab === "my"
                       ? "bg-nu-ink text-nu-paper"
                       : "text-nu-muted hover:bg-nu-cream/30"
@@ -438,7 +450,7 @@ export default function GroupFinancePage() {
                 </button>
               </div>
               <div className="p-4">
-                <p className="text-[11px] text-nu-muted leading-relaxed italic">
+                <p className="text-[13px] text-nu-muted leading-relaxed italic">
                   {activeTab === "all"
                     ? "너트 전체 자금의 흐름과 와셔들의 기여 증빙을 검토합니다."
                     : "본인의 정산 요청 상태를 실시간으로 추적할 수 있는 대기실입니다."}
@@ -458,7 +470,7 @@ export default function GroupFinancePage() {
             </div>
             <button
               onClick={() => setShowClaimForm(true)}
-              className="bg-nu-pink text-nu-paper font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 hover:bg-nu-ink transition-all inline-flex items-center gap-2"
+              className="bg-nu-pink text-nu-paper font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2.5 hover:bg-nu-ink transition-all inline-flex items-center gap-2"
             >
               <Plus size={14} /> NEW CLAIM
             </button>
@@ -480,7 +492,7 @@ export default function GroupFinancePage() {
 
                 <form onSubmit={handleSubmitClaim} className="p-6 space-y-4">
                   <div>
-                    <label className="block font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-2">
+                    <label className="block font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-2">
                       날짜
                     </label>
                     <input
@@ -492,7 +504,7 @@ export default function GroupFinancePage() {
                   </div>
 
                   <div>
-                    <label className="block font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-2">
+                    <label className="block font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-2">
                       카테고리
                     </label>
                     <select
@@ -509,7 +521,7 @@ export default function GroupFinancePage() {
                   </div>
 
                   <div>
-                    <label className="block font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-2">
+                    <label className="block font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-2">
                       항목명
                     </label>
                     <input
@@ -522,7 +534,7 @@ export default function GroupFinancePage() {
                   </div>
 
                   <div>
-                    <label className="block font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-2">
+                    <label className="block font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-2">
                       금액 (원)
                     </label>
                     <input
@@ -535,7 +547,7 @@ export default function GroupFinancePage() {
                   </div>
 
                   <div>
-                    <label className="block font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-2">
+                    <label className="block font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-2">
                       영수증 URL (선택)
                     </label>
                     <input
@@ -548,7 +560,7 @@ export default function GroupFinancePage() {
                   </div>
 
                   <div>
-                    <label className="block font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-2">
+                    <label className="block font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-2">
                       설명 (선택)
                     </label>
                     <textarea
@@ -564,14 +576,14 @@ export default function GroupFinancePage() {
                     <button
                       type="button"
                       onClick={() => setShowClaimForm(false)}
-                      className="flex-1 py-2.5 bg-nu-white border-2 border-nu-ink text-nu-ink font-mono-nu text-[10px] font-bold uppercase tracking-widest hover:bg-nu-cream transition-all"
+                      className="flex-1 py-2.5 bg-nu-white border-2 border-nu-ink text-nu-ink font-mono-nu text-[12px] font-bold uppercase tracking-widest hover:bg-nu-cream transition-all"
                     >
                       취소
                     </button>
                     <button
                       type="submit"
                       disabled={formLoading}
-                      className="flex-1 py-2.5 bg-nu-pink text-nu-paper font-mono-nu text-[10px] font-bold uppercase tracking-widest hover:bg-nu-ink transition-all disabled:opacity-50"
+                      className="flex-1 py-2.5 bg-nu-pink text-nu-paper font-mono-nu text-[12px] font-bold uppercase tracking-widest hover:bg-nu-ink transition-all disabled:opacity-50"
                     >
                       {formLoading ? "제출 중..." : "제출"}
                     </button>
@@ -590,7 +602,7 @@ export default function GroupFinancePage() {
               <h3 className="font-head text-lg font-black text-nu-ink/40 uppercase tracking-widest">
                 아직 정산 내역이 없습니다
               </h3>
-              <p className="text-[11px] mt-3 max-w-[280px] leading-relaxed text-nu-muted">
+              <p className="text-[13px] mt-3 max-w-[280px] leading-relaxed text-nu-muted">
                 첫 번째 정산 요청을 등록하여 그룹 자금을 투명하게 관리해보세요.
               </p>
             </div>
@@ -633,7 +645,7 @@ export default function GroupFinancePage() {
                         <p className="font-head text-[13px] font-bold text-nu-ink leading-tight">
                           {exp.item}
                         </p>
-                        <p className="font-mono-nu text-[9px] text-nu-muted uppercase mt-0.5">
+                        <p className="font-mono-nu text-[11px] text-nu-muted uppercase mt-0.5">
                           {exp.payer.nickname} · {exp.date}
                         </p>
                       </div>
@@ -642,7 +654,7 @@ export default function GroupFinancePage() {
                       <p className="font-head text-sm font-black text-nu-ink">
                         ₩{exp.amount.toLocaleString()}
                       </p>
-                      <p className="font-mono-nu text-[8px] text-nu-blue uppercase mt-0.5">
+                      <p className="font-mono-nu text-[10px] text-nu-blue uppercase mt-0.5">
                         {(exp.amount / 100).toLocaleString()} POINT
                       </p>
                     </div>
@@ -674,7 +686,7 @@ export default function GroupFinancePage() {
                               )}
                             </div>
                             <span
-                              className={`font-mono-nu text-[7px] uppercase tracking-tighter ${
+                              className={`font-mono-nu text-[9px] uppercase tracking-tighter ${
                                 isPassed
                                   ? "text-nu-ink font-bold font-black"
                                   : "text-nu-muted/40"
@@ -711,7 +723,7 @@ export default function GroupFinancePage() {
                       <p className="font-head text-[13px] font-black truncate uppercase tracking-tight">
                         {previewData.name}
                       </p>
-                      <p className="font-mono-nu text-[9px] text-nu-paper/70 truncate uppercase tracking-widest mt-0.5">
+                      <p className="font-mono-nu text-[11px] text-nu-paper/70 truncate uppercase tracking-widest mt-0.5">
                         Advanced Settlement Review
                       </p>
                     </div>
@@ -736,7 +748,7 @@ export default function GroupFinancePage() {
                               {expenditures.find((e) => e.id === previewData.id)?.payer
                                 .nickname}
                             </p>
-                            <p className="font-mono-nu text-[9px] text-nu-paper/40 uppercase tracking-widest">
+                            <p className="font-mono-nu text-[11px] text-nu-paper/40 uppercase tracking-widest">
                               Core Project Contributor
                             </p>
                           </div>
@@ -750,7 +762,7 @@ export default function GroupFinancePage() {
                                   ""
                               ]?.meetings || 0}
                             </p>
-                            <p className="font-mono-nu text-[7px] text-nu-paper/30 uppercase mt-0.5">
+                            <p className="font-mono-nu text-[9px] text-nu-paper/30 uppercase mt-0.5">
                               Sessions
                             </p>
                           </div>
@@ -761,7 +773,7 @@ export default function GroupFinancePage() {
                                   ""
                               ]?.resources || 0}
                             </p>
-                            <p className="font-mono-nu text-[7px] text-nu-paper/30 uppercase mt-0.5">
+                            <p className="font-mono-nu text-[9px] text-nu-paper/30 uppercase mt-0.5">
                               Knowledge
                             </p>
                           </div>
@@ -776,7 +788,7 @@ export default function GroupFinancePage() {
                                 ).length
                               }
                             </p>
-                            <p className="font-mono-nu text-[7px] text-nu-paper/30 uppercase mt-0.5">
+                            <p className="font-mono-nu text-[9px] text-nu-paper/30 uppercase mt-0.5">
                               Claims
                             </p>
                           </div>
@@ -809,11 +821,11 @@ export default function GroupFinancePage() {
                       <div className="bg-nu-white p-4 border border-nu-ink/10">
                         <div className="flex items-center gap-2 mb-2">
                           <TrendingUp size={14} className="text-nu-pink" />
-                          <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest">
+                          <span className="font-mono-nu text-[12px] font-bold uppercase tracking-widest">
                             Reward Simulation
                           </span>
                         </div>
-                        <p className="text-[11px] text-nu-muted leading-relaxed">
+                        <p className="text-[13px] text-nu-muted leading-relaxed">
                           해당 멤버의 높은 기여 지수(미팅 참여{" "}
                           {contributions[
                             expenditures.find((e) => e.id === previewData.id)?.payer_id || ""
@@ -829,7 +841,7 @@ export default function GroupFinancePage() {
                           className="flex flex-col items-center justify-center gap-1 py-4 bg-nu-blue text-nu-paper hover:bg-nu-ink transition-all shadow-xl shadow-nu-blue/10 disabled:opacity-50"
                         >
                           <CheckCircle2 size={18} />
-                          <span className="font-mono-nu text-[9px] font-black uppercase tracking-widest">
+                          <span className="font-mono-nu text-[11px] font-black uppercase tracking-widest">
                             Final Approval
                           </span>
                         </button>
@@ -839,7 +851,7 @@ export default function GroupFinancePage() {
                           className="flex flex-col items-center justify-center gap-1 py-4 bg-nu-white border-2 border-nu-ink text-nu-ink hover:bg-red-50 hover:text-red-500 hover:border-red-500 transition-all disabled:opacity-50"
                         >
                           <XCircle size={18} />
-                          <span className="font-mono-nu text-[9px] font-black uppercase tracking-widest">
+                          <span className="font-mono-nu text-[11px] font-black uppercase tracking-widest">
                             Request Revision
                           </span>
                         </button>
@@ -862,7 +874,7 @@ export default function GroupFinancePage() {
                   <h3 className="font-head text-lg font-black text-nu-ink/30 uppercase tracking-widest">
                     Verification Console
                   </h3>
-                  <p className="text-[11px] mt-4 max-w-[240px] leading-relaxed mx-auto text-nu-muted">
+                  <p className="text-[13px] mt-4 max-w-[240px] leading-relaxed mx-auto text-nu-muted">
                     지출 내역을 선택하면 멤버의 기여 데이터와 증빙 영수증을 한 화면에서 대조할 수 있습니다.
                   </p>
                   <div className="mt-8 flex gap-2">

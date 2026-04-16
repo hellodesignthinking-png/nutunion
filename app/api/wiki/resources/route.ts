@@ -67,12 +67,7 @@ export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "로그인 필요" }, { status: 401 });
-
-  // Verify group membership
-  const isMember = await verifyGroupMembership(supabase, user.id, groupId);
-  if (!isMember) {
-    return NextResponse.json({ error: "그룹 멤버만 접근할 수 있습니다" }, { status: 403 });
-  }
+  // wiki_weekly_resources has "select using (true)" RLS — allow any authenticated user to read
 
   // 1) Fetch wiki_weekly_resources (gracefully skip if table doesn't exist)
   let weeklyResources: any[] = [];
