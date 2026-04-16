@@ -77,25 +77,57 @@ function pick<T>(items: T[], random: () => number) {
   return items[Math.floor(random() * items.length)];
 }
 
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = Math.imul(31, hash) + str.charCodeAt(i) | 0;
+  }
+  return hash >>> 0;
+}
+
+function generateDynamicPalette(rng: () => number): PaletteSet {
+  const h = Math.floor(rng() * 360);
+  const s = 40 + Math.floor(rng() * 50);
+  const l = 85 + Math.floor(rng() * 10);
+  const bg = `hsl(${h}, ${s}%, ${l}%)`;
+  const panel = `hsl(${h}, ${s}%, 98%)`;
+  const inkL = Math.floor(rng() * 10) + 4;
+  const ink = `hsl(${(h + 180 + Math.floor(rng()*60)-30) % 360}, ${20 + Math.floor(rng()*20)}%, ${inkL}%)`;
+  const a1_h = (h + 90 + Math.floor(rng()*180)) % 360;
+  const accent = `hsl(${a1_h}, ${75 + Math.floor(rng()*25)}%, ${45 + Math.floor(rng()*15)}%)`;
+  const a2_h = (a1_h + 90 + Math.floor(rng()*180)) % 360;
+  const accentTwo = `hsl(${a2_h}, ${75 + Math.floor(rng()*25)}%, ${45 + Math.floor(rng()*15)}%)`;
+  const soft = `hsl(${h}, ${Math.max(0, s - 30)}%, ${75 + Math.floor(rng()*15)}%)`;
+  return { bg, panel, ink, accent, accentTwo, soft };
+}
+
 function generateDailyVariants(date: Date): LogoVariant[] {
   const dateCode = getDateCode(date);
   const baseSeed = Number(dateCode);
   return Array.from({ length: DAILY_VARIANT_COUNT }, (_, index) => {
-    const seed = baseSeed + index * 97;
-    const random = createSeededRandom(seed);
-    const family = FAMILIES[index % FAMILIES.length];
-    const palette = PALETTES[Math.floor(random() * PALETTES.length)];
-    const left = pick(LABEL_PARTS, random);
-    const right = pick(LABEL_PARTS, random);
+    const contentSeed = baseSeed + index * 997;
+    const contentRng = createSeededRandom(contentSeed);
+    const left = pick(LABEL_PARTS, contentRng);
+    const right = pick(LABEL_PARTS, contentRng);
     const label = left === right ? `${left} UNION` : `${left} ${right}`;
-    return { id:index+1, seed, family, label, subtitle:pick(SUB_PARTS,random), energy:pick(ENERGY_WORDS,random), palette, fontStack:pick(FONT_STACKS,random), dateCode } satisfies LogoVariant;
+    const subtitle = pick(SUB_PARTS, contentRng);
+    const energy = pick(ENERGY_WORDS, contentRng);
+    const contentStr = `${label}|${subtitle}|${energy}|${index}`;
+    const hash = hashString(contentStr);
+    const visualRng = createSeededRandom(hash);
+    const palette = generateDynamicPalette(visualRng);
+    const fontStack = pick(FONT_STACKS, visualRng);
+    const family = FAMILIES[Math.floor(visualRng() * FAMILIES.length)];
+    return {
+      id: index + 1, seed: hash, family,
+      label, subtitle, energy, palette, fontStack, dateCode
+    } satisfies LogoVariant;
   });
 }
 
 function OpenLogoArtwork({ variant, size }: { variant: LogoVariant; size: number }) {
-  const { family, palette, label, seed, fontStack } = variant;
+  const { palette, label, seed, fontStack, subtitle, energy } = variant;
   const rng = createSeededRandom(seed + 1337);
-  const sub = Math.floor(rng() * 4);
   const rx = (lo: number, hi: number) => lo + rng() * (hi - lo);
   const ri = (lo: number, hi: number) => Math.floor(rx(lo, hi + 1));
 
@@ -103,540 +135,60 @@ function OpenLogoArtwork({ variant, size }: { variant: LogoVariant; size: number
   const sl = label.split(" ")[0] || "NU";
   const N = sl[0] || "N";
 
-  let inner: React.ReactNode = null;
+  let bgLayer: React.ReactNode = null;
+  let fgLayer: React.ReactNode = null;
+  let txtLayer: React.ReactNode = null;
 
-  // ── MONOLITH ─────────────────────────────────────────────────────────
-  if (family === "monolith") {
-    if (sub === 0) {
-      // Horizontal mass blocks
-      const h1 = rx(22,40), h2 = rx(12,22);
-      inner = <>
-        <rect x="0" y="0" width="100" height={h1} fill={a1}/>
-        <rect x="0" y={h1} width="100" height={h2} fill={ink}/>
-        <rect x="0" y={h1+h2} width="100" height={100-h1-h2} fill={panel}/>
-        <text x="6" y={h1*0.78} fontSize={h1*0.58} fontFamily={fontStack} fontWeight="900" fill={panel}>{sl}</text>
-        <line x1="6" y1={h1+h2+14} x2="94" y2={h1+h2+14} stroke={a1} strokeWidth="1.5"/>
-        <text x="6" y={h1+h2+26} fontSize="6.5" fontFamily={fontStack} fill={ink} letterSpacing="3">NUTUNION</text>
-      </>;
-    } else if (sub === 1) {
-      // Vertical split — left solid / right stripes
-      const sp = rx(38,55);
-      inner = <>
-        <rect x="0" y="0" width={sp} height="100" fill={ink}/>
-        <rect x={sp} y="0" width={100-sp} height="100" fill={panel}/>
-        {Array.from({length:7},(_,i)=>(
-          <rect key={i} x={sp} y={i*15+rx(0,5)} width={100-sp} height={rx(3,9)} fill={i%2===0?a1:soft} opacity="0.9"/>
-        ))}
-        <text x={sp/2} y="60" textAnchor="middle" fontSize="26" fontFamily={fontStack} fontWeight="900" fill={panel}>{N}</text>
-        <text x={sp/2} y="73" textAnchor="middle" fontSize="5.5" fontFamily={fontStack} fill={a1} letterSpacing="1.5">NUT</text>
-      </>;
-    } else if (sub === 2) {
-      // Single rotated diamond
-      const cx=rx(38,62), cy=rx(38,62), r2=rx(30,42);
-      const sq = r2*Math.SQRT2;
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={soft}/>
-        <rect x={cx-sq/2} y={cy-sq/2} width={sq} height={sq} fill={a1} transform={`rotate(45 ${cx} ${cy})`}/>
-        <rect x={cx-sq*0.45/2} y={cy-sq*0.45/2} width={sq*0.45} height={sq*0.45} fill={panel} transform={`rotate(45 ${cx} ${cy})`}/>
-        <text x={cx} y={cy+4} textAnchor="middle" fontSize="12" fontFamily={fontStack} fontWeight="900" fill={ink}>{N}</text>
-        <rect x="0" y="88" width="100" height="12" fill={ink}/>
-        <text x="6" y="97" fontSize="6.5" fontFamily={fontStack} fill={panel} letterSpacing="2">NU</text>
-      </>;
-    } else {
-      // Big letterform fills frame
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={a1}/>
-        <text x="50" y="88" textAnchor="middle" fontSize="100" fontFamily={fontStack} fontWeight="900" fill={panel} opacity="0.12">{N}</text>
-        <text x="50" y="86" textAnchor="middle" fontSize="100" fontFamily={fontStack} fontWeight="900" fill={ink} opacity="0.9">{N}</text>
-        <rect x="0" y="0" width="100" height="18" fill={ink} opacity="0.85"/>
-        <text x="6" y="13" fontSize="6" fontFamily={fontStack} fill={panel} letterSpacing="3">NUTUNION OPEN</text>
-      </>;
-    }
-  }
+  // 1. DYNAMIC BACKGROUND (12 variants)
+  const bgType = ri(0, 11);
+  if (bgType === 0) bgLayer = <rect x="0" y="0" width="100" height="100" fill={bg} />;
+  else if (bgType === 1) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/><polygon points={`0,0 100,0 ${rx(50, 100)},100 0,${rx(50, 100)}`} fill={soft}/></>;
+  else if (bgType === 2) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/>{Array.from({length: ri(5, 12)}, (_,i)=><rect key={i} x="0" y={i*(100/ri(5,12))} width="100" height={rx(1, 8)} fill={soft} opacity="0.7"/>)}</>;
+  else if (bgType === 3) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/>{Array.from({length: ri(4, 9)}, (_,i)=><circle key={i} cx="50" cy="50" r={10+i*rx(8,15)} fill="none" stroke={soft} strokeWidth={rx(1, 4)} opacity="0.8"/>)}</>;
+  else if (bgType === 4) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/><circle cx="50" cy="50" r={rx(35, 48)} fill={panel}/></>;
+  else if (bgType === 5) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/>{Array.from({length: 6}, (_,i)=><line key={i} x1={10+i*16} y1="0" x2={10+i*16} y2="100" stroke={soft} strokeWidth={rx(4, 12)} />)}</>;
+  else if (bgType === 6) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/>{Array.from({length: 5}, (_,i)=><path key={i} d={`M0 ${20+i*15} Q ${rx(30, 70)} ${rx(-20, 120)} 100 ${20+i*15}`} fill="none" stroke={soft} strokeWidth={rx(2, 6)}/>)}</>;
+  else if (bgType === 7) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/><rect x={rx(5,15)} y={rx(5,15)} width={rx(70,90)} height={rx(70,90)} fill={panel} stroke={soft} strokeWidth="3" strokeDasharray={`${rx(2,10)} ${rx(2,10)}`}/></>;
+  else if (bgType === 8) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/><polygon points="0,50 50,0 100,50 50,100" fill={soft} opacity="0.6"/></>;
+  else if (bgType === 9) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/>{Array.from({length: ri(20,50)}, (_,i)=><circle key={i} cx={rx(0,100)} cy={rx(0,100)} r={rx(0.5, 2.5)} fill={ink} opacity="0.2"/>)}</>;
+  else if (bgType === 10) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/><circle cx={rx(20,80)} cy={rx(20,80)} r={rx(30,80)} fill={a1} opacity="0.15"/><circle cx={rx(20,80)} cy={rx(20,80)} r={rx(30,80)} fill={a2} opacity="0.15"/></>;
+  else bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg}/><path d={`M 0 0 L ${rx(40,60)} 100 L 100 0 Z`} fill={soft} opacity="0.7"/></>;
 
-  // ── SIGNAL ────────────────────────────────────────────────────────────
-  if (family === "signal") {
-    if (sub === 0) {
-      // Concentric arcs from corner
-      const n = ri(3,6);
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={ink}/>
-        {Array.from({length:n},(_,i)=>{
-          const r3=18+i*(68/n);
-          return <path key={i} d={`M 8 8 m ${r3} 0 a ${r3} ${r3} 0 0 0 0 ${r3}`} fill="none"
-            stroke={i%2===0?a1:a2} strokeWidth={rx(2,5)} strokeLinecap="round"/>;
-        })}
-        <circle cx="8" cy="8" r="6" fill={a1}/>
-        <rect x="0" y="84" width="100" height="16" fill={panel} opacity="0.08"/>
-        <text x="8" y="96" fontSize="7" fontFamily={fontStack} fill={panel} letterSpacing="2">SIGNAL</text>
-      </>;
-    } else if (sub === 1) {
-      // Sunburst rays
-      const rays = ri(9,18);
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={soft}/>
-        {Array.from({length:rays},(_,i)=>{
-          const angle=(i/rays)*Math.PI*2;
-          return <line key={i} x1="50" y1="50"
-            x2={50+Math.cos(angle)*48} y2={50+Math.sin(angle)*48}
-            stroke={i%3===0?a1:ink} strokeWidth={i%2===0?2:1} opacity="0.75"/>;
-        })}
-        <circle cx="50" cy="50" r="15" fill={a1}/>
-        <circle cx="50" cy="50" r="8" fill={panel}/>
-        <text x="50" y="54" textAnchor="middle" fontSize="7" fontFamily={fontStack} fontWeight="900" fill={ink}>NU</text>
-      </>;
-    } else if (sub === 2) {
-      // Radar scan + horizontal bars
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={ink}/>
-        {Array.from({length:11},(_,i)=>(
-          <rect key={i} x="8" y={8+i*7.5} width={rx(25,75)} height={rx(2,5)} fill={i%3===0?a1:i%5===0?a2:panel} opacity={0.5+i*0.04} rx="1"/>
-        ))}
-        <circle cx="76" cy="34" r="18" fill="none" stroke={a2} strokeWidth="3"/>
-        <circle cx="76" cy="34" r="10" fill="none" stroke={a2} strokeWidth="1.5"/>
-        <circle cx="76" cy="34" r="4" fill={a2}/>
-        <line x1="76" y1="10" x2="76" y2="58" stroke={a2} strokeWidth="1" strokeDasharray="3,3"/>
-        <line x1="52" y1="34" x2="100" y2="34" stroke={a2} strokeWidth="1" strokeDasharray="3,3"/>
-      </>;
-    } else {
-      // Oscilloscope frequency
-      const pts = Array.from({length:18},(_,i)=>{
-        const x=8+i*4.9, amp=rx(6,30);
-        return `${x},${50+(i%2===0?amp:-amp)}`;
-      }).join(" ");
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={a1}/>
-        <polyline points={pts} fill="none" stroke={panel} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
-        <line x1="8" y1="50" x2="92" y2="50" stroke={panel} strokeWidth="0.8" strokeDasharray="2,3" opacity="0.4"/>
-        <rect x="0" y="80" width="100" height="20" fill={ink}/>
-        <text x="8" y="94" fontSize="8" fontFamily={fontStack} fill={a2} letterSpacing="1">FREQUENCY</text>
-      </>;
-    }
-  }
+  // 2. DYNAMIC FOREGROUND GRAPHIC (12 variants)
+  const fgType = ri(0, 11);
+  if (fgType === 0) fgLayer = <circle cx="50" cy="50" r={rx(20, 38)} fill={a1} opacity="0.95"/>;
+  else if (fgType === 1) fgLayer = <rect x={rx(20,35)} y={rx(20,35)} width={rx(30,50)} height={rx(30,50)} fill={a2} transform={`rotate(${rx(0,90)} 50 50)`} opacity="0.95"/>;
+  else if (fgType === 2) fgLayer = <><circle cx={rx(35,45)} cy="50" r={rx(15,28)} fill={a1}/><circle cx={rx(55,65)} cy="50" r={rx(15,28)} fill={a2} opacity="0.85"/></>;
+  else if (fgType === 3) fgLayer = <polygon points={`50,${rx(5,25)} ${rx(75,95)},${rx(75,95)} ${rx(5,25)},${rx(75,95)}`} fill={a1} opacity="0.95"/>;
+  else if (fgType === 4) fgLayer = <><rect x={rx(20,35)} y={rx(15,25)} width={rx(8,16)} height={rx(50,70)} fill={a1}/><rect x={rx(55,70)} y={rx(15,25)} width={rx(8,16)} height={rx(50,70)} fill={a2}/><rect x="30" y={rx(40,60)} width="40" height={rx(8,16)} fill={ink}/></>;
+  else if (fgType === 5) fgLayer = <>{Array.from({length: ri(4, 9)}, (_,i)=><circle key={i} cx={rx(20,80)} cy={rx(20,80)} r={rx(4,18)} fill={i%2===0?a1: (i%3===0?ink:a2)} opacity="0.9"/>)}</>;
+  else if (fgType === 6) fgLayer = <path d={`M ${rx(10,30)} ${rx(30,70)} Q 50 ${rx(-10,30)} ${rx(70,90)} ${rx(30,70)} Q 50 ${rx(70,110)} ${rx(10,30)} ${rx(30,70)}Z`} fill={rng()>0.5?a1:a2} opacity="0.95"/>;
+  else if (fgType === 7) fgLayer = <text x="50" y={rx(65,85)} textAnchor="middle" fontSize={rx(45,80)} fontWeight="900" fontFamily={fontStack} fill={a1} opacity="0.25">{N}</text>;
+  else if (fgType === 8) fgLayer = <><ellipse cx="50" cy="50" rx={rx(25,45)} ry={rx(8,25)} fill={a2} transform={`rotate(${rx(0,180)} 50 50)`}/><circle cx="50" cy="50" r={rx(6,15)} fill={ink}/></>;
+  else if (fgType === 9) fgLayer = <><rect x="0" y={rx(30,50)} width="100" height={rx(10,25)} fill={ink} opacity="0.9"/><rect x={rx(20,60)} y="0" width={rx(10,25)} height="100" fill={a1} opacity="0.9"/></>;
+  else if (fgType === 10) fgLayer = <polygon points={`0,0 ${rx(30,70)},0 ${rx(70,100)},100 0,100`} fill={rng()>0.5?a1:ink} opacity={rx(0.4, 0.8)}/>;
+  else fgLayer = <polyline points={`15,${rx(20,80)} 35,${rx(20,80)} 65,${rx(20,80)} 85,${rx(20,80)}`} fill="none" stroke={a2} strokeWidth={rx(4, 12)} strokeLinejoin="round"/>;
 
-  // ── SEAL ─────────────────────────────────────────────────────────────
-  if (family === "seal") {
-    if (sub === 0) {
-      // Circular official seal
-      const ticks = ri(16,24);
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={bg}/>
-        <circle cx="50" cy="50" r="46" fill={ink}/>
-        <circle cx="50" cy="50" r="38" fill="none" stroke={a1} strokeWidth="2"/>
-        {Array.from({length:ticks},(_,i)=>{
-          const ang=(i/ticks)*Math.PI*2;
-          return <line key={i} x1={50+Math.cos(ang)*38} y1={50+Math.sin(ang)*38}
-            x2={50+Math.cos(ang)*44} y2={50+Math.sin(ang)*44}
-            stroke={a1} strokeWidth={i%4===0?2.5:1}/>;
-        })}
-        <circle cx="50" cy="50" r="28" fill={panel}/>
-        <text x="50" y="46" textAnchor="middle" fontSize="13" fontFamily={fontStack} fontWeight="900" fill={ink} letterSpacing="1">NUT</text>
-        <text x="50" y="60" textAnchor="middle" fontSize="9" fontFamily={fontStack} fill={a1} letterSpacing="2">UNION</text>
-      </>;
-    } else if (sub === 1) {
-      // Diamond badge
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={soft}/>
-        <polygon points="50,5 95,50 50,95 5,50" fill={a1}/>
-        <polygon points="50,14 86,50 50,86 14,50" fill={ink}/>
-        <polygon points="50,26 74,50 50,74 26,50" fill={panel}/>
-        <text x="50" y="47" textAnchor="middle" fontSize="10" fontFamily={fontStack} fontWeight="900" fill={a1}>NU</text>
-        <text x="50" y="59" textAnchor="middle" fontSize="7.5" fontFamily={fontStack} fill={a2} letterSpacing="1">UNION</text>
-        {[0,1,2,3].map(i=>{const a=(i/4)*Math.PI*2-Math.PI/4; return <circle key={i} cx={50+Math.cos(a)*46} cy={50+Math.sin(a)*46} r="3" fill={a2}/>;})}
-      </>;
-    } else if (sub === 2) {
-      // Octagonal stamp
-      const oct=(cx:number,cy:number,r:number)=>{const a=0.383*r; return `${cx-a},${cy-r} ${cx+a},${cy-r} ${cx+r},${cy-a} ${cx+r},${cy+a} ${cx+a},${cy+r} ${cx-a},${cy+r} ${cx-r},${cy+a} ${cx-r},${cy-a}`;};
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={panel}/>
-        <polygon points={oct(50,50,46)} fill={a1}/>
-        <polygon points={oct(50,50,38)} fill={ink}/>
-        <polygon points={oct(50,50,29)} fill={panel}/>
-        <text x="50" y="47" textAnchor="middle" fontSize="12" fontFamily={fontStack} fontWeight="900" fill={ink}>NUT</text>
-        <text x="50" y="60" textAnchor="middle" fontSize="8.5" fontFamily={fontStack} fill={a1} letterSpacing="2">UNION</text>
-        {[0,1,2,3,4,5,6,7].map(i=>{const a=(i/8)*Math.PI*2-Math.PI/8; return <circle key={i} cx={50+Math.cos(a)*42} cy={50+Math.sin(a)*42} r="2.5" fill={a2}/>;})}
-      </>;
-    } else {
-      // Postage stamp
-      const perf=(x:number,y:number)=><circle key={`${x}-${y}`} cx={x} cy={y} r="2.6" fill={bg}/>;
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={a1}/>
-        <rect x="10" y="10" width="80" height="80" fill={panel}/>
-        {Array.from({length:9},(_,i)=>perf(14+i*9,7))}
-        {Array.from({length:9},(_,i)=>perf(14+i*9,93))}
-        {Array.from({length:9},(_,i)=>perf(7,14+i*9))}
-        {Array.from({length:9},(_,i)=>perf(93,14+i*9))}
-        <rect x="16" y="16" width="68" height="46" fill={soft}/>
-        <text x="50" y="44" textAnchor="middle" fontSize="20" fontFamily={fontStack} fontWeight="900" fill={ink}>NU</text>
-        <text x="50" y="57" textAnchor="middle" fontSize="8.5" fontFamily={fontStack} fill={a1} letterSpacing="2">UNION</text>
-        <text x="50" y="80" textAnchor="middle" fontSize="13" fontFamily={fontStack} fontWeight="900" fill={a1}>∞</text>
-      </>;
-    }
-  }
-
-  // ── RIBBON ────────────────────────────────────────────────────────────
-  if (family === "ribbon") {
-    if (sub === 0) {
-      // Three diagonal parallelograms
-      const sk=rx(10,22);
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={soft}/>
-        <polygon points={`${sk},0 100,0 ${100-sk},38 0,38`} fill={a1}/>
-        <polygon points={`0,34 100,34 ${100-sk/2},68 ${sk/2},68`} fill={ink}/>
-        <polygon points={`0,64 100,64 100,100 0,100`} fill={a2}/>
-        <text x={sk+6} y="27" fontSize="16" fontFamily={fontStack} fontWeight="900" fill={panel}>{sl}</text>
-        <text x="8" y="88" fontSize="11" fontFamily={fontStack} fontWeight="900" fill={panel}>UNION</text>
-      </>;
-    } else if (sub === 1) {
-      // Racing stripes
-      const mh=rx(26,42), my=rx(10,25);
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={panel}/>
-        <rect x="0" y={my} width="100" height={mh} fill={a1}/>
-        <rect x="0" y={my+mh+rx(2,8)} width="100" height={rx(4,10)} fill={ink}/>
-        <rect x="0" y={my+mh+rx(12,22)} width="100" height={rx(2,5)} fill={a2}/>
-        <text x="8" y={my+mh*0.72} fontSize={mh*0.55} fontFamily={fontStack} fontWeight="900" fill={panel}>{N}</text>
-      </>;
-    } else if (sub === 2) {
-      // Scroll/banner
-      const y1=rx(28,36), y2=rx(60,70);
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={soft}/>
-        <path d={`M 10 ${y1} C 10 ${y1-10}, 90 ${y1-10}, 90 ${y1} L 90 ${y2} C 90 ${y2+10}, 10 ${y2+10}, 10 ${y2} Z`} fill={a1}/>
-        <path d={`M 10 ${y1} C 6 ${y1}, 4 ${y1+5}, 8 ${y1+7} L 10 ${y1+7} Z`} fill={ink} opacity="0.5"/>
-        <path d={`M 90 ${y1} C 94 ${y1}, 96 ${y1+5}, 92 ${y1+7} L 90 ${y1+7} Z`} fill={ink} opacity="0.5"/>
-        <text x="50" y={(y1+y2)/2+5} textAnchor="middle" fontSize="16" fontFamily={fontStack} fontWeight="900" fill={panel}>{sl}</text>
-        <text x="50" y={(y1+y2)/2+18} textAnchor="middle" fontSize="7" fontFamily={fontStack} fill={panel} opacity="0.8" letterSpacing="3">NUTUNION</text>
-      </>;
-    } else {
-      // Interlocked rings
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={ink}/>
-        <ellipse cx="36" cy="50" rx="26" ry="17" fill="none" stroke={a1} strokeWidth="11"/>
-        <ellipse cx="64" cy="50" rx="26" ry="17" fill="none" stroke={a2} strokeWidth="11"/>
-        <ellipse cx="64" cy="50" rx="26" ry="17" fill="none" stroke={a2} strokeWidth="11" strokeDasharray="15 38" strokeDashoffset="19"/>
-        <text x="50" y="87" textAnchor="middle" fontSize="8" fontFamily={fontStack} fill={panel} letterSpacing="2">NUTUNION</text>
-      </>;
-    }
-  }
-
-  // ── STICKER ───────────────────────────────────────────────────────────
-  if (family === "sticker") {
-    if (sub === 0) {
-      // Enamel pin circle
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={bg}/>
-        <circle cx="50" cy="50" r="44" fill={a1} stroke={ink} strokeWidth="4"/>
-        <circle cx="50" cy="50" r="36" fill={panel}/>
-        <circle cx="50" cy="50" r="34" fill="none" stroke={ink} strokeWidth="1" strokeDasharray="4,3"/>
-        <text x="50" y="46" textAnchor="middle" fontSize="14" fontFamily={fontStack} fontWeight="900" fill={ink}>{sl}</text>
-        <text x="50" y="60" textAnchor="middle" fontSize="7.5" fontFamily={fontStack} fill={a1} letterSpacing="2">NUTUNION</text>
-        <circle cx="50" cy="8" r="3" fill={ink}/><circle cx="50" cy="92" r="3" fill={ink}/>
-      </>;
-    } else if (sub === 1) {
-      // Starburst
-      const pts=ri(5,9), or=rx(40,46), ir=or*rx(0.42,0.62);
-      const star=Array.from({length:pts*2},(_,i)=>{
-        const ang=(i/(pts*2))*Math.PI*2-Math.PI/2;
-        const r=i%2===0?or:ir;
-        return `${50+Math.cos(ang)*r},${50+Math.sin(ang)*r}`;
-      }).join(" ");
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={bg}/>
-        <polygon points={star} fill={a1} stroke={ink} strokeWidth="2.5" strokeLinejoin="round"/>
-        <circle cx="50" cy="50" r={ir*0.78} fill={panel}/>
-        <text x="50" y="54" textAnchor="middle" fontSize="12" fontFamily={fontStack} fontWeight="900" fill={ink}>{N}</text>
-      </>;
-    } else if (sub === 2) {
-      // Dog-eared folder
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={bg}/>
-        <path d="M 12 10 H 72 L 90 28 V 88 Q 90 91 87 91 H 13 Q 10 91 10 88 V 13 Q 10 10 12 10 Z" fill={a1} stroke={ink} strokeWidth="2.5"/>
-        <polygon points="72,10 90,28 72,28" fill={a2} stroke={ink} strokeWidth="2.5"/>
-        <rect x="18" y="38" width="50" height="8" rx="2" fill={panel}/>
-        <rect x="18" y="52" width="38" height="8" rx="2" fill={panel}/>
-        <rect x="18" y="66" width="26" height="8" rx="2" fill={panel}/>
-        <text x="18" y="30" fontSize="11" fontFamily={fontStack} fontWeight="900" fill={panel}>{N}</text>
-      </>;
-    } else {
-      // Shield
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={bg}/>
-        <path d="M 50 8 L 90 22 L 90 55 C 90 75, 72 88, 50 94 C 28 88, 10 75, 10 55 L 10 22 Z" fill={a1} stroke={ink} strokeWidth="2.5"/>
-        <path d="M 50 18 L 80 29 L 80 55 C 80 70, 66 80, 50 86 C 34 80, 20 70, 20 55 L 20 29 Z" fill={ink}/>
-        <text x="50" y="57" textAnchor="middle" fontSize="18" fontFamily={fontStack} fontWeight="900" fill={a1}>{N}</text>
-        <text x="50" y="70" textAnchor="middle" fontSize="7" fontFamily={fontStack} fill={panel} letterSpacing="1.5">UNION</text>
-      </>;
-    }
-  }
-
-  // ── TOTEM ─────────────────────────────────────────────────────────────
-  if (family === "totem") {
-    if (sub === 0) {
-      // Stacked shapes
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={soft}/>
-        <polygon points="50,8 72,30 28,30" fill={a1}/>
-        <circle cx="50" cy="46" r="16" fill={panel} stroke={ink} strokeWidth="2"/>
-        <text x="50" y="50" textAnchor="middle" fontSize="11" fontFamily={fontStack} fontWeight="900" fill={ink}>{N}</text>
-        <rect x="32" y="64" width="36" height="14" fill={a2}/>
-        <rect x="24" y="80" width="52" height="14" fill={ink}/>
-        <text x="50" y="90.5" textAnchor="middle" fontSize="7" fontFamily={fontStack} fill={panel} letterSpacing="1.5">NUT</text>
-      </>;
-    } else if (sub === 1) {
-      // Abstract face/mask totem
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={ink}/>
-        {/* Top mask */}
-        <ellipse cx="50" cy="20" rx="16" ry="13" fill={a1}/>
-        <circle cx="44" cy="18" r="3" fill={ink}/><circle cx="56" cy="18" r="3" fill={ink}/>
-        <rect x="44" y="22" width="12" height="3" rx="1.5" fill={ink}/>
-        {/* Mid mask */}
-        <rect x="33" y="36" width="34" height="26" rx="4" fill={a2}/>
-        <circle cx="43" cy="46" r="4" fill={ink}/><circle cx="57" cy="46" r="4" fill={ink}/>
-        <rect x="42" y="55" width="16" height="3" fill={panel}/>
-        {/* Bottom shape */}
-        <polygon points="50,70 68,94 32,94" fill={panel} opacity="0.9"/>
-        <circle cx="50" cy="82" r="4" fill={ink}/>
-      </>;
-    } else if (sub === 2) {
-      // Stacked weight bars
-      const bars=[{w:18,c:a2},{w:34,c:a1},{w:50,c:panel},{w:64,c:ink},{w:78,c:a2}];
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={soft}/>
-        {bars.map((b,i)=><rect key={i} x={(100-b.w)/2} y={10+i*17} width={b.w} height="13" fill={b.c}/>)}
-      </>;
-    } else {
-      // Flame peak
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={ink}/>
-        <path d="M 50 8 C 66 22, 78 30, 74 52 C 70 70, 58 74, 50 92 C 42 74, 30 70, 26 52 C 22 30, 34 22, 50 8 Z" fill={a1}/>
-        <path d="M 50 22 C 62 34, 68 40, 65 56 C 62 68, 56 74, 50 84 C 44 74, 38 68, 35 56 C 32 40, 38 34, 50 22 Z" fill={a2}/>
-        <circle cx="50" cy="52" r="10" fill={panel}/>
-        <text x="50" y="56" textAnchor="middle" fontSize="8" fontFamily={fontStack} fontWeight="900" fill={ink}>{N}</text>
-      </>;
-    }
-  }
-
-  // ── POSTER ────────────────────────────────────────────────────────────
-  if (family === "poster") {
-    if (sub === 0) {
-      // Bauhaus horizontal bands
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={panel}/>
-        <rect x="0" y="0" width="100" height="32" fill={ink}/>
-        <text x="8" y="24" fontSize="20" fontFamily={fontStack} fontWeight="900" fill={a1} letterSpacing="-1">{sl}</text>
-        <rect x="0" y="35" width="62" height="4" fill={a1}/>
-        <rect x="0" y="43" width="42" height="4" fill={a2}/>
-        <text x="8" y="64" fontSize="9.5" fontFamily={fontStack} fill={ink}>{variant.subtitle.toUpperCase()}</text>
-        <text x="8" y="76" fontSize="8" fontFamily={fontStack} fill={soft}>{variant.energy}</text>
-        <rect x="0" y="84" width="100" height="16" fill={a1}/>
-        <text x="8" y="95" fontSize="6.5" fontFamily={fontStack} fill={panel} letterSpacing="2">NUTUNION</text>
-      </>;
-    } else if (sub === 1) {
-      // Swiss diagonal
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={a2}/>
-        <polygon points="0,0 100,0 100,58 0,88" fill={ink}/>
-        <text x="50" y="42" textAnchor="middle" fontSize="30" fontFamily={fontStack} fontWeight="900" fill={a1} letterSpacing="-2">{N}U</text>
-        <text x="50" y="82" textAnchor="middle" fontSize="9" fontFamily={fontStack} fill={panel} letterSpacing="3">NUTUNION</text>
-        <line x1="12" y1="58" x2="88" y2="58" stroke={panel} strokeWidth="1" opacity="0.4"/>
-      </>;
-    } else if (sub === 2) {
-      // Large letterform BG
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={a1}/>
-        <text x="50" y="90" textAnchor="middle" fontSize="110" fontFamily={fontStack} fontWeight="900" fill={panel} opacity="0.1">{N}</text>
-        <rect x="8" y="8" width="84" height="30" fill={ink} opacity="0.9"/>
-        <text x="16" y="28" fontSize="16" fontFamily={fontStack} fontWeight="900" fill={a1}>{sl}</text>
-        <rect x="8" y="70" width="84" height="22" fill={ink} opacity="0.9"/>
-        <text x="16" y="84" fontSize="7" fontFamily={fontStack} fill={panel} letterSpacing="2">NUTUNION · OPEN IDENTITY</text>
-      </>;
-    } else {
-      // Editorial grid
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={soft}/>
-        <rect x="8" y="8" width="84" height="52" fill={a1}/>
-        <text x="50" y="42" textAnchor="middle" fontSize="26" fontFamily={fontStack} fontWeight="900" fill={panel} letterSpacing="-2">{sl}</text>
-        <text x="50" y="54" textAnchor="middle" fontSize="7" fontFamily={fontStack} fill={panel} opacity="0.7" letterSpacing="2">COMMUNITY</text>
-        <line x1="8" y1="64" x2="92" y2="64" stroke={ink} strokeWidth="1.5"/>
-        <text x="8" y="76" fontSize="8" fontFamily={fontStack} fill={ink}>{variant.subtitle}</text>
-        <rect x="8" y="83" width="28" height="10" fill={a2}/>
-        <text x="12" y="91" fontSize="6.5" fontFamily={fontStack} fill={panel}>OPEN</text>
-      </>;
-    }
-  }
-
-  // ── WAVE ─────────────────────────────────────────────────────────────
-  if (family === "wave") {
-    if (sub === 0) {
-      // Multi sine waves
-      const wc=[a1,a2,ink,soft];
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={panel}/>
-        {Array.from({length:3},(_,wi)=>{
-          const by=25+wi*18, amp=rx(8,20), freq=rx(0.06,0.11);
-          const pts=Array.from({length:30},(_,xi)=>{const x=xi*(100/29); return `${x},${by+Math.sin((x*freq+wi)*Math.PI*2)*amp}`;}).join(" ");
-          return <polyline key={wi} points={pts} fill="none" stroke={wc[wi%wc.length]} strokeWidth={rx(2,5)} strokeLinecap="round" opacity="0.9"/>;
-        })}
-        <rect x="0" y="82" width="100" height="18" fill={ink}/>
-        <text x="8" y="93" fontSize="8" fontFamily={fontStack} fill={panel} letterSpacing="2">NUTUNION</text>
-      </>;
-    } else if (sub === 1) {
-      // Concentric ripples
-      const nr=ri(4,7);
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={ink}/>
-        {Array.from({length:nr},(_,i)=>{
-          const r=8+i*(44/nr);
-          return <ellipse key={i} cx="50" cy="50" rx={r} ry={r*rx(0.5,1)} fill="none" stroke={i%2===0?a1:a2} strokeWidth={rx(1.5,4)} opacity={0.6+i*0.06}/>;
-        })}
-        <circle cx="50" cy="50" r="8" fill={a1}/>
-        <text x="50" y="54" textAnchor="middle" fontSize="6" fontFamily={fontStack} fill={ink} fontWeight="900">NU</text>
-      </>;
-    } else if (sub === 2) {
-      // Zigzag mountains
-      const np=ri(3,6), sw=100/np;
-      const zpts=["0,90",...Array.from({length:np},(_,pi)=>
-        [`${(pi+0.5)*sw},${rx(12,42)}`,`${(pi+1)*sw},90`]
-      ).flat()].join(" ");
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={soft}/>
-        <polygon points={zpts} fill={a1}/>
-        <polygon points={["0,100",...Array.from({length:np},(_,pi)=>
-          [`${(pi+0.5)*sw},${rx(22,52)}`,`${(pi+1)*sw},100`]
-        ).flat()].join(" ")} fill={a2} opacity="0.55"/>
-        <rect x="0" y="86" width="100" height="14" fill={ink}/>
-        <text x="8" y="95" fontSize="7" fontFamily={fontStack} fill={panel} letterSpacing="2">NUTUNION</text>
-      </>;
-    } else {
-      // Spiral
-      const sp=Array.from({length:80},(_,i)=>{
-        const t=(i/79)*Math.PI*6, r=4+(i/79)*40;
-        return `${50+Math.cos(t)*r},${50+Math.sin(t)*r}`;
-      }).join(" ");
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={ink}/>
-        <polyline points={sp} fill="none" stroke={a1} strokeWidth="2.5" strokeLinecap="round" opacity="0.9"/>
-        <circle cx="50" cy="50" r="4.5" fill={a2}/>
-        <text x="50" y="96" textAnchor="middle" fontSize="7" fontFamily={fontStack} fill={panel} letterSpacing="2">SPIRAL·NUT</text>
-      </>;
-    }
-  }
-
-  // ── RAILS ─────────────────────────────────────────────────────────────
-  if (family === "rails") {
-    if (sub === 0) {
-      // Barcode bars
-      const nb=ri(16,28);
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={panel}/>
-        {Array.from({length:nb},(_,i)=>{
-          const bw=rx(1.5,5), bx=8+(i/nb)*84, bh=rx(50,82);
-          return <rect key={i} x={bx} y={8} width={bw} height={bh} fill={i%5===0?a1:i%3===0?a2:ink}/>;
-        })}
-        <rect x="0" y="86" width="100" height="14" fill={soft}/>
-        <text x="50" y="96" textAnchor="middle" fontSize="6.5" fontFamily={fontStack} fill={ink} letterSpacing="4">NUTUNION</text>
-      </>;
-    } else if (sub === 1) {
-      // Horizontal scan lines
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={ink}/>
-        {Array.from({length:18},(_,i)=>{
-          const lh=rx(1,5), lw=rx(28,90), lx=rx(0,100-lw);
-          return <rect key={i} x={lx} y={6+i*5.2} width={lw} height={lh} fill={i%3===0?a1:i%5===0?a2:panel} opacity={0.5+i*0.025} rx="0.5"/>;
-        })}
-        <text x="50" y="97" textAnchor="middle" fontSize="7" fontFamily={fontStack} fill={panel} letterSpacing="3">DATA RAIL</text>
-      </>;
-    } else if (sub === 2) {
-      // Halftone grid
-      const co=ri(6,10), ro=ri(6,10);
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={soft}/>
-        {Array.from({length:ro},(_,row)=>
-          Array.from({length:co},(_,col)=>{
-            const cx=10+col*(80/(co-1)), cy=10+row*(80/(ro-1));
-            const r=(1.5+(Math.sin(col*0.8+row*0.6)+1)*3);
-            return <circle key={`${row}-${col}`} cx={cx} cy={cy} r={r} fill={(row+col)%3===0?a1:(row+col)%3===1?a2:ink} opacity="0.85"/>;
-          })
-        )}
-        <rect x="30" y="38" width="40" height="24" fill={panel} opacity="0.9"/>
-        <text x="50" y="53" textAnchor="middle" fontSize="11" fontFamily={fontStack} fontWeight="900" fill={ink}>{sl}</text>
-      </>;
-    } else {
-      // QR-corner aesthetic
-      const qrCorner=(x:number,y:number,s:number)=><>
-        <rect x={x} y={y} width={s} height={s} fill={ink}/>
-        <rect x={x+3} y={y+3} width={s-6} height={s-6} fill={panel}/>
-        <rect x={x+6} y={y+6} width={s-12} height={s-12} fill={ink}/>
-      </>;
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={panel}/>
-        {qrCorner(8,8,22)}{qrCorner(70,8,22)}{qrCorner(8,70,22)}
-        {Array.from({length:4},(_,row)=>Array.from({length:4},(_,col)=>
-          rng()>0.4?<rect key={`${row}-${col}`} x={36+col*7} y={36+row*7} width="5" height="5" fill={rng()>0.55?a1:ink}/>:null
-        ))}
-        <text x="72" y="88" textAnchor="middle" fontSize="6.5" fontFamily={fontStack} fill={ink} letterSpacing="0.5">NU</text>
-      </>;
-    }
-  }
-
-  // ── MOSAIC ────────────────────────────────────────────────────────────
-  if (family === "mosaic") {
-    if (sub === 0) {
-      // 5×5 tile grid
-      const cols=[ink,a1,a2,soft,panel];
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={bg}/>
-        {Array.from({length:5},(_,row)=>
-          Array.from({length:5},(_,col)=>{
-            const tc=cols[Math.floor(rng()*cols.length)], g=2, tw=(100-g*6)/5;
-            return <rect key={`${row}-${col}`} x={g+col*(tw+g)} y={g+row*(tw+g)} width={tw} height={tw} rx={rng()>0.5?4:0} fill={tc}/>;
-          })
-        )}
-      </>;
-    } else if (sub === 1) {
-      // Large + small irregular tiles
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={soft}/>
-        <rect x="8" y="8" width="44" height="44" fill={a1}/>
-        <rect x="56" y="8" width="36" height="20" fill={ink}/>
-        <rect x="56" y="32" width="36" height="20" fill={a2}/>
-        <rect x="8" y="56" width="20" height="36" fill={a2}/>
-        <rect x="32" y="56" width="20" height="36" fill={panel} stroke={ink} strokeWidth="1.5"/>
-        <rect x="56" y="56" width="36" height="36" fill={ink}/>
-        <text x="30" y="35" textAnchor="middle" fontSize="18" fontFamily={fontStack} fontWeight="900" fill={panel}>{N}</text>
-        <text x="74" y="82" textAnchor="middle" fontSize="9" fontFamily={fontStack} fill={a1} letterSpacing="1">NU</text>
-      </>;
-    } else if (sub === 2) {
-      // Triangular tessellation
-      const tc2=[a1,a2,ink,soft,panel], nc=ri(4,7), tw=100/nc, th=tw*0.87, nr=Math.ceil(100/th)+1;
-      const tris:React.ReactNode[]=[];
-      for(let r=0;r<nr;r++){for(let c=0;c<nc*2;c++){
-        const up=c%2===0, bx=(c/2)*tw, by=r*th;
-        const pts3=up?`${bx},${by+th} ${bx+tw/2},${by} ${bx+tw},${by+th}`:`${bx-tw/2},${by} ${bx+tw/2},${by} ${bx},${by+th}`;
-        tris.push(<polygon key={`${r}-${c}`} points={pts3} fill={tc2[Math.floor(rng()*tc2.length)]} stroke={bg} strokeWidth="0.8"/>);
-      }}
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={bg}/>
-        <clipPath id={`m${seed}`}><rect x="0" y="0" width="100" height="100"/></clipPath>
-        <g clipPath={`url(#m${seed})`}>{tris}</g>
-      </>;
-    } else {
-      // Concentric square frames
-      const fc=[a1,ink,a2,soft,panel,a1,ink];
-      inner = <>
-        <rect x="0" y="0" width="100" height="100" fill={bg}/>
-        {fc.map((c,i)=>{const m=i*8+4; return <rect key={i} x={m} y={m} width={100-m*2} height={100-m*2} fill="none" stroke={c} strokeWidth="5"/>;} )}
-        <rect x="36" y="36" width="28" height="28" fill={a1}/>
-        <text x="50" y="54" textAnchor="middle" fontSize="11" fontFamily={fontStack} fontWeight="900" fill={panel}>{N}</text>
-      </>;
-    }
-  }
+  // 3. DYNAMIC TYPOGRAPHY (12 variants)
+  const tyType = ri(0, 11);
+  if (tyType === 0) txtLayer = <><text x="50" y="47" textAnchor="middle" fontSize="13" fontWeight="900" fontFamily={fontStack} fill={ink}>{sl}</text><rect x="35" y="55" width="30" height="2" fill={a1}/><text x="50" y="65" textAnchor="middle" fontSize="6.5" fontFamily={fontStack} fill={ink} letterSpacing="2">UNION</text></>;
+  else if (tyType === 1) txtLayer = <><text x="8" y="24" fontSize="18" fontWeight="900" fontFamily={fontStack} fill={ink}>{sl}</text><text x="8" y="36" fontSize="6" fontFamily={fontStack} fill={ink} opacity="0.8">{energy}</text></>;
+  else if (tyType === 2) txtLayer = <><rect x="0" y="76" width="100" height="24" fill={ink}/><text x="50" y="91" textAnchor="middle" fontSize="10" fontWeight="900" fontFamily={fontStack} fill={panel}>{sl} UNION</text></>;
+  else if (tyType === 3) txtLayer = <><text x="90" y="50" textAnchor="middle" fontSize="14" fontWeight="900" fontFamily={fontStack} fill={ink} transform="rotate(-90 90 50)">{sl}</text><text x="10" y="90" fontSize="7" fontFamily={fontStack} fill={ink}>{subtitle}</text></>;
+  else if (tyType === 4) txtLayer = <><text x="8" y="16" fontSize="10" fontWeight="900" fontFamily={fontStack} fill={ink}>{sl}</text><text x="92" y="92" textAnchor="end" fontSize="10" fontWeight="900" fontFamily={fontStack} fill={ink}>UNION</text></>;
+  else if (tyType === 5) txtLayer = <><rect x="12" y="38" width="76" height="24" fill={panel} stroke={ink} strokeWidth="2.5"/><text x="50" y="54" textAnchor="middle" fontSize="12" fontWeight="900" fontFamily={fontStack} fill={ink}>{sl}</text></>;
+  else if (tyType === 6) txtLayer = <><text x="50" y="18" textAnchor="middle" fontSize="10" fontWeight="900" fontFamily={fontStack} fill={ink} letterSpacing="4">{sl}</text><text x="50" y="92" textAnchor="middle" fontSize="6" fontFamily={fontStack} fill={ink} letterSpacing="1">{energy}</text></>;
+  else if (tyType === 7) txtLayer = <><text x="50" y="56" textAnchor="middle" fontSize="28" fontWeight="900" fontFamily={fontStack} fill={ink}>{N}</text><text x="50" y="70" textAnchor="middle" fontSize="6" fontFamily={fontStack} fill={ink} opacity="0.9" letterSpacing="1.5">{label}</text></>;
+  else if (tyType === 8) txtLayer = <><circle cx="50" cy="50" r="32" fill="none" stroke={ink} strokeWidth="2.5" strokeDasharray="5 5"/><text x="50" y="48" textAnchor="middle" fontSize="11" fontWeight="900" fontFamily={fontStack} fill={ink}>{sl}</text><text x="50" y="60" textAnchor="middle" fontSize="7" fontFamily={fontStack} fill={a1}>UNION</text></>;
+  else if (tyType === 9) txtLayer = <><rect x="0" y="80" width="100" height="20" fill={a1}/><text x="50" y="93" textAnchor="middle" fontSize="9" fontWeight="900" fontFamily={fontStack} fill={panel}>{label}</text><text x="8" y="14" fontSize="6" fontFamily={fontStack} fill={ink}>{energy}</text></>;
+  else if (tyType === 10) txtLayer = <><text x="10" y="55" fontSize="20" fontWeight="900" fontFamily={fontStack} fill={panel} stroke={ink} strokeWidth="1.5">{sl}</text><rect x="10" y="62" width="40" height="4" fill={a2}/></>;
+  else txtLayer = <><rect x="6" y="84" width="24" height="10" fill={a1}/><text x="34" y="92" fontSize="7.5" fontWeight="900" fontFamily={fontStack} fill={ink}>{label}</text></>;
 
   return (
     <svg viewBox="0 0 100 100" width={size} height={size} role="img" aria-label={label}>
-      {inner}
+      {bgLayer}
+      {fgLayer}
+      {txtLayer}
     </svg>
   );
 }
@@ -726,7 +278,7 @@ export function BrandPageClient() {
         <section className="mb-10 grid gap-0 border-[3px] border-nu-ink md:grid-cols-3">
           {[
             {rule:"01",title:"형태를 고정하지 않는다",body:"로고 목적에 맞춘 정형화된 틀 대신, 브랜드가 가진 태도와 활동 밀도를 바탕으로 형식이 먼저 바뀝니다."},
-            {rule:"02",title:"서로 다른 로고 문법",body:"모놀리스·신호·스탬프·리본·스티커·토템·포스터·파동·레일·모자이크 — 10개 패밀리 × 4개 레이아웃 = 40개 구조 문법."},
+            {rule:"02",title:"서로 다른 로고 문법",body:"배경, 코어 형태, 텍스트 배치가 콘텐츠 해시 데이터에 반응하여 1,700가지 이상의 개별적인 구조 문법으로 절차적 렌더링을 수행합니다."},
             {rule:"03",title:"사람의 활동이 먼저 보인다",body:"로고가 '너트처럼 생겼는가'보다 '오늘 어떤 방식으로 움직이는 집단인가'가 먼저 읽히도록 구성했습니다."},
           ].map((r,i)=>(
             <div key={r.rule} className={`p-6 ${i<2?"border-b-[2px] border-nu-ink md:border-b-0 md:border-r-[2px]":""}`}>
@@ -803,7 +355,7 @@ export function BrandPageClient() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="border-[2px] border-nu-ink p-4">
                 <p className="mb-2 font-mono-nu text-[11px] uppercase tracking-[0.18em] text-nu-muted">why it feels different</p>
-                <p className="text-sm leading-relaxed text-nu-gray">이 시스템은 단일 아이콘을 변형하는 방식이 아니라, 40가지 서로 다른 레이아웃 문법 위에 20가지 팔레트가 조합되어 같은 엔진의 다른 색이 아닌 구조 자체가 달라집니다.</p>
+                <p className="text-sm leading-relaxed text-nu-gray">이 시스템은 단일 아이콘을 변형하는 방식이 아니라, 콘텐츠 해시 데이터를 바탕으로 무한대에 가까운 컬러 팔레트와 수천 가지 레이아웃 구조가 절차적으로 조합되어 완전히 독립적인 구조를 렌더링합니다.</p>
               </div>
               <div className="border-[2px] border-nu-ink p-4">
                 <p className="mb-2 font-mono-nu text-[11px] uppercase tracking-[0.18em] text-nu-muted">best use</p>
