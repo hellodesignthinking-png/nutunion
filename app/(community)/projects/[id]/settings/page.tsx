@@ -202,6 +202,7 @@ export default function ProjectSettingsPage() {
         finalImageUrl = publicUrl;
       }
 
+      // Core fields (always exist)
       const { error } = await supabase
         .from("projects")
         .update({
@@ -214,17 +215,21 @@ export default function ProjectSettingsPage() {
           image_url: finalImageUrl,
           kakao_chat_url: kakaoUrl.trim() || null,
           google_drive_url: driveUrl.trim() || null,
-          tool_slack: slackUrl.trim() || null,
-          tool_notion: notionUrl.trim() || null,
-          tool_drive: driveUrl.trim() || null,
-          tool_kakao: kakaoUrl.trim() || null,
-          total_budget: totalBudget ? parseInt(totalBudget) : null,
-          budget_currency: budgetCurrency || "KRW",
-          milestone_dashboard_url: dashUrl.trim() || null,
         })
         .eq("id", projectId);
 
       if (error) throw error;
+
+      // Extended fields (migration 034/010 — best-effort, ignore if columns missing)
+      await supabase.from("projects").update({
+        tool_slack: slackUrl.trim() || null,
+        tool_notion: notionUrl.trim() || null,
+        tool_drive: driveUrl.trim() || null,
+        tool_kakao: kakaoUrl.trim() || null,
+        total_budget: totalBudget ? parseInt(totalBudget) : null,
+        budget_currency: budgetCurrency || "KRW",
+        milestone_dashboard_url: dashUrl.trim() || null,
+      }).eq("id", projectId);
       toast.success("볼트가 업데이트되었습니다");
       router.refresh();
     } catch (err: any) {
@@ -462,7 +467,7 @@ Generated at: ${new Date().toLocaleString()}
           <h2 className="font-head text-lg font-extrabold">기본 정보</h2>
 
           <div>
-            <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">
+            <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
               제목 *
             </label>
             <input
@@ -475,7 +480,7 @@ Generated at: ${new Date().toLocaleString()}
           </div>
 
           <div>
-            <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">
+            <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
               설명
             </label>
             <textarea
@@ -488,7 +493,7 @@ Generated at: ${new Date().toLocaleString()}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">
+              <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
                 카테고리
               </label>
               <select
@@ -504,7 +509,7 @@ Generated at: ${new Date().toLocaleString()}
               </select>
             </div>
             <div>
-              <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">
+              <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
                 상태
               </label>
               <select
@@ -523,7 +528,7 @@ Generated at: ${new Date().toLocaleString()}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">
+              <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
                 시작일
               </label>
               <input
@@ -534,7 +539,7 @@ Generated at: ${new Date().toLocaleString()}
               />
             </div>
             <div>
-              <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">
+              <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
                 종료일
               </label>
               <input
@@ -548,7 +553,7 @@ Generated at: ${new Date().toLocaleString()}
 
           {/* Image */}
           <div>
-            <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">
+            <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
               커버 이미지
             </label>
             <div className="border border-dashed border-nu-ink/20 p-4 text-center">
@@ -566,7 +571,7 @@ Generated at: ${new Date().toLocaleString()}
                       setImagePreview(null);
                       setImageUrl(null);
                     }}
-                    className="mt-2 font-mono-nu text-[10px] text-nu-red uppercase tracking-widest"
+                    className="mt-2 font-mono-nu text-[12px] text-nu-red uppercase tracking-widest"
                   >
                     삭제
                   </button>
@@ -589,22 +594,22 @@ Generated at: ${new Date().toLocaleString()}
 
         {/* External integrations - Tool Hub */}
         <div className="border-t border-nu-ink/[0.06] pt-5 mt-2">
-          <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink block mb-4">️ 툴 허브 (외부 연동)</span>
+          <span className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-pink block mb-4">️ 툴 허브 (외부 연동)</span>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray block mb-1.5">Slack 채널 URL</label>
+              <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray block mb-1.5">Slack 채널 URL</label>
               <input value={slackUrl} onChange={(e) => setSlackUrl(e.target.value)} placeholder="https://app.slack.com/..." className="w-full border border-nu-ink/15 bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-nu-pink" />
             </div>
             <div>
-              <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray block mb-1.5">Notion 보드 URL</label>
+              <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray block mb-1.5">Notion 보드 URL</label>
               <input value={notionUrl} onChange={(e) => setNotionUrl(e.target.value)} placeholder="https://notion.so/..." className="w-full border border-nu-ink/15 bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-nu-pink" />
             </div>
             <div>
-              <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray block mb-1.5">Google Drive URL</label>
+              <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray block mb-1.5">Google Drive URL</label>
               <input value={driveUrl} onChange={(e) => setDriveUrl(e.target.value)} placeholder="https://drive.google.com/..." className="w-full border border-nu-ink/15 bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-nu-pink" />
             </div>
             <div>
-              <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray block mb-1.5">카카오톡 오픈채팅 URL</label>
+              <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray block mb-1.5">카카오톡 오픈채팅 URL</label>
               <input value={kakaoUrl} onChange={(e) => setKakaoUrl(e.target.value)} placeholder="https://open.kakao.com/o/..." className="w-full border border-nu-ink/15 bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-nu-pink" />
             </div>
           </div>
@@ -612,14 +617,14 @@ Generated at: ${new Date().toLocaleString()}
 
         {/* Budget */}
         <div className="border-t border-nu-ink/[0.06] pt-5">
-          <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink block mb-4"> 예산 & 보상 투명성</span>
+          <span className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-pink block mb-4"> 예산 & 보상 투명성</span>
           <div className="grid grid-cols-3 gap-4">
             <div className="col-span-2">
-              <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray block mb-1.5">총 사업비</label>
+              <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray block mb-1.5">총 사업비</label>
               <input type="number" value={totalBudget} onChange={(e) => setTotalBudget(e.target.value)} placeholder="10000000" className="w-full border border-nu-ink/15 bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-nu-pink" />
             </div>
             <div>
-              <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray block mb-1.5">통화</label>
+              <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray block mb-1.5">통화</label>
               <select value={budgetCurrency} onChange={(e) => setBudgetCurrency(e.target.value)} className="w-full border border-nu-ink/15 bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-nu-pink">
                 <option value="KRW">KRW</option>
                 <option value="USD">USD</option>
@@ -628,11 +633,11 @@ Generated at: ${new Date().toLocaleString()}
           </div>
           <div className="flex flex-col gap-4 mt-6">
             <div>
-              <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink block mb-1.5 flex items-center gap-2">
+              <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-pink block mb-1.5 flex items-center gap-2">
                 <Layers size={13} /> 실시간 볼트 대시보드 URL (외부)
               </label>
               <input value={dashUrl} onChange={(e) => setDashUrl(e.target.value)} placeholder="https://databox.com/board/..." className="w-full border border-nu-ink/15 bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-nu-pink" />
-              <p className="font-mono-nu text-[9px] text-nu-muted mt-1">볼트 대시보드 탭에 대시보드를 연동하여 팀원들과 공유합니다</p>
+              <p className="font-mono-nu text-[11px] text-nu-muted mt-1">볼트 대시보드 탭에 대시보드를 연동하여 팀원들과 공유합니다</p>
             </div>
           </div>
         </div>
@@ -640,7 +645,7 @@ Generated at: ${new Date().toLocaleString()}
         <button
           type="submit"
           disabled={saving}
-          className="w-full font-mono-nu text-[11px] font-bold uppercase tracking-[0.1em] py-4 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          className="w-full font-mono-nu text-[13px] font-bold uppercase tracking-[0.1em] py-4 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {saving ? (
             <>
@@ -674,13 +679,13 @@ Generated at: ${new Date().toLocaleString()}
                     <div className="flex items-center gap-1.5">
                       <p className="text-sm font-medium truncate">{m.profile.nickname}</p>
                       {m.role === "lead" && (
-                        <span className="font-mono-nu text-[7px] uppercase tracking-widest bg-nu-pink text-white px-1.5 py-0.5 shrink-0">PM</span>
+                        <span className="font-mono-nu text-[9px] uppercase tracking-widest bg-nu-pink text-white px-1.5 py-0.5 shrink-0">PM</span>
                       )}
                       {m.role === "manager" && (
-                        <span className="font-mono-nu text-[7px] uppercase tracking-widest bg-nu-blue/10 text-nu-blue px-1.5 py-0.5 shrink-0">매니저</span>
+                        <span className="font-mono-nu text-[9px] uppercase tracking-widest bg-nu-blue/10 text-nu-blue px-1.5 py-0.5 shrink-0">매니저</span>
                       )}
                     </div>
-                    <p className="text-[10px] text-nu-muted">
+                    <p className="text-[12px] text-nu-muted">
                       {m.role === "manager" ? "멤버 관리·파일업로드·일정관리 가능" : (roleLabels[m.role] || m.role)}
                     </p>
                   </div>
@@ -692,7 +697,7 @@ Generated at: ${new Date().toLocaleString()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{m.crew.name}</p>
-                    <p className="text-[10px] text-nu-muted capitalize">너트 · {m.crew.category}</p>
+                    <p className="text-[12px] text-nu-muted capitalize">너트 · {m.crew.category}</p>
                   </div>
                 </>
               ) : null}
@@ -701,7 +706,7 @@ Generated at: ${new Date().toLocaleString()}
                   <button
                     type="button"
                     onClick={() => handlePromoteManager(m.id, m.user_id!, m.role === "manager")}
-                    className={`font-mono-nu text-[8px] uppercase tracking-widest px-2 py-1 border transition-colors ${
+                    className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 border transition-colors ${
                       m.role === "manager"
                         ? "border-nu-muted/30 text-nu-muted hover:border-nu-red/40 hover:text-nu-red"
                         : "border-nu-blue/30 text-nu-blue hover:bg-nu-blue hover:text-white"
@@ -724,7 +729,7 @@ Generated at: ${new Date().toLocaleString()}
 
         {/* Add user member */}
         <div className="border-t border-nu-ink/[0.06] pt-4 mb-4">
-          <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-3">
+          <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-3">
             사용자 추가
           </p>
           <div className="flex gap-2">
@@ -744,7 +749,7 @@ Generated at: ${new Date().toLocaleString()}
             <button
               type="button"
               onClick={addUserMember}
-              className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-blue text-white hover:bg-nu-blue/90 transition-colors flex items-center gap-1"
+              className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-blue text-white hover:bg-nu-blue/90 transition-colors flex items-center gap-1"
             >
               <UserPlus size={12} /> 추가
             </button>
@@ -753,7 +758,7 @@ Generated at: ${new Date().toLocaleString()}
 
         {/* Add crew */}
         <div className="border-t border-nu-ink/[0.06] pt-4">
-          <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-3">
+          <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-3">
             너트 추가
           </p>
           <div className="flex gap-2">
@@ -772,7 +777,7 @@ Generated at: ${new Date().toLocaleString()}
             <button
               type="button"
               onClick={addCrewMember}
-              className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-blue text-white hover:bg-nu-blue/90 transition-colors flex items-center gap-1"
+              className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-blue text-white hover:bg-nu-blue/90 transition-colors flex items-center gap-1"
             >
               <UserPlus size={12} /> 추가
             </button>
@@ -789,19 +794,19 @@ Generated at: ${new Date().toLocaleString()}
           <button
             onClick={handleSnapshot}
             disabled={saving}
-            className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-3 border border-nu-ink text-nu-ink hover:bg-nu-ink hover:text-white transition-colors"
+            className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-5 py-3 border border-nu-ink text-nu-ink hover:bg-nu-ink hover:text-white transition-colors"
           >
             스냅샷 박제 (Snapshot)
           </button>
           <button
             onClick={handleArchive}
-            className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-3 border border-nu-amber text-nu-amber hover:bg-nu-amber hover:text-white transition-colors"
+            className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-5 py-3 border border-nu-amber text-nu-amber hover:bg-nu-amber hover:text-white transition-colors"
           >
             볼트 보관
           </button>
           <button
             onClick={handleDelete}
-            className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-3 border border-nu-red text-nu-red hover:bg-nu-red hover:text-white transition-colors flex items-center justify-center gap-1"
+            className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-5 py-3 border border-nu-red text-nu-red hover:bg-nu-red hover:text-white transition-colors flex items-center justify-center gap-1"
           >
             <Trash2 size={12} /> 볼트 삭제
           </button>
