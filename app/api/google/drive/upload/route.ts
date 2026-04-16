@@ -16,7 +16,8 @@ const ALLOWED_TYPES = [
   "text/plain", "text/csv", "text/markdown",
   "image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml",
   "video/mp4", "video/webm",
-  "audio/mpeg", "audio/wav",
+  "audio/mpeg", "audio/mp3", "audio/mp4", "audio/x-m4a", "audio/aac",
+  "audio/wav", "audio/webm", "audio/ogg", "audio/flac",
 ];
 
 export async function POST(req: NextRequest) {
@@ -31,13 +32,15 @@ export async function POST(req: NextRequest) {
     const targetType = formData.get("targetType") as string | null; // "group" | "project"
     const targetId   = formData.get("targetId")   as string | null;
     const stage      = formData.get("stage")       as string | null;
+    const requireSharedFolder = formData.get("requireSharedFolder") === "true";
     // Manual folderId override (advanced use)
-    let folderId = formData.get("folderId") as string | null;
+    const folderId = formData.get("folderId") as string | null;
 
     if (!file) return NextResponse.json({ error: "파일이 없습니다" }, { status: 400 });
+    const normalizedFileType = (file.type || "").split(";")[0];
     if (file.size > 50 * 1024 * 1024)
       return NextResponse.json({ error: "파일 크기는 50MB 이하여야 합니다" }, { status: 400 });
-    if (file.type && !ALLOWED_TYPES.includes(file.type))
+    if (normalizedFileType && !ALLOWED_TYPES.includes(normalizedFileType))
       return NextResponse.json({ error: "허용되지 않는 파일 형식입니다" }, { status: 400 });
 
     const supabase = await createClient();
@@ -47,8 +50,6 @@ export async function POST(req: NextRequest) {
     // we upload using the HOST's token so members don't need to connect Google.
     let uploaderUserId = userId;  // default: use current user's credentials
     let sharedFolderId: string | null = folderId;
-    let hostId: string | null = null;
-
     if (targetType === "group" && targetId) {
       // Check membership
       const { data: membership } = await supabase
@@ -61,11 +62,16 @@ export async function POST(req: NextRequest) {
 
       // Fetch group — try with google_drive_folder_id, fallback to just host_id
       // (column may not exist in production until migration is applied)
-      let group: { host_id: string; google_drive_folder_id?: string | null } | null = null;
+      let group: {
+        host_id: string;
+        google_drive_folder_id?: string | null;
+        google_drive_meetings_folder_id?: string | null;
+        google_drive_resources_folder_id?: string | null;
+      } | null = null;
       {
         const { data, error } = await supabase
           .from("groups")
-          .select("host_id, google_drive_folder_id")
+          .select("host_id, google_drive_folder_id, google_drive_meetings_folder_id, google_drive_resources_folder_id")
           .eq("id", targetId)
           .single();
         if (!error && data) {
@@ -73,10 +79,19 @@ export async function POST(req: NextRequest) {
         } else {
           const { data: fallback } = await supabase
             .from("groups")
-            .select("host_id")
+            .select("host_id, google_drive_folder_id")
             .eq("id", targetId)
             .single();
-          group = fallback;
+          if (fallback) {
+            group = fallback;
+          } else {
+            const { data: minimal } = await supabase
+              .from("groups")
+              .select("host_id")
+              .eq("id", targetId)
+              .single();
+            group = minimal;
+          }
         }
       }
 
@@ -85,9 +100,15 @@ export async function POST(req: NextRequest) {
       }
 
       if (group) {
-        hostId = group.host_id;
-        if (group.google_drive_folder_id) {
-          sharedFolderId = group.google_drive_folder_id;
+        const resolvedFolder =
+          stage === "meeting"
+            ? group.google_drive_meetings_folder_id || group.google_drive_folder_id
+            : stage === "resource"
+              ? group.google_drive_resources_folder_id || group.google_drive_folder_id
+              : group.google_drive_folder_id;
+
+        if (resolvedFolder) {
+          sharedFolderId = resolvedFolder;
           uploaderUserId = group.host_id;
         }
       }
@@ -112,10 +133,19 @@ export async function POST(req: NextRequest) {
         } else {
           const { data: fallback } = await supabase
             .from("projects")
-            .select("created_by")
+            .select("created_by, google_drive_folder_id")
             .eq("id", targetId)
             .single();
-          project = fallback;
+          if (fallback) {
+            project = fallback;
+          } else {
+            const { data: minimal } = await supabase
+              .from("projects")
+              .select("created_by")
+              .eq("id", targetId)
+              .single();
+            project = minimal;
+          }
         }
       }
       if (!membership && project?.created_by !== userId) {
@@ -123,7 +153,6 @@ export async function POST(req: NextRequest) {
       }
 
       if (project?.created_by) {
-        hostId = project.created_by;
         // Pick stage-specific subfolder or root folder
         const stageFolder =
           stage === "planning"  ? project.google_drive_planning_folder_id :
@@ -140,6 +169,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    if (requireSharedFolder && !sharedFolderId) {
+      return NextResponse.json(
+        { error: "연결된 Google Drive 공유 폴더가 없습니다. 먼저 너트/볼트에 Drive 폴더를 설정해주세요.", code: "SHARED_FOLDER_REQUIRED" },
+        { status: 400 }
+      );
+    }
+
     // ── 2. Get Google client (host's if shared folder exists) ──
     const auth = await getGoogleClient(uploaderUserId);
     const drive = google.drive({ version: "v3", auth });
@@ -151,12 +187,12 @@ export async function POST(req: NextRequest) {
     stream.push(buffer);
     stream.push(null);
 
-    const fileMetadata: any = { name: file.name };
+    const fileMetadata: { name: string; parents?: string[] } = { name: file.name };
     if (sharedFolderId) fileMetadata.parents = [sharedFolderId];
 
     const driveRes = await drive.files.create({
       requestBody: fileMetadata,
-      media: { mimeType: file.type || "application/octet-stream", body: stream },
+      media: { mimeType: normalizedFileType || file.type || "application/octet-stream", body: stream },
       fields: "id, name, mimeType, webViewLink, size",
     });
 
@@ -169,8 +205,11 @@ export async function POST(req: NextRequest) {
         fileId,
         requestBody: { role: "reader", type: "anyone" },
       });
-    } catch (permErr: any) {
-      console.warn("Permission setting skipped:", permErr.message);
+    } catch (permErr: unknown) {
+      console.warn(
+        "Permission setting skipped:",
+        permErr instanceof Error ? permErr.message : "unknown error"
+      );
     }
 
     // ── 5. Register in DB ──────────────────────────────────────
@@ -215,17 +254,19 @@ export async function POST(req: NextRequest) {
       },
     });
 
-  } catch (err: any) {
-    if (err.code === 403 || err.message?.includes("insufficient") || err.message?.includes("Insufficient Permission")) {
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error("알 수 없는 업로드 오류");
+    const errorWithCode = error as Error & { code?: number };
+    if (errorWithCode.code === 403 || error.message.includes("insufficient") || error.message.includes("Insufficient Permission")) {
       return NextResponse.json({ error: "업로드 권한이 없습니다. 호스트가 Google 계정을 연결했는지 확인해주세요.", code: "SCOPE_INSUFFICIENT" }, { status: 403 });
     }
-    if (err.message === "GOOGLE_NOT_CONNECTED") {
+    if (error.message === "GOOGLE_NOT_CONNECTED") {
       return NextResponse.json({ error: "호스트의 Google 계정이 연결되지 않았습니다.", code: "NOT_CONNECTED" }, { status: 403 });
     }
-    if (err.message === "GOOGLE_TOKEN_EXPIRED") {
+    if (error.message === "GOOGLE_TOKEN_EXPIRED") {
       return NextResponse.json({ error: "Google 토큰이 만료되었습니다. 호스트가 다시 연결해주세요.", code: "TOKEN_EXPIRED" }, { status: 401 });
     }
-    console.error("Drive upload error:", err);
-    return NextResponse.json({ error: "파일 업로드 실패: " + err.message }, { status: 500 });
+    console.error("Drive upload error:", error);
+    return NextResponse.json({ error: "파일 업로드 실패: " + error.message }, { status: 500 });
   }
 }

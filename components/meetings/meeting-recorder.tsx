@@ -5,13 +5,11 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import {
   Mic,
-  MicOff,
   Pause,
   Play,
   Square,
   Upload,
   Loader2,
-  CheckCircle2,
   AlertCircle,
   Sparkles,
   HardDrive,
@@ -40,6 +38,29 @@ function formatTime(seconds: number): string {
     return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   }
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function normalizeMimeType(mimeType: string | undefined | null): string {
+  return (mimeType || "").split(";")[0] || "audio/webm";
+}
+
+function getAudioExtension(mimeType: string): string {
+  switch (normalizeMimeType(mimeType)) {
+    case "audio/mp4":
+    case "audio/x-m4a":
+      return "m4a";
+    case "audio/mpeg":
+    case "audio/mp3":
+      return "mp3";
+    case "audio/wav":
+      return "wav";
+    case "audio/ogg":
+      return "ogg";
+    case "audio/flac":
+      return "flac";
+    default:
+      return "webm";
+  }
 }
 
 /* ─── Helper: File → Base64 ─── */
@@ -209,14 +230,17 @@ export function MeetingRecorder({
       toast.success("녹음이 시작되었습니다", {
         description: "마이크가 활성화되었습니다. 회의를 진행하세요.",
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Recording error:", err);
-      if (err.name === "NotAllowedError") {
+      if (err instanceof Error && err.name === "NotAllowedError") {
         toast.error("마이크 권한이 필요합니다", {
           description: "브라우저 설정에서 마이크 접근을 허용해주세요.",
         });
       } else {
-        toast.error("녹음을 시작할 수 없습니다: " + err.message);
+        toast.error(
+          "녹음을 시작할 수 없습니다: " +
+            (err instanceof Error ? err.message : "알 수 없는 오류")
+        );
       }
     }
   }
@@ -277,41 +301,48 @@ export function MeetingRecorder({
       } = await supabase.auth.getUser();
       if (!user) throw new Error("로그인이 필요합니다");
 
-      // Upload to Supabase Storage
-      const ext = audioBlob.type.includes("mp4") ? "mp4" : "webm";
+      // Upload to the linked shared Google Drive folder for the nut/bolt.
+      const normalizedMimeType = normalizeMimeType(audioBlob.type);
+      const ext = getAudioExtension(normalizedMimeType);
       const fileName = `recording_${Date.now()}.${ext}`;
-      const filePath = `meetings/${meetingId}/${fileName}`;
+      const { data: mtg, error: meetingError } = await supabase
+        .from("meetings")
+        .select("group_id, project_id")
+        .eq("id", meetingId)
+        .single();
+      if (meetingError) throw new Error("회의 정보를 불러오지 못했습니다");
 
-      const { error: uploadError } = await supabase.storage
-        .from("media")
-        .upload(filePath, audioBlob);
-      if (uploadError) throw new Error("업로드 실패: " + uploadError.message);
+      const file = new File([audioBlob], fileName, {
+        type: normalizedMimeType,
+        lastModified: Date.now(),
+      });
+      const formData = new FormData();
+      formData.append("file", file);
 
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("media").getPublicUrl(filePath);
-
-      // Register in file_attachments
-      try {
-        const { data: mtg } = await supabase
-          .from("meetings")
-          .select("group_id")
-          .eq("id", meetingId)
-          .single();
-        if (mtg?.group_id) {
-          await supabase.from("file_attachments").insert({
-            target_type: "group",
-            target_id: mtg.group_id,
-            uploaded_by: user.id,
-            file_name: `[녹음] ${meetingTitle} - ${fileName}`,
-            file_url: publicUrl,
-            file_type: audioBlob.type || "audio/webm",
-            file_size: audioBlob.size,
-          });
-        }
-      } catch {
-        /* non-critical */
+      if (mtg?.project_id) {
+        formData.append("targetType", "project");
+        formData.append("targetId", mtg.project_id);
+        formData.append("stage", "evidence");
+      } else if (mtg?.group_id) {
+        formData.append("targetType", "group");
+        formData.append("targetId", mtg.group_id);
+        formData.append("stage", "meeting");
+      } else {
+        throw new Error("이 회의는 연결된 너트 또는 볼트가 없습니다");
       }
+      formData.append("requireSharedFolder", "true");
+
+      const uploadRes = await fetch("/api/google/drive/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!uploadRes.ok) {
+        const uploadErr = await uploadRes.json().catch(() => ({}));
+        throw new Error(uploadErr.error || "Google Drive 업로드 실패");
+      }
+
+      const uploadData = await uploadRes.json();
 
       // Convert to base64 for Gemini
       setProcessingStep("AI가 회의 내용을 분석 중...");
@@ -325,7 +356,7 @@ export function MeetingRecorder({
           agendas: [],
           meetingTitle,
           audioBase64: base64,
-          audioMimeType: audioBlob.type || "audio/webm",
+          audioMimeType: normalizedMimeType,
         }),
       });
 
@@ -364,12 +395,14 @@ export function MeetingRecorder({
       setState("done");
       setProcessingStep("");
       toast.success("회의록이 자동 생성되었습니다!", {
-        description: "AI 회의록 탭에서 결과를 확인하세요.",
+        description: uploadData?.file?.webViewLink
+          ? "녹음 파일은 연결된 Google Drive에 저장되었고, AI 회의록도 생성되었습니다."
+          : "AI 회의록 탭에서 결과를 확인하세요.",
       });
       onTranscriptionComplete?.();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Upload/transcribe error:", err);
-      toast.error(err.message || "처리 중 오류가 발생했습니다");
+      toast.error(err instanceof Error ? err.message : "처리 중 오류가 발생했습니다");
       setState("done"); // Go back to done so user can retry
       setProcessingStep("");
     }
@@ -457,8 +490,8 @@ export function MeetingRecorder({
 
       setShowDriveImport(false);
       setDriveUrl("");
-    } catch (err: any) {
-      toast.error(err.message || "Drive 가져오기 실패");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Drive 가져오기 실패");
     } finally {
       setDriveImporting(false);
     }

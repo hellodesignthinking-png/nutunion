@@ -31,6 +31,8 @@ interface ChartData {
   estimatedCompletionDate: Date | null;
 }
 
+type BurndownTask = ProjectTask & { updated_at?: string; marked_done_at?: string };
+
 export function ProjectBurndownChart({
   projectId,
 }: ProjectBurndownChartProps) {
@@ -67,7 +69,7 @@ export function ProjectBurndownChart({
             id,
             title,
             due_date,
-            project_tasks(id, status, created_at, updated_at)
+            tasks:project_tasks(id, status, created_at, updated_at)
           `
           )
           .eq("project_id", projectId)
@@ -81,10 +83,13 @@ export function ProjectBurndownChart({
         }
 
         // Flatten all tasks
-        const allTasks: (ProjectTask & { marked_done_at?: string })[] = [];
+        const allTasks: BurndownTask[] = [];
         milestones.forEach((milestone) => {
-          if ((milestone as any).project_tasks) {
-            allTasks.push(...(milestone as any).project_tasks);
+          const tasks = (milestone as ProjectMilestone & {
+            tasks?: BurndownTask[];
+          }).tasks;
+          if (tasks?.length) {
+            allTasks.push(...tasks);
           }
         });
 
@@ -113,8 +118,8 @@ export function ProjectBurndownChart({
 
         doneTasks.forEach((task) => {
           // Use updated_at if present, otherwise use a heuristic (halfway between creation and today)
-          const completedAt = (task as any).updated_at
-            ? new Date((task as any).updated_at)
+          const completedAt = task.updated_at
+            ? new Date(task.updated_at)
             : new Date(Math.max(
                 new Date(task.created_at).getTime(),
                 today.getTime() - (1000 * 60 * 60 * 24) // assume completed yesterday if no date

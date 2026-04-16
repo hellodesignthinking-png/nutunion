@@ -18,6 +18,13 @@ import { SocialAuth } from "@/components/shared/social-auth";
 import { toast } from "sonner";
 import { Check, AlertCircle, Loader2 } from "lucide-react";
 
+function StatusIcon({ status }: { status: "idle" | "checking" | "available" | "taken" }) {
+  if (status === "idle") return null;
+  if (status === "checking") return <Loader2 size={14} className="animate-spin text-nu-muted" />;
+  if (status === "available") return <Check size={14} className="text-green-600" />;
+  return <AlertCircle size={14} className="text-nu-red" />;
+}
+
 export default function SignupPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -131,14 +138,6 @@ export default function SignupPage() {
     toast.success("가입이 완료되었습니다!");
     router.push("/dashboard");
     router.refresh();
-  }
-
-  // Status indicator component
-  function StatusIcon({ status }: { status: "idle" | "checking" | "available" | "taken" }) {
-    if (status === "idle") return null;
-    if (status === "checking") return <Loader2 size={14} className="animate-spin text-nu-muted" />;
-    if (status === "available") return <Check size={14} className="text-green-600" />;
-    return <AlertCircle size={14} className="text-nu-red" />;
   }
 
   // Step 1: Terms agreement

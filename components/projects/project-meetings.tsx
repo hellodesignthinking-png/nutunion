@@ -6,11 +6,13 @@ import { MeetingNotes } from "@/components/meetings/meeting-notes";
 import { AiMeetingAssistant } from "@/components/meetings/ai-meeting-assistant";
 import { MeetingRecorder } from "@/components/meetings/meeting-recorder";
 import { AgendaList } from "@/components/meetings/agenda-list";
+import type { Profile } from "@/lib/types";
 import { toast } from "sonner";
 import {
   Plus,
   Calendar,
   Clock,
+  MapPin,
   ChevronDown,
   ChevronUp,
   FileText,
@@ -18,11 +20,12 @@ import {
   Trash2,
   Loader2,
   CheckCircle2,
-  Circle,
   Play,
   X,
   Sparkles,
   CalendarX,
+  Edit3,
+  Save,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +37,7 @@ interface ProjectMeeting {
   description: string | null;
   scheduled_at: string;
   duration_min: number;
+  location?: string | null;
   status: string;
   organizer_id: string | null;
   summary: string | null;
@@ -44,6 +48,14 @@ interface ProjectMeeting {
 interface ProjectMember {
   user_id: string;
   profile?: { id: string; nickname: string } | null;
+}
+
+interface ProjectMemberRow {
+  user_id: string;
+  profile:
+    | { id: string; nickname: string }
+    | { id: string; nickname: string }[]
+    | null;
 }
 
 const statusConfig: Record<
@@ -105,7 +117,7 @@ export function ProjectMeetings({
       supabase
         .from("meetings")
         .select(
-          "id, title, description, scheduled_at, duration_min, status, organizer_id, summary, created_at"
+          "id, title, description, scheduled_at, duration_min, location, status, organizer_id, summary, created_at"
         )
         .eq("project_id", projectId)
         .order("scheduled_at", { ascending: false }),
@@ -122,7 +134,7 @@ export function ProjectMeetings({
     }
     if (membersRes.data) {
       setMembers(
-        membersRes.data.map((m: any) => ({
+        (membersRes.data as ProjectMemberRow[]).map((m) => ({
           user_id: m.user_id,
           profile: Array.isArray(m.profile) ? m.profile[0] : m.profile,
         }))
@@ -132,7 +144,13 @@ export function ProjectMeetings({
   }, [projectId]);
 
   useEffect(() => {
-    loadData();
+    const timeoutId = window.setTimeout(() => {
+      void loadData();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [loadData]);
 
   async function handleCreate() {
@@ -228,10 +246,17 @@ export function ProjectMeetings({
   // Build Profile[] for MeetingNotes component
   const memberProfiles = members
     .filter((m) => m.profile)
-    .map((m) => ({
+    .map((m): Profile => ({
       id: m.profile!.id,
-      nickname: m.profile!.nickname,
       name: m.profile!.nickname,
+      nickname: m.profile!.nickname,
+      email: "",
+      specialty: null,
+      avatar_url: null,
+      role: "member",
+      can_create_crew: false,
+      bio: null,
+      created_at: new Date(0).toISOString(),
     }));
 
   if (loading) {
@@ -498,13 +523,22 @@ function MeetingCard({
   onDelete: (id: string) => void;
   onSaveSummary: (id: string, summary: string) => void;
   onRefresh: () => void;
-  memberProfiles: any[];
+  memberProfiles: Profile[];
   userId: string;
   canEdit: boolean;
   projectId: string;
 }) {
   const [summaryText, setSummaryText] = useState(meeting.summary || "");
   const [editingSummary, setEditingSummary] = useState(false);
+  const [editingInfo, setEditingInfo] = useState(false);
+  const [title, setTitle] = useState(meeting.title);
+  const [description, setDescription] = useState(meeting.description || "");
+  const [scheduledAt, setScheduledAt] = useState(
+    new Date(meeting.scheduled_at).toISOString().slice(0, 16)
+  );
+  const [durationMin, setDurationMin] = useState(meeting.duration_min || 60);
+  const [location, setLocation] = useState(meeting.location || "");
+  const [savingInfo, setSavingInfo] = useState(false);
   const cfg = statusConfig[meeting.status] || statusConfig.upcoming;
   const date = new Date(meeting.scheduled_at);
 
@@ -585,6 +619,12 @@ function MeetingCard({
           {/* Status Actions */}
           {canEdit && (
             <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setEditingInfo((prev) => !prev)}
+                className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 text-nu-pink hover:bg-nu-pink/10 border border-nu-pink/20 transition-colors flex items-center gap-1"
+              >
+                <Edit3 size={10} /> {editingInfo ? "수정 닫기" : "일정 수정"}
+              </button>
               {meeting.status === "upcoming" && (
                 <button
                   onClick={() => onStatusChange(meeting.id, "in_progress")}
@@ -610,6 +650,63 @@ function MeetingCard({
                 </button>
               )}
             </div>
+          )}
+
+          {canEdit && editingInfo && (
+            <MeetingInfoEditor
+              meeting={meeting}
+              title={title}
+              description={description}
+              scheduledAt={scheduledAt}
+              durationMin={durationMin}
+              location={location}
+              saving={savingInfo}
+              onTitleChange={setTitle}
+              onDescriptionChange={setDescription}
+              onScheduledAtChange={setScheduledAt}
+              onDurationMinChange={setDurationMin}
+              onLocationChange={setLocation}
+              onCancel={() => {
+                setTitle(meeting.title);
+                setDescription(meeting.description || "");
+                setScheduledAt(new Date(meeting.scheduled_at).toISOString().slice(0, 16));
+                setDurationMin(meeting.duration_min || 60);
+                setLocation(meeting.location || "");
+                setEditingInfo(false);
+              }}
+              onSave={async () => {
+                if (!title.trim()) {
+                  toast.error("회의 제목을 입력해주세요");
+                  return;
+                }
+                if (!scheduledAt) {
+                  toast.error("회의 일시를 선택해주세요");
+                  return;
+                }
+
+                setSavingInfo(true);
+                const supabase = createClient();
+                const { error } = await supabase
+                  .from("meetings")
+                  .update({
+                    title: title.trim(),
+                    description: description.trim() || null,
+                    scheduled_at: new Date(scheduledAt).toISOString(),
+                    duration_min: durationMin,
+                    location: location.trim() || null,
+                  })
+                  .eq("id", meeting.id);
+
+                if (error) {
+                  toast.error("회의 수정 실패: " + error.message);
+                } else {
+                  toast.success("회의 일정이 수정되었습니다");
+                  setEditingInfo(false);
+                  await onRefresh();
+                }
+                setSavingInfo(false);
+              }}
+            />
           )}
 
           {/* Recording / Upload */}
@@ -718,7 +815,13 @@ function MeetingCard({
               }}
               onAddNote={async (content, type) => {
                 const supabase = createClient();
-                const insertData: any = {
+                const insertData: {
+                  meeting_id: string;
+                  content: string;
+                  type: string;
+                  created_by: string;
+                  status?: string;
+                } = {
                   meeting_id: meeting.id,
                   content,
                   type,
@@ -770,6 +873,138 @@ function MeetingCard({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function MeetingInfoEditor({
+  meeting,
+  title,
+  description,
+  scheduledAt,
+  durationMin,
+  location,
+  saving,
+  onTitleChange,
+  onDescriptionChange,
+  onScheduledAtChange,
+  onDurationMinChange,
+  onLocationChange,
+  onCancel,
+  onSave,
+}: {
+  meeting: ProjectMeeting;
+  title: string;
+  description: string;
+  scheduledAt: string;
+  durationMin: number;
+  location: string;
+  saving: boolean;
+  onTitleChange: (value: string) => void;
+  onDescriptionChange: (value: string) => void;
+  onScheduledAtChange: (value: string) => void;
+  onDurationMinChange: (value: number) => void;
+  onLocationChange: (value: string) => void;
+  onCancel: () => void;
+  onSave: () => Promise<void>;
+}) {
+  return (
+    <div className="bg-nu-cream/20 border border-nu-ink/10 p-4 space-y-4">
+      <div className="space-y-1.5">
+        <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted block">
+          회의 제목
+        </label>
+        <Input
+          value={title}
+          onChange={(e) => onTitleChange(e.target.value)}
+          placeholder={meeting.title}
+          className="border-nu-ink/15"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted block">
+          회의 설명
+        </label>
+        <Textarea
+          value={description}
+          onChange={(e) => onDescriptionChange(e.target.value)}
+          placeholder="회의에서 다룰 주제나 안건을 간략히 적어주세요..."
+          rows={2}
+          className="border-nu-ink/15 resize-none"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-1.5">
+          <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted block">
+            회의 일시
+          </label>
+          <Input
+            type="datetime-local"
+            value={scheduledAt}
+            onChange={(e) => onScheduledAtChange(e.target.value)}
+            className="border-nu-ink/15"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted block">
+            소요 시간 (분)
+          </label>
+          <Input
+            type="number"
+            value={durationMin}
+            onChange={(e) => onDurationMinChange(parseInt(e.target.value, 10) || 60)}
+            min={15}
+            step={15}
+            className="border-nu-ink/15"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted block">
+            장소
+          </label>
+          <Input
+            value={location}
+            onChange={(e) => onLocationChange(e.target.value)}
+            placeholder="온라인 / 장소"
+            className="border-nu-ink/15"
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button
+          onClick={() => {
+            void onSave();
+          }}
+          disabled={saving || !title.trim()}
+          className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[12px] uppercase tracking-widest"
+        >
+          {saving ? (
+            <>
+              <Loader2 size={12} className="animate-spin" /> 저장 중...
+            </>
+          ) : (
+            <>
+              <Save size={12} /> 일정 저장
+            </>
+          )}
+        </Button>
+        <Button
+          onClick={onCancel}
+          variant="outline"
+          className="font-mono-nu text-[12px] uppercase tracking-widest border-nu-ink/[0.12] text-nu-gray"
+        >
+          <X size={12} /> 취소
+        </Button>
+        {location && (
+          <span className="ml-auto inline-flex items-center gap-1 text-[12px] text-nu-muted">
+            <MapPin size={12} />
+            {location}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

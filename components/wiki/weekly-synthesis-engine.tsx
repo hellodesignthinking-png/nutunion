@@ -113,7 +113,7 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
       } catch { /* silent */ }
     }
     loadHistory();
-  }, [groupId]); // eslint-disable-line react-hooks/exhaustive-deps — reload history only on groupId change, not phase
+  }, [groupId]);
 
   async function runSynthesis() {
     setPhase("synthesizing");
@@ -150,8 +150,12 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
       } else {
         setPhase("done");
       }
-    } catch (e: any) {
-      const msg = e.name === "AbortError" ? "요청 시간이 초과되었습니다 (60초). 다시 시도해주세요." : (e.message || "통합 실패");
+    } catch (error: unknown) {
+      const msg = error instanceof Error
+        ? error.name === "AbortError"
+          ? "요청 시간이 초과되었습니다 (60초). 다시 시도해주세요."
+          : (error.message || "통합 실패")
+        : "통합 실패";
       setErrorDetail(msg);
       toast.error(msg);
       setPhase("idle");
@@ -403,7 +407,11 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
   function togglePage(idx: number) {
     setSelectedPages(prev => {
       const next = new Set(prev);
-      next.has(idx) ? next.delete(idx) : next.add(idx);
+      if (next.has(idx)) {
+        next.delete(idx);
+      } else {
+        next.add(idx);
+      }
       return next;
     });
   }

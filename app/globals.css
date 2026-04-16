@@ -95,10 +95,12 @@
   --sidebar-border: #0D0D0D;
   --sidebar-ring: #FF48B0;
 
-  --font-head: 'Outfit', sans-serif;
-  --font-body: 'Space Grotesk', sans-serif;
-  --font-mono-nu: 'Space Mono', monospace;
-  --font-serif: 'Playfair Display', serif;
+  --font-head: "Avenir Next", "Segoe UI", sans-serif;
+  --font-sans: "Avenir Next", "Segoe UI", sans-serif;
+  --font-body: "Avenir Next", "Segoe UI", sans-serif;
+  --font-geist-mono: "SFMono-Regular", "Cascadia Mono", "Menlo", monospace;
+  --font-mono-nu: "SFMono-Regular", "Cascadia Mono", "Menlo", monospace;
+  --font-serif: "Iowan Old Style", "Times New Roman", serif;
 
   /* Risograph design tokens */
   --riso-border: 3px solid #0D0D0D;

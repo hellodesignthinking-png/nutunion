@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 
 export default function CommunityError({
   error,
@@ -39,12 +40,12 @@ export default function CommunityError({
           >
             다시 시도
           </button>
-          <a
+          <Link
             href="/"
             className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-8 py-3 border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all"
           >
             홈으로
-          </a>
+          </Link>
         </div>
       </div>
     </div>
