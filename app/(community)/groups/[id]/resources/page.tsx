@@ -138,7 +138,7 @@ export default function ResourcesPage() {
   const [previewData, setPreviewData] = useState<{ url: string; name: string; id?: string; content?: string | null } | null>(null);
   const [isSplitView, setIsSplitView] = useState(true);
   const [showAiSummary, setShowAiSummary] = useState(true);
-  const [isDragging, setIsDragging] = useState(false);
+  // isDragging removed — server upload deprecated
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [linkName, setLinkName] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
@@ -595,59 +595,14 @@ export default function ResourcesPage() {
           </div>
 
           {/* ── Quick Upload Hub ── */}
-          <div
-            className={`mb-6 border-[2px] transition-all ${isDragging ? "border-nu-pink bg-nu-pink/5 scale-[1.01]" : "border-dashed border-nu-ink/15 bg-nu-white"}`}
-            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={async (e) => {
-              e.preventDefault();
-              setIsDragging(false);
-              const droppedFiles = e.dataTransfer.files;
-              if (droppedFiles.length === 0) return;
-              setUploading(true);
-              const supabase = createClient();
-              const { data: { user } } = await supabase.auth.getUser();
-              if (!user) { toast.error("로그인이 필요합니다"); setUploading(false); return; }
-              for (let i = 0; i < droppedFiles.length; i++) {
-                const file = droppedFiles[i];
-                const filePath = `groups/${groupId}/${Date.now()}_${file.name}`;
-                const { error: uploadErr } = await supabase.storage.from("media").upload(filePath, file);
-                if (uploadErr) { toast.error(`${file.name} 업로드 실패`); continue; }
-                const { data: { publicUrl } } = supabase.storage.from("media").getPublicUrl(filePath);
-                const { error: insertErr } = await supabase.from("file_attachments").insert({
-                  target_type: "group", target_id: groupId, uploaded_by: user.id,
-                  file_name: file.name, file_url: publicUrl, file_size: file.size, file_type: file.type,
-                });
-                if (insertErr) { toast.error(`${file.name} 저장 실패`); continue; }
-              }
-              toast.success(`${droppedFiles.length}개 파일이 업로드되었습니다! 🎉`);
-              setUploading(false);
-              await loadData();
-            }}
-          >
+          <div className="mb-6 border-[2px] border-dashed border-nu-ink/15 bg-nu-white">
             <div className="px-5 py-4 flex flex-col sm:flex-row items-center gap-3">
-              {isDragging ? (
-                <div className="flex-1 text-center py-4">
-                  <Upload size={28} className="mx-auto text-nu-pink animate-bounce mb-2" />
-                  <p className="font-head text-sm font-bold text-nu-pink">여기에 파일을 놓으세요!</p>
+              <>
+                <div className="flex items-center gap-2 text-nu-muted flex-shrink-0">
+                  <Upload size={16} />
+                  <span className="font-mono-nu text-[12px] uppercase tracking-widest font-bold">Quick Add</span>
                 </div>
-              ) : (
-                <>
-                  <div className="flex items-center gap-2 text-nu-muted flex-shrink-0">
-                    <Upload size={16} />
-                    <span className="font-mono-nu text-[12px] uppercase tracking-widest font-bold">Quick Add</span>
-                  </div>
-                  <div className="flex-1 flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                    {/* File Upload */}
-                    <input ref={fileInputRef} type="file" className="hidden" onChange={handleUpload} multiple />
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploading}
-                      className="flex items-center gap-2 font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-all disabled:opacity-50"
-                    >
-                      <Plus size={14} /> {uploading ? "업로드 중..." : "파일 선택"}
-                    </button>
-
+                <div className="flex-1 flex items-center gap-2 flex-wrap sm:flex-nowrap">
                     {/* Link Add */}
                     <button
                       onClick={() => setShowLinkInput(!showLinkInput)}
@@ -700,10 +655,8 @@ export default function ResourcesPage() {
                       </button>
                     )}
 
-                    <span className="hidden sm:block font-mono-nu text-[11px] text-nu-muted/40 ml-auto">또는 파일을 이 영역에 드래그하세요</span>
                   </div>
-                </>
-              )}
+              </>
             </div>
 
             {/* Inline Link Input */}

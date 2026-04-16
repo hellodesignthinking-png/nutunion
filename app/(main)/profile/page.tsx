@@ -47,7 +47,7 @@ const CAT_LABELS: Record<string, string> = {
 function GradeBadge({ profile }: { profile: any }) {
   if (profile.role === "admin") {
     return (
-      <span className="inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest bg-nu-pink text-white px-2 py-0.5 border border-nu-pink">
+      <span className="inline-flex items-center gap-1 font-mono-nu text-[11px] uppercase tracking-widest bg-nu-pink text-white px-2 py-0.5 border border-nu-pink">
         <Shield size={9} /> MASTER
       </span>
     );
@@ -55,7 +55,7 @@ function GradeBadge({ profile }: { profile: any }) {
   const tier = profile.tier || "bronze";
   const g = GRADE_MAP[tier] || GRADE_MAP.bronze;
   return (
-    <span className={`inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 border ${g.color}`}>
+    <span className={`inline-flex items-center gap-1 font-mono-nu text-[11px] uppercase tracking-widest px-2 py-0.5 border ${g.color}`}>
       <g.icon size={9} /> {g.label}
     </span>
   );
@@ -163,9 +163,9 @@ function CompetencyRadar({ crews, projects, activity, points, stats }: { crews: 
                     <span className={`p-1 rounded-sm bg-nu-paper border border-nu-ink/5 ${d.color}`}>
                       {d.icon}
                     </span>
-                    <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">{d.label}</span>
+                    <span className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">{d.label}</span>
                  </div>
-                 <span className={`font-mono-nu text-[10px] font-black ${val > 80 ? "text-nu-pink" : "text-nu-ink"}`}>{Math.round(val)}%</span>
+                 <span className={`font-mono-nu text-[12px] font-black ${val > 80 ? "text-nu-pink" : "text-nu-ink"}`}>{Math.round(val)}%</span>
               </div>
             );
          })}
@@ -223,10 +223,8 @@ export default function ProfilePage() {
       const results = await Promise.allSettled([
         supabase.from("group_members").select("role, status, groups(id, name, category, description, image_url)").eq("user_id", user.id).eq("status", "active"),
         supabase.from("project_members").select("role, projects(id, title, status, category, image_url)").eq("user_id", user.id),
-        supabase.from("project_portfolios").select("*, project:projects(title, category, image_url)").eq("user_id", user.id).order("created_at", { ascending: false }),
-        supabase.from("point_logs").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
         supabase.from("crew_posts").select("id, content, type, created_at, group:groups!crew_posts_group_id_fkey(name, id)").eq("author_id", user.id).order("created_at", { ascending: false }).limit(8),
-        supabase.from("crew_resources").select("id, title, url, created_at, group:groups!crew_resources_group_id_fkey(name, id)").eq("author_id", user.id).order("created_at", { ascending: false }).limit(5)
+        supabase.from("file_attachments").select("id, file_name, file_url, created_at, target_id").eq("uploaded_by", user.id).order("created_at", { ascending: false }).limit(5),
       ]);
 
       const getData = (i: number) => {
@@ -237,16 +235,17 @@ export default function ProfilePage() {
 
       const memberData = getData(0);
       const projData = getData(1);
-      const portData = getData(2);
-      const pointData = getData(3);
-      const posts = getData(4);
-      const resources = getData(5);
+      const posts = getData(2);
+      const uploadedFiles = getData(3);
 
       setCrews(memberData);
       setProjects(projData);
-      setPortfolios(portData);
-      setPointLogs(pointData);
+      setPortfolios([]);   // project_portfolios table not yet created
+      setPointLogs([]);    // point_logs table not yet created
 
+      const resources = uploadedFiles.map((f: any) => ({
+        id: f.id, title: f.file_name, url: f.file_url, created_at: f.created_at,
+      }));
       const combined = [
         ...posts.map((p: any) => ({ ...p, _type: "post" })),
         ...resources.map((r: any) => ({ ...r, _type: "resource" })),
@@ -389,7 +388,7 @@ export default function ProfilePage() {
               </label>
             </div>
             <button onClick={() => setEditing(!editing)}
-              className="flex items-center gap-1.5 font-mono-nu text-[10px] uppercase tracking-widest px-3 py-2 border border-nu-ink/15 hover:border-nu-pink hover:text-nu-pink transition-colors">
+              className="flex items-center gap-1.5 font-mono-nu text-[12px] uppercase tracking-widest px-3 py-2 border border-nu-ink/15 hover:border-nu-pink hover:text-nu-pink transition-colors">
               <Edit3 size={11} /> {editing ? "취소" : "프로필 수정"}
             </button>
           </div>
@@ -398,7 +397,7 @@ export default function ProfilePage() {
             <h1 className="font-head text-2xl font-extrabold text-nu-ink">{profile.nickname || "이름 없음"}</h1>
             <GradeBadge profile={profile} />
             {profile.specialty && (
-              <span className={`font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 ${CAT_COLORS[profile.specialty] || "bg-nu-gray text-white"}`}>
+              <span className={`font-mono-nu text-[11px] uppercase tracking-widest px-2 py-0.5 ${CAT_COLORS[profile.specialty] || "bg-nu-gray text-white"}`}>
                 {CAT_LABELS[profile.specialty] || profile.specialty}
               </span>
             )}
@@ -408,16 +407,16 @@ export default function ProfilePage() {
 
           {/* 활동 요약 pills */}
           <div className="flex flex-wrap items-center gap-3 mt-4">
-            <span className="flex items-center gap-1.5 font-mono-nu text-[10px] bg-nu-cream/50 px-3 py-1.5 border border-nu-ink/5">
+            <span className="flex items-center gap-1.5 font-mono-nu text-[12px] bg-nu-cream/50 px-3 py-1.5 border border-nu-ink/5">
               <Layers size={12} className="text-nu-pink" /> <b>{crews.length}</b> 너트
             </span>
-            <span className="flex items-center gap-1.5 font-mono-nu text-[10px] bg-nu-cream/50 px-3 py-1.5 border border-nu-ink/5">
+            <span className="flex items-center gap-1.5 font-mono-nu text-[12px] bg-nu-cream/50 px-3 py-1.5 border border-nu-ink/5">
               <Briefcase size={12} className="text-nu-blue" /> <b>{projects.length}</b> 볼트
             </span>
-            <span className="flex items-center gap-1.5 font-mono-nu text-[10px] bg-nu-ink text-nu-paper px-3 py-1.5">
+            <span className="flex items-center gap-1.5 font-mono-nu text-[12px] bg-nu-ink text-nu-paper px-3 py-1.5">
               <Award size={12} className="text-nu-pink" /> <b>{profile.points || 0}</b> NUT Pts
             </span>
-            <span className="flex items-center gap-1.5 font-mono-nu text-[10px] bg-nu-pink text-white px-3 py-1.5">
+            <span className="flex items-center gap-1.5 font-mono-nu text-[12px] bg-nu-pink text-white px-3 py-1.5">
               <Zap size={12} /> <b>{profile.activity_score || 0}%</b> Activity
             </span>
           </div>
@@ -426,7 +425,7 @@ export default function ProfilePage() {
           {profile.skill_tags && profile.skill_tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-3">
               {profile.skill_tags.map((tag: string) => (
-                <span key={tag} className="text-[10px] font-bold text-nu-muted border border-nu-ink/10 px-2 py-0.5 bg-nu-white">#{tag}</span>
+                <span key={tag} className="text-[12px] font-bold text-nu-muted border border-nu-ink/10 px-2 py-0.5 bg-nu-white">#{tag}</span>
               ))}
             </div>
           )}
@@ -440,23 +439,23 @@ export default function ProfilePage() {
 
           {/* 기본 정보 / 편집 */}
           <div className="bg-nu-white border border-nu-ink/[0.08] p-5">
-            <h3 className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-4">기본 정보</h3>
+            <h3 className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-4">기본 정보</h3>
             {editing ? (
               <div className="space-y-3">
                 <div>
-                  <Label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">이름</Label>
+                  <Label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">이름</Label>
                   <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="mt-1 border-nu-ink/15 bg-transparent text-sm" />
                 </div>
                 <div>
-                  <Label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">닉네임</Label>
+                  <Label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">닉네임</Label>
                   <Input value={form.nickname} onChange={e => setForm({...form, nickname: e.target.value})} className="mt-1 border-nu-ink/15 bg-transparent text-sm" />
                 </div>
                 <div>
-                  <Label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">전화번호</Label>
+                  <Label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">전화번호</Label>
                   <Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="010-0000-0000" className="mt-1 border-nu-ink/15 bg-transparent text-sm" />
                 </div>
                 <div>
-                  <Label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">전문분야</Label>
+                  <Label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">전문분야</Label>
                   <Select value={form.specialty} onValueChange={v => v && setForm({...form, specialty: v})}>
                     <SelectTrigger className="mt-1 border-nu-ink/15 bg-transparent text-sm"><SelectValue placeholder="선택" /></SelectTrigger>
                     <SelectContent>
@@ -468,14 +467,14 @@ export default function ProfilePage() {
                   </Select>
                 </div>
                 <div>
-                  <Label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">자기소개</Label>
+                  <Label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">자기소개</Label>
                   <Textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} rows={3} className="mt-1 border-nu-ink/15 bg-transparent resize-none text-sm" />
                 </div>
                 <div>
-                  <Label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">스킬 태그</Label>
+                  <Label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">스킬 태그</Label>
                   <div className="flex flex-wrap gap-1 mb-2 mt-1">
                     {form.skill_tags.map(tag => (
-                      <span key={tag} className="flex items-center gap-1 text-[10px] bg-nu-ink text-nu-paper px-2 py-0.5">
+                      <span key={tag} className="flex items-center gap-1 text-[12px] bg-nu-ink text-nu-paper px-2 py-0.5">
                         {tag} <X size={10} className="cursor-pointer" onClick={() => setForm({...form, skill_tags: form.skill_tags.filter(t => t !== tag)})} />
                       </span>
                     ))}
@@ -485,7 +484,7 @@ export default function ProfilePage() {
                       value={newSkill} 
                       onChange={e => setNewSkill(e.target.value)} 
                       placeholder="스킬 추가 (엔터)" 
-                      className="h-8 text-[11px] border-nu-ink/10 bg-transparent"
+                      className="h-8 text-[13px] border-nu-ink/10 bg-transparent"
                       onKeyDown={e => {
                         if (e.key === "Enter" && newSkill.trim()) {
                           e.preventDefault();
@@ -500,7 +499,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex gap-2 pt-1">
                   <button onClick={handleSave} disabled={loading}
-                    className="flex-1 font-mono-nu text-[10px] uppercase tracking-widest py-2 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors disabled:opacity-50 flex items-center justify-center gap-1">
+                    className="flex-1 font-mono-nu text-[12px] uppercase tracking-widest py-2 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors disabled:opacity-50 flex items-center justify-center gap-1">
                     <Check size={11} /> {loading ? "저장 중..." : "저장"}
                   </button>
                   <button onClick={() => setEditing(false)}
@@ -520,7 +519,7 @@ export default function ProfilePage() {
 
           {/* Google Workspace 연결 */}
           <div className="bg-nu-white border border-nu-ink/[0.08] p-5">
-            <h3 className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-4">Google Workspace 연결</h3>
+            <h3 className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-4">Google Workspace 연결</h3>
             {googleStatus.loading ? (
               <div className="flex items-center gap-2 text-sm text-nu-muted">
                 <Loader2 size={14} className="animate-spin" /> 연결 상태 확인 중...
@@ -529,34 +528,34 @@ export default function ProfilePage() {
               <div className="space-y-3">
                 {googleStatus.tokenExpired ? (
                   <>
-                    <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 text-amber-700 text-[11px]">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 text-amber-700 text-[13px]">
                       <AlertTriangle size={13} className="shrink-0" />
                       <span>토큰이 만료되었습니다. 다시 연결해 주세요.</span>
                     </div>
                     <a href="/api/auth/google"
-                      className="flex items-center justify-center gap-2 w-full font-mono-nu text-[10px] uppercase tracking-widest py-2.5 bg-amber-500 text-white hover:bg-amber-600 transition-colors no-underline">
+                      className="flex items-center justify-center gap-2 w-full font-mono-nu text-[12px] uppercase tracking-widest py-2.5 bg-amber-500 text-white hover:bg-amber-600 transition-colors no-underline">
                       <RefreshCw size={12} /> 다시 연결하기
                     </a>
                   </>
                 ) : (
-                  <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 text-green-700 text-[11px]">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 text-green-700 text-[13px]">
                     <Check size={13} className="shrink-0" />
                     <span>Google 계정이 연결되어 있습니다</span>
                   </div>
                 )}
-                <p className="text-[10px] text-nu-muted">Drive, Docs, Calendar, Chat 등 Google 서비스를 이용할 수 있습니다.</p>
+                <p className="text-[12px] text-nu-muted">Drive, Docs, Calendar, Chat 등 Google 서비스를 이용할 수 있습니다.</p>
                 <button onClick={handleGoogleDisconnect} disabled={disconnecting}
-                  className="flex items-center justify-center gap-2 w-full font-mono-nu text-[10px] uppercase tracking-widest py-2.5 border border-red-200 text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50">
+                  className="flex items-center justify-center gap-2 w-full font-mono-nu text-[12px] uppercase tracking-widest py-2.5 border border-red-200 text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50">
                   <Unplug size={12} /> {disconnecting ? "해제 중..." : "연결 해제"}
                 </button>
               </div>
             ) : (
               <div className="space-y-3">
-                <p className="text-[11px] text-nu-gray leading-relaxed">
+                <p className="text-[13px] text-nu-gray leading-relaxed">
                   Google 계정을 연결하면 Drive, Docs, Sheets, Calendar, Chat 등을 너트유니온에서 바로 사용할 수 있습니다.
                 </p>
                 <a href="/api/auth/google"
-                  className="flex items-center justify-center gap-2 w-full font-mono-nu text-[10px] uppercase tracking-widest py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors no-underline">
+                  className="flex items-center justify-center gap-2 w-full font-mono-nu text-[12px] uppercase tracking-widest py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors no-underline">
                   <svg width="14" height="14" viewBox="0 0 24 24" className="shrink-0">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
                     <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -571,7 +570,7 @@ export default function ProfilePage() {
 
           {/* Competency Radar Chart */}
           <div className="bg-nu-white border border-nu-ink/[0.08] p-5">
-            <h3 className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-6">프로페셔널 역량 지표</h3>
+            <h3 className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-6">프로페셔널 역량 지표</h3>
             <CompetencyRadar 
               crews={crews} 
               projects={projects} 
@@ -584,9 +583,9 @@ export default function ProfilePage() {
           {/* 외부 링크 */}
           <div className="bg-nu-white border border-nu-ink/[0.08] p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">포트폴리오 링크</h3>
+              <h3 className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted">포트폴리오 링크</h3>
               <button onClick={() => setEditLinks(!editLinks)}
-                className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-blue hover:underline flex items-center gap-1">
+                className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-blue hover:underline flex items-center gap-1">
                 <Edit3 size={10} /> {editLinks ? "취소" : "편집"}
               </button>
             </div>
@@ -601,14 +600,14 @@ export default function ProfilePage() {
                   { key: "website", label: "Website", placeholder: "https://..." },
                 ].map(({ key, label, placeholder }) => (
                   <div key={key}>
-                    <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-0.5">{label}</label>
+                    <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted block mb-0.5">{label}</label>
                     <input value={(links as any)[key]} placeholder={placeholder}
                       onChange={e => setLinks({ ...links, [key]: e.target.value })}
-                      className="w-full px-2 py-1.5 border border-nu-ink/10 bg-transparent text-[11px] focus:outline-none focus:border-nu-pink" />
+                      className="w-full px-2 py-1.5 border border-nu-ink/10 bg-transparent text-[13px] focus:outline-none focus:border-nu-pink" />
                   </div>
                 ))}
                 <button onClick={handleSaveLinks} disabled={savingLinks}
-                  className="w-full font-mono-nu text-[10px] uppercase tracking-widest py-2 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors mt-1 disabled:opacity-50">
+                  className="w-full font-mono-nu text-[12px] uppercase tracking-widest py-2 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors mt-1 disabled:opacity-50">
                   {savingLinks ? "저장 중..." : "저장"}
                 </button>
               </div>
@@ -655,7 +654,7 @@ export default function ProfilePage() {
               { key: "history",  label: "포인트 내역", icon: DollarSign },
             ].map(t => (
               <button key={t.key} onClick={() => setTab(t.key as any)}
-                className={`flex items-center gap-1.5 px-4 py-3 font-mono-nu text-[10px] uppercase tracking-widest border-b-2 transition-colors ${tab === t.key ? "border-nu-pink text-nu-pink" : "border-transparent text-nu-muted hover:text-nu-ink"}`}>
+                className={`flex items-center gap-1.5 px-4 py-3 font-mono-nu text-[12px] uppercase tracking-widest border-b-2 transition-colors ${tab === t.key ? "border-nu-pink text-nu-pink" : "border-transparent text-nu-muted hover:text-nu-ink"}`}>
                 <t.icon size={13} /> {t.label}
               </button>
             ))}
@@ -674,7 +673,7 @@ export default function ProfilePage() {
                 <div className="bg-nu-white border border-nu-ink/[0.08]">
                   <div className="px-5 py-4 border-b border-nu-ink/[0.06] flex items-center justify-between">
                     <h3 className="font-head text-sm font-bold text-nu-ink">최근 활동</h3>
-                    <span className="font-mono-nu text-[10px] text-nu-muted">{recentActivity.length}개</span>
+                    <span className="font-mono-nu text-[12px] text-nu-muted">{recentActivity.length}개</span>
                   </div>
                   <div className="divide-y divide-nu-ink/[0.04]">
                     {recentActivity.map((item: any, i) => {
@@ -688,12 +687,12 @@ export default function ProfilePage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-0.5">
-                              <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">
+                              <span className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">
                                 {item._type === "resource" ? "자료 등록" : "게시글"}
                               </span>
                               {group && (
                                 <Link href={`/groups/${group.id}`}
-                                  className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-blue hover:underline truncate max-w-[120px]">
+                                  className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-blue hover:underline truncate max-w-[120px]">
                                   {group.name}
                                 </Link>
                               )}
@@ -702,7 +701,7 @@ export default function ProfilePage() {
                               {item.title || item.content || "-"}
                             </p>
                           </div>
-                          <span className="font-mono-nu text-[10px] text-nu-muted shrink-0">{formatDate(item.created_at)}</span>
+                          <span className="font-mono-nu text-[12px] text-nu-muted shrink-0">{formatDate(item.created_at)}</span>
                         </div>
                       );
                     })}
@@ -719,7 +718,7 @@ export default function ProfilePage() {
                 <div className="col-span-2 bg-nu-white border border-nu-ink/[0.08] p-10 text-center">
                   <Users size={32} className="text-nu-muted/30 mx-auto mb-3" />
                   <p className="text-nu-gray text-sm">참여 중인 너트가 없습니다</p>
-                  <Link href="/groups" className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-blue hover:underline mt-2 block">
+                  <Link href="/groups" className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-blue hover:underline mt-2 block">
                     너트 찾아보기
                   </Link>
                 </div>
@@ -730,15 +729,15 @@ export default function ProfilePage() {
                   <Link key={i} href={`/groups/${g.id}`}
                     className="bg-nu-white border border-nu-ink/[0.08] p-4 hover:border-nu-pink transition-colors no-underline group">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className={`font-mono-nu text-[8px] uppercase tracking-widest px-1.5 py-0.5 font-bold ${CAT_COLORS[g.category] || "bg-nu-gray text-white"}`}>
+                      <span className={`font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 font-bold ${CAT_COLORS[g.category] || "bg-nu-gray text-white"}`}>
                         {CAT_LABELS[g.category] || g.category}
                       </span>
                       {c.role === "host" && (
-                        <span className="font-mono-nu text-[8px] uppercase tracking-widest bg-nu-pink/10 text-nu-pink px-1.5 py-0.5">Host</span>
+                        <span className="font-mono-nu text-[10px] uppercase tracking-widest bg-nu-pink/10 text-nu-pink px-1.5 py-0.5">Host</span>
                       )}
                     </div>
                     <h4 className="font-head text-sm font-bold text-nu-ink mb-1 group-hover:text-nu-pink transition-colors">{g.name}</h4>
-                    {g.description && <p className="text-[11px] text-nu-muted truncate">{g.description}</p>}
+                    {g.description && <p className="text-[13px] text-nu-muted truncate">{g.description}</p>}
                     <div className="flex items-center justify-end mt-2">
                       <ChevronRight size={13} className="text-nu-muted group-hover:text-nu-pink transition-colors" />
                     </div>
@@ -755,7 +754,7 @@ export default function ProfilePage() {
                 <div className="bg-nu-white border border-nu-ink/[0.08] p-10 text-center">
                   <Briefcase size={32} className="text-nu-muted/30 mx-auto mb-3" />
                   <p className="text-nu-gray text-sm">참여 중인 볼트가 없습니다</p>
-                  <Link href="/projects" className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-blue hover:underline mt-2 block">
+                  <Link href="/projects" className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-blue hover:underline mt-2 block">
                     볼트 찾아보기
                   </Link>
                 </div>
@@ -770,10 +769,10 @@ export default function ProfilePage() {
                       <div className="flex items-center gap-2 mb-0.5">
                         <h4 className="font-head text-sm font-bold text-nu-ink group-hover:text-nu-pink transition-colors truncate">{proj.title}</h4>
                         {p.role === "lead" && (
-                          <span className="font-mono-nu text-[8px] uppercase tracking-widest bg-green-50 text-green-600 px-1.5 py-0.5 shrink-0">PM</span>
+                          <span className="font-mono-nu text-[10px] uppercase tracking-widest bg-green-50 text-green-600 px-1.5 py-0.5 shrink-0">PM</span>
                         )}
                       </div>
-                      <span className={`font-mono-nu text-[9px] uppercase tracking-widest ${proj.status === "active" ? "text-green-600" : "text-nu-muted"}`}>
+                      <span className={`font-mono-nu text-[11px] uppercase tracking-widest ${proj.status === "active" ? "text-green-600" : "text-nu-muted"}`}>
                         {proj.status === "active" ? "진행중" : proj.status === "completed" ? "완료" : proj.status}
                       </span>
                     </div>
@@ -817,16 +816,16 @@ export default function ProfilePage() {
                             <div className="w-full h-full flex items-center justify-center font-head text-4xl font-black text-nu-ink/5 uppercase">{p.project?.category}</div>
                           )}
                           <div className="absolute top-2 right-2 flex gap-1">
-                            <span className="bg-nu-ink text-white text-[8px] px-1.5 py-0.5 font-bold uppercase tracking-widest">{p.project?.category}</span>
+                            <span className="bg-nu-ink text-white text-[10px] px-1.5 py-0.5 font-bold uppercase tracking-widest">{p.project?.category}</span>
                           </div>
                         </div>
                         <div className="p-4">
                           <h4 className="font-head text-sm font-bold text-nu-ink mb-1">{p.title}</h4>
-                          <p className="text-[10px] text-nu-muted mb-3 line-clamp-2">{p.description}</p>
+                          <p className="text-[12px] text-nu-muted mb-3 line-clamp-2">{p.description}</p>
                           <div className="flex items-center justify-between mt-auto">
-                            <span className="font-mono-nu text-[9px] text-nu-muted flex items-center gap-1"><Calendar size={10} /> {formatDate(p.created_at)}</span>
+                            <span className="font-mono-nu text-[11px] text-nu-muted flex items-center gap-1"><Calendar size={10} /> {formatDate(p.created_at)}</span>
                             {p.url && (
-                              <a href={p.url} target="_blank" rel="noreferrer" className="text-nu-blue flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest hover:underline whitespace-nowrap">VIEW WORK <ExternalLink size={10} /></a>
+                              <a href={p.url} target="_blank" rel="noreferrer" className="text-nu-blue flex items-center gap-1 font-mono-nu text-[11px] uppercase tracking-widest hover:underline whitespace-nowrap">VIEW WORK <ExternalLink size={10} /></a>
                             )}
                           </div>
                         </div>
@@ -853,11 +852,11 @@ export default function ProfilePage() {
                           </div>
                           <div>
                              <p className="text-sm font-bold text-nu-ink">{log.reason}</p>
-                             <p className="text-[10px] text-nu-muted font-mono-nu mt-1">{formatDate(log.created_at)} · {log.type?.toUpperCase()}</p>
+                             <p className="text-[12px] text-nu-muted font-mono-nu mt-1">{formatDate(log.created_at)} · {log.type?.toUpperCase()}</p>
                           </div>
                        </div>
                        <div className={`font-mono-nu text-base font-extrabold ${log.amount > 0 ? "text-green-600" : "text-nu-red"}`}>
-                          {log.amount > 0 ? "+" : ""}{log.amount} <span className="text-[10px] text-nu-muted font-normal ml-0.5">pts</span>
+                          {log.amount > 0 ? "+" : ""}{log.amount} <span className="text-[12px] text-nu-muted font-normal ml-0.5">pts</span>
                        </div>
                     </div>
                   ))}

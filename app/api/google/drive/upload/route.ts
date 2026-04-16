@@ -59,11 +59,26 @@ export async function POST(req: NextRequest) {
         .eq("status", "active")
         .maybeSingle();
 
-      const { data: group } = await supabase
-        .from("groups")
-        .select("host_id, google_drive_folder_id")
-        .eq("id", targetId)
-        .single();
+      // Fetch group — try with google_drive_folder_id, fallback to just host_id
+      // (column may not exist in production until migration is applied)
+      let group: { host_id: string; google_drive_folder_id?: string | null } | null = null;
+      {
+        const { data, error } = await supabase
+          .from("groups")
+          .select("host_id, google_drive_folder_id")
+          .eq("id", targetId)
+          .single();
+        if (!error && data) {
+          group = data;
+        } else {
+          const { data: fallback } = await supabase
+            .from("groups")
+            .select("host_id")
+            .eq("id", targetId)
+            .single();
+          group = fallback;
+        }
+      }
 
       if (!membership && group?.host_id !== userId) {
         return NextResponse.json({ error: "그룹 멤버만 파일을 업로드할 수 있습니다" }, { status: 403 });
@@ -73,7 +88,6 @@ export async function POST(req: NextRequest) {
         hostId = group.host_id;
         if (group.google_drive_folder_id) {
           sharedFolderId = group.google_drive_folder_id;
-          // Upload using host's credentials so file lands in shared folder
           uploaderUserId = group.host_id;
         }
       }
@@ -85,12 +99,25 @@ export async function POST(req: NextRequest) {
         .eq("user_id", userId)
         .maybeSingle();
 
-      const { data: project } = await supabase
-        .from("projects")
-        .select("created_by, google_drive_folder_id, google_drive_planning_folder_id, google_drive_interim_folder_id, google_drive_evidence_folder_id, google_drive_final_folder_id")
-        .eq("id", targetId)
-        .single();
-
+      // Fetch project — try with drive columns, fallback to just created_by
+      let project: { created_by: string; google_drive_folder_id?: string | null; google_drive_planning_folder_id?: string | null; google_drive_interim_folder_id?: string | null; google_drive_evidence_folder_id?: string | null; google_drive_final_folder_id?: string | null } | null = null;
+      {
+        const { data, error } = await supabase
+          .from("projects")
+          .select("created_by, google_drive_folder_id, google_drive_planning_folder_id, google_drive_interim_folder_id, google_drive_evidence_folder_id, google_drive_final_folder_id")
+          .eq("id", targetId)
+          .single();
+        if (!error && data) {
+          project = data;
+        } else {
+          const { data: fallback } = await supabase
+            .from("projects")
+            .select("created_by")
+            .eq("id", targetId)
+            .single();
+          project = fallback;
+        }
+      }
       if (!membership && project?.created_by !== userId) {
         return NextResponse.json({ error: "프로젝트 멤버만 파일을 업로드할 수 있습니다" }, { status: 403 });
       }
