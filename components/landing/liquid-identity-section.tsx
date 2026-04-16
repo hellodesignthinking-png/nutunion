@@ -15,6 +15,7 @@ import {
   ArchiveEntry, getTodayKey, buildInsight,
 } from "@/lib/brand/genre-engine";
 import { toast } from "sonner";
+import { OpenLogoArtwork, LogoVariant } from "@/components/brand/brand-page-client";
 
 const CAT_KO: Record<string, string> = {
   space: "공간·건축", culture: "예술·문화", platform: "플랫폼·개발", vibe: "바이브·지역",
@@ -79,6 +80,30 @@ function canvasToDownload(canvas: HTMLCanvasElement, filename: string) {
       href: URL.createObjectURL(blob), download: filename,
     }).click();
   }, "image/png");
+}
+
+function buildVariantForGenre(genre: LogoGenre, dateSeed: number = 0, dateCode: string = "2026"): LogoVariant {
+  const cfg = GENRES[genre];
+  let seedNum = dateSeed;
+  for(let i=0; i<genre.length; i++) seedNum += genre.charCodeAt(i);
+  return {
+    id: seedNum,
+    seed: seedNum,
+    family: "monolith",
+    label: cfg.label,
+    subtitle: cfg.vibe,
+    energy: cfg.labelKo,
+    dateCode,
+    fontStack: `'${cfg.font}', sans-serif`,
+    palette: {
+      bg: cfg.colors.bg,
+      panel: cfg.colors.surface,
+      ink: cfg.colors.text,
+      accent: cfg.colors.primary,
+      accentTwo: cfg.colors.secondary,
+      soft: cfg.colors.shell,
+    }
+  };
 }
 
 // ── Main Component ──────────────────────────────────────────────────────────
@@ -361,7 +386,7 @@ export function LiquidIdentitySection() {
                       className="flex flex-col items-center gap-1.5 p-3 border transition-all hover:scale-105"
                       style={{ borderColor: `${c.colors.primary}50`, background: `${c.colors.bg}` }}>
                       <div style={{ width: 52, height: 52 }}>
-                        <LiquidNutSvg genre={e.genre} size={52} animated={false} />
+                        <OpenLogoArtwork variant={buildVariantForGenre(e.genre)} size={52} />
                       </div>
                       <span className="font-mono-nu text-[10px]" style={{ color: c.colors.text }}>
                         {e.date.slice(5)}
@@ -493,12 +518,9 @@ export function LiquidIdentitySection() {
               <div ref={svgContainerRef}
                 className={`transition-all duration-300 ${transitioning ? "opacity-0 scale-90" : "opacity-100 scale-100"}`}
                 style={{ filter: `drop-shadow(0 16px 48px ${cfg.colors.primary}70)` }}>
-                <LiquidNutSvg
-                  genre={activeGenre}
+                <OpenLogoArtwork
+                  variant={buildVariantForGenre(activeGenre, vibe?.dateSeed ?? 0)}
                   size={220}
-                  animated
-                  dateSeed={vibe?.dateSeed ?? 0}
-                  activityLevel={vibe?.activityLevel ?? 0}
                 />
               </div>
 

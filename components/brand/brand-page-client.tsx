@@ -14,7 +14,7 @@ interface PaletteSet {
   accent: string; accentTwo: string; soft: string;
 }
 
-interface LogoVariant {
+export interface LogoVariant {
   id: number; seed: number; family: LogoFamily;
   label: string; subtitle: string; energy: string;
   palette: PaletteSet; fontStack: string; dateCode: string;
@@ -125,7 +125,7 @@ function generateDailyVariants(date: Date): LogoVariant[] {
   });
 }
 
-function OpenLogoArtwork({ variant, size }: { variant: LogoVariant; size: number }) {
+export function OpenLogoArtwork({ variant, size }: { variant: LogoVariant; size: number }) {
   const { palette, label, seed, fontStack, subtitle, energy } = variant;
   const rng = createSeededRandom(seed + 1337);
   const rx = (lo: number, hi: number) => lo + rng() * (hi - lo);
@@ -136,80 +136,167 @@ function OpenLogoArtwork({ variant, size }: { variant: LogoVariant; size: number
   const N = sl[0] || "N";
   const uId = `logo-${seed}`;
 
-  let bgLayer: React.ReactNode = null;
-  let fgLayer: React.ReactNode = null;
-  let txtLayer: React.ReactNode = null;
+  // Make ALL parameters continuous/procedural to guarantee zero identical copies
+  const bgPadding = rx(0, 15);
+  const bgRoundness = rx(0, 50);
+  const coreRadius = rx(15, 30);
+  const hasBgGradient = rng() > 0.5;
+  const hasGrid = rng() > 0.7;
 
-  // 1. FRAME/BACKGROUND (More contained, like an app icon or brand presentation board)
-  const bgType = ri(0, 11);
-  if (bgType === 0) bgLayer = <rect x="0" y="0" width="100" height="100" fill={bg} />;
-  else if (bgType === 1) bgLayer = <rect x="5" y="5" width="90" height="90" rx="15" fill={bg} />;
-  else if (bgType === 2) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg} /><circle cx="50" cy="50" r="45" fill={soft}/></>;
-  else if (bgType === 3) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg} /><path d="M0 0 L100 0 L100 50 Z" fill={soft} opacity="0.5"/></>;
-  else if (bgType === 4) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg} /><rect x="10" y="10" width="80" height="80" fill="none" stroke={soft} strokeWidth="2"/></>;
-  else if (bgType === 5) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg} /><line x1="10" y1="90" x2="90" y2="90" stroke={soft} strokeWidth="1"/></>;
-  else if (bgType === 6) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg} /><circle cx="20" cy="20" r="40" fill={soft} opacity="0.3"/><circle cx="80" cy="80" r="40" fill={soft} opacity="0.3"/></>;
-  else if (bgType === 7) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg} /><rect x="0" y="0" width="100" height="100" fill={`url(#${uId}-bgGrad)`}/><linearGradient id={`${uId}-bgGrad`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={bg}/><stop offset="100%" stopColor={soft}/></linearGradient></>;
-  else if (bgType === 8) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg} /><polygon points="0,0 30,0 20,100 0,100" fill={soft} opacity="0.4"/></>;
-  else if (bgType === 9) bgLayer = <circle cx="50" cy="50" r="50" fill={bg} />;
-  else if (bgType === 10) bgLayer = <><rect x="0" y="0" width="100" height="100" fill={bg} /><rect x="40" y="0" width="20" height="100" fill={soft} opacity="0.3"/></>;
-  else bgLayer = <rect x="0" y="0" width="100" height="100" fill={bg} />;
+  // Background
+  const bgLayer = (
+    <>
+      <rect x="0" y="0" width="100" height="100" fill={bg} />
+      {hasBgGradient && (
+        <>
+          <linearGradient id={`${uId}-bgG`} x1="0" y1="0" x2={rx(0,1)} y2={rx(0,1)}>
+            <stop offset="0%" stopColor={bg} />
+            <stop offset="100%" stopColor={soft} stopOpacity={rx(0.2, 0.8)} />
+          </linearGradient>
+          <rect x={bgPadding} y={bgPadding} width={100 - bgPadding*2} height={100 - bgPadding*2} rx={bgRoundness} fill={`url(#${uId}-bgG)`} />
+        </>
+      )}
+      {hasGrid && (
+        <circle cx={rx(20,80)} cy={rx(20,80)} r={rx(30,80)} fill="none" stroke={soft} strokeWidth={rx(0.5, 2)} strokeDasharray={`${rx(2,10)} ${rx(2,10)}`} opacity="0.5" />
+      )}
+      {!hasBgGradient && (
+        <rect x={bgPadding} y={bgPadding} width={100 - bgPadding*2} height={100 - bgPadding*2} rx={bgRoundness} fill="none" stroke={soft} strokeWidth={rx(1,3)} />
+      )}
+    </>
+  );
 
-  // 2. LOGO SYMBOL / MARK (Central, distinct signature shape)
-  const fgType = ri(0, 11);
-  const rS = rx(20, 25);
+  // Procedural Polygon Generator for the Mark
+  const sides = ri(3, 8); // 3=triangle, 4=square/diamond, 5=pentagon, 6=hex, 8=octagon
+  const startAngle = rx(0, Math.PI);
+  const genPoly = (cx: number, cy: number, r: number) => {
+    let pts = "";
+    for (let i = 0; i < sides; i++) {
+      const a = startAngle + (i * 2 * Math.PI) / sides;
+      pts += `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)} `;
+    }
+    return pts;
+  };
+
+  const markFormat = ri(0, 4);
+  let fgLayer: React.ReactNode;
   
-  if (fgType === 0) {
-    fgLayer = <polygon points="50,15 80,32 80,68 50,85 20,68 20,32" fill={a1} stroke={a2} strokeWidth="4" strokeLinejoin="round"/>;
-  } else if (fgType === 1) {
-    fgLayer = <><path d="M35 75 L35 25 L65 75 L65 25" fill="none" stroke={a1} strokeWidth="12" strokeLinejoin="miter"/><circle cx="65" cy="75" r="4" fill={ink}/></>;
-  } else if (fgType === 2) {
-    fgLayer = <><circle cx="40" cy="40" r={rS} fill={a1} opacity="0.9"/><circle cx="60" cy="60" r={rS} fill={a2} opacity="0.9" style={{mixBlendMode:"multiply"}}/></>;
-  } else if (fgType === 3) {
-    fgLayer = <><rect x="25" y="30" width="50" height="8" fill={a1} rx="4"/><rect x="35" y="46" width="50" height="8" fill={a2} rx="4"/><rect x="15" y="62" width="50" height="8" fill={ink} rx="4"/></>;
-  } else if (fgType === 4) {
-    fgLayer = <polygon points="60,20 30,55 45,55 40,80 70,45 55,45" fill={a1}/>;
-  } else if (fgType === 5) {
-    fgLayer = <><rect x="25" y="35" width="30" height="30" rx="15" fill="none" stroke={a1} strokeWidth="8"/><rect x="45" y="35" width="30" height="30" rx="15" fill="none" stroke={a2} strokeWidth="8"/></>;
-  } else if (fgType === 6) {
-    fgLayer = <><polygon points="50,25 75,40 50,55 25,40" fill={a1}/><polygon points="25,40 50,55 50,85 25,70" fill={a2}/><polygon points="75,40 75,70 50,85 50,55" fill={ink}/></>;
-  } else if (fgType === 7) {
-    fgLayer = <><circle cx="50" cy="50" r="28" fill="none" stroke={a1} strokeWidth="8"/><circle cx="50" cy="50" r="12" fill={a2}/></>;
-  } else if (fgType === 8) {
-    fgLayer = <><polygon points="50,20 75,50 50,80 25,50" fill={a1}/><path d="M 25 50 L 50 20 L 50 80 Z" fill={a2}/></>;
-  } else if (fgType === 9) {
-    fgLayer = <path d="M 30 80 L 30 50 A 20 20 0 0 1 70 50 L 70 80 L 55 80 L 55 50 A 5 5 0 0 0 45 50 L 45 80 Z" fill={a1}/>;
-  } else if (fgType === 10) {
-    fgLayer = <path d="M 30 25 L 70 25 L 70 55 C 70 70 50 85 50 85 C 50 85 30 70 30 55 Z" fill={a2} stroke={a1} strokeWidth="4"/>;
+  if (markFormat === 0) {
+    // Intersecting Polygons
+    const offset = rx(2, 10);
+    fgLayer = (
+      <>
+        <polygon points={genPoly(50 - offset, 50 - offset, coreRadius)} fill={a1} opacity="0.9" style={{mixBlendMode:"multiply"}} />
+        <polygon points={genPoly(50 + offset, 50 + offset, coreRadius * rx(0.7, 1.2))} fill={a2} opacity="0.9" style={{mixBlendMode:"multiply"}} />
+      </>
+    );
+  } else if (markFormat === 1) {
+    // Monogram / Core Text Embed
+    fgLayer = (
+      <>
+        <circle cx="50" cy="50" r={coreRadius} fill={a1} />
+        <circle cx="50" cy="50" r={coreRadius - rx(2,8)} fill="none" stroke={bg} strokeWidth={rx(1,3)} strokeDasharray={rng() > 0.5 ? "3 3" : "none"} />
+        <text x="50" y={50 + coreRadius*0.3} textAnchor="middle" fontSize={coreRadius*1.2} fontWeight="900" fontFamily={fontStack} fill={bg}>{N}</text>
+      </>
+    );
+  } else if (markFormat === 2) {
+    // Concentric Rings / Shapes
+    const steps = ri(2, 4);
+    fgLayer = (
+      <>
+        {Array.from({length: steps}).map((_, i) => {
+          const r = coreRadius - (i * (coreRadius / steps));
+          const isFill = rng() > 0.5;
+          return rng() > 0.5 ? (
+            <circle key={i} cx="50" cy="50" r={r} fill={isFill ? (i%2===0?a1:a2) : "none"} stroke={isFill ? "none" : ink} strokeWidth={rx(2,6)} />
+          ) : (
+            <polygon key={i} points={genPoly(50, 50, r)} fill={isFill ? (i%2===0?a1:a2) : "none"} stroke={isFill ? "none" : ink} strokeWidth={rx(2,6)} />
+          );
+        })}
+      </>
+    );
+  } else if (markFormat === 3) {
+    // Architectural Cuts
+    const cutY = rx(40, 60);
+    const cutAngle = rx(-10, 10);
+    fgLayer = (
+      <g transform={`rotate(${cutAngle} 50 50)`}>
+        <rect x={50 - coreRadius} y={50 - coreRadius} width={coreRadius*2} height={cutY - (50 - coreRadius)} fill={a1} />
+        <rect x={50 - coreRadius} y={cutY} width={coreRadius*2} height={(50 + coreRadius) - cutY} fill={a2} />
+        <line x1={20} y1={cutY} x2={80} y2={cutY} stroke={ink} strokeWidth={rx(1,4)} />
+      </g>
+    );
   } else {
-    fgLayer = <><path d="M 20 50 Q 35 30 50 50 T 80 50" fill="none" stroke={a1} strokeWidth="10" strokeLinecap="round"/><path d="M 20 65 Q 35 45 50 65 T 80 65" fill="none" stroke={a2} strokeWidth="10" strokeLinecap="round"/></>;
+    // Modular Blocks
+    const blockH = coreRadius * 0.6;
+    fgLayer = (
+      <>
+        <rect x={50 - coreRadius} y={50 - coreRadius} width={coreRadius*2 * rx(0.4, 0.8)} height={blockH} fill={a1} rx={rx(0, 10)} />
+        <rect x={50 - coreRadius + rx(10,30)} y={50 - coreRadius + blockH + rx(2,6)} width={coreRadius*2 * rx(0.4, 0.8)} height={blockH} fill={a2} rx={rx(0, 10)} />
+        <circle cx={50} cy={50} r={rx(2, 6)} fill={ink} />
+      </>
+    );
   }
 
-  // 3. LOGO TYPOGRAPHY LOCK-UPS (12 variants)
-  const tyType = ri(0, 11);
-  if (tyType === 0) txtLayer = <g transform="translate(0, 15)"><text x="50" y="80" textAnchor="middle" fontSize="12" fontWeight="900" fontFamily={fontStack} fill={ink}>{sl}</text></g>;
-  else if (tyType === 1) txtLayer = <g transform="translate(0, -15)"><text x="50" y="85" textAnchor="middle" fontSize="16" fontWeight="900" fontFamily={fontStack} fill={ink} letterSpacing="-0.5">{sl}</text><rect x="42" y="90" width="16" height="2" fill={a1}/></g>;
-  else if (tyType === 2) txtLayer = <text x="50" y="55" textAnchor="middle" fontSize="14" fontWeight="900" fontFamily={fontStack} fill={panel} stroke={ink} strokeWidth="3" paintOrder="stroke">{label}</text>;
-  else if (tyType === 3) txtLayer = <><rect x="0" y="75" width="100" height="25" fill={ink}/><text x="50" y="91" textAnchor="middle" fontSize="11" fontWeight="900" fontFamily={fontStack} fill={panel} letterSpacing="1">{sl} UNION</text></>;
-  else if (tyType === 4) txtLayer = <><text x="50" y="16" textAnchor="middle" fontSize="9" fontWeight="900" fontFamily={fontStack} fill={ink} letterSpacing="4">{sl}</text><text x="50" y="94" textAnchor="middle" fontSize="7" fontFamily={fontStack} fill={ink} letterSpacing="1">{energy}</text></>;
-  else if (tyType === 5) txtLayer = <><rect x="15" y="42" width="70" height="16" fill={panel}/><text x="50" y="53" textAnchor="middle" fontSize="10" fontWeight="900" fontFamily={fontStack} fill={ink}>{label}</text></>;
-  else if (tyType === 6) txtLayer = <><path id={`${uId}-archup`} d="M 25 50 A 25 25 0 0 1 75 50" fill="none"/><text fontSize="8" fontWeight="bold" fontFamily={fontStack} fill={ink} letterSpacing="1"><textPath href={`#${uId}-archup`} startOffset="50%" textAnchor="middle">{sl}</textPath></text></>;
-  else if (tyType === 7) txtLayer = <><text x="15" y="54" fontSize="13" fontWeight="900" fontFamily={fontStack} fill={ink} transform="rotate(-90 15 54)">{sl}</text><text x="85" y="48" fontSize="13" fontWeight="900" fontFamily={fontStack} fill={ink} transform="rotate(90 85 48)">UNION</text></>;
-  else if (tyType === 8) txtLayer = <g transform="translate(0, -9)"><text x="50" y="93" textAnchor="middle" fontSize="10" fontWeight="900" fontFamily={fontStack} fill={ink}>{sl}</text><circle cx="30" cy="90" r="1.5" fill={a1}/><circle cx="70" cy="90" r="1.5" fill={a1}/></g>;
-  else if (tyType === 9) txtLayer = <><text x="50" y="90" textAnchor="middle" fontSize="7" fontWeight="bold" fontFamily={fontStack} fill={ink} letterSpacing="2">{sl} {subtitle}</text></>;
-  else if (tyType === 10) txtLayer = <><path id={`${uId}-ring`} d="M 50 20 A 30 30 0 1 1 49.9 20" fill="none"/><text fontSize="7" fontWeight="900" fontFamily={fontStack} fill={ink} letterSpacing="1"><textPath href={`#${uId}-ring`} startOffset="20%">NUTUNION EST. 2026 {sl}</textPath></text></>;
-  else txtLayer = <><text x="25" y="55" fontSize="22" fontWeight="900" fontFamily={fontStack} fill={ink} letterSpacing="-1">{N}</text><text x="25" y="65" fontSize="6" fontFamily={fontStack} fill={a1}>{label}</text></>;
+  // Procedural Typography Lock-up
+  const typoLayout = ri(0, 3);
+  let txtLayer: React.ReactNode;
+  const tBaseY = 50 + coreRadius + rx(15, 25);
+  
+  if (typoLayout === 0) {
+    // Standard Bottom Lockup
+    const tSpacing = rx(-1, 3);
+    const tSize = rx(10, 16);
+    txtLayer = (
+      <g transform={`translate(0, ${tBaseY - 50})`}>
+        <text x="50" y="50" textAnchor="middle" fontSize={tSize} fontWeight="900" fontFamily={fontStack} fill={ink} letterSpacing={tSpacing}>{sl}</text>
+        <text x="50" y={50 + tSize*0.7} textAnchor="middle" fontSize={tSize * 0.4} fontFamily={fontStack} fill={a1} letterSpacing={rx(1,4)}>{subtitle.toUpperCase()}</text>
+      </g>
+    );
+  } else if (typoLayout === 1) {
+    // Framed Left/Right
+    const rot = rng() > 0.5 ? -90 : 90;
+    const px = rot === -90 ? 15 : 85;
+    txtLayer = (
+      <>
+        <text x={px} y="50" textAnchor="middle" fontSize={rx(12, 18)} fontWeight="900" fontFamily={fontStack} fill={ink} transform={`rotate(${rot} ${px} 50)`} letterSpacing={rx(0,2)}>{sl}</text>
+        <rect x={rot === -90 ? px+10 : px-11} y={50 - coreRadius} width={1} height={coreRadius*2} fill={ink} opacity="0.3" />
+      </>
+    );
+  } else if (typoLayout === 2) {
+    // Circular Arc Type
+    const arcRadius = coreRadius + rx(8, 15);
+    txtLayer = (
+      <>
+        <path id={`${uId}-arc`} d={`M 50 ${50-arcRadius} A ${arcRadius} ${arcRadius} 0 1 1 49.9 ${50-arcRadius}`} fill="none" />
+        <text fontSize={rx(6, 10)} fontWeight="bold" fontFamily={fontStack} fill={ink} letterSpacing={rx(1,3)}>
+          <textPath href={`#${uId}-arc`} startOffset={`${rx(10, 40)}%`}>{label} · {energy.toUpperCase()}</textPath>
+        </text>
+      </>
+    );
+  } else {
+    // Massive Background Drop Type + Tiny Overlay
+    txtLayer = (
+      <>
+        <text x="50" y={50 + coreRadius} textAnchor="middle" fontSize={rx(30, 45)} fontWeight="900" fontFamily={fontStack} fill={a1} opacity="0.2" letterSpacing="-2">{N}</text>
+        <rect x="50" y={tBaseY-10} width={rx(20,40)} height={1} fill={ink} transform={`translate(-${rx(10,20)}, 0)`} />
+        <text x="50" y={tBaseY} textAnchor="middle" fontSize={rx(8, 12)} fontWeight="900" fontFamily={fontStack} fill={ink}>{label}</text>
+      </>
+    );
+  }
+
+  // Adjust foreground position slightly up if text is at the bottom
+  const shiftY = typoLayout === 0 || typoLayout === 3 ? -10 : 0;
 
   return (
     <svg viewBox="0 0 100 100" width={size} height={size} role="img" aria-label={label} className="overflow-hidden">
       <defs>
         <clipPath id={`${uId}-clip`}>
-          <rect x="0" y="0" width="100" height="100" rx={rx(0, 16)} />
+          <rect x="0" y="0" width="100" height="100" rx={rx(0, 20)} />
         </clipPath>
       </defs>
       <g clipPath={`url(#${uId}-clip)`}>
         {bgLayer}
-        <g transform={tyType === 0 ? "translate(0, -10)" : tyType === 1 ? "translate(0, -5)" : tyType === 3 ? "translate(0, -5)" : (tyType === 8 ? "translate(0, -5)" : "translate(0,0)")}>
+        <g transform={`translate(0, ${shiftY})`}>
           {fgLayer}
         </g>
         {txtLayer}
