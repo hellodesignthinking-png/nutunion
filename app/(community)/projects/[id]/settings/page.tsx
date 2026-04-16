@@ -13,6 +13,14 @@ import {
   Users,
   AlertTriangle,
   Layers,
+  Check,
+  ChevronDown,
+  Clock,
+  ShieldCheck,
+  ShieldOff,
+  UserMinus,
+  UserCheck,
+  Mail,
 } from "lucide-react";
 import type { Specialty, ProjectStatus } from "@/lib/types";
 
@@ -48,8 +56,19 @@ interface MemberItem {
   user_id: string | null;
   crew_id: string | null;
   role: string;
+  joined_at?: string;
   profile?: { id: string; nickname: string; avatar_url: string | null };
   crew?: { id: string; name: string; category: string };
+}
+
+interface ApplicationItem {
+  id: string;
+  applicant_id: string;
+  message: string | null;
+  portfolio_url: string | null;
+  status: "pending" | "approved" | "rejected" | "withdrawn";
+  created_at: string;
+  applicant?: { id: string; nickname: string; avatar_url: string | null; specialty: string | null };
 }
 
 export default function ProjectSettingsPage() {
@@ -77,9 +96,13 @@ export default function ProjectSettingsPage() {
   const [dashUrl, setDashUrl]           = useState("");
 
   const [members, setMembers] = useState<MemberItem[]>([]);
+  const [applications, setApplications] = useState<ApplicationItem[]>([]);
   const [crews, setCrews] = useState<{ id: string; name: string; category: string }[]>([]);
   const [searchNickname, setSearchNickname] = useState("");
   const [selectedCrewId, setSelectedCrewId] = useState("");
+  const [processingApp, setProcessingApp] = useState<string | null>(null);
+  const [changingRole, setChangingRole] = useState<string | null>(null);
+  const [expandedApp, setExpandedApp] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -158,6 +181,16 @@ export default function ProjectSettingsPage() {
 
     setMembers(membersData || []);
 
+    // Load pending applications
+    const { data: appsData } = await supabase
+      .from("project_applications")
+      .select("id, applicant_id, message, portfolio_url, status, created_at, applicant:profiles!project_applications_applicant_id_fkey(id, nickname, avatar_url, specialty)")
+      .eq("project_id", projectId)
+      .in("status", ["pending"])
+      .order("created_at", { ascending: false });
+
+    setApplications((appsData || []) as ApplicationItem[]);
+
     // Load all crews for dropdown
     const { data: crewsData } = await supabase
       .from("groups")
@@ -176,6 +209,107 @@ export default function ProjectSettingsPage() {
     const reader = new FileReader();
     reader.onload = () => setImagePreview(reader.result as string);
     reader.readAsDataURL(file);
+  }
+
+  // ── Application management ───────────────────────────────────
+  async function approveApplication(app: ApplicationItem) {
+    setProcessingApp(app.id);
+    const supabase = createClient();
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      // 1. Update application status
+      const { error: appErr } = await supabase
+        .from("project_applications")
+        .update({ status: "approved", reviewed_by: user?.id, reviewed_at: new Date().toISOString() })
+        .eq("id", app.id);
+      if (appErr) throw appErr;
+
+      // 2. Create member record
+      const { data: newMember, error: memErr } = await supabase
+        .from("project_members")
+        .insert({ project_id: projectId, user_id: app.applicant_id, role: "member" })
+        .select("*, profile:profiles!project_members_user_id_fkey(id, nickname, avatar_url)")
+        .single();
+      if (memErr && memErr.code !== "23505") throw memErr; // ignore duplicate
+
+      // 3. Notify applicant
+      await supabase.from("notifications").insert({
+        user_id: app.applicant_id,
+        type: "application_approved",
+        title: "볼트 지원 승낙",
+        body: `'${title}' 볼트에 합류하셨습니다! 환영합니다.`,
+        metadata: { project_id: projectId },
+        is_read: false,
+      });
+
+      setApplications(prev => prev.filter(a => a.id !== app.id));
+      if (newMember) setMembers(prev => [...prev, newMember]);
+      toast.success(`${app.applicant?.nickname}님을 승낙했습니다`);
+    } catch (err: any) {
+      toast.error(err.message || "승낙 실패");
+    } finally {
+      setProcessingApp(null);
+    }
+  }
+
+  async function rejectApplication(app: ApplicationItem) {
+    if (!confirm(`${app.applicant?.nickname}님의 지원을 거절하시겠습니까?`)) return;
+    setProcessingApp(app.id);
+    const supabase = createClient();
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from("project_applications")
+        .update({ status: "rejected", reviewed_by: user?.id, reviewed_at: new Date().toISOString() })
+        .eq("id", app.id);
+      if (error) throw error;
+
+      await supabase.from("notifications").insert({
+        user_id: app.applicant_id,
+        type: "application_rejected",
+        title: "볼트 지원 결과",
+        body: `'${title}' 볼트 지원이 검토 후 보류되었습니다.`,
+        metadata: { project_id: projectId },
+        is_read: false,
+      });
+
+      setApplications(prev => prev.filter(a => a.id !== app.id));
+      toast.success("지원을 거절했습니다");
+    } catch (err: any) {
+      toast.error(err.message || "거절 실패");
+    } finally {
+      setProcessingApp(null);
+    }
+  }
+
+  // ── Role change ──────────────────────────────────────────────
+  async function changeRole(memberId: string, userId: string | null, newRole: string) {
+    setChangingRole(memberId);
+    const supabase = createClient();
+    try {
+      const { error } = await supabase
+        .from("project_members")
+        .update({ role: newRole })
+        .eq("id", memberId);
+      if (error) throw error;
+
+      setMembers(prev => prev.map(m => m.id === memberId ? { ...m, role: newRole } : m));
+      if (userId) {
+        await supabase.from("notifications").insert({
+          user_id: userId,
+          type: "role_changed",
+          title: "볼트 역할 변경",
+          body: `볼트에서 역할이 '${roleLabels[newRole] || newRole}'(으)로 변경되었습니다.`,
+          metadata: { project_id: projectId },
+          is_read: false,
+        });
+      }
+      toast.success("역할이 변경되었습니다");
+    } catch (err: any) {
+      toast.error(err.message || "역할 변경 실패");
+    } finally {
+      setChangingRole(null);
+    }
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -658,68 +792,169 @@ Generated at: ${new Date().toLocaleString()}
       </form>
 
       {/* Members management */}
-      <div className="bg-nu-white border border-nu-ink/[0.08] p-6 mb-8">
-        <h2 className="font-head text-lg font-extrabold mb-6 flex items-center gap-2">
-          <Users size={18} /> 멤버 관리
-        </h2>
+      <div className="bg-nu-white border border-nu-ink/[0.08] mb-8">
+        <div className="px-6 py-5 border-b border-nu-ink/[0.08] flex items-center justify-between">
+          <h2 className="font-head text-lg font-extrabold flex items-center gap-2">
+            <Users size={18} /> 멤버 관리
+          </h2>
+          <span className="font-mono-nu text-[12px] text-nu-muted">{members.length}명 참여 중</span>
+        </div>
 
-        {/* Current members */}
-        <div className="space-y-3 mb-6">
-          {members.map((m) => (
-            <div
-              key={m.id}
-              className="flex items-center gap-3 p-3 bg-nu-cream/30"
-            >
-              {m.user_id && m.profile ? (
-                <>
-                  <div className="w-8 h-8 rounded-full bg-nu-cream flex items-center justify-center font-head text-xs font-bold text-nu-ink">
-                    {m.profile.nickname.charAt(0).toUpperCase()}
+        {/* ── Pending applications ── */}
+        {applications.length > 0 && (
+          <div className="border-b border-nu-ink/[0.08]">
+            <div className="px-6 py-3 bg-nu-amber/5 flex items-center gap-2">
+              <Clock size={13} className="text-nu-amber" />
+              <span className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-amber">
+                지원 대기 {applications.length}건
+              </span>
+            </div>
+            <div className="divide-y divide-nu-ink/[0.06]">
+              {applications.map((app) => (
+                <div key={app.id} className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-nu-amber/10 flex items-center justify-center font-head text-sm font-bold text-nu-amber shrink-0">
+                      {app.applicant?.nickname?.charAt(0).toUpperCase() || "?"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold text-nu-ink">{app.applicant?.nickname}</p>
+                        {app.applicant?.specialty && (
+                          <span className="font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 bg-nu-cream text-nu-muted border border-nu-ink/10">
+                            {app.applicant.specialty}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-nu-muted">
+                        {new Date(app.created_at).toLocaleDateString("ko", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })} 지원
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedApp(expandedApp === app.id ? null : app.id)}
+                        className="font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1.5 border border-nu-ink/10 text-nu-muted hover:border-nu-ink/30 transition-colors"
+                      >
+                        <Mail size={11} />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={processingApp === app.id}
+                        onClick={() => rejectApplication(app)}
+                        className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 border border-red-200 text-red-500 hover:bg-red-50 transition-colors flex items-center gap-1 disabled:opacity-40"
+                      >
+                        {processingApp === app.id ? <Loader2 size={10} className="animate-spin" /> : <X size={11} />}
+                        거절
+                      </button>
+                      <button
+                        type="button"
+                        disabled={processingApp === app.id}
+                        onClick={() => approveApplication(app)}
+                        className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center gap-1 disabled:opacity-40"
+                      >
+                        {processingApp === app.id ? <Loader2 size={10} className="animate-spin" /> : <Check size={11} />}
+                        승낙
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-sm font-medium truncate">{m.profile.nickname}</p>
-                      {m.role === "lead" && (
-                        <span className="font-mono-nu text-[9px] uppercase tracking-widest bg-nu-pink text-white px-1.5 py-0.5 shrink-0">PM</span>
+                  {/* Expandable: message + portfolio */}
+                  {expandedApp === app.id && (app.message || app.portfolio_url) && (
+                    <div className="mt-3 ml-12 space-y-2 animate-in slide-in-from-top-2 duration-150">
+                      {app.message && (
+                        <div className="bg-nu-cream/50 border border-nu-ink/[0.08] px-4 py-3">
+                          <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-1">지원 메시지</p>
+                          <p className="text-sm text-nu-graphite leading-relaxed">{app.message}</p>
+                        </div>
                       )}
-                      {m.role === "manager" && (
-                        <span className="font-mono-nu text-[9px] uppercase tracking-widest bg-nu-blue/10 text-nu-blue px-1.5 py-0.5 shrink-0">매니저</span>
+                      {app.portfolio_url && (
+                        <a
+                          href={app.portfolio_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 font-mono-nu text-[11px] text-nu-blue hover:underline no-underline"
+                        >
+                          포트폴리오 링크 →
+                        </a>
                       )}
                     </div>
-                    <p className="text-[12px] text-nu-muted">
-                      {m.role === "manager" ? "멤버 관리·파일업로드·일정관리 가능" : (roleLabels[m.role] || m.role)}
-                    </p>
-                  </div>
-                </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Current members ── */}
+        <div className="divide-y divide-nu-ink/[0.06]">
+          {members.length === 0 ? (
+            <div className="px-6 py-8 text-center text-nu-muted text-sm">
+              아직 멤버가 없습니다
+            </div>
+          ) : members.map((m) => (
+            <div key={m.id} className="px-6 py-4 flex items-center gap-3">
+              {/* Avatar */}
+              {m.user_id && m.profile ? (
+                <div className="w-9 h-9 rounded-full bg-nu-cream flex items-center justify-center font-head text-sm font-bold text-nu-ink shrink-0">
+                  {m.profile.nickname.charAt(0).toUpperCase()}
+                </div>
               ) : m.crew_id && m.crew ? (
-                <>
-                  <div className={`w-8 h-8 flex items-center justify-center font-head text-xs font-bold text-white ${catColors[m.crew.category] || "bg-nu-gray"}`}>
-                    {m.crew.name.charAt(0)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{m.crew.name}</p>
-                    <p className="text-[12px] text-nu-muted capitalize">너트 · {m.crew.category}</p>
-                  </div>
-                </>
+                <div className={`w-9 h-9 flex items-center justify-center font-head text-sm font-bold text-white shrink-0 ${catColors[m.crew.category] || "bg-nu-gray"}`}>
+                  {m.crew.name.charAt(0)}
+                </div>
               ) : null}
-              {m.role !== "lead" && m.user_id && (
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => handlePromoteManager(m.id, m.user_id!, m.role === "manager")}
-                    className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 border transition-colors ${
-                      m.role === "manager"
-                        ? "border-nu-muted/30 text-nu-muted hover:border-nu-red/40 hover:text-nu-red"
-                        : "border-nu-blue/30 text-nu-blue hover:bg-nu-blue hover:text-white"
-                    }`}
-                  >
-                    {m.role === "manager" ? "해제" : "매니저"}
-                  </button>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-bold text-nu-ink">
+                    {m.profile?.nickname || m.crew?.name || "—"}
+                  </p>
+                  <span className={`font-mono-nu text-[9px] uppercase tracking-widest px-1.5 py-0.5 ${
+                    m.role === "lead" ? "bg-nu-pink text-white" :
+                    m.role === "manager" ? "bg-nu-blue/10 text-nu-blue" :
+                    m.role === "observer" ? "bg-nu-cream text-nu-muted" :
+                    "bg-nu-ink/5 text-nu-graphite"
+                  }`}>
+                    {roleLabels[m.role] || m.role}
+                  </span>
+                </div>
+                <p className="text-[11px] text-nu-muted">
+                  {m.crew ? `너트 · ${m.crew.category}` : "개인 참여"}
+                </p>
+              </div>
+
+              {/* Actions — lead 본인 제외 */}
+              {m.role !== "lead" && (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {/* Role selector */}
+                  {m.user_id && (
+                    <div className="relative">
+                      <select
+                        value={m.role}
+                        disabled={changingRole === m.id}
+                        onChange={(e) => changeRole(m.id, m.user_id, e.target.value)}
+                        className="appearance-none font-mono-nu text-[11px] uppercase tracking-widest px-3 py-1.5 pr-6 border border-nu-ink/10 text-nu-muted bg-transparent hover:border-nu-ink/30 focus:outline-none focus:border-nu-blue transition-colors cursor-pointer disabled:opacity-40"
+                      >
+                        <option value="member">멤버</option>
+                        <option value="manager">매니저</option>
+                        <option value="observer">옵저버</option>
+                        <option value="lead">리드로 이전</option>
+                      </select>
+                      {changingRole === m.id ? (
+                        <Loader2 size={10} className="absolute right-2 top-1/2 -translate-y-1/2 animate-spin text-nu-muted pointer-events-none" />
+                      ) : (
+                        <ChevronDown size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-nu-muted pointer-events-none" />
+                      )}
+                    </div>
+                  )}
+                  {/* Remove button */}
                   <button
                     type="button"
                     onClick={() => removeMember(m.id)}
-                    className="text-nu-red hover:text-red-700 transition-colors p-1"
+                    className="p-1.5 text-nu-muted/40 hover:text-red-500 hover:bg-red-50 transition-colors rounded"
+                    title="멤버 제외"
                   >
-                    <X size={14} />
+                    <UserMinus size={14} />
                   </button>
                 </div>
               )}
@@ -727,11 +962,10 @@ Generated at: ${new Date().toLocaleString()}
           ))}
         </div>
 
-        {/* Add user member */}
-        <div className="border-t border-nu-ink/[0.06] pt-4 mb-4">
-          <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-3">
-            사용자 추가
-          </p>
+        {/* ── Add member ── */}
+        <div className="border-t border-nu-ink/[0.08] px-6 py-5 space-y-4">
+          <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted font-bold">멤버 직접 추가</p>
+          {/* Add user member */}
           <div className="flex gap-2">
             <input
               type="text"
@@ -740,10 +974,7 @@ Generated at: ${new Date().toLocaleString()}
               placeholder="닉네임으로 검색"
               className="flex-1 px-4 py-2.5 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink transition-colors"
               onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addUserMember();
-                }
+                if (e.key === "Enter") { e.preventDefault(); addUserMember(); }
               }}
             />
             <button
@@ -754,30 +985,23 @@ Generated at: ${new Date().toLocaleString()}
               <UserPlus size={12} /> 추가
             </button>
           </div>
-        </div>
 
-        {/* Add crew */}
-        <div className="border-t border-nu-ink/[0.06] pt-4">
-          <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-3">
-            너트 추가
-          </p>
+          {/* Add crew */}
           <div className="flex gap-2">
             <select
               value={selectedCrewId}
               onChange={(e) => setSelectedCrewId(e.target.value)}
               className="flex-1 px-4 py-2.5 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink transition-colors"
             >
-              <option value="">너트 선택...</option>
+              <option value="">너트(그룹) 추가...</option>
               {crews.map((c) => (
-                <option key={c.id} value={c.id}>
-                  [{c.category}] {c.name}
-                </option>
+                <option key={c.id} value={c.id}>[{c.category}] {c.name}</option>
               ))}
             </select>
             <button
               type="button"
               onClick={addCrewMember}
-              className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-blue text-white hover:bg-nu-blue/90 transition-colors flex items-center gap-1"
+              className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors flex items-center gap-1"
             >
               <UserPlus size={12} /> 추가
             </button>
