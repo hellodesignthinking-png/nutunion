@@ -142,6 +142,67 @@ export default function SchedulePage() {
     );
   }
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editStartStr, setEditStartStr] = useState("");
+  const [editLocation, setEditLocation] = useState("");
+
+  async function handleDelete(e: React.MouseEvent, evt: EventItem) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm("이 일정을 취소/삭제하시겠습니까?")) return;
+    
+    const supabase = createClient();
+    const table = evt.itemType === "meeting" ? "meetings" : "events";
+    const { error } = await supabase.from(table).delete().eq("id", evt.id);
+    if (error) {
+      alert("삭제 실패: " + error.message);
+    } else {
+      setEvents((prev) => prev.filter((p) => p.id !== evt.id));
+    }
+  }
+
+  function startEdit(e: React.MouseEvent, evt: EventItem) {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingId(evt.id);
+    setEditTitle(evt.title);
+    setEditStartStr(new Date(evt.start_at).toISOString().slice(0, 16));
+    setEditLocation(evt.location || "");
+  }
+
+  async function handleSaveEdit(evt: EventItem) {
+    if (!editTitle.trim()) return;
+    const supabase = createClient();
+    const table = evt.itemType === "meeting" ? "meetings" : "events";
+    
+    const updates: any = {
+      title: editTitle.trim(),
+      location: editLocation.trim() || null,
+    };
+    
+    if (evt.itemType === "meeting") {
+      updates.scheduled_at = new Date(editStartStr).toISOString();
+    } else {
+      updates.start_at = new Date(editStartStr).toISOString();
+      // Keep duration rough
+      updates.end_at = new Date(new Date(editStartStr).getTime() + 60*60*1000).toISOString();
+    }
+
+    const { error } = await supabase.from(table).update(updates).eq("id", evt.id);
+    if (!error) {
+      setEvents((prev) => prev.map((p) => {
+        if (p.id === evt.id) {
+          return { ...p, title: updates.title, location: updates.location, start_at: updates.scheduled_at || updates.start_at };
+        }
+        return p;
+      }));
+      setEditingId(null);
+    } else {
+      alert("수정 실패: " + error.message);
+    }
+  }
+
   return (
     <div className="max-w-6xl mx-auto px-8 py-12">
       {/* Breadcrumb */}
@@ -245,8 +306,25 @@ export default function SchedulePage() {
         <div>
           {view === "month" && <h3 className="font-head text-lg font-extrabold mb-4">이번 달 일정 ({events.length}개)</h3>}
           <div className="flex flex-col gap-3">
-            {events.map((evt) => (
-              <div key={`${evt.itemType}-${evt.id}`} className="bg-nu-white border-[2px] border-nu-ink/[0.08] hover:border-nu-pink/40 transition-all overflow-hidden">
+            {events.map((evt) => {
+              if (editingId === evt.id) {
+                return (
+                  <div key={`${evt.itemType}-${evt.id}`} className="bg-nu-white border-[2px] border-nu-ink/[0.08] p-4 flex flex-col gap-3">
+                    <input value={editTitle} onChange={e => setEditTitle(e.target.value)} className="px-3 py-2 border text-sm" placeholder="일정 제목" />
+                    <div className="flex gap-2">
+                      <input type="datetime-local" value={editStartStr} onChange={e => setEditStartStr(e.target.value)} className="px-3 py-2 border text-sm" />
+                      <input value={editLocation} onChange={e => setEditLocation(e.target.value)} className="px-3 py-2 border text-sm flex-1" placeholder="장소" />
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <button onClick={() => setEditingId(null)} className="px-4 py-2 border text-[12px] hover:bg-nu-cream">취소</button>
+                      <button onClick={() => handleSaveEdit(evt)} className="px-4 py-2 bg-nu-ink text-white text-[12px]">저장</button>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+              <div key={`${evt.itemType}-${evt.id}`} className="bg-nu-white border-[2px] border-nu-ink/[0.08] hover:border-nu-pink/40 transition-all overflow-hidden flex flex-col relative group">
                 <Link href={`/groups/${groupId}/${evt.itemType === "meeting" ? "meetings" : "events"}/${evt.id}`} className="flex items-center gap-4 p-4 no-underline">
                   <div className={`w-12 h-12 flex flex-col items-center justify-center shrink-0 ${evt.itemType === "meeting" ? "bg-nu-blue/10" : "bg-nu-pink/10"}`}>
                     <span className={`font-head text-base font-extrabold leading-none ${evt.itemType === "meeting" ? "text-nu-blue" : "text-nu-pink"}`}>
@@ -259,7 +337,7 @@ export default function SchedulePage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-head text-sm font-bold text-nu-ink truncate">{evt.title}</p>
-                      {evt.itemType === "meeting" && <span className="font-mono-nu text-[11px] bg-nu-blue/10 text-nu-blue px-1.5 py-0.5">미팅</span>}
+                      {evt.itemType === "meeting" ? <span className="font-mono-nu text-[11px] bg-nu-blue/10 text-nu-blue px-1.5 py-0.5">미팅</span> : <span className="font-mono-nu text-[11px] bg-nu-pink/10 text-nu-pink px-1.5 py-0.5">이벤트</span>}
                     </div>
                     <div className="flex flex-wrap gap-3 mt-1 text-xs text-nu-muted">
                       <span className="flex items-center gap-1"><Clock size={10} />{new Date(evt.start_at).toLocaleTimeString("ko", { hour: "2-digit", minute: "2-digit" })}{evt.duration_min && ` (${evt.duration_min}분)`}</span>
@@ -268,13 +346,19 @@ export default function SchedulePage() {
                   </div>
                   <GoogleCalendarButton title={evt.title} startAt={evt.start_at} endAt={evt.end_at} location={evt.location || ""} className="shrink-0 hidden md:inline-flex text-[11px] px-2 py-1.5" />
                 </Link>
+                {isHost && (
+                  <div className="absolute top-3 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={(e) => startEdit(e, evt)} className="bg-nu-white px-2 py-1 text-[11px] border shadow-sm hover:text-nu-pink">수정</button>
+                    <button onClick={(e) => handleDelete(e, evt)} className="bg-nu-white px-2 py-1 text-[11px] border shadow-sm text-red-500 hover:bg-red-50">삭제</button>
+                  </div>
+                )}
                 {evt.itemType === "event" && userId && (
                   <div className="border-t border-nu-ink/[0.06] px-4 py-2.5">
                     <EventRsvpButton eventId={evt.id} userId={userId} maxAttendees={evt.max_attendees} />
                   </div>
                 )}
               </div>
-            ))}
+            )})}
           </div>
         </div>
       ) : (
