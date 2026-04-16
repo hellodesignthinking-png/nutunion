@@ -777,17 +777,19 @@ export function UnifiedTabView({
                                 
                                 {/* Full Document Rendering */}
                                 <div 
-                                  className="text-[15px] sm:text-[16px] leading-8 sm:leading-9 text-nu-ink space-y-5
-                                            [&>p]:mb-5 [&>p]:text-justify [&>p]:break-keep
-                                            [&>h1]:text-2xl [&>h1]:font-extrabold [&>h1]:text-nu-ink [&>h1]:mt-8 [&>h1]:mb-4
-                                            [&>h2]:text-xl [&>h2]:font-extrabold [&>h2]:text-nu-ink [&>h2]:mt-8 [&>h2]:mb-3
-                                            [&>h3]:text-lg [&>h3]:font-bold [&>h3]:text-nu-ink [&>h3]:mt-6 [&>h3]:mb-2
-                                            [&>ul]:list-disc [&>ul]:ml-6 [&>ul]:mb-5 [&>ul>li]:mb-2 [&>ul>li]:pl-1
-                                            [&>ol]:list-decimal [&>ol]:ml-6 [&>ol]:mb-5 [&>ol>li]:mb-2 [&>ol>li]:pl-1
-                                            [&>blockquote]:border-l-4 [&>blockquote]:border-purple-300 [&>blockquote]:pl-4 [&>blockquote]:italic [&>blockquote]:text-nu-muted
-                                            [&>pre]:bg-nu-cream [&>pre]:p-4 [&>pre]:overflow-x-auto [&>pre]:text-sm
-                                            [&>code]:bg-nu-cream/50 [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:text-nu-pink [&>code]:font-mono-nu"
-                                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(applyBacklinks(combinedHtml)) }}
+                                  className="prose prose-slate prose-sm sm:prose-base max-w-none w-full 
+                                            prose-headings:font-head prose-headings:font-extrabold prose-headings:text-nu-ink
+                                            prose-p:text-justify prose-p:break-keep prose-p:leading-relaxed prose-p:text-nu-ink
+                                            prose-a:text-nu-blue prose-a:no-underline hover:prose-a:underline
+                                            prose-img:rounded-sm prose-img:border prose-img:border-nu-ink/10 prose-img:w-full
+                                            prose-blockquote:border-l-4 prose-blockquote:border-purple-300 prose-blockquote:bg-purple-50 prose-blockquote:p-4 prose-blockquote:italic
+                                            prose-li:marker:text-nu-pink"
+                                  dangerouslySetInnerHTML={{ 
+                                    __html: DOMPurify.sanitize(applyBacklinks(combinedHtml), { 
+                                      ADD_TAGS: ['iframe', 'video', 'source'], 
+                                      ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'target', 'class', 'style', 'controls'] 
+                                    }) 
+                                  }}
                                 />
 
                                 {/* Document Meta Footer */}
