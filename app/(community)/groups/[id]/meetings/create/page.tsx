@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ interface AgendaItem {
 export default function CreateMeetingPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const groupId = params.id as string;
   const [loading, setLoading] = useState(false);
   const [duration, setDuration] = useState("60");
@@ -38,6 +39,17 @@ export default function CreateMeetingPage() {
     description: "",
     duration_min: 10,
   });
+
+  // Pre-fill title and agenda from query params (e.g. from Gap Analysis)
+  const prefillTitle = searchParams.get("title") || "";
+  const prefillTopic = searchParams.get("topic") || "";
+
+  useEffect(() => {
+    if (prefillTopic && agendas.length === 0) {
+      setAgendas([{ topic: prefillTopic, description: "갭 분석에서 제안된 논의 주제", duration_min: 20 }]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function addAgenda() {
     if (!newAgenda.topic.trim()) {
@@ -138,16 +150,16 @@ export default function CreateMeetingPage() {
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6">
         <Link href={`/groups/${groupId}`}
-          className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted hover:text-nu-ink no-underline flex items-center gap-1.5 transition-colors">
+          className="font-mono-nu text-[13px] uppercase tracking-widest text-nu-muted hover:text-nu-ink no-underline flex items-center gap-1.5 transition-colors">
           <ArrowLeft size={13} /> 너트로
         </Link>
         <span className="text-nu-muted/40">/</span>
         <Link href={`/groups/${groupId}/meetings`}
-          className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted hover:text-nu-ink no-underline transition-colors">
+          className="font-mono-nu text-[13px] uppercase tracking-widest text-nu-muted hover:text-nu-ink no-underline transition-colors">
           미팅
         </Link>
         <span className="text-nu-muted/40">/</span>
-        <span className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-ink">새 미팅</span>
+        <span className="font-mono-nu text-[13px] uppercase tracking-widest text-nu-ink">새 미팅</span>
       </div>
       <h1 className="font-head text-3xl font-extrabold text-nu-ink mb-2">
         새 미팅 만들기
@@ -157,19 +169,20 @@ export default function CreateMeetingPage() {
       <div className="bg-nu-white border border-nu-ink/[0.08] p-8">
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div>
-            <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
+            <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
               제목
             </Label>
             <Input
               name="title"
               required
+              defaultValue={prefillTitle}
               placeholder="정기 미팅"
               className="mt-1.5 border-nu-ink/15 bg-transparent"
             />
           </div>
 
           <div>
-            <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
+            <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
               설명
             </Label>
             <Textarea
@@ -182,7 +195,7 @@ export default function CreateMeetingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
+              <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
                 날짜
               </Label>
               <Input
@@ -193,7 +206,7 @@ export default function CreateMeetingPage() {
               />
             </div>
             <div>
-              <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
+              <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
                 시간
               </Label>
               <Input
@@ -204,7 +217,7 @@ export default function CreateMeetingPage() {
               />
             </div>
             <div>
-              <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
+              <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
                 소요 시간
               </Label>
               <Select value={duration} onValueChange={(v) => v && setDuration(v)}>
@@ -222,7 +235,7 @@ export default function CreateMeetingPage() {
           </div>
 
           <div>
-            <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
+            <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
               장소
             </Label>
             <Input
@@ -234,12 +247,12 @@ export default function CreateMeetingPage() {
 
           {/* Tags */}
           <div>
-            <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
+            <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
               태그 (검색용)
             </Label>
             <div className="mt-1.5 flex flex-wrap gap-1.5 p-2 border border-nu-ink/15 min-h-[44px] bg-transparent focus-within:border-nu-pink transition-colors">
               {tags.map(t => (
-                <span key={t} className="inline-flex items-center gap-1 font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 bg-nu-ink/10 text-nu-ink">
+                <span key={t} className="inline-flex items-center gap-1 font-mono-nu text-[12px] uppercase tracking-widest px-2 py-0.5 bg-nu-ink/10 text-nu-ink">
                   # {t}
                   <button type="button" onClick={() => setTags(prev => prev.filter(x => x !== t))} className="text-nu-muted hover:text-nu-red">×</button>
                 </span>
@@ -259,7 +272,7 @@ export default function CreateMeetingPage() {
                 className="flex-1 min-w-[100px] bg-transparent text-xs focus:outline-none"
               />
             </div>
-            <p className="font-mono-nu text-[9px] text-nu-muted mt-1">Enter 또는 콤마(,)로 태그 추가</p>
+            <p className="font-mono-nu text-[11px] text-nu-muted mt-1">Enter 또는 콤마(,)로 태그 추가</p>
           </div>
 
           {/* Agendas section */}
@@ -287,7 +300,7 @@ export default function CreateMeetingPage() {
                         </p>
                       )}
                     </div>
-                    <span className="font-mono-nu text-[10px] text-nu-muted shrink-0">
+                    <span className="font-mono-nu text-[12px] text-nu-muted shrink-0">
                       {agenda.duration_min}분
                     </span>
                     <button
@@ -343,7 +356,7 @@ export default function CreateMeetingPage() {
                 type="button"
                 variant="outline"
                 onClick={addAgenda}
-                className="self-start font-mono-nu text-[10px] uppercase tracking-widest"
+                className="self-start font-mono-nu text-[12px] uppercase tracking-widest"
               >
                 <Plus size={14} /> 안건 추가
               </Button>
@@ -354,7 +367,7 @@ export default function CreateMeetingPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[11px] uppercase tracking-widest px-8"
+              className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[13px] uppercase tracking-widest px-8"
             >
               {loading ? "생성 중..." : "미팅 만들기"}
             </Button>
@@ -362,7 +375,7 @@ export default function CreateMeetingPage() {
               type="button"
               variant="outline"
               onClick={() => router.back()}
-              className="font-mono-nu text-[11px] uppercase tracking-widest"
+              className="font-mono-nu text-[13px] uppercase tracking-widest"
             >
               취소
             </Button>
