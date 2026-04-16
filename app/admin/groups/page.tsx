@@ -71,16 +71,16 @@ export default async function AdminGroupsPage() {
       {/* Stats summary */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
         <div className="bg-nu-white border border-nu-ink/[0.08] p-4">
-          <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-1">전체</p>
+          <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-1">전체</p>
           <p className="font-head text-2xl font-extrabold">{formatted.length}</p>
         </div>
         <div className="bg-nu-white border border-nu-ink/[0.08] p-4">
-          <p className="font-mono-nu text-[10px] uppercase tracking-widest text-green-600 mb-1">활성</p>
+          <p className="font-mono-nu text-[12px] uppercase tracking-widest text-green-600 mb-1">활성</p>
           <p className="font-head text-2xl font-extrabold text-green-600">{activeCount}</p>
         </div>
         {Object.entries(categoryBreakdown).map(([cat, count]) => (
           <div key={cat} className="bg-nu-white border border-nu-ink/[0.08] p-4">
-            <p className={`font-mono-nu text-[10px] uppercase tracking-widest mb-1 ${catColors[cat]?.split(" ")[1] || "text-nu-muted"}`}>
+            <p className={`font-mono-nu text-[12px] uppercase tracking-widest mb-1 ${catColors[cat]?.split(" ")[1] || "text-nu-muted"}`}>
               {catLabels[cat] || cat}
             </p>
             <p className="font-head text-2xl font-extrabold">{count}</p>

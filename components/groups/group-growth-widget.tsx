@@ -82,11 +82,11 @@ export function GroupGrowthWidget({ groupId }: { groupId: string }) {
       <div className="bg-gradient-to-r from-nu-ink to-nu-ink/90 text-nu-paper px-5 py-4">
         <div className="flex items-center gap-2 mb-1">
           <TrendingUp size={14} className="text-nu-pink" />
-          <span className="font-mono-nu text-[10px] font-bold uppercase tracking-[0.2em] text-nu-pink">
+          <span className="font-mono-nu text-[12px] font-bold uppercase tracking-[0.2em] text-nu-pink">
             Growth_Dashboard
           </span>
         </div>
-        <p className="text-[11px] text-nu-paper/60">
+        <p className="text-[13px] text-nu-paper/60">
           AI가 추적하는 너트 성장 현황
         </p>
       </div>
@@ -102,7 +102,7 @@ export function GroupGrowthWidget({ groupId }: { groupId: string }) {
           <div key={i} className={`text-center py-4 ${i < 3 ? "border-r border-nu-ink/[0.06]" : ""}`}>
             <s.icon size={14} className={`mx-auto ${s.color} mb-1`} />
             <div className="font-head text-xl font-extrabold text-nu-ink">{s.value}</div>
-            <div className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted">{s.label}</div>
+            <div className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">{s.label}</div>
           </div>
         ))}
       </div>
@@ -112,16 +112,16 @@ export function GroupGrowthWidget({ groupId }: { groupId: string }) {
         <div className="px-5 py-4 border-b border-nu-ink/[0.06]">
           <div className="flex items-center gap-1.5 mb-2">
             <Sparkles size={12} className="text-purple-500" />
-            <span className="font-mono-nu text-[9px] uppercase tracking-widest text-purple-600 font-bold">
+            <span className="font-mono-nu text-[11px] uppercase tracking-widest text-purple-600 font-bold">
               최근 다이제스트
             </span>
             {stats.latestDigestDate && (
-              <span className="font-mono-nu text-[8px] text-nu-muted ml-auto">
+              <span className="font-mono-nu text-[10px] text-nu-muted ml-auto">
                 {new Date(stats.latestDigestDate).toLocaleDateString("ko", { month: "short", day: "numeric" })}
               </span>
             )}
           </div>
-          <p className="text-[11px] text-nu-gray leading-relaxed line-clamp-3">
+          <p className="text-[13px] text-nu-gray leading-relaxed line-clamp-3">
             {stats.latestDigest}
           </p>
         </div>
@@ -132,10 +132,10 @@ export function GroupGrowthWidget({ groupId }: { groupId: string }) {
         <div className="px-5 py-3 border-b border-nu-ink/[0.06]">
           <div className="flex items-center gap-1.5">
             <BookOpen size={10} className="text-nu-blue shrink-0" />
-            <span className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">최근 완료:</span>
-            <span className="text-[11px] text-nu-ink font-medium truncate">{stats.recentMeetingTitle}</span>
+            <span className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest">최근 완료:</span>
+            <span className="text-[13px] text-nu-ink font-medium truncate">{stats.recentMeetingTitle}</span>
             {stats.recentMeetingDate && (
-              <span className="font-mono-nu text-[8px] text-nu-muted ml-auto shrink-0">
+              <span className="font-mono-nu text-[10px] text-nu-muted ml-auto shrink-0">
                 {new Date(stats.recentMeetingDate).toLocaleDateString("ko", { month: "short", day: "numeric" })}
               </span>
             )}
@@ -147,7 +147,7 @@ export function GroupGrowthWidget({ groupId }: { groupId: string }) {
       {hasActivity ? (
         <Link
           href={`/groups/${groupId}/wiki`}
-          className="flex items-center justify-between px-5 py-3 text-[11px] font-mono-nu uppercase tracking-widest text-nu-pink no-underline hover:bg-nu-pink/5 transition-colors"
+          className="flex items-center justify-between px-5 py-3 text-[13px] font-mono-nu uppercase tracking-widest text-nu-pink no-underline hover:bg-nu-pink/5 transition-colors"
         >
           <span className="flex items-center gap-1.5">
             <Sparkles size={12} /> 탭에서 성장 기록 보기
@@ -156,7 +156,7 @@ export function GroupGrowthWidget({ groupId }: { groupId: string }) {
         </Link>
       ) : (
         <div className="px-5 py-4 text-center">
-          <p className="text-[11px] text-nu-muted">첫 미팅을 만들어 성장을 시작하세요!</p>
+          <p className="text-[13px] text-nu-muted">첫 미팅을 만들어 성장을 시작하세요!</p>
         </div>
       )}
     </div>

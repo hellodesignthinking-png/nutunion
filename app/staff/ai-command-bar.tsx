@@ -324,10 +324,10 @@ export function AICommandBar() {
           className="w-full flex items-center gap-3 px-5 py-4 bg-white border-2 border-dashed border-indigo-200 hover:border-indigo-400 transition-colors cursor-pointer text-left group"
         >
           <Sparkles size={18} className="text-indigo-400 group-hover:text-indigo-600 transition-colors" />
-          <span className="font-mono-nu text-[11px] text-nu-muted group-hover:text-nu-graphite uppercase tracking-widest">
-            할 일, 일정을 자유롭게 입력하세요...
+          <span className="font-mono-nu text-[13px] text-nu-muted group-hover:text-nu-graphite uppercase tracking-widest">
+            할일, 일정을 자유롭게 입력하세요...
           </span>
-          <span className="ml-auto font-mono-nu text-[9px] text-nu-muted/50 uppercase tracking-widest hidden sm:block">
+          <span className="ml-auto font-mono-nu text-[11px] text-nu-muted/50 uppercase tracking-widest hidden sm:block">
             AI 자동 분류
           </span>
         </button>
@@ -339,15 +339,15 @@ export function AICommandBar() {
           {/* Header */}
           <div className="flex items-center gap-2 px-4 py-2 border-b border-indigo-100 bg-indigo-50/30">
             <Sparkles size={14} className="text-indigo-600" />
-            <span className="font-mono-nu text-[10px] uppercase tracking-widest text-indigo-600 font-bold">AI 커맨드</span>
-            <span className="font-mono-nu text-[9px] text-nu-muted ml-1">여러 줄 입력 → 자동 분류 → 수정 → 등록</span>
+            <span className="font-mono-nu text-[12px] uppercase tracking-widest text-indigo-600 font-bold">AI 커맨드</span>
+            <span className="font-mono-nu text-[11px] text-nu-muted ml-1">여러 줄 입력 → 자동 분류 → 수정 → 등록</span>
             {googleConnected === false && (
-              <span className="font-mono-nu text-[8px] text-amber-600 bg-amber-50 px-2 py-0.5 border border-amber-200 ml-auto mr-2">
+              <span className="font-mono-nu text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 border border-amber-200 ml-auto mr-2">
                 Google 미연결 (일정→할일 대체)
               </span>
             )}
             {googleConnected === true && (
-              <span className="font-mono-nu text-[8px] text-green-600 bg-green-50 px-2 py-0.5 border border-green-200 ml-auto mr-2">
+              <span className="font-mono-nu text-[10px] text-green-600 bg-green-50 px-2 py-0.5 border border-green-200 ml-auto mr-2">
                 Google 연결됨
               </span>
             )}
@@ -371,13 +371,13 @@ export function AICommandBar() {
             onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleParse(); }}
           />
           <div className="flex items-center justify-between px-4 py-2 border-t border-nu-ink/5 bg-nu-ink/[0.02]">
-            <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">
+            <span className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
               Ctrl+Enter로 분석
             </span>
             <button
               onClick={handleParse}
               disabled={!input.trim() || parsing}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 text-white font-mono-nu text-[10px] uppercase tracking-widest border-none cursor-pointer hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 text-white font-mono-nu text-[12px] uppercase tracking-widest border-none cursor-pointer hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {parsing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
               {parsing ? "분석 중..." : "분석"}
@@ -389,22 +389,22 @@ export function AICommandBar() {
             <div className="border-t-2 border-indigo-200">
               {/* Summary Header */}
               <div className="flex items-center gap-3 px-4 py-2.5 bg-indigo-50/50">
-                <span className="font-mono-nu text-[10px] uppercase tracking-widest text-indigo-600 font-bold">
+                <span className="font-mono-nu text-[12px] uppercase tracking-widest text-indigo-600 font-bold">
                   분석 결과
                 </span>
                 <div className="flex items-center gap-2">
                   {parsedActions.filter(a => a.type === "task").length > 0 && (
-                    <span className="font-mono-nu text-[9px] bg-green-100 text-green-700 px-2 py-0.5 border border-green-200">
+                    <span className="font-mono-nu text-[11px] bg-green-100 text-green-700 px-2 py-0.5 border border-green-200">
                       할일 {parsedActions.filter(a => a.type === "task").length}
                     </span>
                   )}
                   {parsedActions.filter(a => a.type === "event").length > 0 && (
-                    <span className="font-mono-nu text-[9px] bg-indigo-100 text-indigo-700 px-2 py-0.5 border border-indigo-200">
+                    <span className="font-mono-nu text-[11px] bg-indigo-100 text-indigo-700 px-2 py-0.5 border border-indigo-200">
                       일정 {parsedActions.filter(a => a.type === "event").length}
                     </span>
                   )}
                 </div>
-                <span className="font-mono-nu text-[8px] text-nu-muted ml-auto">
+                <span className="font-mono-nu text-[10px] text-nu-muted ml-auto">
                   카드를 클릭하여 수정
                 </span>
               </div>
@@ -432,13 +432,13 @@ export function AICommandBar() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => addEmptyAction("task")}
-                    className="flex items-center gap-1 px-3 py-1.5 font-mono-nu text-[9px] text-green-700 bg-green-50 border border-green-200 hover:bg-green-100 cursor-pointer uppercase tracking-widest transition-colors"
+                    className="flex items-center gap-1 px-3 py-1.5 font-mono-nu text-[11px] text-green-700 bg-green-50 border border-green-200 hover:bg-green-100 cursor-pointer uppercase tracking-widest transition-colors"
                   >
                     <Plus size={10} /> 할일 추가
                   </button>
                   <button
                     onClick={() => addEmptyAction("event")}
-                    className="flex items-center gap-1 px-3 py-1.5 font-mono-nu text-[9px] text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 cursor-pointer uppercase tracking-widest transition-colors"
+                    className="flex items-center gap-1 px-3 py-1.5 font-mono-nu text-[11px] text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 cursor-pointer uppercase tracking-widest transition-colors"
                   >
                     <Plus size={10} /> 일정 추가
                   </button>
@@ -447,14 +447,14 @@ export function AICommandBar() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => { setParsedActions([]); setEditingId(null); }}
-                    className="px-4 py-2 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted border border-nu-ink/15 bg-transparent cursor-pointer hover:border-nu-ink/30 transition-colors"
+                    className="px-4 py-2 font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted border border-nu-ink/15 bg-transparent cursor-pointer hover:border-nu-ink/30 transition-colors"
                   >
                     초기화
                   </button>
                   <button
                     onClick={handleExecute}
                     disabled={executing || enabledCount === 0}
-                    className="flex items-center gap-1.5 px-5 py-2 bg-indigo-600 text-white font-mono-nu text-[10px] uppercase tracking-widest border-none cursor-pointer hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex items-center gap-1.5 px-5 py-2 bg-indigo-600 text-white font-mono-nu text-[12px] uppercase tracking-widest border-none cursor-pointer hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {executing ? <Loader2 size={12} className="animate-spin" /> : <ArrowRight size={12} />}
                     {executing ? "등록 중..." : `${enabledCount}개 등록하기`}
@@ -508,7 +508,7 @@ function ActionCard({
         </button>
 
         {/* Type Badge */}
-        <span className={`font-mono-nu text-[8px] uppercase tracking-widest px-2 py-0.5 shrink-0 border ${
+        <span className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 shrink-0 border ${
           isEvent ? "bg-indigo-50 text-indigo-700 border-indigo-200" : "bg-green-50 text-green-700 border-green-200"
         }`}>
           {isEvent ? "일정" : "할일"}
@@ -521,29 +521,29 @@ function ActionCard({
           </p>
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             {action.dueDate && (
-              <span className="font-mono-nu text-[8px] text-nu-muted flex items-center gap-0.5">
+              <span className="font-mono-nu text-[10px] text-nu-muted flex items-center gap-0.5">
                 <Calendar size={8} /> {formatDateLabel(action.dueDate)}
               </span>
             )}
             {isEvent && action.startTime && (
-              <span className="font-mono-nu text-[8px] text-indigo-600 flex items-center gap-0.5">
+              <span className="font-mono-nu text-[10px] text-indigo-600 flex items-center gap-0.5">
                 <Clock size={8} /> {action.startTime}~{action.endTime}
               </span>
             )}
             {!isEvent && action.priority && action.priority !== "medium" && (
-              <span className={`font-mono-nu text-[8px] px-1.5 py-px border ${
+              <span className={`font-mono-nu text-[10px] px-1.5 py-px border ${
                 PRIORITY_OPTIONS.find(p => p.value === action.priority)?.color || ""
               }`}>
                 {PRIORITY_OPTIONS.find(p => p.value === action.priority)?.label}
               </span>
             )}
             {action.projectName && (
-              <span className="font-mono-nu text-[8px] text-indigo-600 flex items-center gap-0.5">
+              <span className="font-mono-nu text-[10px] text-indigo-600 flex items-center gap-0.5">
                 <FolderOpen size={8} /> {action.projectName}
               </span>
             )}
             {isEvent && !googleConnected && (
-              <span className="font-mono-nu text-[7px] text-amber-600 flex items-center gap-0.5">
+              <span className="font-mono-nu text-[9px] text-amber-600 flex items-center gap-0.5">
                 <AlertTriangle size={7} /> 할일로 대체
               </span>
             )}
@@ -577,7 +577,7 @@ function ActionCard({
           {/* Type Switcher */}
           <button
             onClick={() => onUpdate({ type: "task" })}
-            className={`font-mono-nu text-[9px] uppercase tracking-widest px-2.5 py-1 border cursor-pointer transition-colors ${
+            className={`font-mono-nu text-[11px] uppercase tracking-widest px-2.5 py-1 border cursor-pointer transition-colors ${
               !isEvent ? "bg-green-100 text-green-700 border-green-300" : "bg-transparent text-nu-muted border-nu-ink/10 hover:border-green-300"
             }`}
           >
@@ -585,7 +585,7 @@ function ActionCard({
           </button>
           <button
             onClick={() => onUpdate({ type: "event", startTime: action.startTime || "10:00", endTime: action.endTime || "11:00", dueDate: action.dueDate || new Date().toISOString().split("T")[0] })}
-            className={`font-mono-nu text-[9px] uppercase tracking-widest px-2.5 py-1 border cursor-pointer transition-colors ${
+            className={`font-mono-nu text-[11px] uppercase tracking-widest px-2.5 py-1 border cursor-pointer transition-colors ${
               isEvent ? "bg-indigo-100 text-indigo-700 border-indigo-300" : "bg-transparent text-nu-muted border-nu-ink/10 hover:border-indigo-300"
             }`}
           >
@@ -602,7 +602,7 @@ function ActionCard({
           </button>
           <button
             onClick={onStopEdit}
-            className="px-3 py-1 font-mono-nu text-[9px] text-indigo-600 border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 cursor-pointer uppercase tracking-widest transition-colors"
+            className="px-3 py-1 font-mono-nu text-[11px] text-indigo-600 border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 cursor-pointer uppercase tracking-widest transition-colors"
           >
             완료
           </button>
@@ -630,12 +630,12 @@ function ActionCard({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {/* Date */}
         <div>
-          <label className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest block mb-1">날짜</label>
+          <label className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest block mb-1">날짜</label>
           <input
             type="date"
             value={action.dueDate}
             onChange={e => onUpdate({ dueDate: e.target.value })}
-            className="w-full px-2 py-1.5 border border-nu-ink/10 bg-white font-mono-nu text-[11px] focus:outline-none focus:border-indigo-400 transition-colors"
+            className="w-full px-2 py-1.5 border border-nu-ink/10 bg-white font-mono-nu text-[13px] focus:outline-none focus:border-indigo-400 transition-colors"
           />
         </div>
 
@@ -643,21 +643,21 @@ function ActionCard({
         {isEvent && (
           <>
             <div>
-              <label className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest block mb-1">시작</label>
+              <label className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest block mb-1">시작</label>
               <input
                 type="time"
                 value={action.startTime}
                 onChange={e => onUpdate({ startTime: e.target.value })}
-                className="w-full px-2 py-1.5 border border-nu-ink/10 bg-white font-mono-nu text-[11px] focus:outline-none focus:border-indigo-400 transition-colors"
+                className="w-full px-2 py-1.5 border border-nu-ink/10 bg-white font-mono-nu text-[13px] focus:outline-none focus:border-indigo-400 transition-colors"
               />
             </div>
             <div>
-              <label className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest block mb-1">종료</label>
+              <label className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest block mb-1">종료</label>
               <input
                 type="time"
                 value={action.endTime}
                 onChange={e => onUpdate({ endTime: e.target.value })}
-                className="w-full px-2 py-1.5 border border-nu-ink/10 bg-white font-mono-nu text-[11px] focus:outline-none focus:border-indigo-400 transition-colors"
+                className="w-full px-2 py-1.5 border border-nu-ink/10 bg-white font-mono-nu text-[13px] focus:outline-none focus:border-indigo-400 transition-colors"
               />
             </div>
           </>
@@ -666,11 +666,11 @@ function ActionCard({
         {/* Priority (tasks only) */}
         {!isEvent && (
           <div>
-            <label className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest block mb-1">우선순위</label>
+            <label className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest block mb-1">우선순위</label>
             <select
               value={action.priority}
               onChange={e => onUpdate({ priority: e.target.value as ParsedAction["priority"] })}
-              className="w-full px-2 py-1.5 border border-nu-ink/10 bg-white font-mono-nu text-[11px] focus:outline-none focus:border-indigo-400 transition-colors appearance-none cursor-pointer"
+              className="w-full px-2 py-1.5 border border-nu-ink/10 bg-white font-mono-nu text-[13px] focus:outline-none focus:border-indigo-400 transition-colors appearance-none cursor-pointer"
             >
               {PRIORITY_OPTIONS.map(p => (
                 <option key={p.value} value={p.value}>{p.label}</option>
@@ -682,14 +682,14 @@ function ActionCard({
         {/* Project (tasks only) */}
         {!isEvent && (
           <div>
-            <label className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest block mb-1">프로젝트</label>
+            <label className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest block mb-1">프로젝트</label>
             <select
               value={action.projectId}
               onChange={e => {
                 const proj = allProjects.find(p => p.id === e.target.value);
                 onUpdate({ projectId: e.target.value, projectName: proj?.title || "" });
               }}
-              className="w-full px-2 py-1.5 border border-nu-ink/10 bg-white font-mono-nu text-[11px] focus:outline-none focus:border-indigo-400 transition-colors appearance-none cursor-pointer"
+              className="w-full px-2 py-1.5 border border-nu-ink/10 bg-white font-mono-nu text-[13px] focus:outline-none focus:border-indigo-400 transition-colors appearance-none cursor-pointer"
             >
               <option value="">선택 안 함</option>
               {allProjects.map(p => (
@@ -702,12 +702,12 @@ function ActionCard({
         {/* Location (events only) */}
         {isEvent && (
           <div className="col-span-2 sm:col-span-1">
-            <label className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest block mb-1">장소</label>
+            <label className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest block mb-1">장소</label>
             <input
               value={action.location}
               onChange={e => onUpdate({ location: e.target.value })}
               placeholder="장소 (선택)"
-              className="w-full px-2 py-1.5 border border-nu-ink/10 bg-white font-mono-nu text-[11px] focus:outline-none focus:border-indigo-300 transition-colors"
+              className="w-full px-2 py-1.5 border border-nu-ink/10 bg-white font-mono-nu text-[13px] focus:outline-none focus:border-indigo-300 transition-colors"
             />
           </div>
         )}

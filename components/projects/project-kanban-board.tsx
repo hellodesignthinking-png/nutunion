@@ -106,6 +106,13 @@ export function ProjectKanbanBoard({
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
 
+  // Task edit modal
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    title: "", description: "", due_date: "", assigned_to: "", milestone_id: "",
+  });
+
   // New task inline
   const [addingInColumn, setAddingInColumn] = useState<string | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -268,6 +275,48 @@ export function ProjectKanbanBoard({
       onTaskChange?.();
     }
     setAddingTask(false);
+  }
+
+  // ── Open task edit modal ───────────────────────────────────────────
+  function openEditModal(task: Task) {
+    setEditingTask(task);
+    setEditForm({
+      title: task.title,
+      description: task.description || "",
+      due_date: task.due_date ? task.due_date.split("T")[0] : "",
+      assigned_to: task.assigned_to || "",
+      milestone_id: task.milestone_id || "",
+    });
+  }
+
+  // ── Save task edit ─────────────────────────────────────────────────
+  async function handleSaveEdit() {
+    if (!editingTask || !editForm.title.trim()) return;
+    setEditSaving(true);
+
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("project_tasks")
+      .update({
+        title: editForm.title.trim(),
+        description: editForm.description.trim() || null,
+        due_date: editForm.due_date || null,
+        assigned_to: editForm.assigned_to || null,
+        milestone_id: editForm.milestone_id || editingTask.milestone_id,
+      })
+      .eq("id", editingTask.id)
+      .select("*, assignee:profiles!project_tasks_assigned_to_fkey(id, nickname, avatar_url), milestone:project_milestones!project_tasks_milestone_id_fkey(id, title)")
+      .single();
+
+    if (error) {
+      toast.error("저장 실패: " + error.message);
+    } else if (data) {
+      setTasks((prev) => prev.map((t) => t.id === editingTask.id ? data as Task : t));
+      toast.success("태스크가 수정되었습니다");
+      setEditingTask(null);
+      onTaskChange?.();
+    }
+    setEditSaving(false);
   }
 
   // ── Delete task ────────────────────────────────────────────────────

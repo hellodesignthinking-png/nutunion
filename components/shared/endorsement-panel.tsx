@@ -202,7 +202,7 @@ export function EndorsementPanel({
 
   if (compact) {
     return (
-      <div className="flex items-center gap-2 text-[11px]">
+      <div className="flex items-center gap-2 text-[13px]">
         <Shield size={14} className="text-nu-blue" />
         <span className="font-mono-nu font-bold text-nu-ink">
           {totalEndorsements} 보증
@@ -223,7 +223,7 @@ export function EndorsementPanel({
           <span className="font-head text-sm font-bold text-nu-ink">
             동료 검증
           </span>
-          <span className="font-mono-nu text-[9px] bg-nu-blue/10 text-nu-blue px-2 py-0.5 font-bold uppercase tracking-widest">
+          <span className="font-mono-nu text-[11px] bg-nu-blue/10 text-nu-blue px-2 py-0.5 font-bold uppercase tracking-widest">
             {totalEndorsements} verified
           </span>
         </div>
@@ -254,7 +254,7 @@ export function EndorsementPanel({
                   return (
                     <div key={dim.key} className="space-y-1">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono-nu text-[10px] font-bold text-nu-ink uppercase">
+                        <span className="font-mono-nu text-[12px] font-bold text-nu-ink uppercase">
                           {dim.label}
                         </span>
                         {stat && stat.count > 0 && (
@@ -271,7 +271,7 @@ export function EndorsementPanel({
                           />
                         </div>
                         {stat && stat.count > 0 && (
-                          <span className="font-mono-nu text-[9px] text-nu-muted min-w-[30px]">
+                          <span className="font-mono-nu text-[11px] text-nu-muted min-w-[30px]">
                             {stat.count}명
                           </span>
                         )}
@@ -283,7 +283,7 @@ export function EndorsementPanel({
                             {stat.endorsers.slice(0, 4).map((endorser) => (
                               <div
                                 key={endorser.id}
-                                className="w-5 h-5 rounded-full bg-nu-blue/20 border-2 border-white flex items-center justify-center text-[7px] font-bold text-nu-blue shrink-0"
+                                className="w-5 h-5 rounded-full bg-nu-blue/20 border-2 border-white flex items-center justify-center text-[9px] font-bold text-nu-blue shrink-0"
                                 title={endorser.nickname}
                               >
                                 {endorser.avatar_url ? (
@@ -299,7 +299,7 @@ export function EndorsementPanel({
                             ))}
                           </div>
                           {stat.endorsers.length > 4 && (
-                            <span className="text-[8px] text-nu-muted ml-1">
+                            <span className="text-[10px] text-nu-muted ml-1">
                               +{stat.endorsers.length - 4}
                             </span>
                           )}
@@ -316,7 +316,7 @@ export function EndorsementPanel({
                   {!showForm ? (
                     <button
                       onClick={() => setShowForm(true)}
-                      className="w-full px-3 py-2 bg-nu-pink text-white font-mono-nu text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity flex items-center justify-center gap-1"
+                      className="w-full px-3 py-2 bg-nu-pink text-white font-mono-nu text-[12px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity flex items-center justify-center gap-1"
                     >
                       <Award size={12} /> 보증하기
                     </button>
@@ -324,7 +324,7 @@ export function EndorsementPanel({
                     <div className="space-y-3 p-3 bg-nu-cream/20 border border-nu-ink/5">
                       {/* Dimension Dropdown */}
                       <div>
-                        <label className="block font-mono-nu text-[9px] font-bold text-nu-ink mb-1 uppercase">
+                        <label className="block font-mono-nu text-[11px] font-bold text-nu-ink mb-1 uppercase">
                           역량 선택
                         </label>
                         <select
@@ -335,7 +335,7 @@ export function EndorsementPanel({
                               selectedDimension: e.target.value,
                             })
                           }
-                          className="w-full px-2 py-1.5 bg-white border border-nu-ink/10 text-[10px] focus:outline-none focus:border-nu-pink"
+                          className="w-full px-2 py-1.5 bg-white border border-nu-ink/10 text-[12px] focus:outline-none focus:border-nu-pink"
                         >
                           {DIMENSIONS.map((dim) => (
                             <option key={dim.key} value={dim.key}>
@@ -347,7 +347,7 @@ export function EndorsementPanel({
 
                       {/* Rating Stars */}
                       <div>
-                        <label className="block font-mono-nu text-[9px] font-bold text-nu-ink mb-1 uppercase">
+                        <label className="block font-mono-nu text-[11px] font-bold text-nu-ink mb-1 uppercase">
                           평점 (1-5)
                         </label>
                         <div className="flex gap-1">
@@ -374,7 +374,7 @@ export function EndorsementPanel({
 
                       {/* Comment */}
                       <div>
-                        <label className="block font-mono-nu text-[9px] font-bold text-nu-ink mb-1 uppercase">
+                        <label className="block font-mono-nu text-[11px] font-bold text-nu-ink mb-1 uppercase">
                           의견 (선택사항)
                         </label>
                         <textarea
@@ -386,7 +386,7 @@ export function EndorsementPanel({
                             })
                           }
                           placeholder="짧은 의견을 남겨보세요..."
-                          className="w-full px-2 py-1.5 bg-white border border-nu-ink/10 text-[10px] focus:outline-none focus:border-nu-pink resize-none"
+                          className="w-full px-2 py-1.5 bg-white border border-nu-ink/10 text-[12px] focus:outline-none focus:border-nu-pink resize-none"
                           rows={2}
                         />
                       </div>
@@ -402,14 +402,14 @@ export function EndorsementPanel({
                               comment: "",
                             });
                           }}
-                          className="flex-1 px-2 py-1.5 bg-nu-ink/5 border border-nu-ink/10 font-mono-nu text-[9px] font-bold text-nu-ink hover:opacity-70 transition-opacity"
+                          className="flex-1 px-2 py-1.5 bg-nu-ink/5 border border-nu-ink/10 font-mono-nu text-[11px] font-bold text-nu-ink hover:opacity-70 transition-opacity"
                         >
                           취소
                         </button>
                         <button
                           onClick={handleSubmitEndorsement}
                           disabled={submitting || formState.rating === 0}
-                          className="flex-1 px-2 py-1.5 bg-nu-pink text-white font-mono-nu text-[9px] font-bold uppercase tracking-widest disabled:opacity-40 flex items-center justify-center gap-1"
+                          className="flex-1 px-2 py-1.5 bg-nu-pink text-white font-mono-nu text-[11px] font-bold uppercase tracking-widest disabled:opacity-40 flex items-center justify-center gap-1"
                         >
                           {submitting ? (
                             <Loader2 size={10} className="animate-spin" />
@@ -425,13 +425,13 @@ export function EndorsementPanel({
               )}
 
               {currentUserId === targetUserId && (
-                <p className="text-[9px] text-nu-muted text-center py-2">
+                <p className="text-[11px] text-nu-muted text-center py-2">
                   자신에게는 보증할 수 없습니다
                 </p>
               )}
 
               {!currentUserId && (
-                <p className="text-[9px] text-nu-muted text-center py-2">
+                <p className="text-[11px] text-nu-muted text-center py-2">
                   로그인하면 보증할 수 있습니다
                 </p>
               )}

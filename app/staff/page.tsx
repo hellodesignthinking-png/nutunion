@@ -98,13 +98,13 @@ export default async function StaffDashboardPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-head text-3xl font-extrabold text-nu-ink">오늘의 워크스페이스</h1>
-          <p className="font-mono-nu text-[11px] text-nu-muted mt-1 uppercase tracking-widest">
+          <p className="font-mono-nu text-[13px] text-nu-muted mt-1 uppercase tracking-widest">
             {today.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "long" })}
           </p>
         </div>
         <Link
           href="/staff/workspace/create"
-          className="inline-flex items-center gap-2 font-mono-nu text-[11px] uppercase tracking-widest px-5 py-2.5 bg-indigo-600 text-white no-underline hover:bg-indigo-700 transition-colors"
+          className="inline-flex items-center gap-2 font-mono-nu text-[13px] uppercase tracking-widest px-5 py-2.5 bg-indigo-600 text-white no-underline hover:bg-indigo-700 transition-colors"
         >
           <Plus size={14} /> <span className="hidden sm:inline">새 프로젝트</span><span className="sm:hidden">추가</span>
         </Link>
@@ -116,23 +116,23 @@ export default async function StaffDashboardPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
         <div className="bg-white border border-nu-ink/[0.06] p-4">
-          <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-1">스태프 프로젝트</p>
+          <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-1">스태프 프로젝트</p>
           <p className="font-head text-2xl font-extrabold text-indigo-600">{(projects || []).length}</p>
         </div>
         <div className="bg-white border border-nu-ink/[0.06] p-4">
-          <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-1">볼트 프로젝트</p>
+          <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-1">볼트 프로젝트</p>
           <p className="font-head text-2xl font-extrabold text-purple-600">{boltProjects.length}</p>
         </div>
         <div className="bg-white border border-nu-ink/[0.06] p-4">
-          <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-1">내 할일</p>
+          <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-1">내 할일</p>
           <p className="font-head text-2xl font-extrabold text-nu-ink">{activeTasks.length}</p>
         </div>
         <div className={`border p-4 ${overdueTasks.length > 0 ? "bg-red-50 border-red-200" : "bg-white border-nu-ink/[0.06]"}`}>
-          <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-1">지연</p>
+          <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-1">지연</p>
           <p className={`font-head text-2xl font-extrabold ${overdueTasks.length > 0 ? "text-red-600" : "text-nu-ink"}`}>{overdueTasks.length}</p>
         </div>
         <div className={`border p-4 ${todayTasks.length > 0 ? "bg-orange-50 border-orange-200" : "bg-white border-nu-ink/[0.06]"}`}>
-          <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-1">오늘 마감</p>
+          <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-1">오늘 마감</p>
           <p className={`font-head text-2xl font-extrabold ${todayTasks.length > 0 ? "text-orange-600" : "text-nu-ink"}`}>{todayTasks.length}</p>
         </div>
       </div>
@@ -157,14 +157,14 @@ export default async function StaffDashboardPage() {
                       <div className="flex-1 min-w-0">
                         <p className="font-head text-sm font-bold text-nu-ink truncate">{task.title}</p>
                         {task.project && (
-                          <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">{(task.project as any).title}</p>
+                          <p className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest">{(task.project as any).title}</p>
                         )}
                       </div>
-                      <span className={`font-mono-nu text-[9px] uppercase px-2 py-0.5 ${priorityColor[task.priority] || ""}`}>
+                      <span className={`font-mono-nu text-[11px] uppercase px-2 py-0.5 ${priorityColor[task.priority] || ""}`}>
                         {task.priority}
                       </span>
                       {task.due_date && (
-                        <span className={`font-mono-nu text-[9px] flex items-center gap-1 ${isOverdue ? "text-red-600 font-bold" : "text-orange-600 font-bold"}`}>
+                        <span className={`font-mono-nu text-[11px] flex items-center gap-1 ${isOverdue ? "text-red-600 font-bold" : "text-orange-600 font-bold"}`}>
                           <Clock size={10} />
                           {isOverdue ? "지연 " : "오늘 "}{new Date(task.due_date).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}
                         </span>
@@ -182,7 +182,7 @@ export default async function StaffDashboardPage() {
               <h2 className="font-head text-lg font-extrabold text-nu-ink flex items-center gap-2">
                 <CheckSquare size={18} className="text-indigo-600" /> 할일
               </h2>
-              <Link href="/staff/tasks" className="font-mono-nu text-[10px] text-indigo-600 no-underline uppercase tracking-widest hover:underline flex items-center gap-1">
+              <Link href="/staff/tasks" className="font-mono-nu text-[12px] text-indigo-600 no-underline uppercase tracking-widest hover:underline flex items-center gap-1">
                 전체 보기 <ArrowRight size={10} />
               </Link>
             </div>
@@ -194,14 +194,14 @@ export default async function StaffDashboardPage() {
                     <div className="flex-1 min-w-0">
                       <p className="font-head text-sm font-bold text-nu-ink truncate">{task.title}</p>
                       {task.project && (
-                        <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">{(task.project as any).title}</p>
+                        <p className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest">{(task.project as any).title}</p>
                       )}
                     </div>
-                    <span className={`font-mono-nu text-[9px] uppercase px-2 py-0.5 ${priorityColor[task.priority] || ""}`}>
+                    <span className={`font-mono-nu text-[11px] uppercase px-2 py-0.5 ${priorityColor[task.priority] || ""}`}>
                       {task.priority}
                     </span>
                     {task.due_date && (
-                      <span className="font-mono-nu text-[9px] text-nu-muted flex items-center gap-1">
+                      <span className="font-mono-nu text-[11px] text-nu-muted flex items-center gap-1">
                         <Clock size={10} />
                         {new Date(task.due_date).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}
                       </span>
@@ -233,11 +233,11 @@ export default async function StaffDashboardPage() {
                     <StatusDot status={bt.status} />
                     <div className="flex-1 min-w-0">
                       <p className="font-head text-sm font-bold text-nu-ink truncate">{bt.title}</p>
-                      <p className="font-mono-nu text-[9px] text-purple-600 uppercase tracking-widest">
+                      <p className="font-mono-nu text-[11px] text-purple-600 uppercase tracking-widest">
                         {bt.milestone?.project?.title} · {bt.milestone?.title}
                       </p>
                     </div>
-                    <span className="font-mono-nu text-[9px] px-2 py-0.5 bg-purple-100 text-purple-700 uppercase">볼트</span>
+                    <span className="font-mono-nu text-[11px] px-2 py-0.5 bg-purple-100 text-purple-700 uppercase">볼트</span>
                   </Link>
                 ))}
               </div>
@@ -253,7 +253,7 @@ export default async function StaffDashboardPage() {
               <h2 className="font-head text-lg font-extrabold text-nu-ink flex items-center gap-2">
                 <FolderOpen size={18} className="text-indigo-600" /> 프로젝트
               </h2>
-              <Link href="/staff/workspace" className="font-mono-nu text-[10px] text-indigo-600 no-underline uppercase tracking-widest hover:underline flex items-center gap-1">
+              <Link href="/staff/workspace" className="font-mono-nu text-[12px] text-indigo-600 no-underline uppercase tracking-widest hover:underline flex items-center gap-1">
                 전체 보기 <ArrowRight size={10} />
               </Link>
             </div>
@@ -266,12 +266,12 @@ export default async function StaffDashboardPage() {
                   className="block p-5 bg-white border border-nu-ink/[0.06] hover:border-indigo-200 transition-all no-underline group"
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 bg-indigo-50 text-indigo-600">
+                    <span className="font-mono-nu text-[11px] uppercase tracking-widest px-2 py-0.5 bg-indigo-50 text-indigo-600">
                       {p.category || "general"}
                     </span>
                   </div>
                   <h3 className="font-head text-sm font-bold text-nu-ink group-hover:text-indigo-600 transition-colors truncate">{p.title}</h3>
-                  <p className="font-mono-nu text-[9px] text-nu-muted mt-1">
+                  <p className="font-mono-nu text-[11px] text-nu-muted mt-1">
                     {new Date(p.updated_at || p.created_at).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })} 업데이트
                   </p>
                 </Link>
@@ -284,12 +284,12 @@ export default async function StaffDashboardPage() {
                   className="block p-5 bg-white border border-purple-100 hover:border-purple-300 transition-all no-underline group"
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 bg-purple-50 text-purple-600">
+                    <span className="font-mono-nu text-[11px] uppercase tracking-widest px-2 py-0.5 bg-purple-50 text-purple-600">
                       볼트 · {p.category || "general"}
                     </span>
                   </div>
                   <h3 className="font-head text-sm font-bold text-nu-ink group-hover:text-purple-600 transition-colors truncate">{p.title}</h3>
-                  <p className="font-mono-nu text-[9px] text-nu-muted mt-1">
+                  <p className="font-mono-nu text-[11px] text-nu-muted mt-1">
                     {new Date(p.updated_at).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })} 업데이트
                   </p>
                 </Link>
@@ -299,7 +299,7 @@ export default async function StaffDashboardPage() {
               <div className="border-2 border-dashed border-nu-ink/10 p-10 text-center bg-white/50">
                 <FolderOpen size={32} className="mx-auto mb-3 text-nu-ink/15" />
                 <p className="text-sm text-nu-muted mb-3">아직 프로젝트가 없습니다</p>
-                <Link href="/staff/workspace/create" className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 bg-indigo-600 text-white no-underline hover:bg-indigo-700 inline-flex items-center gap-1.5">
+                <Link href="/staff/workspace/create" className="font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2 bg-indigo-600 text-white no-underline hover:bg-indigo-700 inline-flex items-center gap-1.5">
                   <Plus size={12} /> 첫 프로젝트 만들기
                 </Link>
               </div>
@@ -323,7 +323,7 @@ export default async function StaffDashboardPage() {
                 className="flex items-center gap-2 py-3 px-3 bg-white border border-nu-ink/[0.06] hover:border-indigo-200 hover:bg-indigo-50/30 transition-all no-underline group"
               >
                 <span className="text-nu-muted group-hover:text-indigo-600 transition-colors">{q.icon}</span>
-                <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-graphite group-hover:text-indigo-600">{q.label}</span>
+                <span className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-graphite group-hover:text-indigo-600">{q.label}</span>
               </Link>
             ))}
           </div>
@@ -340,7 +340,7 @@ export default async function StaffDashboardPage() {
           {/* Recent Files */}
           <section className="bg-white border border-nu-ink/[0.06]">
             <div className="p-4 border-b border-nu-ink/5">
-              <h3 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
+              <h3 className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
                 <FileText size={14} className="text-indigo-600" /> 최근 파일
               </h3>
             </div>
@@ -358,7 +358,7 @@ export default async function StaffDashboardPage() {
                       <span>{mimeIcon(f.mime_type)}</span>
                       <div className="min-w-0 flex-1">
                         <p className="font-head text-xs font-bold text-nu-ink truncate">{f.title}</p>
-                        <p className="font-mono-nu text-[8px] text-nu-muted">
+                        <p className="font-mono-nu text-[10px] text-nu-muted">
                           {(f.creator as any)?.nickname || "Unknown"} · {new Date(f.created_at).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}
                         </p>
                       </div>
@@ -368,7 +368,7 @@ export default async function StaffDashboardPage() {
               </div>
             ) : (
               <div className="p-6 text-center">
-                <p className="font-mono-nu text-[10px] text-nu-muted">아직 파일이 없습니다</p>
+                <p className="font-mono-nu text-[12px] text-nu-muted">아직 파일이 없습니다</p>
               </div>
             )}
           </section>
@@ -376,7 +376,7 @@ export default async function StaffDashboardPage() {
           {/* Activity Feed */}
           <section className="bg-white border border-nu-ink/[0.06]">
             <div className="p-4 border-b border-nu-ink/5">
-              <h3 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
+              <h3 className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
                 <Activity size={14} className="text-indigo-600" /> 최근 활동
               </h3>
             </div>
@@ -385,10 +385,10 @@ export default async function StaffDashboardPage() {
                 {recentActivity.map((a: any) => (
                   <div key={a.id} className="px-4 py-3">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="font-head text-[11px] font-bold text-nu-ink">{(a.user as any)?.nickname || "System"}</span>
-                      <span className="font-mono-nu text-[9px] text-indigo-600">{actionLabel[a.action] || a.action}</span>
+                      <span className="font-head text-[13px] font-bold text-nu-ink">{(a.user as any)?.nickname || "System"}</span>
+                      <span className="font-mono-nu text-[11px] text-indigo-600">{actionLabel[a.action] || a.action}</span>
                     </div>
-                    <p className="font-mono-nu text-[8px] text-nu-muted">
+                    <p className="font-mono-nu text-[10px] text-nu-muted">
                       {new Date(a.created_at).toLocaleDateString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                     </p>
                   </div>
@@ -396,7 +396,7 @@ export default async function StaffDashboardPage() {
               </div>
             ) : (
               <div className="p-6 text-center">
-                <p className="font-mono-nu text-[10px] text-nu-muted">최근 활동이 없습니다</p>
+                <p className="font-mono-nu text-[12px] text-nu-muted">최근 활동이 없습니다</p>
               </div>
             )}
           </section>

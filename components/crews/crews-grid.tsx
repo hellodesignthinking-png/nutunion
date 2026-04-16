@@ -74,7 +74,7 @@ export function CrewsGrid({ groups, userId, memberships = [] }: { groups: CrewIt
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
-              className={`font-mono-nu text-[11px] font-bold tracking-[0.08em] uppercase px-5 py-2.5 border-[1.5px] transition-colors ${
+              className={`font-mono-nu text-[13px] font-bold tracking-[0.08em] uppercase px-5 py-2.5 border-[1.5px] transition-colors ${
                 filter === f.key
                   ? "bg-nu-ink border-nu-ink text-nu-paper"
                   : "bg-transparent border-nu-ink/15 text-nu-graphite hover:border-nu-ink/40"
@@ -95,7 +95,7 @@ export function CrewsGrid({ groups, userId, memberships = [] }: { groups: CrewIt
       </div>
 
       {/* Results count */}
-      <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-6">
+      <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-6">
         {filtered.length}개의 크루
       </p>
 
@@ -133,16 +133,16 @@ export function CrewsGrid({ groups, userId, memberships = [] }: { groups: CrewIt
                     </>
                   )}
                   <div className="absolute top-4 left-4 flex gap-2">
-                    <span className={`font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 text-white ${style.bg}`}>
+                    <span className={`font-mono-nu text-[11px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 text-white ${style.bg}`}>
                       {g.category}
                     </span>
                     {status === "pending" && (
-                      <span className="font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 bg-nu-amber text-white">
+                      <span className="font-mono-nu text-[11px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 bg-nu-amber text-white">
                         심사중
                       </span>
                     )}
                     {status === "active" && (
-                      <span className="font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 bg-nu-blue text-white">
+                      <span className="font-mono-nu text-[11px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 bg-nu-blue text-white">
                         가입 중
                       </span>
                     )}
@@ -162,10 +162,10 @@ export function CrewsGrid({ groups, userId, memberships = [] }: { groups: CrewIt
 
                   {/* Host info */}
                   <div className="flex items-center gap-2 mb-4">
-                    <div className="w-6 h-6 rounded-full bg-nu-cream flex items-center justify-center font-head text-[10px] font-bold">
+                    <div className="w-6 h-6 rounded-full bg-nu-cream flex items-center justify-center font-head text-[12px] font-bold">
                       {g.host_nickname.charAt(0).toUpperCase()}
                     </div>
-                    <span className="font-mono-nu text-[10px] text-nu-muted">
+                    <span className="font-mono-nu text-[12px] text-nu-muted">
                       {g.host_nickname}
                     </span>
                   </div>
@@ -176,24 +176,24 @@ export function CrewsGrid({ groups, userId, memberships = [] }: { groups: CrewIt
                       <div className={`progress-bar-fill ${style.bg}`} style={{ width: `${pct}%` }} />
                     </div>
                     <div className="flex items-center justify-between mt-1.5">
-                      <span className="font-mono-nu text-[10px] text-nu-muted flex items-center gap-1">
+                      <span className="font-mono-nu text-[12px] text-nu-muted flex items-center gap-1">
                         <Users size={10} /> {g.member_count}/{g.max_members}
                       </span>
-                      {pct >= 100 && <span className="font-mono-nu text-[9px] text-nu-red">FULL</span>}
+                      {pct >= 100 && <span className="font-mono-nu text-[11px] text-nu-red">FULL</span>}
                     </div>
                   </div>
 
                   {/* Action */}
                   {status === "rejected" ? (
                     <div className="text-center">
-                       <p className="text-[10px] text-nu-red mb-2 font-bold">심사 거절됨</p>
+                       <p className="text-[12px] text-nu-red mb-2 font-bold">심사 거절됨</p>
                        {membership.rejection_reason && (
-                         <p className="text-[10px] text-nu-muted italic mb-3">"{membership.rejection_reason}"</p>
+                         <p className="text-[12px] text-nu-muted italic mb-3">"{membership.rejection_reason}"</p>
                        )}
                        <button
                         onClick={() => handleJoin(g.id, g.max_members, g.member_count)}
                         disabled={isJoining}
-                        className="w-full font-mono-nu text-[10px] font-bold uppercase tracking-[0.1em] text-center py-3 border border-nu-red/30 text-nu-red hover:bg-nu-red hover:text-nu-paper transition-colors flex items-center justify-center gap-2"
+                        className="w-full font-mono-nu text-[12px] font-bold uppercase tracking-[0.1em] text-center py-3 border border-nu-red/30 text-nu-red hover:bg-nu-red hover:text-nu-paper transition-colors flex items-center justify-center gap-2"
                       >
                         {isJoining ? <Loader2 size={12} className="animate-spin" /> : "다시 신청하기"} <ArrowRight size={12} />
                       </button>
@@ -202,7 +202,7 @@ export function CrewsGrid({ groups, userId, memberships = [] }: { groups: CrewIt
                     <button
                       onClick={() => !isJoining && status !== "active" && status !== "pending" && handleJoin(g.id, g.max_members, g.member_count)}
                       disabled={status === "active" || status === "pending" || isJoining}
-                      className={`w-full font-mono-nu text-[10px] font-bold uppercase tracking-[0.1em] text-center py-3 border border-nu-ink/15 transition-colors flex items-center justify-center gap-2 ${
+                      className={`w-full font-mono-nu text-[12px] font-bold uppercase tracking-[0.1em] text-center py-3 border border-nu-ink/15 transition-colors flex items-center justify-center gap-2 ${
                         status === "active" ? "bg-nu-blue/5 text-nu-blue border-nu-blue/20" :
                         status === "pending" ? "bg-nu-amber/5 text-nu-amber border-nu-amber/20" :
                         "text-nu-graphite hover:bg-nu-ink hover:text-nu-paper"
@@ -254,21 +254,21 @@ export function CrewsGrid({ groups, userId, memberships = [] }: { groups: CrewIt
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={`font-mono-nu text-[8px] font-bold uppercase tracking-[0.15em] px-2 py-0.5 text-white ${style.bg}`}>
+                    <span className={`font-mono-nu text-[10px] font-bold uppercase tracking-[0.15em] px-2 py-0.5 text-white ${style.bg}`}>
                       {g.category}
                     </span>
-                    {status === "pending" && <span className="font-mono-nu text-[8px] font-bold uppercase px-2 py-0.5 bg-nu-amber text-white">심사중</span>}
-                    {status === "active" && <span className="font-mono-nu text-[8px] font-bold uppercase px-2 py-0.5 bg-nu-blue text-white">가입 중</span>}
+                    {status === "pending" && <span className="font-mono-nu text-[10px] font-bold uppercase px-2 py-0.5 bg-nu-amber text-white">심사중</span>}
+                    {status === "active" && <span className="font-mono-nu text-[10px] font-bold uppercase px-2 py-0.5 bg-nu-blue text-white">가입 중</span>}
                     <Link href={userId ? `/groups/${g.id}` : "/login"} className="font-head text-base font-extrabold text-nu-ink no-underline hover:text-nu-pink truncate">
                       {g.name}
                     </Link>
                   </div>
                   <p className="text-xs text-nu-gray truncate">{g.description}</p>
                   <div className="flex items-center gap-4 mt-2">
-                    <span className="font-mono-nu text-[10px] text-nu-muted">by {g.host_nickname}</span>
-                    <span className="font-mono-nu text-[10px] text-nu-muted flex items-center gap-1"><Users size={10} /> {g.member_count}/{g.max_members}</span>
+                    <span className="font-mono-nu text-[12px] text-nu-muted">by {g.host_nickname}</span>
+                    <span className="font-mono-nu text-[12px] text-nu-muted flex items-center gap-1"><Users size={10} /> {g.member_count}/{g.max_members}</span>
                     {status === "rejected" && membership.rejection_reason && (
-                      <span className="text-[10px] text-nu-red italic">거절 사유: {membership.rejection_reason}</span>
+                      <span className="text-[12px] text-nu-red italic">거절 사유: {membership.rejection_reason}</span>
                     )}
                   </div>
                 </div>
@@ -276,7 +276,7 @@ export function CrewsGrid({ groups, userId, memberships = [] }: { groups: CrewIt
                 <button
                   onClick={() => !isJoining && status !== "active" && status !== "pending" && handleJoin(g.id, g.max_members, g.member_count)}
                   disabled={status === "active" || status === "pending" || isJoining}
-                  className={`shrink-0 font-mono-nu text-[10px] font-bold uppercase tracking-[0.1em] px-5 py-2.5 border border-nu-ink/15 transition-colors ${
+                  className={`shrink-0 font-mono-nu text-[12px] font-bold uppercase tracking-[0.1em] px-5 py-2.5 border border-nu-ink/15 transition-colors ${
                     status === "active" ? "bg-nu-blue/5 text-nu-blue border-nu-blue/20" :
                     status === "pending" ? "bg-nu-amber/5 text-nu-amber border-nu-amber/20" :
                     "text-nu-graphite hover:bg-nu-ink hover:text-nu-paper"
@@ -296,7 +296,7 @@ export function CrewsGrid({ groups, userId, memberships = [] }: { groups: CrewIt
       {filtered.length === 0 && (
         <div className="text-center py-20 bg-nu-white border border-nu-ink/[0.06] p-12">
           <p className="text-nu-gray text-sm mb-4">해당 카테고리에 크루가 없습니다</p>
-          <Link href={userId ? "/groups/create" : "/signup"} className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-pink no-underline hover:underline">
+          <Link href={userId ? "/groups/create" : "/signup"} className="font-mono-nu text-[13px] uppercase tracking-widest text-nu-pink no-underline hover:underline">
             첫 번째 크루를 만들어보세요 &rarr;
           </Link>
         </div>

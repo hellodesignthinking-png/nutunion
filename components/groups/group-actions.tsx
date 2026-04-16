@@ -108,20 +108,20 @@ export function GroupActions({
     // 호스트는 탈퇴 버튼 없음
     if (userId === hostId) {
       return (
-        <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-3 bg-green-600 text-white inline-flex items-center gap-2">
+        <span className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-5 py-3 bg-green-600 text-white inline-flex items-center gap-2">
           <CheckCircle2 size={14} /> 참여중
         </span>
       );
     }
     return (
       <div className="flex items-center gap-2">
-        <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-3 bg-green-600 text-white inline-flex items-center gap-2">
+        <span className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-5 py-3 bg-green-600 text-white inline-flex items-center gap-2">
           <CheckCircle2 size={14} /> 참여중
         </span>
         <button
           onClick={handleLeave}
           disabled={loading}
-          className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-2.5 border border-nu-muted text-nu-muted hover:border-nu-red hover:text-nu-red transition-colors flex items-center gap-1"
+          className="font-mono-nu text-[12px] uppercase tracking-widest px-3 py-2.5 border border-nu-muted text-nu-muted hover:border-nu-red hover:text-nu-red transition-colors flex items-center gap-1"
         >
           {loading ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />} 너트 탈퇴
         </button>
@@ -132,13 +132,13 @@ export function GroupActions({
   if (membershipStatus === "pending") {
     return (
       <div className="flex items-center gap-2">
-        <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-3 bg-nu-amber text-white inline-flex items-center gap-2">
+        <span className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-5 py-3 bg-nu-amber text-white inline-flex items-center gap-2">
           <Clock size={14} /> 승인 대기중
         </span>
         <button
           onClick={handleCancelJoin}
           disabled={loading}
-          className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-2.5 border border-nu-muted text-nu-muted hover:border-nu-red hover:text-nu-red transition-colors flex items-center gap-1"
+          className="font-mono-nu text-[12px] uppercase tracking-widest px-3 py-2.5 border border-nu-muted text-nu-muted hover:border-nu-red hover:text-nu-red transition-colors flex items-center gap-1"
         >
           <XCircle size={12} /> 취소
         </button>
@@ -148,7 +148,7 @@ export function GroupActions({
 
   if (membershipStatus === "waitlist") {
     return (
-      <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-3 bg-nu-gray text-white inline-flex items-center gap-2">
+      <span className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-5 py-3 bg-nu-gray text-white inline-flex items-center gap-2">
         <Users size={14} /> 대기중
       </span>
     );
@@ -162,7 +162,7 @@ export function GroupActions({
       onClick={handleJoin}
       disabled={loading || isFull}
       id="group-join-btn"
-      className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors disabled:opacity-50 flex items-center gap-2"
+      className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors disabled:opacity-50 flex items-center gap-2"
     >
       {loading ? <Loader2 size={14} className="animate-spin" /> : null}
       {isFull ? "인원 마감" : "가입 신청"}

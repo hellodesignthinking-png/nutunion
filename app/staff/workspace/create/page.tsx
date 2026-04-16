@@ -97,7 +97,7 @@ export default function CreateStaffProjectPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 md:px-8 py-10">
-      <Link href="/staff/workspace" className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest no-underline hover:text-nu-ink flex items-center gap-1 mb-6">
+      <Link href="/staff/workspace" className="font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest no-underline hover:text-nu-ink flex items-center gap-1 mb-6">
         <ArrowLeft size={12} /> 프로젝트 목록
       </Link>
       <h1 className="font-head text-3xl font-extrabold text-nu-ink mb-2">새 프로젝트</h1>
@@ -106,15 +106,15 @@ export default function CreateStaffProjectPage() {
       <div className="bg-white border border-nu-ink/[0.06] p-8">
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div>
-            <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">프로젝트명</Label>
+            <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">프로젝트명</Label>
             <Input name="title" required placeholder="예: ZeroSite 2026 런칭" className="mt-1.5 border-nu-ink/15 bg-transparent" />
           </div>
           <div>
-            <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">설명</Label>
+            <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">설명</Label>
             <Textarea name="description" rows={3} placeholder="프로젝트 목표와 범위를 설명해주세요" className="mt-1.5 border-nu-ink/15 bg-transparent resize-none" />
           </div>
           <div>
-            <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">카테고리</Label>
+            <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">카테고리</Label>
             <select name="category" defaultValue="general" className="mt-1.5 w-full px-3 py-2 border border-nu-ink/15 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
               {CATEGORIES.map(c => (
                 <option key={c.value} value={c.value}>{c.label}</option>
@@ -123,12 +123,12 @@ export default function CreateStaffProjectPage() {
           </div>
           <div className="flex items-center gap-3 py-2">
             <input type="checkbox" name="createDrive" id="createDrive" className="w-4 h-4 accent-indigo-600" />
-            <label htmlFor="createDrive" className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray flex items-center gap-1.5 cursor-pointer">
+            <label htmlFor="createDrive" className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray flex items-center gap-1.5 cursor-pointer">
               <FolderOpen size={14} /> Google Drive 폴더 자동 생성
             </label>
           </div>
           <div className="flex gap-3 mt-4">
-            <Button type="submit" disabled={loading} className="bg-indigo-600 text-white hover:bg-indigo-700 font-mono-nu text-[11px] uppercase tracking-widest px-8">
+            <Button type="submit" disabled={loading} className="bg-indigo-600 text-white hover:bg-indigo-700 font-mono-nu text-[13px] uppercase tracking-widest px-8">
               {loading ? "생성 중..." : "프로젝트 생성"}
             </Button>
           </div>

@@ -66,7 +66,7 @@ export function AskWiki({ groupId }: { groupId: string }) {
         </div>
         <div className="flex-1 text-left">
           <p className="font-head text-sm font-bold">Ask Wiki</p>
-          <p className="font-mono-nu text-[9px] text-white/40 uppercase tracking-widest">
+          <p className="font-mono-nu text-[11px] text-white/40 uppercase tracking-widest">
             AI에게 이 너트의 지식을 질문하세요
           </p>
         </div>
@@ -82,7 +82,7 @@ export function AskWiki({ groupId }: { groupId: string }) {
         <div className="flex items-center gap-2">
           <Brain size={16} className="text-nu-pink" />
           <span className="font-head text-sm font-bold">Ask Wiki</span>
-          <span className="font-mono-nu text-[8px] text-white/30 uppercase tracking-widest">AI 지식 비서</span>
+          <span className="font-mono-nu text-[10px] text-white/30 uppercase tracking-widest">AI 지식 비서</span>
         </div>
         <button onClick={() => setOpen(false)} className="text-white/40 hover:text-white transition-colors">
           <X size={16} />
@@ -100,7 +100,7 @@ export function AskWiki({ groupId }: { groupId: string }) {
                 <button
                   key={suggestion}
                   onClick={() => { setQuery(suggestion); }}
-                  className="font-mono-nu text-[9px] px-2 py-1 bg-white border border-nu-ink/10 text-nu-muted hover:border-nu-pink hover:text-nu-pink transition-colors"
+                  className="font-mono-nu text-[11px] px-2 py-1 bg-white border border-nu-ink/10 text-nu-muted hover:border-nu-pink hover:text-nu-pink transition-colors"
                 >
                   {suggestion}
                 </button>
@@ -116,7 +116,7 @@ export function AskWiki({ groupId }: { groupId: string }) {
                 : "bg-white border border-nu-ink/10 text-nu-graphite"
             }`}>
               {msg.role === "assistant" && (
-                <p className="font-mono-nu text-[7px] text-nu-pink uppercase tracking-wider mb-1 flex items-center gap-1">
+                <p className="font-mono-nu text-[9px] text-nu-pink uppercase tracking-wider mb-1 flex items-center gap-1">
                   <Brain size={8} /> AI
                 </p>
               )}

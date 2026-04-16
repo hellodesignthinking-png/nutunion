@@ -43,7 +43,7 @@ export default async function EventDetailPage({
       {/* Event header */}
       <div className="mb-8">
         {event.is_recurring && (
-          <span className="inline-flex items-center gap-1 font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink mb-3">
+          <span className="inline-flex items-center gap-1 font-mono-nu text-[12px] uppercase tracking-widest text-nu-pink mb-3">
             <Repeat size={12} /> 반복 일정
           </span>
         )}
@@ -146,7 +146,7 @@ export default async function EventDetailPage({
               <div className="flex flex-col gap-2.5">
                 {registered.map((a: any) => (
                   <div key={a.user_id} className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-full bg-nu-cream flex items-center justify-center font-head text-[10px] font-bold">
+                    <div className="w-7 h-7 rounded-full bg-nu-cream flex items-center justify-center font-head text-[12px] font-bold">
                       {(a.profile?.nickname || "U").charAt(0).toUpperCase()}
                     </div>
                     <span className="text-sm">{a.profile?.nickname}</span>
@@ -165,7 +165,7 @@ export default async function EventDetailPage({
                 <div className="flex flex-col gap-2.5">
                   {waitlisted.map((a: any) => (
                     <div key={a.user_id} className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-full bg-nu-yellow/20 flex items-center justify-center font-head text-[10px] font-bold">
+                      <div className="w-7 h-7 rounded-full bg-nu-yellow/20 flex items-center justify-center font-head text-[12px] font-bold">
                         {(a.profile?.nickname || "U").charAt(0).toUpperCase()}
                       </div>
                       <span className="text-sm text-nu-muted">
@@ -178,7 +178,7 @@ export default async function EventDetailPage({
             </>
           )}
 
-          <p className="font-mono-nu text-[10px] text-nu-muted mt-4">
+          <p className="font-mono-nu text-[12px] text-nu-muted mt-4">
             주최: {event.creator?.nickname}
           </p>
         </div>

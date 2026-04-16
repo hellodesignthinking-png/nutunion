@@ -191,7 +191,7 @@ export function MilestoneSettlement({
         <div className="relative">
           <div className="flex items-center gap-2 mb-2">
             <DollarSign size={16} className="text-nu-pink" />
-            <span className="font-mono-nu text-[9px] font-black uppercase tracking-[0.25em] text-nu-pink">
+            <span className="font-mono-nu text-[11px] font-black uppercase tracking-[0.25em] text-nu-pink">
               Settlement_Dashboard
             </span>
           </div>
@@ -200,7 +200,7 @@ export function MilestoneSettlement({
               <p className="font-head text-3xl font-extrabold">
                 {earnedReward.toLocaleString()}원
               </p>
-              <p className="text-[11px] text-nu-paper/60 mt-0.5">
+              <p className="text-[13px] text-nu-paper/60 mt-0.5">
                 확정 수익 / 총 {totalBudget.toLocaleString()}원
               </p>
             </div>
@@ -209,7 +209,7 @@ export function MilestoneSettlement({
                 <p className="font-head text-xl font-bold text-nu-pink">
                   {mySharePct}%
                 </p>
-                <p className="font-mono-nu text-[9px] text-nu-paper/50 uppercase tracking-widest">
+                <p className="font-mono-nu text-[11px] text-nu-paper/50 uppercase tracking-widest">
                   My Share
                 </p>
               </div>
@@ -221,7 +221,7 @@ export function MilestoneSettlement({
       {/* Milestone Timeline */}
       {enrichedMilestones.length > 0 && (
         <div className="px-6 py-5">
-          <h4 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-muted mb-4 flex items-center gap-2">
+          <h4 className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-muted mb-4 flex items-center gap-2">
             <Clock size={12} /> 마일스톤 로드맵
           </h4>
           <div className="space-y-0">
@@ -262,11 +262,11 @@ export function MilestoneSettlement({
                   {/* Content */}
                   <div className="flex-1 pb-6">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-mono-nu text-[8px] font-bold uppercase tracking-widest text-nu-muted">
+                      <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-muted">
                         {ms.phase}
                       </span>
                       {ms.displayStatus === "active" && (
-                        <span className="font-mono-nu text-[7px] font-bold uppercase px-1.5 py-0.5 bg-nu-amber/10 text-nu-amber border border-nu-amber/20">
+                        <span className="font-mono-nu text-[9px] font-bold uppercase px-1.5 py-0.5 bg-nu-amber/10 text-nu-amber border border-nu-amber/20">
                           IN PROGRESS
                         </span>
                       )}
@@ -282,7 +282,7 @@ export function MilestoneSettlement({
                     </p>
                     <div className="flex items-center gap-3 mt-2">
                       <span
-                        className={`font-mono-nu text-[10px] font-bold ${
+                        className={`font-mono-nu text-[12px] font-bold ${
                           ms.displayStatus === "completed"
                             ? "text-nu-pink"
                             : "text-nu-muted"
@@ -302,7 +302,7 @@ export function MilestoneSettlement({
                         </div>
                       )}
                       {ms.displayStatus === "active" && (
-                        <span className="font-mono-nu text-[9px] text-nu-amber font-bold">
+                        <span className="font-mono-nu text-[11px] text-nu-amber font-bold">
                           {ms.progress}%
                         </span>
                       )}
@@ -318,7 +318,7 @@ export function MilestoneSettlement({
       {/* Contributor Shares */}
       {memberShares.length > 0 && (
         <div className="px-6 py-5 border-t border-nu-ink/5 bg-nu-cream/10">
-          <h4 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-muted mb-4 flex items-center gap-2">
+          <h4 className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-muted mb-4 flex items-center gap-2">
             <TrendingUp size={12} /> 기여도 기반 배분율
           </h4>
           <div className="space-y-3">
@@ -343,20 +343,20 @@ export function MilestoneSettlement({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[11px] font-bold text-nu-ink truncate">
+                    <span className="text-[13px] font-bold text-nu-ink truncate">
                       {c.name}
                     </span>
                     {c.isMe && (
-                      <span className="font-mono-nu text-[7px] bg-nu-pink text-white px-1 py-0.5 font-bold">
+                      <span className="font-mono-nu text-[9px] bg-nu-pink text-white px-1 py-0.5 font-bold">
                         ME
                       </span>
                     )}
                     {c.role === "lead" && (
-                      <span className="font-mono-nu text-[7px] bg-nu-blue/10 text-nu-blue px-1 py-0.5 font-bold border border-nu-blue/20">
+                      <span className="font-mono-nu text-[9px] bg-nu-blue/10 text-nu-blue px-1 py-0.5 font-bold border border-nu-blue/20">
                         LEAD
                       </span>
                     )}
-                    <span className="ml-auto font-mono-nu text-[9px] font-bold text-nu-ink">
+                    <span className="ml-auto font-mono-nu text-[11px] font-bold text-nu-ink">
                       {c.share}%
                     </span>
                   </div>
@@ -375,9 +375,9 @@ export function MilestoneSettlement({
 
           {myShare && activeMilestone && (
             <div className="mt-4 p-3 bg-nu-ink/[0.03] border border-nu-ink/5">
-              <p className="font-mono-nu text-[9px] text-nu-muted text-center">
+              <p className="font-mono-nu text-[11px] text-nu-muted text-center">
                 현재 기여도 기준 나의 예상 수익:{" "}
-                <span className="font-bold text-nu-pink text-[11px]">
+                <span className="font-bold text-nu-pink text-[13px]">
                   {Math.round(
                     activeMilestone.reward * (mySharePct / 100)
                   ).toLocaleString()}
@@ -392,7 +392,7 @@ export function MilestoneSettlement({
 
           {!myShare && totalRatio === 0 && (
             <div className="mt-4 p-3 bg-nu-ink/[0.03] border border-nu-ink/5">
-              <p className="font-mono-nu text-[9px] text-nu-muted text-center">
+              <p className="font-mono-nu text-[11px] text-nu-muted text-center">
                 아직 배분율이 설정되지 않았습니다. 자금·보상 탭에서 설정해주세요
               </p>
             </div>

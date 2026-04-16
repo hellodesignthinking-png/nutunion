@@ -36,7 +36,7 @@ export function GroupsPreview({ groups }: { groups?: GroupItem[] }) {
           <p className="text-nu-gray mb-4">아직 등록된 너트가 없습니다</p>
           <Link
             href="/signup"
-            className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-pink text-nu-paper border-[3px] border-nu-pink no-underline hover:bg-nu-ink hover:border-nu-ink transition-colors inline-block"
+            className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-pink text-nu-paper border-[3px] border-nu-pink no-underline hover:bg-nu-ink hover:border-nu-ink transition-colors inline-block"
           >
             첫 번째 너트를 만들어보세요 &rarr;
           </Link>
@@ -49,7 +49,7 @@ export function GroupsPreview({ groups }: { groups?: GroupItem[] }) {
     <section id="groups" className="py-20 px-8 max-w-7xl mx-auto">
       <div className="flex items-end justify-between mb-12">
         <div>
-          <span className="font-mono-nu text-[10px] uppercase tracking-[0.3em] text-nu-pink block mb-3">
+          <span className="font-mono-nu text-[12px] uppercase tracking-[0.3em] text-nu-pink block mb-3">
             Community
           </span>
           <h2 className="font-head text-[clamp(32px,4.5vw,52px)] font-extrabold tracking-tighter text-nu-ink leading-[0.9]">
@@ -63,7 +63,7 @@ export function GroupsPreview({ groups }: { groups?: GroupItem[] }) {
         </div>
         <Link
           href="/groups"
-          className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-ink no-underline hover:text-nu-pink transition-colors hidden md:flex items-center gap-2 border-[2px] border-nu-ink px-4 py-2 hover:bg-nu-ink hover:text-nu-paper"
+          className="font-mono-nu text-[13px] uppercase tracking-widest text-nu-ink no-underline hover:text-nu-pink transition-colors hidden md:flex items-center gap-2 border-[2px] border-nu-ink px-4 py-2 hover:bg-nu-ink hover:text-nu-paper"
         >
           전체 보기 &rarr;
         </Link>
@@ -93,10 +93,10 @@ export function GroupsPreview({ groups }: { groups?: GroupItem[] }) {
               <div className={`absolute top-0 right-0 w-24 h-24 ${color.halftone} opacity-[0.06] -rotate-12`} aria-hidden="true" />
 
               {/* Registration mark */}
-              <span className="absolute top-2 right-3 font-mono-nu text-[8px] text-nu-ink/10" aria-hidden="true">⊕</span>
+              <span className="absolute top-2 right-3 font-mono-nu text-[10px] text-nu-ink/10" aria-hidden="true">⊕</span>
 
               {/* Category tag — rotated stamp style */}
-              <span className={`inline-block self-start font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-3 py-1.5 mb-4 text-white ${color.bg} -rotate-1`}>
+              <span className={`inline-block self-start font-mono-nu text-[11px] font-bold uppercase tracking-[0.15em] px-3 py-1.5 mb-4 text-white ${color.bg} -rotate-1`}>
                 {g.cat}
               </span>
 
@@ -108,10 +108,10 @@ export function GroupsPreview({ groups }: { groups?: GroupItem[] }) {
                   <div className={`progress-bar-fill ${color.bar}`} style={{ width: `${pct}%` }} />
                 </div>
                 <div className="flex items-center justify-between mt-1.5">
-                  <span className="font-mono-nu text-[10px] text-nu-muted">
+                  <span className="font-mono-nu text-[12px] text-nu-muted">
                     {g.m}/{g.max} 와셔
                   </span>
-                  <span className="font-mono-nu text-[9px] text-nu-ink/20">
+                  <span className="font-mono-nu text-[11px] text-nu-ink/20">
                     {String(i + 1).padStart(2, '0')}
                   </span>
                 </div>
@@ -123,7 +123,7 @@ export function GroupsPreview({ groups }: { groups?: GroupItem[] }) {
       </div>
 
       <div className="text-center mt-8 md:hidden">
-        <Link href="/groups" className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-pink no-underline hover:underline">
+        <Link href="/groups" className="font-mono-nu text-[13px] uppercase tracking-widest text-nu-pink no-underline hover:underline">
           전체 보기 &rarr;
         </Link>
       </div>

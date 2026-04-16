@@ -91,31 +91,31 @@ function StatusBadge({ status }: { status: string }) {
   switch (status) {
     case "active":
       return (
-        <span className="font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 bg-green-600 text-white inline-flex items-center gap-1">
+        <span className="font-mono-nu text-[11px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 bg-green-600 text-white inline-flex items-center gap-1">
           <Circle size={7} fill="currentColor" /> 진행중
         </span>
       );
     case "completed":
       return (
-        <span className="font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 bg-nu-blue text-white inline-flex items-center gap-1">
+        <span className="font-mono-nu text-[11px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 bg-nu-blue text-white inline-flex items-center gap-1">
           <CheckCircle2 size={9} /> 완료
         </span>
       );
     case "draft":
       return (
-        <span className="font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 bg-nu-gray text-white inline-flex items-center gap-1">
+        <span className="font-mono-nu text-[11px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 bg-nu-gray text-white inline-flex items-center gap-1">
           <Pencil size={8} /> 준비중
         </span>
       );
     case "archived":
       return (
-        <span className="font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 bg-nu-muted text-white inline-flex items-center gap-1">
+        <span className="font-mono-nu text-[11px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 bg-nu-muted text-white inline-flex items-center gap-1">
           <Archive size={8} /> 보관
         </span>
       );
     default:
       return (
-        <span className="font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 bg-nu-gray text-white">
+        <span className="font-mono-nu text-[11px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 bg-nu-gray text-white">
           {status}
         </span>
       );
@@ -127,7 +127,7 @@ function DeadlineBadge({ endDate, status }: { endDate: string | null; status: st
   const days = getDaysUntil(endDate);
   if (days === null || days < 0 || days > 7) return null;
   return (
-    <span className="absolute top-4 right-4 font-mono-nu text-[10px] font-black uppercase tracking-wider px-2.5 py-1 bg-red-600 text-white">
+    <span className="absolute top-4 right-4 font-mono-nu text-[12px] font-black uppercase tracking-wider px-2.5 py-1 bg-red-600 text-white">
       D-{days}
     </span>
   );
@@ -139,10 +139,10 @@ function ProgressBar({ total, completed }: { total: number; completed: number })
   return (
     <div className="mb-3">
       <div className="flex items-center justify-between mb-1">
-        <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">
+        <span className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">
           마일스톤
         </span>
-        <span className="font-mono-nu text-[9px] font-bold text-nu-ink">
+        <span className="font-mono-nu text-[11px] font-bold text-nu-ink">
           {completed}/{total} ({pct}%)
         </span>
       </div>
@@ -236,7 +236,7 @@ export function ProjectsGrid({
               <button
                 key={f.key}
                 onClick={() => setCatFilter(f.key)}
-                className={`font-mono-nu text-[11px] font-bold tracking-[0.08em] uppercase px-5 py-2.5 border-[1.5px] transition-colors ${
+                className={`font-mono-nu text-[13px] font-bold tracking-[0.08em] uppercase px-5 py-2.5 border-[1.5px] transition-colors ${
                   catFilter === f.key
                     ? "bg-nu-ink border-nu-ink text-nu-paper"
                     : "bg-transparent border-nu-ink/15 text-nu-graphite hover:border-nu-ink/40"
@@ -254,7 +254,7 @@ export function ProjectsGrid({
               <button
                 key={s.key}
                 onClick={() => setSortKey(s.key)}
-                className={`font-mono-nu text-[9px] font-bold tracking-[0.08em] uppercase px-3 py-1.5 border transition-colors ${
+                className={`font-mono-nu text-[11px] font-bold tracking-[0.08em] uppercase px-3 py-1.5 border transition-colors ${
                   sortKey === s.key
                     ? "bg-nu-graphite border-nu-graphite text-nu-paper"
                     : "bg-transparent border-nu-ink/10 text-nu-muted hover:border-nu-ink/30"
@@ -300,7 +300,7 @@ export function ProjectsGrid({
           <button
             key={f.key}
             onClick={() => setStatusFilter(f.key)}
-            className={`font-mono-nu text-[10px] tracking-[0.08em] uppercase px-4 py-2 border transition-colors ${
+            className={`font-mono-nu text-[12px] tracking-[0.08em] uppercase px-4 py-2 border transition-colors ${
               statusFilter === f.key
                 ? "bg-nu-graphite border-nu-graphite text-nu-paper"
                 : "bg-transparent border-nu-ink/10 text-nu-muted hover:border-nu-ink/30"
@@ -312,7 +312,7 @@ export function ProjectsGrid({
       </div>
 
       {/* Results count */}
-      <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-6">
+      <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-6">
         {filtered.length}개의 볼트
       </p>
 
@@ -354,13 +354,13 @@ export function ProjectsGrid({
                   )}
                   <div className="absolute top-4 left-4 flex gap-2">
                     {p.user_role && (
-                      <span className="font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 bg-green-600 text-white inline-flex items-center gap-1">
+                      <span className="font-mono-nu text-[11px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 bg-green-600 text-white inline-flex items-center gap-1">
                         <Check size={9} /> {p.user_role === "lead" ? "리드" : "참여중"}
                       </span>
                     )}
                     {p.category && (
                       <span
-                        className={`font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 text-white ${style.bg}`}
+                        className={`font-mono-nu text-[11px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 text-white ${style.bg}`}
                       >
                         {p.category}
                       </span>
@@ -397,7 +397,7 @@ export function ProjectsGrid({
                   {(p.start_date || p.end_date) && (
                     <div className="flex items-center gap-1.5 mb-3 text-xs text-nu-muted">
                       <Calendar size={12} />
-                      <span className="font-mono-nu text-[10px]">
+                      <span className="font-mono-nu text-[12px]">
                         {formatDateRange(p.start_date, p.end_date)}
                       </span>
                     </div>
@@ -407,14 +407,14 @@ export function ProjectsGrid({
                   {/* Footer info */}
                   <div className="flex items-center justify-between pt-3 border-t border-nu-ink/[0.06]">
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-nu-cream flex items-center justify-center font-head text-[10px] font-bold">
+                      <div className="w-6 h-6 rounded-full bg-nu-cream flex items-center justify-center font-head text-[12px] font-bold">
                         {p.creator_nickname.charAt(0).toUpperCase()}
                       </div>
-                      <span className="font-mono-nu text-[10px] text-nu-muted">
+                      <span className="font-mono-nu text-[12px] text-nu-muted">
                         {p.creator_nickname}
                       </span>
                     </div>
-                    <span className="font-mono-nu text-[10px] text-nu-muted flex items-center gap-1">
+                    <span className="font-mono-nu text-[12px] text-nu-muted flex items-center gap-1">
                       <Users size={10} /> {p.member_count}
                     </span>
                   </div>
@@ -458,20 +458,20 @@ export function ProjectsGrid({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     {p.user_role && (
-                      <span className="font-mono-nu text-[8px] font-bold uppercase tracking-[0.15em] px-2 py-0.5 bg-green-600 text-white inline-flex items-center gap-1">
+                      <span className="font-mono-nu text-[10px] font-bold uppercase tracking-[0.15em] px-2 py-0.5 bg-green-600 text-white inline-flex items-center gap-1">
                         <Check size={8} /> {p.user_role === "lead" ? "리드" : "참여중"}
                       </span>
                     )}
                     {p.category && (
                       <span
-                        className={`font-mono-nu text-[8px] font-bold uppercase tracking-[0.15em] px-2 py-0.5 text-white ${style.bg}`}
+                        className={`font-mono-nu text-[10px] font-bold uppercase tracking-[0.15em] px-2 py-0.5 text-white ${style.bg}`}
                       >
                         {p.category}
                       </span>
                     )}
                     <StatusBadge status={p.status} />
                     {showDeadline && (
-                      <span className="font-mono-nu text-[8px] font-black uppercase tracking-wider px-2 py-0.5 bg-red-600 text-white">
+                      <span className="font-mono-nu text-[10px] font-black uppercase tracking-wider px-2 py-0.5 bg-red-600 text-white">
                         D-{daysLeft}
                       </span>
                     )}
@@ -485,20 +485,20 @@ export function ProjectsGrid({
                   </div>
                   <p className="text-xs text-nu-gray truncate">{p.description}</p>
                   <div className="flex items-center gap-4 mt-2 flex-wrap">
-                    <span className="font-mono-nu text-[10px] text-nu-muted">
+                    <span className="font-mono-nu text-[12px] text-nu-muted">
                       by {p.creator_nickname}
                     </span>
-                    <span className="font-mono-nu text-[10px] text-nu-muted flex items-center gap-1">
+                    <span className="font-mono-nu text-[12px] text-nu-muted flex items-center gap-1">
                       <Users size={10} /> {p.member_count}
                     </span>
                     {(p.start_date || p.end_date) && (
-                      <span className="font-mono-nu text-[10px] text-nu-muted flex items-center gap-1">
+                      <span className="font-mono-nu text-[12px] text-nu-muted flex items-center gap-1">
                         <Calendar size={10} />{" "}
                         {formatDateRange(p.start_date, p.end_date)}
                       </span>
                     )}
                     {p.milestone_total != null && p.milestone_total > 0 && (
-                      <span className="font-mono-nu text-[10px] text-nu-muted">
+                      <span className="font-mono-nu text-[12px] text-nu-muted">
                         마일스톤 {p.milestone_completed ?? 0}/{p.milestone_total}
                       </span>
                     )}
@@ -507,7 +507,7 @@ export function ProjectsGrid({
                 {/* Action */}
                 <Link
                   href={userId ? `/projects/${p.id}` : "/login"}
-                  className="shrink-0 font-mono-nu text-[10px] font-bold uppercase tracking-[0.1em] px-5 py-2.5 border border-nu-ink/15 text-nu-graphite hover:bg-nu-ink hover:text-nu-paper transition-colors no-underline inline-flex items-center gap-1"
+                  className="shrink-0 font-mono-nu text-[12px] font-bold uppercase tracking-[0.1em] px-5 py-2.5 border border-nu-ink/15 text-nu-graphite hover:bg-nu-ink hover:text-nu-paper transition-colors no-underline inline-flex items-center gap-1"
                   prefetch={true}
                 >
                   보기 <ArrowRight size={12} />
@@ -529,13 +529,13 @@ export function ProjectsGrid({
           <h3 className="font-head text-lg font-extrabold text-nu-ink mb-2">
             볼트를 찾을 수 없습니다
           </h3>
-          <p className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest mb-6">
+          <p className="font-mono-nu text-[13px] text-nu-muted uppercase tracking-widest mb-6">
             필터를 변경하거나 새 볼트를 만들어보세요
           </p>
           {hasActiveFilters && (
             <button
               onClick={resetFilters}
-              className="font-mono-nu text-[11px] font-bold uppercase tracking-[0.08em] px-6 py-2.5 border-[2px] border-nu-ink text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-colors inline-flex items-center gap-2"
+              className="font-mono-nu text-[13px] font-bold uppercase tracking-[0.08em] px-6 py-2.5 border-[2px] border-nu-ink text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-colors inline-flex items-center gap-2"
             >
               <RotateCcw size={12} /> 필터 초기화
             </button>

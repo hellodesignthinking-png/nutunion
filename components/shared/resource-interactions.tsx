@@ -140,11 +140,11 @@ export function ResourceInteractions({
     return (
       <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
         <button onClick={toggleLike}
-          className={`flex items-center gap-1 text-[11px] transition-colors ${liked ? "text-red-500" : "text-nu-muted hover:text-red-400"}`}>
+          className={`flex items-center gap-1 text-[13px] transition-colors ${liked ? "text-red-500" : "text-nu-muted hover:text-red-400"}`}>
           <Heart size={13} fill={liked ? "currentColor" : "none"} /> {likeCount > 0 && likeCount}
         </button>
         <button onClick={() => { setShowComments(!showComments); if (!showComments) loadComments(); }}
-          className="flex items-center gap-1 text-[11px] text-nu-muted hover:text-nu-ink transition-colors">
+          className="flex items-center gap-1 text-[13px] text-nu-muted hover:text-nu-ink transition-colors">
           <MessageCircle size={13} /> {commentCount > 0 && commentCount}
         </button>
       </div>
@@ -175,17 +175,17 @@ export function ResourceInteractions({
           {comments.map((c) => (
             <div key={c.id}>
               <div className="flex items-start gap-2">
-                <div className="w-6 h-6 rounded-full bg-nu-cream flex items-center justify-center font-head text-[9px] font-bold shrink-0 mt-0.5">
+                <div className="w-6 h-6 rounded-full bg-nu-cream flex items-center justify-center font-head text-[11px] font-bold shrink-0 mt-0.5">
                   {(c.author?.nickname || "U").charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold">{c.author?.nickname}</span>
-                    <span className="text-[9px] text-nu-muted">{timeAgo(c.created_at)}</span>
+                    <span className="text-[13px] font-bold">{c.author?.nickname}</span>
+                    <span className="text-[11px] text-nu-muted">{timeAgo(c.created_at)}</span>
                   </div>
-                  <p className="text-[11px] text-nu-graphite mt-0.5 leading-relaxed">{c.content}</p>
+                  <p className="text-[13px] text-nu-graphite mt-0.5 leading-relaxed">{c.content}</p>
                   <button onClick={() => setReplyTo(replyTo === c.id ? null : c.id)}
-                    className="text-[9px] text-nu-muted hover:text-nu-pink mt-1 font-medium">
+                    className="text-[11px] text-nu-muted hover:text-nu-pink mt-1 font-medium">
                     답글
                   </button>
                 </div>
@@ -196,15 +196,15 @@ export function ResourceInteractions({
                 <div className="ml-8 mt-2 space-y-2 border-l-2 border-nu-ink/5 pl-3">
                   {c.replies.map((r) => (
                     <div key={r.id} className="flex items-start gap-2">
-                      <div className="w-5 h-5 rounded-full bg-nu-cream flex items-center justify-center font-head text-[8px] font-bold shrink-0 mt-0.5">
+                      <div className="w-5 h-5 rounded-full bg-nu-cream flex items-center justify-center font-head text-[10px] font-bold shrink-0 mt-0.5">
                         {(r.author?.nickname || "U").charAt(0).toUpperCase()}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold">{r.author?.nickname}</span>
-                          <span className="text-[8px] text-nu-muted">{timeAgo(r.created_at)}</span>
+                          <span className="text-[12px] font-bold">{r.author?.nickname}</span>
+                          <span className="text-[10px] text-nu-muted">{timeAgo(r.created_at)}</span>
                         </div>
-                        <p className="text-[10px] text-nu-graphite mt-0.5">{r.content}</p>
+                        <p className="text-[12px] text-nu-graphite mt-0.5">{r.content}</p>
                       </div>
                     </div>
                   ))}
@@ -216,9 +216,9 @@ export function ResourceInteractions({
                 <div className="ml-8 mt-2 flex gap-2">
                   <input value={replyText} onChange={(e) => setReplyText(e.target.value)}
                     placeholder="답글 입력..." onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); postComment(replyText, c.id); } }}
-                    className="flex-1 h-7 px-2 bg-nu-cream/30 border border-nu-ink/10 text-[10px] focus:outline-none focus:border-nu-pink" />
+                    className="flex-1 h-7 px-2 bg-nu-cream/30 border border-nu-ink/10 text-[12px] focus:outline-none focus:border-nu-pink" />
                   <button onClick={() => postComment(replyText, c.id)} disabled={posting || !replyText.trim()}
-                    className="px-2 h-7 bg-nu-ink text-white text-[9px] disabled:opacity-40"><Send size={10} /></button>
+                    className="px-2 h-7 bg-nu-ink text-white text-[11px] disabled:opacity-40"><Send size={10} /></button>
                 </div>
               )}
             </div>
@@ -231,14 +231,14 @@ export function ResourceInteractions({
                 placeholder="댓글 입력..." onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); postComment(newComment); } }}
                 className="flex-1 h-8 px-3 bg-nu-cream/20 border border-nu-ink/10 text-xs focus:outline-none focus:border-nu-pink" />
               <button onClick={() => postComment(newComment)} disabled={posting || !newComment.trim()}
-                className="px-3 h-8 bg-nu-pink text-white font-mono-nu text-[9px] uppercase tracking-widest disabled:opacity-40 flex items-center gap-1">
+                className="px-3 h-8 bg-nu-pink text-white font-mono-nu text-[11px] uppercase tracking-widest disabled:opacity-40 flex items-center gap-1">
                 {posting ? <Loader2 size={10} className="animate-spin" /> : <Send size={10} />} 등록
               </button>
             </div>
           )}
 
           {comments.length === 0 && !userId && (
-            <p className="text-[10px] text-nu-muted text-center py-2">로그인하면 댓글을 남길 수 있습니다</p>
+            <p className="text-[12px] text-nu-muted text-center py-2">로그인하면 댓글을 남길 수 있습니다</p>
           )}
         </div>
       )}

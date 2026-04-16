@@ -207,7 +207,7 @@ export default function ApplicationList({
             <button
               key={f.value}
               onClick={() => setFilter(f.value)}
-              className={`font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 border transition-colors ${
+              className={`font-mono-nu text-[12px] uppercase tracking-widest px-3 py-1.5 border transition-colors ${
                 filter === f.value
                   ? "bg-nu-ink text-nu-paper border-nu-ink"
                   : "border-nu-ink/[0.12] text-nu-gray hover:border-nu-ink/30"
@@ -268,14 +268,14 @@ export default function ApplicationList({
                       <p className="font-head font-bold text-nu-ink text-sm">
                         {applicant?.nickname ?? applicant?.name ?? "알 수 없음"}
                       </p>
-                      <p className="text-[11px] text-nu-muted">
+                      <p className="text-[13px] text-nu-muted">
                         {applicant?.email}
                       </p>
                     </div>
                   </div>
 
                   <span
-                    className={`font-mono-nu text-[10px] uppercase tracking-widest px-2.5 py-1 border-[2px] flex items-center gap-1 ${badge.className}`}
+                    className={`font-mono-nu text-[12px] uppercase tracking-widest px-2.5 py-1 border-[2px] flex items-center gap-1 ${badge.className}`}
                   >
                     {BadgeIcon && <BadgeIcon size={10} />}
                     {badge.label}
@@ -293,7 +293,7 @@ export default function ApplicationList({
                 {app.status === "rejected" &&
                   (app as any).rejection_reason && (
                     <div className="bg-red-50/50 border border-red-200/50 px-4 py-3">
-                      <p className="font-mono-nu text-[9px] uppercase tracking-widest text-red-400 mb-1">
+                      <p className="font-mono-nu text-[11px] uppercase tracking-widest text-red-400 mb-1">
                         거절 사유
                       </p>
                       <p className="text-xs text-red-700 leading-relaxed">
@@ -303,7 +303,7 @@ export default function ApplicationList({
                   )}
 
                 {/* Meta */}
-                <div className="flex flex-wrap items-center gap-4 text-[11px] text-nu-muted">
+                <div className="flex flex-wrap items-center gap-4 text-[13px] text-nu-muted">
                   {app.portfolio_url && (
                     <a
                       href={app.portfolio_url}
@@ -340,7 +340,7 @@ export default function ApplicationList({
                     {/* Rejection reason inline form */}
                     {isRejecting && (
                       <div className="bg-red-50/30 border border-red-200/40 p-4 space-y-3">
-                        <label className="font-mono-nu text-[10px] uppercase tracking-widest text-red-500 block">
+                        <label className="font-mono-nu text-[12px] uppercase tracking-widest text-red-500 block">
                           거절 사유 입력 (선택)
                         </label>
                         <textarea
@@ -361,7 +361,7 @@ export default function ApplicationList({
                               )
                             }
                             disabled={processing === app.id}
-                            className="flex items-center gap-1.5 font-mono-nu text-[10px] font-bold uppercase tracking-[0.1em] px-4 py-2 bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+                            className="flex items-center gap-1.5 font-mono-nu text-[12px] font-bold uppercase tracking-[0.1em] px-4 py-2 bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
                           >
                             {processing === app.id ? (
                               <Loader2 size={12} className="animate-spin" />
@@ -375,7 +375,7 @@ export default function ApplicationList({
                               setRejectingId(null);
                               setRejectionReason("");
                             }}
-                            className="flex items-center gap-1.5 font-mono-nu text-[10px] font-bold uppercase tracking-[0.1em] px-4 py-2 border border-nu-ink/[0.12] text-nu-gray hover:bg-nu-cream/30 transition-colors"
+                            className="flex items-center gap-1.5 font-mono-nu text-[12px] font-bold uppercase tracking-[0.1em] px-4 py-2 border border-nu-ink/[0.12] text-nu-gray hover:bg-nu-cream/30 transition-colors"
                           >
                             <X size={12} />
                             취소
@@ -392,7 +392,7 @@ export default function ApplicationList({
                             handleAction(app.id, "approved", app.applicant_id)
                           }
                           disabled={processing === app.id}
-                          className="flex items-center gap-1.5 font-mono-nu text-[10px] font-bold uppercase tracking-[0.1em] px-4 py-2 bg-nu-ink text-nu-paper hover:bg-nu-ink/90 transition-colors disabled:opacity-50"
+                          className="flex items-center gap-1.5 font-mono-nu text-[12px] font-bold uppercase tracking-[0.1em] px-4 py-2 bg-nu-ink text-nu-paper hover:bg-nu-ink/90 transition-colors disabled:opacity-50"
                         >
                           {processing === app.id ? (
                             <Loader2 size={12} className="animate-spin" />
@@ -404,7 +404,7 @@ export default function ApplicationList({
                         <button
                           onClick={() => setRejectingId(app.id)}
                           disabled={processing === app.id}
-                          className="flex items-center gap-1.5 font-mono-nu text-[10px] font-bold uppercase tracking-[0.1em] px-4 py-2 border-[2px] border-nu-red/30 text-nu-red hover:bg-nu-red/5 transition-colors disabled:opacity-50"
+                          className="flex items-center gap-1.5 font-mono-nu text-[12px] font-bold uppercase tracking-[0.1em] px-4 py-2 border-[2px] border-nu-red/30 text-nu-red hover:bg-nu-red/5 transition-colors disabled:opacity-50"
                         >
                           <XCircle size={12} />
                           거절

@@ -100,7 +100,7 @@ export default async function PublicWikiPage({ params }: { params: Promise<{ slu
         <div className="absolute -left-32 -bottom-32 w-96 h-96 bg-nu-blue/[0.03] rounded-full blur-3xl" />
 
         <div className="max-w-5xl mx-auto px-6 md:px-8 py-10 relative z-10">
-          <div className="flex items-center gap-2 font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest mb-6">
+          <div className="flex items-center gap-2 font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest mb-6">
             <Link href="/" className="hover:text-nu-ink no-underline transition-colors">NutUnion</Link>
             <ChevronRight size={10} />
             <span>Public Wiki</span>
@@ -116,7 +116,7 @@ export default async function PublicWikiPage({ params }: { params: Promise<{ slu
               <h1 className="font-head text-3xl md:text-4xl font-extrabold text-nu-ink tracking-tight leading-tight">
                 {topic.name}
               </h1>
-              <p className="font-mono-nu text-[10px] text-nu-pink uppercase tracking-[0.2em] font-bold mt-0.5">
+              <p className="font-mono-nu text-[12px] text-nu-pink uppercase tracking-[0.2em] font-bold mt-0.5">
                 Open Knowledge Base
               </p>
             </div>
@@ -129,21 +129,21 @@ export default async function PublicWikiPage({ params }: { params: Promise<{ slu
           {/* Stats bar */}
           <div className="flex items-center gap-5 mt-6 flex-wrap">
             {group && (
-              <span className="flex items-center gap-1.5 font-mono-nu text-[9px] text-nu-muted">
+              <span className="flex items-center gap-1.5 font-mono-nu text-[11px] text-nu-muted">
                 <Users size={11} /> {group.name}
               </span>
             )}
-            <span className="flex items-center gap-1.5 font-mono-nu text-[9px] text-nu-muted">
+            <span className="flex items-center gap-1.5 font-mono-nu text-[11px] text-nu-muted">
               <FileText size={11} /> {pageList.length} pages
             </span>
-            <span className="flex items-center gap-1.5 font-mono-nu text-[9px] text-nu-muted">
+            <span className="flex items-center gap-1.5 font-mono-nu text-[11px] text-nu-muted">
               <Clock size={11} /> {readingMinutes}분 읽기
             </span>
-            <span className="flex items-center gap-1.5 font-mono-nu text-[9px] text-nu-muted">
+            <span className="flex items-center gap-1.5 font-mono-nu text-[11px] text-nu-muted">
               <Users size={11} /> {uniqueContributors.length}명 기여
             </span>
             {topic.published_at && (
-              <span className="font-mono-nu text-[9px] text-nu-muted">
+              <span className="font-mono-nu text-[11px] text-nu-muted">
                 Published {new Date(topic.published_at).toLocaleDateString("ko")}
               </span>
             )}
@@ -161,7 +161,7 @@ export default async function PublicWikiPage({ params }: { params: Promise<{ slu
               {/* TOC */}
               {pageList.length > 1 && (
                 <nav className="bg-white border-[2px] border-nu-ink/[0.08] p-4">
-                  <h3 className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-muted mb-3 flex items-center gap-1.5">
+                  <h3 className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-muted mb-3 flex items-center gap-1.5">
                     <BookOpen size={11} /> 목차
                   </h3>
                   <ul className="space-y-1.5">
@@ -171,7 +171,7 @@ export default async function PublicWikiPage({ params }: { params: Promise<{ slu
                           href={`#page-${page.id}`}
                           className="text-xs text-nu-graphite hover:text-nu-pink no-underline transition-colors flex items-center gap-2"
                         >
-                          <span className="font-mono-nu text-[8px] text-nu-muted/50 w-4">{String(i + 1).padStart(2, "0")}</span>
+                          <span className="font-mono-nu text-[10px] text-nu-muted/50 w-4">{String(i + 1).padStart(2, "0")}</span>
                           <span className="truncate">{page.title}</span>
                         </a>
                       </li>
@@ -183,12 +183,12 @@ export default async function PublicWikiPage({ params }: { params: Promise<{ slu
               {/* Contributors */}
               {uniqueContributors.length > 0 && (
                 <div className="bg-white border-[2px] border-nu-ink/[0.08] p-4">
-                  <h3 className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-muted mb-3 flex items-center gap-1.5">
+                  <h3 className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-muted mb-3 flex items-center gap-1.5">
                     <Users size={11} /> 기여자
                   </h3>
                   <div className="flex flex-wrap gap-1.5">
                     {uniqueContributors.map(([uid, name]) => (
-                      <span key={uid} className="font-mono-nu text-[9px] px-2 py-1 bg-nu-cream border border-nu-ink/5 text-nu-ink">
+                      <span key={uid} className="font-mono-nu text-[11px] px-2 py-1 bg-nu-cream border border-nu-ink/5 text-nu-ink">
                         {name}
                       </span>
                     ))}
@@ -198,23 +198,23 @@ export default async function PublicWikiPage({ params }: { params: Promise<{ slu
 
               {/* Stats */}
               <div className="bg-nu-ink text-white p-4 border-[2px] border-nu-ink">
-                <h3 className="font-mono-nu text-[8px] font-bold uppercase tracking-widest text-white/40 mb-3">
+                <h3 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-white/40 mb-3">
                   Knowledge Stats
                 </h3>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-white/60">총 문자수</span>
-                    <span className="font-mono-nu text-[10px] font-bold text-nu-pink">{totalChars.toLocaleString()}</span>
+                    <span className="text-[12px] text-white/60">총 문자수</span>
+                    <span className="font-mono-nu text-[12px] font-bold text-nu-pink">{totalChars.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-white/60">총 버전</span>
-                    <span className="font-mono-nu text-[10px] font-bold text-nu-blue">
+                    <span className="text-[12px] text-white/60">총 버전</span>
+                    <span className="font-mono-nu text-[12px] font-bold text-nu-blue">
                       {pageList.reduce((sum: number, p: any) => sum + p.version, 0)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-white/60">최근 업데이트</span>
-                    <span className="font-mono-nu text-[10px] font-bold text-nu-amber">
+                    <span className="text-[12px] text-white/60">최근 업데이트</span>
+                    <span className="font-mono-nu text-[12px] font-bold text-nu-amber">
                       {pageList[0] ? new Date(pageList[0].updated_at).toLocaleDateString("ko", { month: "short", day: "numeric" }) : "-"}
                     </span>
                   </div>
@@ -237,12 +237,12 @@ export default async function PublicWikiPage({ params }: { params: Promise<{ slu
                           {page.title}
                         </h2>
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest bg-nu-cream px-2 py-1 flex items-center gap-1">
+                          <span className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest bg-nu-cream px-2 py-1 flex items-center gap-1">
                             <GitBranch size={8} /> v{page.version}
                           </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 mt-2 font-mono-nu text-[8px] text-nu-muted">
+                      <div className="flex items-center gap-3 mt-2 font-mono-nu text-[10px] text-nu-muted">
                         <span>by {page.author?.nickname || "Unknown"}</span>
                         <span>·</span>
                         <span>{new Date(page.updated_at).toLocaleDateString("ko", { year: "numeric", month: "short", day: "numeric" })}</span>
@@ -271,7 +271,7 @@ export default async function PublicWikiPage({ params }: { params: Promise<{ slu
 
         {/* Footer */}
         <div className="mt-16 pt-8 border-t border-nu-ink/10 text-center">
-          <div className="inline-flex items-center gap-2 font-mono-nu text-[9px] text-nu-muted/40 uppercase tracking-widest">
+          <div className="inline-flex items-center gap-2 font-mono-nu text-[11px] text-nu-muted/40 uppercase tracking-widest">
             <Brain size={12} />
             Powered by NutUnion Living Wiki
           </div>

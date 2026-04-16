@@ -155,7 +155,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
         )}
 
         <div className="max-w-6xl mx-auto px-8 py-10 relative z-10 w-full">
-          <div className="flex items-center gap-1 font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest mb-6">
+          <div className="flex items-center gap-1 font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest mb-6">
             <Link href="/groups" className="hover:text-nu-ink transition-colors no-underline">너트</Link>
             <ChevronRight size={12} />
             <span className="text-nu-ink">{group.name}</span>
@@ -164,12 +164,12 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-6">
-                <span className={`inline-block font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-3 py-1 text-white ${colors.bg} -rotate-1 shadow-lg shadow-black/10`}>
+                <span className={`inline-block font-mono-nu text-[11px] font-bold uppercase tracking-[0.15em] px-3 py-1 text-white ${colors.bg} -rotate-1 shadow-lg shadow-black/10`}>
                   {group.category}
                 </span>
                 {/* Category pill from constants */}
                 {categoryMeta && (
-                  <span className={`inline-block font-mono-nu text-[9px] font-bold uppercase tracking-[0.12em] px-2.5 py-1 border-[2px] ${categoryMeta.border} ${categoryMeta.text} ${categoryMeta.light}`}>
+                  <span className={`inline-block font-mono-nu text-[11px] font-bold uppercase tracking-[0.12em] px-2.5 py-1 border-[2px] ${categoryMeta.border} ${categoryMeta.text} ${categoryMeta.light}`}>
                     {categoryMeta.label}
                   </span>
                 )}
@@ -180,7 +180,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
               <p className="text-nu-graphite max-w-xl leading-relaxed mb-6 text-sm font-medium">
                 {group.description}
               </p>
-              <div className="flex flex-wrap items-center gap-6 font-mono-nu text-[11px]">
+              <div className="flex flex-wrap items-center gap-6 font-mono-nu text-[13px]">
                  <span className="flex items-center gap-2 text-nu-muted">
                    <span className="w-1.5 h-1.5 rounded-full bg-nu-pink animate-pulse" />
                    호스트: <span className="text-nu-ink font-bold">{groupData.host?.nickname || "—"}</span>
@@ -226,7 +226,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
                 className="flex items-center justify-center gap-2 px-4 py-3 bg-nu-white border-[2px] border-nu-ink/10 hover:border-nu-pink/40 hover:-translate-y-0.5 transition-all no-underline group"
               >
                 <span className="text-nu-muted group-hover:text-nu-pink transition-colors">{action.icon}</span>
-                <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-graphite group-hover:text-nu-ink transition-colors">
+                <span className="font-mono-nu text-[13px] font-bold uppercase tracking-widest text-nu-graphite group-hover:text-nu-ink transition-colors">
                   {action.label}
                 </span>
               </Link>
@@ -350,7 +350,7 @@ async function GroupStatsSection({ id, colors }: { id: string; colors: any }) {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
           </span>
-          <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-green-600">활동중</span>
+          <span className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-green-600">활동중</span>
         </div>
       )}
 
@@ -361,11 +361,11 @@ async function GroupStatsSection({ id, colors }: { id: string; colors: any }) {
             <p className="font-head text-3xl font-extrabold text-nu-ink leading-none">
               {(stat.value || 0).toLocaleString()}
             </p>
-            <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
+            <p className="font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest">
               {stat.label}
             </p>
             {stat.sub && (
-              <p className="font-mono-nu text-[9px] text-nu-muted/70 uppercase tracking-wider">
+              <p className="font-mono-nu text-[11px] text-nu-muted/70 uppercase tracking-wider">
                 {stat.sub}
               </p>
             )}
@@ -408,7 +408,7 @@ async function GroupUpcomingSection({ id, colors, isHost, isMember, userId }: an
             <Calendar size={18} className={colors.text} /> 다가오는 일정
           </h2>
           {(isMember || isHost) && (
-            <Link href={`/groups/${id}/schedule`} className={`font-mono-nu text-[11px] uppercase tracking-widest ${colors.text} no-underline hover:underline flex items-center gap-1`}>
+            <Link href={`/groups/${id}/schedule`} className={`font-mono-nu text-[13px] uppercase tracking-widest ${colors.text} no-underline hover:underline flex items-center gap-1`}>
               캘린더 <ChevronRight size={12} />
             </Link>
           )}
@@ -421,12 +421,12 @@ async function GroupUpcomingSection({ id, colors, isHost, isMember, userId }: an
             </div>
             <div>
               <p className="font-head text-sm font-bold text-nu-graphite mb-1">예정된 일정이 없습니다</p>
-              <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">아직 등록된 미팅이나 이벤트가 없어요</p>
+              <p className="font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest">아직 등록된 미팅이나 이벤트가 없어요</p>
             </div>
             {(isMember || isHost) && (
               <Link
                 href={`/groups/${id}/meetings/create`}
-                className={`inline-flex items-center gap-2 px-5 py-2.5 border-[2px] border-nu-ink text-nu-ink font-mono-nu text-[11px] font-bold uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper transition-all hover:-translate-y-0.5`}
+                className={`inline-flex items-center gap-2 px-5 py-2.5 border-[2px] border-nu-ink text-nu-ink font-mono-nu text-[13px] font-bold uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper transition-all hover:-translate-y-0.5`}
               >
                 <Plus size={14} /> 미팅 만들기
               </Link>
@@ -445,7 +445,7 @@ async function GroupUpcomingSection({ id, colors, isHost, isMember, userId }: an
                       <span className={`font-head text-lg font-extrabold leading-none ${isEvent ? "text-nu-pink" : "text-nu-blue"}`}>
                         {date.getDate()}
                       </span>
-                      <span className={`font-mono-nu text-[9px] uppercase ${isEvent ? "text-nu-pink/70" : "text-nu-blue/70"}`}>
+                      <span className={`font-mono-nu text-[11px] uppercase ${isEvent ? "text-nu-pink/70" : "text-nu-blue/70"}`}>
                         {date.toLocaleDateString("ko", { month: "short" })}
                       </span>
                     </div>
@@ -454,10 +454,10 @@ async function GroupUpcomingSection({ id, colors, isHost, isMember, userId }: an
                         <h3 className="font-head text-sm font-bold text-nu-ink truncate group-hover:text-nu-pink transition-colors">
                           {item.title}
                         </h3>
-                        {!isEvent && <span className="font-mono-nu text-[8px] uppercase tracking-wider px-1.5 py-0.5 bg-nu-blue/10 text-nu-blue shrink-0">미팅</span>}
+                        {!isEvent && <span className="font-mono-nu text-[10px] uppercase tracking-wider px-1.5 py-0.5 bg-nu-blue/10 text-nu-blue shrink-0">미팅</span>}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-nu-muted">
-                        <span className="font-mono-nu text-[10px] font-bold text-nu-graphite">{relativeLabel}</span>
+                        <span className="font-mono-nu text-[12px] font-bold text-nu-graphite">{relativeLabel}</span>
                         <span className="flex items-center gap-1"><Clock size={11} /> {date.toLocaleTimeString("ko", { hour: "2-digit", minute: "2-digit", hour12: false })}</span>
                         {item.location && <span className="flex items-center gap-1"><MapPin size={11} /> {item.location}</span>}
                       </div>
@@ -491,7 +491,7 @@ async function GroupUpcomingSection({ id, colors, isHost, isMember, userId }: an
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-head text-sm font-bold text-nu-ink group-hover:text-nu-amber transition-colors mb-1">{m.title}</p>
-                    <p className="font-mono-nu text-[10px] text-nu-muted">{new Date(m.scheduled_at).toLocaleDateString("ko", { year: "numeric", month: "long", day: "numeric" })}</p>
+                    <p className="font-mono-nu text-[12px] text-nu-muted">{new Date(m.scheduled_at).toLocaleDateString("ko", { year: "numeric", month: "long", day: "numeric" })}</p>
                   </div>
                 </div>
               </Link>
@@ -573,8 +573,8 @@ async function GroupSidebarSections({ id, colors, isHost, isMember, group, userI
               >
                 <span className="w-8 h-8 bg-[#FEE500] flex items-center justify-center font-head text-xs font-extrabold text-[#3C1E1E]">K</span>
                 <div className="flex-1 min-w-0">
-                  <p className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-ink">카카오톡 채팅</p>
-                  <p className="font-mono-nu text-[9px] text-nu-muted truncate">{group.kakao_chat_url}</p>
+                  <p className="font-mono-nu text-[13px] font-bold uppercase tracking-widest text-nu-ink">카카오톡 채팅</p>
+                  <p className="font-mono-nu text-[11px] text-nu-muted truncate">{group.kakao_chat_url}</p>
                 </div>
                 <ExternalLink size={14} className="text-nu-muted shrink-0" />
               </a>
@@ -588,8 +588,8 @@ async function GroupSidebarSections({ id, colors, isHost, isMember, group, userI
               >
                 <span className="w-8 h-8 bg-[#4285F4] flex items-center justify-center font-head text-xs font-extrabold text-white">G</span>
                 <div className="flex-1 min-w-0">
-                  <p className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-ink">구글 드라이브</p>
-                  <p className="font-mono-nu text-[9px] text-nu-muted truncate">{group.google_drive_url}</p>
+                  <p className="font-mono-nu text-[13px] font-bold uppercase tracking-widest text-nu-ink">구글 드라이브</p>
+                  <p className="font-mono-nu text-[11px] text-nu-muted truncate">{group.google_drive_url}</p>
                 </div>
                 <ExternalLink size={14} className="text-nu-muted shrink-0" />
               </a>
@@ -604,7 +604,7 @@ async function GroupSidebarSections({ id, colors, isHost, isMember, group, userI
             className="flex items-center gap-2 px-4 py-3 border-[2px] border-dashed border-nu-ink/10 text-nu-muted hover:border-nu-ink/30 hover:text-nu-graphite transition-all no-underline mb-4"
           >
             <Link2 size={14} />
-            <span className="font-mono-nu text-[10px] uppercase tracking-widest">외부 도구 연결하기</span>
+            <span className="font-mono-nu text-[12px] uppercase tracking-widest">외부 도구 연결하기</span>
           </Link>
         )}
 
@@ -620,7 +620,7 @@ async function GroupSidebarSections({ id, colors, isHost, isMember, group, userI
           {isHost && (
             <Link
               href={`/groups/${id}/settings`}
-              className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted hover:text-nu-pink transition-colors no-underline flex items-center gap-1"
+              className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted hover:text-nu-pink transition-colors no-underline flex items-center gap-1"
             >
               <UserPlus size={12} /> 와셔 초대
             </Link>
@@ -644,17 +644,17 @@ async function GroupSidebarSections({ id, colors, isHost, isMember, group, userI
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-nu-ink truncate">{m.profile?.nickname}</p>
                   {memberRole === "host" && (
-                    <span className="inline-flex items-center gap-1 font-mono-nu text-[9px] font-bold uppercase tracking-wider text-nu-amber">
+                    <span className="inline-flex items-center gap-1 font-mono-nu text-[11px] font-bold uppercase tracking-wider text-nu-amber">
                       <Crown size={10} /> 호스트
                     </span>
                   )}
                   {memberRole === "manager" && (
-                    <span className="inline-flex items-center gap-1 font-mono-nu text-[9px] font-bold uppercase tracking-wider text-nu-blue">
+                    <span className="inline-flex items-center gap-1 font-mono-nu text-[11px] font-bold uppercase tracking-wider text-nu-blue">
                       <Shield size={10} /> 매니저
                     </span>
                   )}
                   {memberRole !== "host" && memberRole !== "manager" && (
-                    <p className="font-mono-nu text-[10px] text-nu-muted">와셔</p>
+                    <p className="font-mono-nu text-[12px] text-nu-muted">와셔</p>
                   )}
                 </div>
               </div>
@@ -664,7 +664,7 @@ async function GroupSidebarSections({ id, colors, isHost, isMember, group, userI
         {hasMoreMembers && (
           <Link
             href={`/groups/${id}/settings`}
-            className="block mt-2 py-2.5 text-center font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-muted hover:text-nu-ink border-[2px] border-dashed border-nu-ink/10 hover:border-nu-ink/30 transition-all no-underline"
+            className="block mt-2 py-2.5 text-center font-mono-nu text-[13px] font-bold uppercase tracking-widest text-nu-muted hover:text-nu-ink border-[2px] border-dashed border-nu-ink/10 hover:border-nu-ink/30 transition-all no-underline"
           >
             전체 보기 ({totalMembers}명) <ChevronRight size={12} className="inline" />
           </Link>

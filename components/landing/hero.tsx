@@ -34,15 +34,15 @@ export function Hero({ content }: HeroProps) {
       {/* Left - Text */}
       <div className="relative z-10 px-8 lg:px-14 py-32 lg:py-20 flex flex-col justify-end border-r-[3px] border-nu-ink bg-nu-paper">
         {/* Registration mark */}
-        <div className="absolute top-4 left-4 font-mono-nu text-[10px] text-nu-ink/15 select-none" aria-hidden="true">⊕</div>
-        <div className="absolute top-4 right-6 font-mono-nu text-[10px] text-nu-ink/15 select-none" aria-hidden="true">NU—001</div>
+        <div className="absolute top-4 left-4 font-mono-nu text-[12px] text-nu-ink/15 select-none" aria-hidden="true">⊕</div>
+        <div className="absolute top-4 right-6 font-mono-nu text-[12px] text-nu-ink/15 select-none" aria-hidden="true">NU—001</div>
 
         {/* Halftone decorative element */}
         <div className="absolute top-12 right-12 w-40 h-40 halftone-pink opacity-[0.08] -rotate-12" aria-hidden="true" />
         <div className="absolute bottom-24 right-20 w-24 h-24 halftone-blue opacity-[0.06] rotate-6" aria-hidden="true" />
 
         <div className="reveal-item">
-          <span className="font-mono-nu text-[10px] font-bold tracking-[0.3em] uppercase text-nu-pink mb-10 flex items-center gap-3">
+          <span className="font-mono-nu text-[12px] font-bold tracking-[0.3em] uppercase text-nu-pink mb-10 flex items-center gap-3">
             <span className="block w-10 h-[3px] bg-nu-pink" aria-hidden="true" />
             {kicker}
           </span>
@@ -73,7 +73,7 @@ export function Hero({ content }: HeroProps) {
 
           {/* Decorative stamp */}
           <div className="absolute -right-4 top-4 w-20 h-20 border-[3px] border-nu-pink rotate-12 flex items-center justify-center opacity-30 pointer-events-none" aria-hidden="true">
-            <span className="font-mono-nu text-[8px] font-bold text-nu-pink tracking-widest uppercase transform -rotate-12">RISO</span>
+            <span className="font-mono-nu text-[10px] font-bold text-nu-pink tracking-widest uppercase transform -rotate-12">RISO</span>
           </div>
         </div>
 
@@ -82,10 +82,10 @@ export function Hero({ content }: HeroProps) {
         </p>
 
         <div className="reveal-item flex flex-wrap items-center gap-3 mt-4">
-          <Link href="/signup" className="font-mono-nu text-[11px] font-bold tracking-[0.1em] uppercase px-7 py-4 bg-nu-ink text-nu-paper border-[3px] border-nu-ink hover:bg-nu-pink hover:border-nu-pink transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[-4px_4px_0_#0D0D0D] no-underline inline-flex items-center gap-2">
+          <Link href="/signup" className="font-mono-nu text-[13px] font-bold tracking-[0.1em] uppercase px-7 py-4 bg-nu-ink text-nu-paper border-[3px] border-nu-ink hover:bg-nu-pink hover:border-nu-pink transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[-4px_4px_0_#0D0D0D] no-underline inline-flex items-center gap-2">
             {ctaPrimary} <span aria-hidden="true">&rarr;</span>
           </Link>
-          <a href="#scenes" className="font-mono-nu text-[11px] font-bold tracking-[0.1em] uppercase px-7 py-4 bg-transparent text-nu-ink border-[3px] border-nu-ink hover:bg-nu-yellow hover:border-nu-yellow transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[-4px_4px_0_#0D0D0D] no-underline">
+          <a href="#scenes" className="font-mono-nu text-[13px] font-bold tracking-[0.1em] uppercase px-7 py-4 bg-transparent text-nu-ink border-[3px] border-nu-ink hover:bg-nu-yellow hover:border-nu-yellow transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[-4px_4px_0_#0D0D0D] no-underline">
             {ctaSecondary}
           </a>
         </div>
@@ -99,7 +99,7 @@ export function Hero({ content }: HeroProps) {
 
         {/* Scroll indicator */}
         <div className="absolute bottom-10 left-8 lg:left-14 flex items-center gap-3 z-10 scroll-bounce" aria-hidden="true">
-          <span className="font-mono-nu text-[10px] tracking-[0.15em] uppercase text-nu-gray">Scroll</span>
+          <span className="font-mono-nu text-[12px] tracking-[0.15em] uppercase text-nu-gray">Scroll</span>
           <span className="w-[60px] h-[3px] bg-nu-ink relative overflow-hidden">
             <span className="absolute inset-0 bg-nu-pink origin-left animate-pulse" />
           </span>
@@ -167,14 +167,14 @@ export function Hero({ content }: HeroProps) {
         </div>
 
         {/* Bottom corner metadata */}
-        <div className="absolute bottom-10 right-10 font-mono-nu text-[10px] text-nu-paper/30 tracking-widest z-10 text-right">
+        <div className="absolute bottom-10 right-10 font-mono-nu text-[12px] text-nu-paper/30 tracking-widest z-10 text-right">
           <div>EST. 2024</div>
           <div className="text-nu-pink/40 mt-1">EDITION 001</div>
         </div>
 
         {/* Ink stamp decorative */}
         <div className="absolute top-[15%] right-[10%] w-24 h-24 rounded-full border-[3px] border-nu-paper/10 flex items-center justify-center -rotate-12">
-          <span className="font-mono-nu text-[7px] font-bold uppercase tracking-[0.2em] text-nu-paper/20">PROTOCOL</span>
+          <span className="font-mono-nu text-[9px] font-bold uppercase tracking-[0.2em] text-nu-paper/20">PROTOCOL</span>
         </div>
       </div>
     </section>

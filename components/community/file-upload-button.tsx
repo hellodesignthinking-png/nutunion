@@ -53,7 +53,7 @@ export function FileUploadButton({ targetType, targetId, userId, onUploaded }: F
   }
 
   return (
-    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-nu-muted hover:text-nu-pink hover:bg-nu-pink/5 transition-colors cursor-pointer font-mono-nu text-[10px]">
+    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-nu-muted hover:text-nu-pink hover:bg-nu-pink/5 transition-colors cursor-pointer font-mono-nu text-[12px]">
       {uploading ? <Loader2 size={12} className="animate-spin" /> : <Paperclip size={12} />}
       {uploading ? "업로드중..." : "파일첨부"}
       <input type="file" className="hidden" onChange={handleUpload} disabled={uploading} />
@@ -104,7 +104,7 @@ export function AttachedFiles({ targetType, targetId }: AttachedFilesProps) {
         >
           <FileText size={11} className="text-nu-blue shrink-0" />
           <span className="truncate max-w-[120px]">{f.file_name}</span>
-          {f.file_size && <span className="text-nu-muted text-[9px]">{formatSize(f.file_size)}</span>}
+          {f.file_size && <span className="text-nu-muted text-[11px]">{formatSize(f.file_size)}</span>}
         </a>
       ))}
     </div>

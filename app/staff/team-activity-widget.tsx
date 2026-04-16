@@ -98,10 +98,10 @@ export function TeamActivityWidget() {
   return (
     <section className="bg-white border border-nu-ink/[0.06]">
       <div className="p-4 border-b border-nu-ink/5 flex items-center justify-between">
-        <h3 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
+        <h3 className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
           <Users size={14} className="text-indigo-600" /> 팀 현황
         </h3>
-        <Link href="/staff/tasks" className="font-mono-nu text-[9px] text-indigo-600 no-underline hover:underline uppercase tracking-widest">
+        <Link href="/staff/tasks" className="font-mono-nu text-[11px] text-indigo-600 no-underline hover:underline uppercase tracking-widest">
           전체
         </Link>
       </div>
@@ -120,17 +120,17 @@ export function TeamActivityWidget() {
                   <p className="font-head text-xs font-bold text-nu-ink truncate">{m.nickname}</p>
                   <div className="flex items-center gap-2 mt-0.5">
                     {m.tasksInProgress > 0 && (
-                      <span className="font-mono-nu text-[8px] text-indigo-600 flex items-center gap-0.5">
+                      <span className="font-mono-nu text-[10px] text-indigo-600 flex items-center gap-0.5">
                         <Circle size={7} /> {m.tasksInProgress} 진행중
                       </span>
                     )}
                     {m.tasksOverdue > 0 && (
-                      <span className="font-mono-nu text-[8px] text-red-600 font-bold">
+                      <span className="font-mono-nu text-[10px] text-red-600 font-bold">
                         {m.tasksOverdue} 지연
                       </span>
                     )}
                     {m.recentCompletions > 0 && (
-                      <span className="font-mono-nu text-[8px] text-green-600 flex items-center gap-0.5">
+                      <span className="font-mono-nu text-[10px] text-green-600 flex items-center gap-0.5">
                         <CheckCircle2 size={7} /> 이번주 {m.recentCompletions}
                       </span>
                     )}
@@ -143,7 +143,7 @@ export function TeamActivityWidget() {
                     <div className="h-1 bg-nu-ink/5 w-full">
                       <div className="h-1 bg-indigo-500 transition-all" style={{ width: `${progress}%` }} />
                     </div>
-                    <p className="font-mono-nu text-[7px] text-nu-muted text-right mt-0.5">{m.tasksDone}/{m.tasksTotal}</p>
+                    <p className="font-mono-nu text-[9px] text-nu-muted text-right mt-0.5">{m.tasksDone}/{m.tasksTotal}</p>
                   </div>
                 )}
               </div>

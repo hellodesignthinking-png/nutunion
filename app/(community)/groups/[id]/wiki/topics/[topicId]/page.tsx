@@ -87,7 +87,7 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ id
       {/* Header */}
       <div className="border-b-[3px] border-nu-ink bg-nu-cream/30 py-10">
         <div className="max-w-5xl mx-auto px-8">
-          <nav className="flex items-center gap-1.5 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-4 flex-wrap">
+          <nav className="flex items-center gap-1.5 font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-4 flex-wrap">
             <Link href={`/groups/${groupId}`} className="hover:text-nu-ink no-underline">{group.name}</Link>
             <ChevronRight size={10} />
             <Link href={`/groups/${groupId}/wiki`} className="hover:text-nu-ink no-underline">Wiki</Link>
@@ -106,20 +106,20 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ id
             <div className="flex items-center gap-4 shrink-0">
               <div className="text-center bg-white border-[2px] border-nu-ink/10 px-4 py-2 min-w-[70px]">
                 <p className="font-head text-xl font-extrabold text-nu-ink">{pages.length}</p>
-                <p className="font-mono-nu text-[7px] text-nu-muted uppercase tracking-widest">Pages</p>
+                <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">Pages</p>
               </div>
               <div className="text-center bg-white border-[2px] border-nu-ink/10 px-4 py-2 min-w-[70px]">
                 <p className="font-head text-xl font-extrabold text-nu-blue">{totalContribs}</p>
-                <p className="font-mono-nu text-[7px] text-nu-muted uppercase tracking-widest">Edits</p>
+                <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">Edits</p>
               </div>
               <div className="text-center bg-white border-[2px] border-nu-ink/10 px-4 py-2 min-w-[70px]">
                 <p className="font-head text-xl font-extrabold text-nu-pink">{totalViews}</p>
-                <p className="font-mono-nu text-[7px] text-nu-muted uppercase tracking-widest">Views</p>
+                <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">Views</p>
               </div>
               {activeContributors > 0 && (
                 <div className="text-center bg-white border-[2px] border-nu-ink/10 px-4 py-2 min-w-[70px]">
                   <p className="font-head text-xl font-extrabold text-green-500">{activeContributors}</p>
-                  <p className="font-mono-nu text-[7px] text-nu-muted uppercase tracking-widest">Active (7d)</p>
+                  <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">Active (7d)</p>
                 </div>
               )}
             </div>

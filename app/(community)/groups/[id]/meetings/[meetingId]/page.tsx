@@ -27,6 +27,7 @@ import { AiMeetingAssistant } from "@/components/meetings/ai-meeting-assistant";
 import { WikiSyncPanel } from "@/components/wiki/wiki-sync-panel";
 import { WeeklyDigestEngine } from "@/components/wiki/weekly-digest-engine";
 import { AiErrorBoundary } from "@/components/shared/ai-error-boundary";
+import { MeetingRecorder } from "@/components/meetings/meeting-recorder";
 
 function getEmbedUrl(url: string) {
   if (!url) return "";
@@ -126,41 +127,41 @@ function MeetingInfoEditor({ meeting, date, canEdit, meetingId, onUpdate }: {
     return (
       <div className="bg-nu-white border border-nu-ink/[0.08] p-6 mb-6 space-y-4">
         <div>
-          <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-1">회의 제목</label>
+          <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted block mb-1">회의 제목</label>
           <input value={title} onChange={e => setTitle(e.target.value)}
             className="w-full px-3 py-2 border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink bg-nu-paper" />
         </div>
         <div>
-          <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-1">설명</label>
+          <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted block mb-1">설명</label>
           <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
             className="w-full px-3 py-2 border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink bg-nu-paper resize-none" />
         </div>
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-1">일시</label>
+            <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted block mb-1">일시</label>
             <input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)}
               className="w-full px-3 py-2 border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink bg-nu-paper" />
           </div>
           <div>
-            <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-1">시간 (분)</label>
+            <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted block mb-1">시간 (분)</label>
             <input type="number" value={durationMin} onChange={e => setDurationMin(parseInt(e.target.value) || 60)} min={10} max={480}
               className="w-full px-3 py-2 border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink bg-nu-paper" />
           </div>
           <div>
-            <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-1">장소</label>
+            <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted block mb-1">장소</label>
             <input value={location} onChange={e => setLocation(e.target.value)} placeholder="온라인 / 장소"
               className="w-full px-3 py-2 border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink bg-nu-paper" />
           </div>
         </div>
         <div className="flex gap-2">
           <button onClick={handleSave} disabled={saving || !title.trim()}
-            className="font-mono-nu text-[10px] font-bold uppercase px-4 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors disabled:opacity-50">
+            className="font-mono-nu text-[12px] font-bold uppercase px-4 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors disabled:opacity-50">
             {saving ? "저장 중..." : "저장"}
           </button>
           <button onClick={() => setEditing(false)}
-            className="font-mono-nu text-[10px] uppercase px-4 py-2 text-nu-muted hover:text-nu-ink transition-colors">취소</button>
+            className="font-mono-nu text-[12px] uppercase px-4 py-2 text-nu-muted hover:text-nu-ink transition-colors">취소</button>
           <button onClick={handleDelete}
-            className="ml-auto font-mono-nu text-[10px] uppercase px-4 py-2 text-red-500 hover:text-red-700 border border-red-200 hover:border-red-400 transition-colors flex items-center gap-1">
+            className="ml-auto font-mono-nu text-[12px] uppercase px-4 py-2 text-red-500 hover:text-red-700 border border-red-200 hover:border-red-400 transition-colors flex items-center gap-1">
             <Trash2 size={11} /> 회의 삭제
           </button>
         </div>
@@ -187,7 +188,7 @@ function MeetingInfoEditor({ meeting, date, canEdit, meetingId, onUpdate }: {
         )}
         {canEdit && (
           <button onClick={() => setEditing(true)}
-            className="ml-auto font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink hover:underline flex items-center gap-1">
+            className="ml-auto font-mono-nu text-[12px] uppercase tracking-widest text-nu-pink hover:underline flex items-center gap-1">
             <Edit3 size={11} /> 수정
           </button>
         )}
@@ -507,7 +508,7 @@ export default function MeetingDetailPage() {
         <div className={`transition-all duration-500 ${isSplitView ? "lg:w-[55%] xl:w-[50%] shrink-0" : "w-full"}`}>
 
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-1.5 mb-6 font-mono-nu text-[11px] uppercase tracking-widest flex-wrap">
+      <nav className="flex items-center gap-1.5 mb-6 font-mono-nu text-[13px] uppercase tracking-widest flex-wrap">
         <Link href={`/groups/${groupId}`}
           className="text-nu-muted hover:text-nu-ink no-underline flex items-center gap-1 transition-colors">
           <ArrowLeft size={12} /> {groupName}
@@ -525,9 +526,9 @@ export default function MeetingDetailPage() {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-4">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-3 flex-wrap">
-              <Badge className={`text-[10px] ${cfg.className}`}>{cfg.label}</Badge>
+              <Badge className={`text-[12px] ${cfg.className}`}>{cfg.label}</Badge>
               {meeting.organizer && (
-                <span className="font-mono-nu text-[10px] text-nu-muted flex items-center gap-1">
+                <span className="font-mono-nu text-[12px] text-nu-muted flex items-center gap-1">
                   <User size={12} />{meeting.organizer.nickname} (주최)
                 </span>
               )}
@@ -538,7 +539,7 @@ export default function MeetingDetailPage() {
 
           <button
             onClick={() => setIsSplitView(!isSplitView)}
-            className={`font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-2.5 border-[2px] transition-all flex items-center gap-2 shrink-0 ${
+            className={`font-mono-nu text-[12px] font-bold uppercase tracking-widest px-3 py-2.5 border-[2px] transition-all flex items-center gap-2 shrink-0 ${
               isSplitView ? "bg-nu-ink text-nu-paper border-nu-ink" : "bg-nu-white border-nu-ink/10 text-nu-muted hover:border-nu-ink"
             }`}
             title="스플릿 뷰 토글"
@@ -548,10 +549,10 @@ export default function MeetingDetailPage() {
           </button>
           {canEdit && (
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-nu-cream/50 border border-nu-ink/[0.06]">
-              <kbd className="font-mono-nu text-[8px] bg-nu-white px-1.5 py-0.5 border border-nu-ink/10 text-nu-muted">⌘</kbd>
-              <span className="font-mono-nu text-[8px] text-nu-muted">+</span>
-              <kbd className="font-mono-nu text-[8px] bg-nu-white px-1.5 py-0.5 border border-nu-ink/10 text-nu-muted">Enter</kbd>
-              <span className="font-mono-nu text-[8px] text-nu-muted ml-1">AI 분석</span>
+              <kbd className="font-mono-nu text-[10px] bg-nu-white px-1.5 py-0.5 border border-nu-ink/10 text-nu-muted">⌘</kbd>
+              <span className="font-mono-nu text-[10px] text-nu-muted">+</span>
+              <kbd className="font-mono-nu text-[10px] bg-nu-white px-1.5 py-0.5 border border-nu-ink/10 text-nu-muted">Enter</kbd>
+              <span className="font-mono-nu text-[10px] text-nu-muted ml-1">AI 분석</span>
             </div>
           )}
         </div>
@@ -559,7 +560,7 @@ export default function MeetingDetailPage() {
       {/* Roles & Quick Assets Panel */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div className="bg-nu-white border border-nu-ink/[0.08] p-5">
-          <h3 className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-3 flex items-center gap-2">
+          <h3 className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-3 flex items-center gap-2">
             <Users size={12} /> 세션 역할
           </h3>
           <div className="space-y-4">
@@ -569,7 +570,7 @@ export default function MeetingDetailPage() {
                 <span className="text-sm text-nu-ink">{(meeting as any).secretary?.nickname || "미지정"}</span>
                 {canEdit && (
                   <select 
-                    className="text-[10px] border border-nu-ink/10 bg-nu-cream/30 px-1 py-0.5"
+                    className="text-[12px] border border-nu-ink/10 bg-nu-cream/30 px-1 py-0.5"
                     onChange={(e) => updateMeetingField("secretary_id", e.target.value || null)}
                     value={(meeting as any).secretary_id || ""}
                   >
@@ -585,7 +586,7 @@ export default function MeetingDetailPage() {
                 <span className="text-sm text-nu-ink">{(meeting as any).speaker?.nickname || "미지정"}</span>
                 {canEdit && (
                   <select 
-                    className="text-[10px] border border-nu-ink/10 bg-nu-cream/30 px-1 py-0.5"
+                    className="text-[12px] border border-nu-ink/10 bg-nu-cream/30 px-1 py-0.5"
                     onChange={(e) => updateMeetingField("speaker_id", e.target.value || null)}
                     value={(meeting as any).speaker_id || ""}
                   >
@@ -599,7 +600,7 @@ export default function MeetingDetailPage() {
         </div>
 
         <div className="bg-nu-white border border-nu-ink/[0.08] p-5">
-          <h3 className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-3 flex items-center gap-2">
+          <h3 className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-3 flex items-center gap-2">
              <Link2 size={12} /> 세션 아카이브
           </h3>
           {canEdit || (meeting as any).log_url ? (
@@ -619,7 +620,7 @@ export default function MeetingDetailPage() {
                   <input 
                     type="text"
                     placeholder="https://notion.so/..."
-                    className="flex-1 text-[10px] bg-transparent border border-nu-ink/10 px-2 py-1"
+                    className="flex-1 text-[12px] bg-transparent border border-nu-ink/10 px-2 py-1"
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         updateMeetingField("log_url", (e.target as HTMLInputElement).value);
@@ -627,7 +628,7 @@ export default function MeetingDetailPage() {
                     }}
                     defaultValue={(meeting as any).log_url || ""}
                   />
-                  <Button variant="outline" className="h-6 px-2 text-[8px]" onClick={() => toast.info("링크를 입력하고 엔터를 눌러주세요")}>등록</Button>
+                  <Button variant="outline" className="h-6 px-2 text-[10px]" onClick={() => toast.info("링크를 입력하고 엔터를 눌러주세요")}>등록</Button>
                 </div>
               )}
             </div>
@@ -644,6 +645,18 @@ export default function MeetingDetailPage() {
         canEdit={canEdit}
         meetingId={meetingId}
         onUpdate={loadMeeting}
+      />
+
+      {/* Meeting Recorder — active during in_progress or for file upload when completed */}
+      <MeetingRecorder
+        meetingId={meetingId}
+        meetingTitle={meeting.title}
+        meetingStatus={meeting.status}
+        canEdit={canEdit}
+        onTranscriptionComplete={() => {
+          setActiveTab("ai-notes");
+          loadMeeting();
+        }}
       />
 
       {/* Google Calendar */}
@@ -663,19 +676,19 @@ export default function MeetingDetailPage() {
       {meeting.status === "completed" && (
         <div className="bg-nu-pink/5 border-[2px] border-nu-pink/20 p-5 mb-6">
           <div className="flex items-center justify-between mb-3">
-            <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink font-bold flex items-center gap-1.5">
+            <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-pink font-bold flex items-center gap-1.5">
               <FileText size={12} /> 회의 요약
             </p>
             <div className="flex items-center gap-3">
               {canEdit && (
                 <button onClick={() => setShowPromote(true)}
-                  className="font-mono-nu text-[10px] text-nu-pink hover:underline flex items-center gap-1">
+                  className="font-mono-nu text-[12px] text-nu-pink hover:underline flex items-center gap-1">
                   <Sparkles size={11} /> 베스트 프랙티스 승격
                 </button>
               )}
               {canEdit && !editingSummary && (
                 <button onClick={() => { setEditingSummary(true); setEditedSummary(meeting.summary || ""); }}
-                  className="font-mono-nu text-[10px] text-nu-pink hover:underline flex items-center gap-1">
+                  className="font-mono-nu text-[12px] text-nu-pink hover:underline flex items-center gap-1">
                   <Edit3 size={11} /> 수정
                 </button>
               )}
@@ -686,10 +699,10 @@ export default function MeetingDetailPage() {
               <Textarea value={editedSummary} onChange={e => setEditedSummary(e.target.value)}
                 rows={4} className="border-nu-ink/15 bg-nu-white resize-none text-sm" />
               <div className="flex gap-2">
-                <Button onClick={handleSaveEditedSummary} className="bg-nu-pink text-nu-paper hover:bg-nu-pink/90 font-mono-nu text-[10px] uppercase tracking-widest">
+                <Button onClick={handleSaveEditedSummary} className="bg-nu-pink text-nu-paper hover:bg-nu-pink/90 font-mono-nu text-[12px] uppercase tracking-widest">
                   <Save size={12} /> 저장
                 </Button>
-                <Button variant="outline" onClick={() => setEditingSummary(false)} className="font-mono-nu text-[10px] uppercase tracking-widest">취소</Button>
+                <Button variant="outline" onClick={() => setEditingSummary(false)} className="font-mono-nu text-[12px] uppercase tracking-widest">취소</Button>
               </div>
             </div>
           ) : (
@@ -705,23 +718,23 @@ export default function MeetingDetailPage() {
         <div className="mb-6 flex flex-wrap gap-3">
           {meeting.status === "upcoming" && (
             <Button onClick={handleStartMeeting} disabled={actionLoading}
-              className="bg-nu-blue text-nu-paper hover:bg-nu-blue/90 font-mono-nu text-[11px] uppercase tracking-widest">
+              className="bg-nu-blue text-nu-paper hover:bg-nu-blue/90 font-mono-nu text-[13px] uppercase tracking-widest">
               <Play size={14} /> 미팅 시작
             </Button>
           )}
           {meeting.status === "in_progress" && !showSummaryInput && (
             <Button onClick={() => setShowSummaryInput(true)}
-              className="bg-nu-pink text-nu-paper hover:bg-nu-pink/90 font-mono-nu text-[11px] uppercase tracking-widest">
+              className="bg-nu-pink text-nu-paper hover:bg-nu-pink/90 font-mono-nu text-[13px] uppercase tracking-widest">
               <CheckCircle2 size={14} /> 미팅 완료
             </Button>
           )}
           {showSummaryInput && (
             <div className="w-full bg-nu-white border border-nu-ink/[0.08] p-5">
-              <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray mb-2">회의 요약</p>
+              <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray mb-2">회의 요약</p>
               {meeting.summary && !summary && (
                 <button
                   onClick={() => setSummary(meeting.summary || "")}
-                  className="mb-2 text-[10px] font-mono-nu text-nu-pink hover:underline"
+                  className="mb-2 text-[12px] font-mono-nu text-nu-pink hover:underline"
                 >
                   ✨ AI가 작성한 요약 불러오기
                 </button>
@@ -731,14 +744,14 @@ export default function MeetingDetailPage() {
                 className="border-nu-ink/15 bg-transparent resize-none mb-3" />
               <div className="flex items-center gap-2">
                 <Button onClick={handleCompleteMeeting} disabled={actionLoading}
-                  className="bg-nu-pink text-nu-paper hover:bg-nu-pink/90 font-mono-nu text-[11px] uppercase tracking-widest">
+                  className="bg-nu-pink text-nu-paper hover:bg-nu-pink/90 font-mono-nu text-[13px] uppercase tracking-widest">
                   {actionLoading ? "저장 중..." : "완료 처리"}
                 </Button>
-                <Button variant="outline" onClick={() => setShowSummaryInput(false)} className="font-mono-nu text-[11px] uppercase tracking-widest">취소</Button>
+                <Button variant="outline" onClick={() => setShowSummaryInput(false)} className="font-mono-nu text-[13px] uppercase tracking-widest">취소</Button>
                 {!meeting.summary && (
                   <button
                     onClick={() => { setShowSummaryInput(false); setActiveTab("ai-notes"); }}
-                    className="ml-auto text-[10px] font-mono-nu text-nu-blue hover:underline flex items-center gap-1"
+                    className="ml-auto text-[12px] font-mono-nu text-nu-blue hover:underline flex items-center gap-1"
                   >
                     <Sparkles size={10} /> AI 회의록으로 먼저 분석하기
                   </button>
@@ -754,12 +767,12 @@ export default function MeetingDetailPage() {
         <div className="mb-4 bg-purple-50 border border-purple-200 p-3 flex items-start gap-2">
           <Zap size={14} className="text-purple-500 mt-0.5 shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="font-mono-nu text-[8px] text-purple-500 uppercase tracking-widest mb-0.5">이전 다이제스트 컨텍스트 (AI 자동 참조 중)</p>
-            <p className="text-[11px] text-purple-800 leading-relaxed line-clamp-2">{previousDigest}</p>
+            <p className="font-mono-nu text-[10px] text-purple-500 uppercase tracking-widest mb-0.5">이전 다이제스트 컨텍스트 (AI 자동 참조 중)</p>
+            <p className="text-[13px] text-purple-800 leading-relaxed line-clamp-2">{previousDigest}</p>
           </div>
           <button
             onClick={() => setActiveTab("digest")}
-            className="shrink-0 px-2 py-1 font-mono-nu text-[7px] uppercase tracking-widest text-purple-600 border border-purple-300 hover:bg-purple-100 transition-colors"
+            className="shrink-0 px-2 py-1 font-mono-nu text-[9px] uppercase tracking-widest text-purple-600 border border-purple-300 hover:bg-purple-100 transition-colors"
           >
             상세
           </button>
@@ -775,16 +788,16 @@ export default function MeetingDetailPage() {
         }}
       >
         <TabsList variant="line" className="mb-6">
-          <TabsTrigger value="agendas" className="font-mono-nu text-[11px] uppercase tracking-widest">안건</TabsTrigger>
-          <TabsTrigger value="ai-notes" className="font-mono-nu text-[11px] uppercase tracking-widest flex items-center gap-1"><Sparkles size={11} /> AI 회의록</TabsTrigger>
-          <TabsTrigger value="resources" className="font-mono-nu text-[11px] uppercase tracking-widest">자료 공유 ({resources.length})</TabsTrigger>
-          <TabsTrigger value="notes" className="font-mono-nu text-[11px] uppercase tracking-widest">노트</TabsTrigger>
-          <TabsTrigger value="next" className="font-mono-nu text-[11px] uppercase tracking-widest">다음 주제</TabsTrigger>
-          <TabsTrigger value="attendance" className="font-mono-nu text-[11px] uppercase tracking-widest">출석</TabsTrigger>
-          <TabsTrigger value="wiki-sync" className="font-mono-nu text-[11px] uppercase tracking-widest flex items-center gap-1 text-nu-pink font-bold">
+          <TabsTrigger value="agendas" className="font-mono-nu text-[13px] uppercase tracking-widest">안건</TabsTrigger>
+          <TabsTrigger value="ai-notes" className="font-mono-nu text-[13px] uppercase tracking-widest flex items-center gap-1"><Sparkles size={11} /> AI 회의록</TabsTrigger>
+          <TabsTrigger value="resources" className="font-mono-nu text-[13px] uppercase tracking-widest">자료 공유 ({resources.length})</TabsTrigger>
+          <TabsTrigger value="notes" className="font-mono-nu text-[13px] uppercase tracking-widest">노트</TabsTrigger>
+          <TabsTrigger value="next" className="font-mono-nu text-[13px] uppercase tracking-widest">다음 주제</TabsTrigger>
+          <TabsTrigger value="attendance" className="font-mono-nu text-[13px] uppercase tracking-widest">출석</TabsTrigger>
+          <TabsTrigger value="wiki-sync" className="font-mono-nu text-[13px] uppercase tracking-widest flex items-center gap-1 text-nu-pink font-bold">
             <Sparkles size={11} /> 탭 동기화
           </TabsTrigger>
-          <TabsTrigger value="digest" className="font-mono-nu text-[11px] uppercase tracking-widest flex items-center gap-1 text-purple-600 font-bold">
+          <TabsTrigger value="digest" className="font-mono-nu text-[13px] uppercase tracking-widest flex items-center gap-1 text-purple-600 font-bold">
             <Zap size={11} /> 주간 다이제스트
             {previousDigest && <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />}
           </TabsTrigger>
@@ -868,14 +881,14 @@ export default function MeetingDetailPage() {
             {(canEdit || true) && (
               <div className="bg-nu-white border border-nu-ink/[0.08]">
                 <button onClick={() => setShowAdd(!showAdd)}
-                  className="w-full flex items-center gap-2 p-4 font-mono-nu text-[11px] uppercase tracking-widest text-nu-ink hover:text-nu-pink transition-colors">
+                  className="w-full flex items-center gap-2 p-4 font-mono-nu text-[13px] uppercase tracking-widest text-nu-ink hover:text-nu-pink transition-colors">
                   <Plus size={14} /> 자료 추가하기 (Drive, 기사, 논문, 링크)
                 </button>
                 {showAdd && (
                   <div className="border-t border-nu-ink/[0.08] p-5 flex flex-col gap-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray block mb-1">유형</label>
+                        <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray block mb-1">유형</label>
                         <select value={newRes.type} onChange={e => setNewRes(p => ({ ...p, type: e.target.value as SharedResource["type"] }))}
                           className="w-full px-3 py-2 border border-nu-ink/15 bg-transparent text-sm focus:outline-none focus:border-nu-pink">
                           <option value="drive">📁 Google Drive</option>
@@ -885,27 +898,27 @@ export default function MeetingDetailPage() {
                         </select>
                       </div>
                       <div>
-                        <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray block mb-1">제목</label>
+                        <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray block mb-1">제목</label>
                         <Input value={newRes.title} onChange={e => setNewRes(p => ({ ...p, title: e.target.value }))}
                           placeholder="자료 제목" className="border-nu-ink/15 bg-transparent" />
                       </div>
                     </div>
                     <div>
-                      <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray block mb-1">URL</label>
+                      <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray block mb-1">URL</label>
                       <Input value={newRes.url} onChange={e => setNewRes(p => ({ ...p, url: e.target.value }))}
                         placeholder="https://" className="border-nu-ink/15 bg-transparent" />
                     </div>
                     <div>
-                      <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray block mb-1">설명 (선택)</label>
+                      <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray block mb-1">설명 (선택)</label>
                       <Textarea value={newRes.description} onChange={e => setNewRes(p => ({ ...p, description: e.target.value }))}
                         placeholder="이 자료에 대한 간단한 설명" rows={2} className="border-nu-ink/15 bg-transparent resize-none" />
                     </div>
                     <div className="flex gap-2">
                       <Button onClick={handleAddResource} disabled={addingRes}
-                        className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[10px] uppercase tracking-widest">
+                        className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[12px] uppercase tracking-widest">
                         {addingRes ? "추가 중..." : "추가"}
                       </Button>
-                      <Button variant="outline" onClick={() => setShowAdd(false)} className="font-mono-nu text-[10px] uppercase tracking-widest">취소</Button>
+                      <Button variant="outline" onClick={() => setShowAdd(false)} className="font-mono-nu text-[12px] uppercase tracking-widest">취소</Button>
                     </div>
                   </div>
                 )}
@@ -929,12 +942,12 @@ export default function MeetingDetailPage() {
                           className="font-head text-sm font-bold text-nu-ink hover:text-nu-pink transition-colors no-underline flex items-center gap-1">
                           {r.title} <ExternalLink size={12} />
                         </a>
-                        <span className="font-mono-nu text-[9px] px-1.5 py-0.5 bg-nu-cream text-nu-muted uppercase">
+                        <span className="font-mono-nu text-[11px] px-1.5 py-0.5 bg-nu-cream text-nu-muted uppercase">
                           {r.type === "drive" ? "Drive" : r.type === "article" ? "기사" : r.type === "paper" ? "논문" : "링크"}
                         </span>
                       </div>
                       {r.description && <p className="text-xs text-nu-muted mb-1">{r.description}</p>}
-                      <p className="font-mono-nu text-[9px] text-nu-muted">{r.author?.nickname} · {new Date(r.created_at).toLocaleDateString("ko")}</p>
+                      <p className="font-mono-nu text-[11px] text-nu-muted">{r.author?.nickname} · {new Date(r.created_at).toLocaleDateString("ko")}</p>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <button 
@@ -957,11 +970,11 @@ export default function MeetingDetailPage() {
                     <div className="border-t border-nu-ink/[0.05] px-4 pb-3">
                       {r.replies!.map(reply => (
                         <div key={reply.id} className="flex items-start gap-2 pt-3">
-                          <div className="w-6 h-6 rounded-full bg-nu-cream flex items-center justify-center text-[10px] font-bold shrink-0">
+                          <div className="w-6 h-6 rounded-full bg-nu-cream flex items-center justify-center text-[12px] font-bold shrink-0">
                             {(reply.author?.nickname || "U").charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <span className="font-mono-nu text-[10px] text-nu-muted">{reply.author?.nickname}</span>
+                            <span className="font-mono-nu text-[12px] text-nu-muted">{reply.author?.nickname}</span>
                             <p className="text-sm text-nu-graphite">{reply.content}</p>
                           </div>
                         </div>
@@ -979,7 +992,7 @@ export default function MeetingDetailPage() {
                       className="flex-1 px-3 py-1.5 bg-nu-paper border border-nu-ink/[0.08] text-xs focus:outline-none focus:border-nu-pink transition-colors"
                     />
                     <button onClick={() => handleAddReply(r.id)} disabled={submittingReply === r.id}
-                      className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors disabled:opacity-50">
+                      className="font-mono-nu text-[12px] uppercase tracking-widest px-3 py-1.5 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors disabled:opacity-50">
                       {submittingReply === r.id ? "..." : "답글"}
                     </button>
                   </div>
@@ -1008,7 +1021,7 @@ export default function MeetingDetailPage() {
                 className="border-nu-ink/15 bg-transparent resize-none mb-3" disabled={!canEdit} />
               {canEdit && (
                 <Button onClick={handleSaveNextTopic} disabled={savingNextTopic}
-                  className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[11px] uppercase tracking-widest">
+                  className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[13px] uppercase tracking-widest">
                   {savingNextTopic ? "저장 중..." : "저장"}
                 </Button>
               )}
@@ -1019,7 +1032,7 @@ export default function MeetingDetailPage() {
               <div className="flex items-center gap-2 mb-4">
                 <AlertCircle size={18} className="text-nu-red" />
                 <h3 className="font-head text-lg font-extrabold text-nu-ink">연계 이슈</h3>
-                <span className="font-mono-nu text-[10px] text-nu-muted">{issues.filter(i => i.status === "open").length}개 오픈</span>
+                <span className="font-mono-nu text-[12px] text-nu-muted">{issues.filter(i => i.status === "open").length}개 오픈</span>
               </div>
 
               {/* Issue list */}
@@ -1032,7 +1045,7 @@ export default function MeetingDetailPage() {
                     <span className={`text-sm flex-1 ${issue.status === "resolved" ? "line-through text-nu-muted" : "text-nu-ink"}`}>
                       {issue.title}
                     </span>
-                    <span className={`font-mono-nu text-[9px] uppercase px-1.5 py-0.5 ${issue.status === "open" ? "bg-nu-red/10 text-nu-red" : "bg-green-50 text-green-600"}`}>
+                    <span className={`font-mono-nu text-[11px] uppercase px-1.5 py-0.5 ${issue.status === "open" ? "bg-nu-red/10 text-nu-red" : "bg-green-50 text-green-600"}`}>
                       {issue.status === "open" ? "오픈" : "해결됨"}
                     </span>
                     {canEdit && (
@@ -1050,7 +1063,7 @@ export default function MeetingDetailPage() {
                   onKeyDown={e => { if (e.key === "Enter") handleAddIssue(); }}
                   placeholder="새 이슈 추가..." className="border-nu-ink/15 bg-transparent" />
                 <Button onClick={handleAddIssue} disabled={addingIssue}
-                  className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[10px] uppercase tracking-widest shrink-0">
+                  className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[12px] uppercase tracking-widest shrink-0">
                   <Plus size={13} /> 추가
                 </Button>
               </div>
@@ -1109,7 +1122,7 @@ export default function MeetingDetailPage() {
                   <div className="flex items-center justify-between px-5 py-4 border-b-2 border-nu-ink bg-nu-ink text-nu-paper">
                     <div className="min-w-0 pr-4">
                       <p className="font-head text-[13px] font-black truncate uppercase tracking-tight">{previewData.name}</p>
-                      <p className="font-mono-nu text-[9px] text-nu-paper/60 truncate uppercase tracking-widest mt-0.5">Live Document Review</p>
+                      <p className="font-mono-nu text-[11px] text-nu-paper/60 truncate uppercase tracking-widest mt-0.5">Live Document Review</p>
                     </div>
                     <button onClick={() => setPreviewData(null)} className="p-1.5 text-nu-paper/60 hover:text-nu-paper">
                       <X size={18} />
@@ -1126,8 +1139,8 @@ export default function MeetingDetailPage() {
                   </div>
                   
                   <div className="p-4 bg-nu-cream/30 border-t border-nu-ink/5">
-                    <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-[0.2em]">Contextual Workspace</p>
-                    <p className="text-[10px] text-nu-graphite mt-1">자료를 보면서 동시에 회의록을 작성하세요.</p>
+                    <p className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-[0.2em]">Contextual Workspace</p>
+                    <p className="text-[12px] text-nu-graphite mt-1">자료를 보면서 동시에 회의록을 작성하세요.</p>
                   </div>
                 </div>
               ) : (
@@ -1136,7 +1149,7 @@ export default function MeetingDetailPage() {
                     <Eye size={32} className="opacity-20 text-nu-pink" />
                   </div>
                   <p className="font-head text-sm font-bold text-nu-ink/40 uppercase tracking-widest">Select a resource to pin</p>
-                  <p className="text-[11px] mt-2 max-w-[200px] leading-relaxed">자료 공유 탭에서 '눈' 아이콘을 클릭하면 이 패널에 문서가 고정되어 미팅 중에 함께 볼 수 있습니다.</p>
+                  <p className="text-[13px] mt-2 max-w-[200px] leading-relaxed">자료 공유 탭에서 '눈' 아이콘을 클릭하면 이 패널에 문서가 고정되어 미팅 중에 함께 볼 수 있습니다.</p>
                 </div>
               )}
             </div>
@@ -1204,14 +1217,14 @@ function MeetingAttendanceCheck({ meetingId, groupId, canEdit }: { meetingId: st
 
   return (
     <div>
-      <p className="font-mono-nu text-[10px] text-nu-muted mb-4">
+      <p className="font-mono-nu text-[12px] text-nu-muted mb-4">
         출석: {attendedCount}/{members.length}명
         {members.length > 0 && <span className="ml-2 text-nu-pink">({Math.round((attendedCount / members.length) * 100)}%)</span>}
       </p>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
         {members.map(m => (
           <button key={m.userId} onClick={() => toggleAttendance(m.userId, m.attended)} disabled={!canEdit}
-            className={`flex items-center gap-2.5 px-3 py-2.5 border-[2px] transition-all font-mono-nu text-[11px] ${
+            className={`flex items-center gap-2.5 px-3 py-2.5 border-[2px] transition-all font-mono-nu text-[13px] ${
               m.attended ? "bg-green-50 border-green-400 text-green-700" : "border-nu-ink/15 text-nu-muted hover:border-nu-ink/30"
             } ${canEdit ? "cursor-pointer" : "cursor-default"}`}>
             {m.attended
@@ -1251,7 +1264,7 @@ function MeetingTimer({ startTime }: { startTime: string }) {
   return (
     <div className="mt-4 flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200">
       <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-      <span className="font-mono-nu text-[10px] uppercase tracking-widest text-green-700 font-bold">
+      <span className="font-mono-nu text-[12px] uppercase tracking-widest text-green-700 font-bold">
         회의 진행 중
       </span>
       <span className="font-mono-nu text-[13px] text-green-800 font-black tabular-nums">

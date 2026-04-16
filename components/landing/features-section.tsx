@@ -61,7 +61,7 @@ export function FeaturesSection() {
   return (
     <section ref={ref} className="py-24 px-8 max-w-7xl mx-auto">
       <div className="text-center mb-16 reveal-item">
-        <span className="font-mono-nu text-[10px] uppercase tracking-[0.3em] text-nu-pink mb-4 block">
+        <span className="font-mono-nu text-[12px] uppercase tracking-[0.3em] text-nu-pink mb-4 block">
           How It Works
         </span>
         <h2 className="font-head text-[clamp(36px,5vw,56px)] font-extrabold text-nu-ink tracking-tighter leading-[0.9]">
@@ -88,7 +88,7 @@ export function FeaturesSection() {
             <div className={`absolute top-0 right-0 w-32 h-32 ${f.halftone} opacity-[0.06]`} aria-hidden="true" />
 
             {/* Registration mark */}
-            <span className="absolute top-3 right-4 font-mono-nu text-[8px] text-nu-ink/10">⊕</span>
+            <span className="absolute top-3 right-4 font-mono-nu text-[10px] text-nu-ink/10">⊕</span>
 
             <div className="flex flex-col gap-6 w-full">
               {/* Risograph Image Block */}
@@ -99,7 +99,7 @@ export function FeaturesSection() {
               </div>
 
               <div>
-                <span className="font-mono-nu text-[9px] uppercase tracking-[0.25em] text-nu-muted block mb-2">
+                <span className="font-mono-nu text-[11px] uppercase tracking-[0.25em] text-nu-muted block mb-2">
                   {f.label}
                 </span>
                 <h3 className="font-head text-2xl font-extrabold text-nu-ink mb-3 tracking-tight">

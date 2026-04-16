@@ -7,10 +7,12 @@ import { createClient } from "@/lib/supabase/client";
 import {
   Edit3, History, Users, GitBranch, Clock,
   ThumbsUp, Eye, ChevronDown, ChevronUp,
-  Sparkles, Tag, ArrowLeft, BookOpen, Loader2, Trash2,
-  Link2, Plus, Search, X, List, FileText, ArrowUpDown
+  Sparkles, Tag, ArrowLeft, BookOpen, Loader2,
+  Link2, Plus, Search, X, List, FileText, ArrowUpDown,
+  LayoutTemplate, BookOpenCheck, CheckSquare, Square, Zap,
 } from "lucide-react";
 import { WikiPageEditor } from "@/components/wiki/wiki-page-editor";
+import { AskWiki } from "@/components/wiki/ask-wiki";
 import { toast } from "sonner";
 import DOMPurify from "isomorphic-dompurify";
 
@@ -51,6 +53,9 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
   const [searchingLinks, setSearchingLinks] = useState(false);
   const [showTOC, setShowTOC] = useState(false);
   const [diffVersion, setDiffVersion] = useState<{ version: number; content: string; title: string } | null>(null);
+  const [viewMode, setViewMode] = useState<"playbook" | "paper">("playbook");
+  const [aiSummary, setAiSummary] = useState<{ lines: string[]; keywords: string[] } | null>(null);
+  const [loadingAiSummary, setLoadingAiSummary] = useState(false);
   const linkSearchTimer = useRef<NodeJS.Timeout | null>(null);
 
   // Cleanup timer on unmount
@@ -274,19 +279,33 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
     return html;
   };
 
-  // Render markdown with TOC anchor IDs on headings
+  // Render markdown with TOC anchor IDs, callout boxes, checkboxes, and #tags
   const renderMarkdownWithIds = (md: string) => {
     let headingIndex = 0;
     let html = escapeHtml(md);
+
     // Code blocks (``` ... ```) — must run before other transforms
     html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) =>
       `<pre class="bg-nu-ink text-white p-4 my-4 overflow-x-auto font-mono-nu text-xs leading-relaxed border-l-4 border-nu-pink"><code>${code.trim()}</code></pre>`
     );
-    // Blockquotes
-    html = html.replace(/^&gt; (.+)/gm, '<blockquote class="border-l-4 border-nu-blue/30 pl-4 my-3 text-nu-muted italic text-sm">$1</blockquote>');
+
+    // Callout blocks: > 💡 → Insight (nu-pink), > ⚠️ → Warning (nu-amber), > 🛠 → Tool (nu-blue), > ✅ → Success
+    html = html.replace(/^&gt; 💡 (.+)$/gm,
+      '<div class="my-4 border-[2px] border-nu-pink bg-nu-pink/[0.06] px-5 py-4 flex items-start gap-3 shadow-[3px_3px_0_0_rgba(233,30,99,0.15)]"><span class="text-xl shrink-0 mt-0.5">💡</span><div class="flex-1 text-sm text-nu-graphite leading-relaxed font-medium">$1</div></div>');
+    html = html.replace(/^&gt; ⚠️ (.+)$/gm,
+      '<div class="my-4 border-[2px] border-nu-amber bg-nu-amber/[0.06] px-5 py-4 flex items-start gap-3 shadow-[3px_3px_0_0_rgba(245,158,11,0.15)]"><span class="text-xl shrink-0 mt-0.5">⚠️</span><div class="flex-1 text-sm text-nu-graphite leading-relaxed font-medium">$1</div></div>');
+    html = html.replace(/^&gt; 🛠 (.+)$/gm,
+      '<div class="my-4 border-[2px] border-nu-blue bg-nu-blue/[0.06] px-5 py-4 flex items-start gap-3 shadow-[3px_3px_0_0_rgba(46,111,255,0.15)]"><span class="text-xl shrink-0 mt-0.5">🛠️</span><div class="flex-1 text-sm text-nu-graphite leading-relaxed font-medium">$1</div></div>');
+    html = html.replace(/^&gt; ✅ (.+)$/gm,
+      '<div class="my-4 border-[2px] border-green-500 bg-green-50 px-5 py-4 flex items-start gap-3"><span class="text-xl shrink-0 mt-0.5">✅</span><div class="flex-1 text-sm text-nu-graphite leading-relaxed font-medium">$1</div></div>');
+    // Fallback plain blockquotes
+    html = html.replace(/^&gt; (.+)/gm,
+      '<blockquote class="border-l-4 border-nu-blue/30 pl-4 my-3 text-nu-muted italic text-sm">$1</blockquote>');
+
     // Horizontal rules
     html = html.replace(/^---$/gm, '<hr class="my-6 border-nu-ink/10" />');
-    // Headers with TOC IDs — single pass to assign IDs in document order (matching tocItems)
+
+    // Headers with TOC IDs
     html = html.replace(/^(#{1,3}) (.+)/gm, (_m, hashes, text) => {
       const id = `toc-${headingIndex++}`;
       const level = hashes.length;
@@ -294,21 +313,70 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
       if (level === 2) return `<h2 id="${id}" class="font-head text-lg font-extrabold mt-7 mb-3 text-nu-ink border-b border-nu-ink/10 pb-2 scroll-mt-20">${text}</h2>`;
       return `<h1 id="${id}" class="font-head text-2xl font-extrabold mt-8 mb-4 text-nu-ink scroll-mt-20">${text}</h1>`;
     });
+
     // Inline formatting
     html = html
       .replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold text-nu-ink">$1</strong>')
       .replace(/\*(.+?)\*/g, '<em>$1</em>')
       .replace(/`(.+?)`/g, '<code class="bg-nu-cream/50 px-1.5 py-0.5 text-nu-pink font-mono-nu text-xs border border-nu-ink/10 rounded">$1</code>');
-    // Lists
+
+    // Checkbox lists (before regular lists)
+    html = html
+      .replace(/^- \[x\] (.+)/gm, '<li class="ml-4 flex items-start gap-2 text-sm text-nu-graphite leading-relaxed py-0.5"><span class="text-green-500 shrink-0 mt-0.5">☑</span><span class="line-through opacity-60">$1</span></li>')
+      .replace(/^- \[ \] (.+)/gm, '<li class="ml-4 flex items-start gap-2 text-sm text-nu-graphite leading-relaxed py-0.5"><span class="text-nu-muted/40 shrink-0 mt-0.5">☐</span><span>$1</span></li>');
+
+    // Regular lists
     html = html
       .replace(/^- (.+)/gm, '<li class="ml-4 list-disc text-sm text-nu-graphite leading-relaxed">$1</li>')
       .replace(/^\d+\. (.+)/gm, '<li class="ml-4 list-decimal text-sm text-nu-graphite leading-relaxed">$1</li>');
+
     // Links
     html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" class="text-nu-blue hover:text-nu-pink underline" target="_blank" rel="noopener noreferrer">$1</a>');
+
+    // Hashtags → clickable badge (only standalone #word, not inside HTML attrs)
+    html = html.replace(/(^|[\s,])#([a-zA-Z가-힣0-9_]+)/g,
+      '$1<span class="inline-flex items-center gap-0.5 font-mono-nu text-[11px] font-bold px-1.5 py-0.5 bg-nu-blue/10 text-nu-blue border border-nu-blue/20 rounded-sm cursor-pointer hover:bg-nu-blue/20 transition-colors">#$2</span>');
+
     // Line breaks
     html = html.replace(/\n\n/g, '<div class="h-3"></div>').replace(/\n/g, '<br/>');
     return html;
   };
+
+  // Auto-generate AI TL;DR summary from page content
+  const generateAiSummary = useCallback(async () => {
+    if (aiSummary || loadingAiSummary) return;
+    setLoadingAiSummary(true);
+    try {
+      const res = await fetch("/api/ai/ask-wiki", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          groupId,
+          question: `다음 위키 페이지 "${page.title}"의 핵심 내용을 JSON으로 응답해줘. 형식: {"lines": ["요약1줄", "요약2줄", "요약3줄"], "keywords": ["키워드1","키워드2","키워드3","키워드4","키워드5"]}. 위키 내용: ${(page.content || "").substring(0, 2000)}`,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        try {
+          // Try to parse JSON from answer
+          const match = (data.answer || "").match(/\{[\s\S]*\}/);
+          if (match) {
+            const parsed = JSON.parse(match[0]);
+            if (parsed.lines && parsed.keywords) {
+              setAiSummary(parsed);
+            }
+          } else {
+            // fallback: split answer into lines
+            const lines = (data.answer || "").split("\n").filter((l: string) => l.trim()).slice(0, 3);
+            setAiSummary({ lines, keywords: [] });
+          }
+        } catch {
+          // ignore parse error
+        }
+      }
+    } catch { /* ignore */ }
+    setLoadingAiSummary(false);
+  }, [groupId, page.title, page.content, aiSummary, loadingAiSummary]);
 
   if (isEditing) {
     return (
@@ -370,13 +438,91 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
           </div>
         </div>
 
-        <button
-          onClick={() => setIsEditing(true)}
-          className="px-5 py-2.5 bg-nu-ink text-white font-mono-nu text-[12px] font-bold uppercase tracking-widest hover:bg-nu-pink transition-all flex items-center gap-2 shrink-0"
-        >
-          <Edit3 size={12} /> Edit
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {/* View mode toggle */}
+          <div className="flex border-[2px] border-nu-ink/[0.08] overflow-hidden">
+            <button
+              onClick={() => setViewMode("playbook")}
+              className={`flex items-center gap-1.5 px-3 py-2 font-mono-nu text-[11px] font-bold uppercase tracking-widest transition-all ${
+                viewMode === "playbook" ? "bg-nu-pink text-white" : "bg-white text-nu-muted hover:text-nu-ink"
+              }`}
+              title="플레이북 모드: TL;DR·액션 체크리스트 강조"
+            >
+              <LayoutTemplate size={12} /> 플레이북
+            </button>
+            <button
+              onClick={() => setViewMode("paper")}
+              className={`flex items-center gap-1.5 px-3 py-2 font-mono-nu text-[11px] font-bold uppercase tracking-widest transition-all ${
+                viewMode === "paper" ? "bg-nu-ink text-white" : "bg-white text-nu-muted hover:text-nu-ink"
+              }`}
+              title="논문 모드: 학술적 레이아웃"
+            >
+              <BookOpenCheck size={12} /> 논문
+            </button>
+          </div>
+          <button
+            onClick={() => setIsEditing(true)}
+            className="px-5 py-2.5 bg-nu-ink text-white font-mono-nu text-[12px] font-bold uppercase tracking-widest hover:bg-nu-pink transition-all flex items-center gap-2"
+          >
+            <Edit3 size={12} /> Edit
+          </button>
+        </div>
       </div>
+
+      {/* ── Layer 1: AI TL;DR (Playbook mode) ── */}
+      {viewMode === "playbook" && (
+        <div className="border-[3px] border-nu-pink bg-nu-pink/[0.04] overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-3 bg-nu-pink text-white">
+            <div className="flex items-center gap-2">
+              <Sparkles size={14} />
+              <span className="font-mono-nu text-[11px] font-black uppercase tracking-[0.2em]">AI 익스프레스 — TL;DR</span>
+            </div>
+            {!aiSummary && !loadingAiSummary && (
+              <button
+                onClick={generateAiSummary}
+                className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-1 bg-white/20 hover:bg-white/30 transition-all flex items-center gap-1"
+              >
+                <Zap size={10} /> 3줄 요약 생성
+              </button>
+            )}
+          </div>
+          <div className="px-5 py-4">
+            {loadingAiSummary && (
+              <div className="flex items-center gap-2 text-nu-pink/70">
+                <Loader2 size={14} className="animate-spin" />
+                <span className="font-mono-nu text-[12px]">Gemini가 핵심을 추출하는 중...</span>
+              </div>
+            )}
+            {aiSummary ? (
+              <div className="space-y-3">
+                <ul className="space-y-2">
+                  {aiSummary.lines.map((line, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-nu-graphite">
+                      <span className="font-mono-nu text-[10px] font-black text-nu-pink bg-nu-pink/10 px-1.5 py-0.5 shrink-0 mt-0.5">{String(i + 1).padStart(2, "0")}</span>
+                      <span className="leading-relaxed">{line}</span>
+                    </li>
+                  ))}
+                </ul>
+                {aiSummary.keywords.length > 0 && (
+                  <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-nu-pink/10">
+                    <span className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">키워드:</span>
+                    {aiSummary.keywords.map((kw, i) => (
+                      <span key={i} className="font-mono-nu text-[11px] font-bold px-2 py-0.5 bg-nu-blue/10 text-nu-blue border border-nu-blue/20">
+                        #{kw}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : !loadingAiSummary && (
+              <p className="text-sm text-nu-muted italic">
+                위 버튼을 눌러 AI가 이 페이지의 핵심을 3줄로 요약하게 하세요.
+                플레이북 템플릿에서는 <code className="font-mono-nu text-[11px] bg-nu-cream/50 px-1 py-0.5">&gt; 💡</code>로 작성된 내용이 여기에 강조됩니다.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Table of Contents */}
       {tocItems.length > 2 && (
@@ -416,7 +562,9 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
       {/* Content */}
       <div
         ref={contentRef}
-        className="wiki-page-content bg-white border-[3px] border-nu-ink p-8 md:p-12 text-sm text-nu-graphite leading-relaxed min-h-[300px] shadow-[8px_8px_0px_0px_rgba(13,13,13,0.06)]"
+        className={`wiki-page-content bg-white border-[3px] border-nu-ink min-h-[300px] shadow-[8px_8px_0px_0px_rgba(13,13,13,0.06)] ${
+          viewMode === "paper" ? "p-8 md:p-14 text-sm leading-[1.9] font-serif-like" : "p-6 md:p-10 text-sm leading-relaxed"
+        }`}
         dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderMarkdownWithIds(page.content || "")) }}
       />
 
@@ -702,6 +850,17 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
               )}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* ── AI Q&A (Interactive Wiki Chatbot) ── */}
+      <div className="border-[2px] border-nu-blue/20 bg-nu-blue/[0.03]">
+        <div className="px-5 py-3 bg-nu-blue text-white flex items-center gap-2">
+          <Sparkles size={13} />
+          <span className="font-mono-nu text-[11px] font-black uppercase tracking-[0.2em]">AI 질의응답 — 이 페이지에 대해 물어보세요</span>
+        </div>
+        <div className="p-4">
+          <AskWiki groupId={groupId} />
         </div>
       </div>
 

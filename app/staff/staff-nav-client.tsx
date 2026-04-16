@@ -44,7 +44,7 @@ export function StaffNavClient({ navItems, staffName }: StaffNavClientProps) {
             <span className="font-head text-[15px] font-extrabold text-nu-ink tracking-tight">
               nutunion
             </span>
-            <span className="font-mono-nu text-[9px] uppercase tracking-widest bg-indigo-600 text-white px-2 py-0.5">
+            <span className="font-mono-nu text-[11px] uppercase tracking-widest bg-indigo-600 text-white px-2 py-0.5">
               Staff
             </span>
           </Link>
@@ -55,7 +55,7 @@ export function StaffNavClient({ navItems, staffName }: StaffNavClientProps) {
             <Link
               key={item.href}
               href={item.href}
-              className={`font-mono-nu text-[11px] no-underline tracking-[0.08em] uppercase transition-all px-3 py-2 flex items-center gap-1.5 ${
+              className={`font-mono-nu text-[13px] no-underline tracking-[0.08em] uppercase transition-all px-3 py-2 flex items-center gap-1.5 ${
                 isActive(item.href)
                   ? "text-indigo-600 font-bold bg-indigo-50"
                   : "text-nu-graphite opacity-70 hover:opacity-100 hover:bg-nu-ink/[0.03]"
@@ -75,15 +75,15 @@ export function StaffNavClient({ navItems, staffName }: StaffNavClientProps) {
             aria-label="검색 (Ctrl+K)"
           >
             <Search size={12} className="text-nu-muted group-hover:text-indigo-600" />
-            <span className="font-mono-nu text-[9px] text-nu-muted/50 tracking-wider">Ctrl+K</span>
+            <span className="font-mono-nu text-[11px] text-nu-muted/50 tracking-wider">Ctrl+K</span>
           </button>
 
-          <span className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
+          <span className="font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest">
             {staffName}
           </span>
           <Link
             href="/dashboard"
-            className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 border border-nu-ink/15 text-nu-gray no-underline hover:text-nu-ink hover:border-nu-ink/30 transition-colors"
+            className="font-mono-nu text-[12px] uppercase tracking-widest px-3 py-1.5 border border-nu-ink/15 text-nu-gray no-underline hover:text-nu-ink hover:border-nu-ink/30 transition-colors"
           >
             &larr; 사이트로
           </Link>
@@ -115,12 +115,12 @@ export function StaffNavClient({ navItems, staffName }: StaffNavClientProps) {
             </Link>
           ))}
           <div className="border-t border-nu-ink/[0.06] pt-3 mt-2 flex items-center justify-between px-3">
-            <span className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
+            <span className="font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest">
               {staffName}
             </span>
             <Link
               href="/dashboard"
-              className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 border border-nu-ink/15 text-nu-gray no-underline hover:text-nu-ink transition-colors"
+              className="font-mono-nu text-[12px] uppercase tracking-widest px-3 py-1.5 border border-nu-ink/15 text-nu-gray no-underline hover:text-nu-ink transition-colors"
             >
               &larr; 사이트로
             </Link>

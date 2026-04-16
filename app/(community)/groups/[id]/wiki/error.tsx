@@ -25,13 +25,13 @@ export default function WikiErrorPage({
           탭 페이지를 불러오는 중 문제가 발생했습니다.
         </p>
         {error.digest && (
-          <p className="font-mono-nu text-[9px] text-nu-muted bg-nu-cream/50 px-3 py-1 mb-4 break-all">
+          <p className="font-mono-nu text-[11px] text-nu-muted bg-nu-cream/50 px-3 py-1 mb-4 break-all">
             digest: {error.digest}
           </p>
         )}
         <button
           onClick={reset}
-          className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-ink text-white hover:bg-nu-pink transition-all"
+          className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-ink text-white hover:bg-nu-pink transition-all"
         >
           다시 시도
         </button>

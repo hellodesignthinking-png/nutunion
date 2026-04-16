@@ -155,13 +155,13 @@ export function MyTasksWidget() {
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-nu-ink truncate">{t.title}</p>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className={`font-mono-nu text-[7px] uppercase px-1 py-px ${
+                    <span className={`font-mono-nu text-[9px] uppercase px-1 py-px ${
                       t.source === "google" ? "bg-blue-50 text-blue-500" : "bg-purple-50 text-purple-500"
                     }`}>
                       {t.source === "google" ? "Google" : "볼트"}
                     </span>
                     {t.projectTitle && (
-                      <Link href={t.projectHref || "#"} className="font-mono-nu text-[7px] text-indigo-500 no-underline hover:underline truncate max-w-[80px]"
+                      <Link href={t.projectHref || "#"} className="font-mono-nu text-[9px] text-indigo-500 no-underline hover:underline truncate max-w-[80px]"
                         onClick={e => e.stopPropagation()}>
                         {t.projectTitle}
                       </Link>
@@ -169,7 +169,7 @@ export function MyTasksWidget() {
                   </div>
                 </div>
                 {due && (
-                  <span className={`font-mono-nu text-[8px] flex items-center gap-0.5 shrink-0 ${due.cls}`}>
+                  <span className={`font-mono-nu text-[10px] flex items-center gap-0.5 shrink-0 ${due.cls}`}>
                     {due.text === "지연" && <AlertTriangle size={8} />}
                     {due.text === "오늘" && <Clock size={8} />}
                     {due.text}

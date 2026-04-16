@@ -53,7 +53,7 @@ export default function BestPracticesPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-8 pt-8 pb-24">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-1.5 mb-6 font-mono-nu text-[11px] uppercase tracking-widest">
+      <nav className="flex items-center gap-1.5 mb-6 font-mono-nu text-[13px] uppercase tracking-widest">
         <Link href={`/groups/${groupId}`}
           className="text-nu-muted hover:text-nu-ink no-underline flex items-center gap-1 transition-colors">
           <ArrowLeft size={12} /> {groupName}
@@ -66,7 +66,7 @@ export default function BestPracticesPage() {
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-1">
           <Sparkles size={16} className="text-nu-pink" />
-          <span className="font-mono-nu text-[9px] font-black uppercase tracking-[0.2em] text-nu-pink">
+          <span className="font-mono-nu text-[11px] font-black uppercase tracking-[0.2em] text-nu-pink">
             Best_Practices
           </span>
         </div>

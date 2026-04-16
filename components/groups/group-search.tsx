@@ -125,7 +125,7 @@ export function GroupSearch({ groupId }: { groupId: string }) {
         <div className="flex flex-wrap gap-1.5 mt-2">
           {allTags.map(t => (
             <button key={t} onClick={() => { setSelectedTag(selectedTag === t ? null : t); setOpen(true); }}
-              className={`font-mono-nu text-[9px] uppercase tracking-widest px-2 py-1 flex items-center gap-1 transition-all ${selectedTag === t ? "bg-nu-ink text-nu-paper" : "bg-nu-cream text-nu-muted hover:bg-nu-ink/10"}`}>
+              className={`font-mono-nu text-[11px] uppercase tracking-widest px-2 py-1 flex items-center gap-1 transition-all ${selectedTag === t ? "bg-nu-ink text-nu-paper" : "bg-nu-cream text-nu-muted hover:bg-nu-ink/10"}`}>
               <Tag size={9} />{t}
             </button>
           ))}
@@ -143,7 +143,7 @@ export function GroupSearch({ groupId }: { groupId: string }) {
             results.map(r => (
               <a key={`${r.type}-${r.id}`} href={r.url} onClick={() => setOpen(false)}
                 className="flex items-start gap-3 px-4 py-3 hover:bg-nu-cream/30 transition-colors no-underline border-b border-nu-ink/[0.05] last:border-b-0">
-                <span className={`font-mono-nu text-[8px] uppercase tracking-widest px-1.5 py-0.5 shrink-0 mt-0.5 ${typeColor[r.type]}`}>
+                <span className={`font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 shrink-0 mt-0.5 ${typeColor[r.type]}`}>
                   {typeLabel[r.type]}
                 </span>
                 <div className="flex-1 min-w-0">
@@ -151,11 +151,11 @@ export function GroupSearch({ groupId }: { groupId: string }) {
                   {r.excerpt && <p className="text-xs text-nu-muted truncate">{r.excerpt}</p>}
                   <div className="flex flex-wrap gap-1 mt-1">
                     {r.tags.map(t => (
-                      <span key={t} className="font-mono-nu text-[8px] text-nu-blue"># {t}</span>
+                      <span key={t} className="font-mono-nu text-[10px] text-nu-blue"># {t}</span>
                     ))}
                   </div>
                 </div>
-                <span className="font-mono-nu text-[9px] text-nu-muted shrink-0">
+                <span className="font-mono-nu text-[11px] text-nu-muted shrink-0">
                   {new Date(r.date).toLocaleDateString("ko", { month: "short", day: "numeric" })}
                 </span>
               </a>

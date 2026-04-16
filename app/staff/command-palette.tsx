@@ -178,19 +178,19 @@ export function CommandPalette() {
             placeholder="검색하거나 명령어 입력... (이동, 프로젝트, 할일)"
             className="flex-1 text-sm bg-transparent border-none outline-none placeholder:text-nu-muted/60"
           />
-          <span className="font-mono-nu text-[8px] text-nu-muted/50 uppercase shrink-0">ESC</span>
+          <span className="font-mono-nu text-[10px] text-nu-muted/50 uppercase shrink-0">ESC</span>
         </div>
 
         {/* Results */}
         <div className="max-h-[50vh] overflow-y-auto py-2">
           {filtered.length === 0 ? (
             <div className="px-4 py-8 text-center">
-              <p className="font-mono-nu text-[10px] text-nu-muted">결과가 없습니다</p>
+              <p className="font-mono-nu text-[12px] text-nu-muted">결과가 없습니다</p>
             </div>
           ) : (
             Object.entries(grouped).map(([category, items]) => (
               <div key={category}>
-                <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted px-4 py-1 font-bold">
+                <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted px-4 py-1 font-bold">
                   {category}
                 </p>
                 {items.map(item => {
@@ -209,7 +209,7 @@ export function CommandPalette() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold truncate">{item.label}</p>
                         {item.description && (
-                          <p className="font-mono-nu text-[8px] text-nu-muted truncate">{item.description}</p>
+                          <p className="font-mono-nu text-[10px] text-nu-muted truncate">{item.description}</p>
                         )}
                       </div>
                       {isSelected && <ArrowRight size={12} className="text-indigo-400 shrink-0" />}
@@ -223,9 +223,9 @@ export function CommandPalette() {
 
         {/* Footer */}
         <div className="px-4 py-2 border-t border-nu-ink/[0.06] bg-nu-ink/[0.02] flex items-center gap-4">
-          <span className="font-mono-nu text-[8px] text-nu-muted/50">↑↓ 이동</span>
-          <span className="font-mono-nu text-[8px] text-nu-muted/50">Enter 선택</span>
-          <span className="font-mono-nu text-[8px] text-nu-muted/50">Esc 닫기</span>
+          <span className="font-mono-nu text-[10px] text-nu-muted/50">↑↓ 이동</span>
+          <span className="font-mono-nu text-[10px] text-nu-muted/50">Enter 선택</span>
+          <span className="font-mono-nu text-[10px] text-nu-muted/50">Esc 닫기</span>
         </div>
       </div>
     </div>

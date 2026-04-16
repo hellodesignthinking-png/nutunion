@@ -37,7 +37,7 @@ export function VideoSection({ content }: VideoSectionProps) {
 
       <div className="max-w-5xl mx-auto relative">
         <div className="text-center mb-12 reveal-item">
-          <span className="font-mono-nu text-[10px] uppercase tracking-[0.3em] text-nu-pink mb-4 block">
+          <span className="font-mono-nu text-[12px] uppercase tracking-[0.3em] text-nu-pink mb-4 block">
             Watch
           </span>
           <h2 className="font-head text-[clamp(32px,4.5vw,48px)] font-extrabold text-nu-paper tracking-tighter leading-[0.9]">
@@ -51,8 +51,8 @@ export function VideoSection({ content }: VideoSectionProps) {
         {/* Video player — brutalist frame */}
         <div className="reveal-item relative aspect-video bg-nu-graphite overflow-hidden border-[3px] border-nu-paper/15">
           {/* Registration marks */}
-          <div className="absolute top-2 left-2 font-mono-nu text-[10px] text-nu-paper/10 z-20" aria-hidden="true">⊕</div>
-          <div className="absolute top-2 right-2 font-mono-nu text-[10px] text-nu-paper/10 z-20" aria-hidden="true">⊕</div>
+          <div className="absolute top-2 left-2 font-mono-nu text-[12px] text-nu-paper/10 z-20" aria-hidden="true">⊕</div>
+          <div className="absolute top-2 right-2 font-mono-nu text-[12px] text-nu-paper/10 z-20" aria-hidden="true">⊕</div>
 
           {playing && videoUrl ? (
             <iframe
@@ -98,14 +98,14 @@ export function VideoSection({ content }: VideoSectionProps) {
                   <div className="w-20 h-20 border-[3px] border-nu-paper/20 flex items-center justify-center mx-auto mb-4">
                     <Play size={32} className="text-nu-paper/30 ml-1" />
                   </div>
-                  <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-paper/30">
+                  <p className="font-mono-nu text-[13px] uppercase tracking-widest text-nu-paper/30">
                     Coming Soon
                   </p>
                 </div>
               )}
 
               {videoUrl && (
-                <p className="relative z-10 font-mono-nu text-[10px] uppercase tracking-widest text-nu-paper/40 mt-6">
+                <p className="relative z-10 font-mono-nu text-[12px] uppercase tracking-widest text-nu-paper/40 mt-6">
                   Click to play
                 </p>
               )}
@@ -115,10 +115,10 @@ export function VideoSection({ content }: VideoSectionProps) {
 
         {/* Controls bar */}
         <div className="flex items-center justify-between mt-3">
-          <span className="font-mono-nu text-[9px] text-nu-paper/20 tracking-widest uppercase">
+          <span className="font-mono-nu text-[11px] text-nu-paper/20 tracking-widest uppercase">
             RISO BROADCAST — NU EDITION
           </span>
-          <span className="font-mono-nu text-[9px] text-nu-paper/15">⊕</span>
+          <span className="font-mono-nu text-[11px] text-nu-paper/15">⊕</span>
         </div>
       </div>
     </section>

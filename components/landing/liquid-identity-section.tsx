@@ -300,16 +300,16 @@ export function LiquidIdentitySection() {
         {/* ── Header ─────────────────────────────────────────────────── */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-10">
           <div className="flex items-center gap-3">
-            <span className="font-mono-nu text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1.5"
+            <span className="font-mono-nu text-[12px] font-bold uppercase tracking-[0.2em] px-3 py-1.5"
               style={{ background: cfg.colors.primary, color: cfg.colors.text }}>
               Liquid Identity
             </span>
-            <span className="font-mono-nu text-[9px] uppercase tracking-widest"
+            <span className="font-mono-nu text-[11px] uppercase tracking-widest"
               style={{ color: cfg.colors.accent, opacity: 0.7 }}>
               v3.0 Multiverse
             </span>
             {vibe?.isHybrid && (
-              <span className="font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5"
+              <span className="font-mono-nu text-[11px] uppercase tracking-widest px-2 py-0.5"
                 style={{ background: cfg.colors.accent, color: cfg.colors.bg }}>
                 <Layers size={9} className="inline mr-1" />Hybrid
               </span>
@@ -318,18 +318,18 @@ export function LiquidIdentitySection() {
 
           <div className="flex items-center gap-2">
             <button onClick={handleAutomatic} disabled={!manualMode}
-              className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-2 border transition-all flex items-center gap-1.5"
+              className="font-mono-nu text-[12px] uppercase tracking-widest px-3 py-2 border transition-all flex items-center gap-1.5"
               style={{ borderColor: cfg.colors.accent, color: cfg.colors.accent,
                 background: manualMode ? "transparent" : `${cfg.colors.accent}18` }}>
               <Database size={11} /> 오늘 데이터
             </button>
             <button onClick={() => handleSelect(ALL_GENRES[Math.floor(Math.random() * ALL_GENRES.length)])}
-              className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-2 border transition-all flex items-center gap-1.5"
+              className="font-mono-nu text-[12px] uppercase tracking-widest px-3 py-2 border transition-all flex items-center gap-1.5"
               style={{ borderColor: cfg.colors.text + "40", color: cfg.colors.text }}>
               <Shuffle size={11} /> 랜덤
             </button>
             <button onClick={() => setShowArchive(a => !a)}
-              className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-2 border transition-all flex items-center gap-1.5"
+              className="font-mono-nu text-[12px] uppercase tracking-widest px-3 py-2 border transition-all flex items-center gap-1.5"
               style={{ borderColor: cfg.colors.text + "40", color: cfg.colors.text,
                 background: showArchive ? `${cfg.colors.primary}22` : "transparent" }}>
               <Calendar size={11} /> 아카이브
@@ -344,12 +344,12 @@ export function LiquidIdentitySection() {
         {/* ── Archive Drawer ──────────────────────────────────────────── */}
         {showArchive && (
           <div className="mb-8 border p-4" style={{ borderColor: `${cfg.colors.accent}40`, background: `${cfg.colors.surface}` }}>
-            <p className="font-mono-nu text-[10px] uppercase tracking-widest mb-3"
+            <p className="font-mono-nu text-[12px] uppercase tracking-widest mb-3"
               style={{ color: cfg.colors.accent }}>
               너트 아카이브 — 지난 로고들
             </p>
             {archive.length === 0 ? (
-              <p className="font-mono-nu text-[11px]" style={{ color: cfg.colors.text, opacity: 0.4 }}>
+              <p className="font-mono-nu text-[13px]" style={{ color: cfg.colors.text, opacity: 0.4 }}>
                 아직 기록이 없습니다. 매일 방문하면 수집됩니다.
               </p>
             ) : (
@@ -363,10 +363,10 @@ export function LiquidIdentitySection() {
                       <div style={{ width: 52, height: 52 }}>
                         <LiquidNutSvg genre={e.genre} size={52} animated={false} />
                       </div>
-                      <span className="font-mono-nu text-[8px]" style={{ color: c.colors.text }}>
+                      <span className="font-mono-nu text-[10px]" style={{ color: c.colors.text }}>
                         {e.date.slice(5)}
                       </span>
-                      <span className="font-mono-nu text-[7px]" style={{ color: c.colors.accent }}>
+                      <span className="font-mono-nu text-[9px]" style={{ color: c.colors.accent }}>
                         {c.label}
                       </span>
                     </button>
@@ -386,14 +386,14 @@ export function LiquidIdentitySection() {
 
             {/* Today's vibe header */}
             <div className="p-7 border-b" style={{ borderColor: `${cfg.colors.shell}30` }}>
-              <p className="font-mono-nu text-[10px] uppercase tracking-widest mb-1"
+              <p className="font-mono-nu text-[12px] uppercase tracking-widest mb-1"
                 style={{ color: cfg.colors.accent, opacity: 0.7 }}>Today&apos;s Vibe</p>
               <h2 className="text-5xl md:text-6xl font-extrabold tracking-tight transition-all duration-500"
                 style={{ fontFamily: `'${cfg.font}', sans-serif`, color: cfg.colors.text }}>
                 {cfg.vibe.toUpperCase()}
               </h2>
               {vibe?.isHybrid && vibe.hybridGenres && (
-                <p className="font-mono-nu text-[10px] mt-2 flex items-center gap-2"
+                <p className="font-mono-nu text-[12px] mt-2 flex items-center gap-2"
                   style={{ color: cfg.colors.accent }}>
                   <Layers size={10} />
                   {GENRES[vibe.hybridGenres[0]].label} × {GENRES[vibe.hybridGenres[1]].label} 하이브리드
@@ -410,7 +410,7 @@ export function LiquidIdentitySection() {
                 <div className="flex items-start gap-3">
                   <Zap size={16} style={{ color: cfg.colors.accent }} className="shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="font-mono-nu text-[10px] uppercase tracking-widest mb-1.5"
+                    <p className="font-mono-nu text-[12px] uppercase tracking-widest mb-1.5"
                       style={{ color: cfg.colors.accent, opacity: 0.7 }}>Data Insight</p>
                     <p className="text-sm leading-relaxed" style={{ color: cfg.colors.text }}>
                       {vibe.insight || `총 ${vibe.activityLevel}개의 활동이 오늘의 너트를 만들었습니다.`}
@@ -423,7 +423,7 @@ export function LiquidIdentitySection() {
                           const pct = Math.round((count / vibe.activityLevel) * 100);
                           return (
                             <div key={cat}>
-                              <div className="flex justify-between font-mono-nu text-[9px] mb-0.5"
+                              <div className="flex justify-between font-mono-nu text-[11px] mb-0.5"
                                 style={{ color: cfg.colors.text, opacity: 0.6 }}>
                                 <span>{CAT_KO[cat] ?? cat}</span>
                                 <span>{count}개 ({pct}%)</span>
@@ -443,7 +443,7 @@ export function LiquidIdentitySection() {
 
             {/* Genre selector */}
             <div className="p-5">
-              <p className="font-mono-nu text-[10px] uppercase tracking-widest mb-3"
+              <p className="font-mono-nu text-[12px] uppercase tracking-widest mb-3"
                 style={{ color: cfg.colors.text, opacity: 0.4 }}>8 Genre Library</p>
               <div className="grid grid-cols-2 gap-1.5">
                 {ALL_GENRES.map((g) => {
@@ -464,11 +464,11 @@ export function LiquidIdentitySection() {
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-head text-xs font-bold">{c.label}</span>
                           {isToday && (
-                            <span className="font-mono-nu text-[7px] uppercase tracking-wider px-1 py-0.5"
+                            <span className="font-mono-nu text-[9px] uppercase tracking-wider px-1 py-0.5"
                               style={{ background: c.colors.accent, color: c.colors.bg }}>Today</span>
                           )}
                         </div>
-                        <p className="font-mono-nu text-[8px] opacity-60 truncate">{c.labelKo}</p>
+                        <p className="font-mono-nu text-[10px] opacity-60 truncate">{c.labelKo}</p>
                       </div>
                     </button>
                   );
@@ -508,21 +508,21 @@ export function LiquidIdentitySection() {
                   style={{ fontFamily: `'${cfg.font}', sans-serif`, color: cfg.colors.text }}>
                   NUT UNION
                 </p>
-                <p className="font-mono-nu text-[10px] uppercase tracking-[0.3em] mt-1.5"
+                <p className="font-mono-nu text-[12px] uppercase tracking-[0.3em] mt-1.5"
                   style={{ color: cfg.colors.accent, opacity: 0.7 }}>
                   {cfg.vibe} · {getTodayKey()}
                 </p>
               </div>
 
               {/* Genre stamp */}
-              <div className="absolute top-4 left-4 font-mono-nu text-[9px] font-bold uppercase tracking-widest px-3 py-1.5"
+              <div className="absolute top-4 left-4 font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-1.5"
                 style={{ background: cfg.colors.primary, color: cfg.colors.text }}>
                 {cfg.label}
               </div>
 
               {/* Variable path indicator */}
               {(vibe?.activityLevel ?? 0) > 0 && (
-                <div className="absolute top-4 right-4 font-mono-nu text-[8px] uppercase tracking-widest px-2 py-1"
+                <div className="absolute top-4 right-4 font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1"
                   style={{ background: `${cfg.colors.accent}20`, color: cfg.colors.accent }}>
                   Activity {vibe?.activityLevel}
                 </div>
@@ -531,21 +531,21 @@ export function LiquidIdentitySection() {
 
             {/* ── Download bar ──────────────────────────────────────── */}
             <div className="border-t p-4" style={{ borderColor: `${cfg.colors.shell}50` }}>
-              <p className="font-mono-nu text-[10px] uppercase tracking-widest mb-3"
+              <p className="font-mono-nu text-[12px] uppercase tracking-widest mb-3"
                 style={{ color: cfg.colors.text, opacity: 0.4 }}>
                 한정판 Identity Kit · {getTodayKey()}
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {/* SVG */}
                 <button onClick={dlSvg}
-                  className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-2.5 border-[2px] flex items-center justify-center gap-1.5 transition-all hover:opacity-80"
+                  className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-3 py-2.5 border-[2px] flex items-center justify-center gap-1.5 transition-all hover:opacity-80"
                   style={{ borderColor: cfg.colors.text + "50", color: cfg.colors.text }}
                   id="dl-svg">
                   <Download size={11} /> SVG 로고
                 </button>
                 {/* PNG */}
                 <button onClick={dlPng} disabled={downloading === "png"}
-                  className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-2.5 border-[2px] flex items-center justify-center gap-1.5 transition-all hover:opacity-80 disabled:opacity-40"
+                  className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-3 py-2.5 border-[2px] flex items-center justify-center gap-1.5 transition-all hover:opacity-80 disabled:opacity-40"
                   style={{ borderColor: cfg.colors.text + "50", color: cfg.colors.text }}
                   id="dl-png">
                   {downloading === "png" ? <RefreshCw size={11} className="animate-spin" /> : <Download size={11} />}
@@ -553,7 +553,7 @@ export function LiquidIdentitySection() {
                 </button>
                 {/* Wallpaper */}
                 <button onClick={dlWallpaper} disabled={downloading === "wallpaper"}
-                  className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-2.5 flex items-center justify-center gap-1.5 transition-all hover:opacity-80 disabled:opacity-40"
+                  className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-3 py-2.5 flex items-center justify-center gap-1.5 transition-all hover:opacity-80 disabled:opacity-40"
                   style={{ background: cfg.colors.primary + "DD", color: cfg.colors.text }}
                   id="dl-wallpaper">
                   {downloading === "wallpaper" ? <RefreshCw size={11} className="animate-spin" /> : <Download size={11} />}
@@ -561,7 +561,7 @@ export function LiquidIdentitySection() {
                 </button>
                 {/* Business Card */}
                 <button onClick={dlBusinessCard} disabled={downloading === "card"}
-                  className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-2.5 flex items-center justify-center gap-1.5 transition-all hover:opacity-80 disabled:opacity-40"
+                  className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-3 py-2.5 flex items-center justify-center gap-1.5 transition-all hover:opacity-80 disabled:opacity-40"
                   style={{ background: cfg.colors.accent + "CC", color: cfg.colors.bg }}
                   id="dl-card">
                   {downloading === "card" ? <RefreshCw size={11} className="animate-spin" /> : <Download size={11} />}
@@ -570,7 +570,7 @@ export function LiquidIdentitySection() {
               </div>
               {/* Brand Kit */}
               <button onClick={dlBrandKit}
-                className="mt-2 w-full font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-3 flex items-center justify-center gap-2 transition-all hover:opacity-90"
+                className="mt-2 w-full font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-3 flex items-center justify-center gap-2 transition-all hover:opacity-90"
                 style={{ background: cfg.colors.secondary, color: cfg.colors.text }}
                 id="dl-brandkit">
                 <Download size={12} /> 전체 브랜드 킷 (JSON)
@@ -580,13 +580,13 @@ export function LiquidIdentitySection() {
             {/* Footer nav */}
             <div className="p-4 border-t flex items-center justify-between"
               style={{ borderColor: `${cfg.colors.shell}20` }}>
-              <p className="font-mono-nu text-[9px]" style={{ color: cfg.colors.text, opacity: 0.3 }}>
+              <p className="font-mono-nu text-[11px]" style={{ color: cfg.colors.text, opacity: 0.3 }}>
                 {vibe?.calculatedAt
                   ? `Calculated ${new Date(vibe.calculatedAt).toLocaleTimeString("ko", { hour: "2-digit", minute: "2-digit" })}`
                   : "Daily seed"}
               </p>
               <Link href="/brand"
-                className="font-mono-nu text-[10px] uppercase tracking-widest no-underline flex items-center gap-1 hover:gap-2 transition-all"
+                className="font-mono-nu text-[12px] uppercase tracking-widest no-underline flex items-center gap-1 hover:gap-2 transition-all"
                 style={{ color: cfg.colors.accent }}>
                 브랜드 가이드 <ChevronRight size={12} />
               </Link>

@@ -49,12 +49,12 @@ export function BrandPageClient() {
       {/* Header */}
       <header className="border-b-[3px] border-nu-ink sticky top-0 bg-nu-paper z-40">
         <div className="max-w-7xl mx-auto px-8 py-4 flex items-center gap-4">
-          <Link href="/" className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted no-underline hover:text-nu-ink flex items-center gap-1.5 transition-colors">
+          <Link href="/" className="font-mono-nu text-[13px] uppercase tracking-widest text-nu-muted no-underline hover:text-nu-ink flex items-center gap-1.5 transition-colors">
             <ArrowLeft size={14} /> 홈으로
           </Link>
           <span className="text-nu-ink/20">|</span>
           <span className="font-head text-lg font-extrabold">Nut-Cell Brand System</span>
-          <span className="ml-auto font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted bg-nu-ink/5 px-2 py-1">v1.0</span>
+          <span className="ml-auto font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted bg-nu-ink/5 px-2 py-1">v1.0</span>
         </div>
       </header>
 
@@ -62,7 +62,7 @@ export function BrandPageClient() {
 
         {/* Hero */}
         <div className="mb-20 border-b-[2px] border-nu-ink/10 pb-16">
-          <p className="font-mono-nu text-[10px] uppercase tracking-[0.2em] text-nu-muted mb-4">
+          <p className="font-mono-nu text-[12px] uppercase tracking-[0.2em] text-nu-muted mb-4">
             Master Design Matrix
           </p>
           <h1 className="font-head text-6xl md:text-8xl font-extrabold text-nu-ink tracking-tighter mb-6">
@@ -77,10 +77,10 @@ export function BrandPageClient() {
 
         {/* Size selector */}
         <div className="flex items-center gap-2 mb-8">
-          <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">사이즈:</span>
+          <span className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted">사이즈:</span>
           {(["sm", "md", "lg"] as const).map(s => (
             <button key={s} onClick={() => setActiveSize(s)}
-              className={`font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 border-[2px] transition-all ${
+              className={`font-mono-nu text-[12px] uppercase tracking-widest px-3 py-1.5 border-[2px] transition-all ${
                 activeSize === s ? "bg-nu-ink text-nu-paper border-nu-ink" : "border-nu-ink/20 text-nu-muted"
               }`}>
               {s}
@@ -109,12 +109,12 @@ export function BrandPageClient() {
                 <div className="mb-6">
                   <div className="flex items-center gap-3 mb-2">
                     <span
-                      className="font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-3 py-1 text-nu-paper"
+                      className="font-mono-nu text-[11px] font-bold uppercase tracking-[0.15em] px-3 py-1 text-nu-paper"
                       style={{ background: cfg.primary }}
                     >
                       {cfg.label}
                     </span>
-                    <span className="font-mono-nu text-[10px] text-nu-muted">grain {cfg.grain}</span>
+                    <span className="font-mono-nu text-[12px] text-nu-muted">grain {cfg.grain}</span>
                   </div>
                   <h2
                     className="text-2xl font-extrabold text-nu-ink mb-1"
@@ -122,12 +122,12 @@ export function BrandPageClient() {
                   >
                     NUT UNION
                   </h2>
-                  <p className="font-mono-nu text-[11px] text-nu-muted">{cfg.tagline}</p>
+                  <p className="font-mono-nu text-[13px] text-nu-muted">{cfg.tagline}</p>
                 </div>
 
                 {/* Colors */}
                 <div className="mb-4">
-                  <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-2">Color Palette</p>
+                  <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-2">Color Palette</p>
                   <div className="flex gap-1.5">
                     {[cfg.primary, cfg.secondary, cfg.accent].map(color => (
                       <button
@@ -136,7 +136,7 @@ export function BrandPageClient() {
                         onClick={() => copyColor(color)}
                       >
                         <div className="h-10 border border-nu-ink/10" style={{ background: color }} />
-                        <p className="font-mono-nu text-[8px] text-nu-muted mt-1 text-center">
+                        <p className="font-mono-nu text-[10px] text-nu-muted mt-1 text-center">
                           {copied === color
                             ? <><Check size={8} className="inline" /> Copied!</>
                             : color
@@ -150,7 +150,7 @@ export function BrandPageClient() {
                 {/* Font */}
                 <div className="border border-nu-ink/10 px-4 py-3 flex items-center justify-between">
                   <div>
-                    <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-0.5">Typography</p>
+                    <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-0.5">Typography</p>
                     <p className="text-sm font-bold text-nu-ink" style={{ fontFamily: `'${cfg.font}', sans-serif` }}>
                       {cfg.font}
                     </p>
@@ -159,7 +159,7 @@ export function BrandPageClient() {
                     href={cfg.fontUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-pink hover:underline flex items-center gap-1 no-underline"
+                    className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-pink hover:underline flex items-center gap-1 no-underline"
                   >
                     <Download size={10} /> 폰트
                   </a>
@@ -193,7 +193,7 @@ export function BrandPageClient() {
                     animated={false}
                   />
                 </div>
-                <p className="font-mono-nu text-[10px] text-nu-muted text-center uppercase tracking-widest">
+                <p className="font-mono-nu text-[12px] text-nu-muted text-center uppercase tracking-widest">
                   {label}
                 </p>
               </div>
@@ -230,7 +230,7 @@ export function BrandPageClient() {
               <thead>
                 <tr className="border-b-[2px] border-nu-ink bg-nu-ink">
                   {["그룹", "카테고리", "폰트", "Primary", "Grain"].map(h => (
-                    <th key={h} className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-paper px-6 py-3 text-left">
+                    <th key={h} className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-paper px-6 py-3 text-left">
                       {h}
                     </th>
                   ))}
@@ -243,13 +243,13 @@ export function BrandPageClient() {
                     <tr key={g} className={`border-b border-nu-ink/10 ${i % 2 === 0 ? "" : "bg-nu-cream/30"}`}>
                       <td className="px-6 py-4">
                         <span
-                          className="font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 text-nu-paper"
+                          className="font-mono-nu text-[11px] uppercase tracking-widest px-2 py-0.5 text-nu-paper"
                           style={{ background: cfg.primary }}
                         >
                           {cfg.label}
                         </span>
                       </td>
-                      <td className="px-6 py-4 font-mono-nu text-[11px] text-nu-gray">{cfg.tagline}</td>
+                      <td className="px-6 py-4 font-mono-nu text-[13px] text-nu-gray">{cfg.tagline}</td>
                       <td className="px-6 py-4">
                         <span className="text-sm font-bold" style={{ fontFamily: `'${cfg.font}', sans-serif` }}>
                           {cfg.font}
@@ -258,10 +258,10 @@ export function BrandPageClient() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <div className="w-5 h-5 border border-nu-ink/10" style={{ background: cfg.primary }} />
-                          <span className="font-mono-nu text-[11px]">{cfg.primary}</span>
+                          <span className="font-mono-nu text-[13px]">{cfg.primary}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 font-mono-nu text-[11px]">{cfg.grain}</td>
+                      <td className="px-6 py-4 font-mono-nu text-[13px]">{cfg.grain}</td>
                     </tr>
                   );
                 })}
@@ -278,7 +278,7 @@ export function BrandPageClient() {
           </div>
           <Link
             href="/#identity-generator"
-            className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-8 py-4 bg-nu-ink text-nu-paper no-underline hover:bg-nu-pink transition-colors flex items-center gap-2 whitespace-nowrap"
+            className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-8 py-4 bg-nu-ink text-nu-paper no-underline hover:bg-nu-pink transition-colors flex items-center gap-2 whitespace-nowrap"
           >
             Generator 사용하기 →
           </Link>

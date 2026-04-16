@@ -9,7 +9,7 @@ import {
   ChevronDown, ChevronUp, ExternalLink, Sparkles,
   ArrowRight, Hash, AlertCircle, Lightbulb,
   MessageSquare, Plus, Quote, Link2, TrendingUp,
-  Search, CheckCircle2, XCircle, Microscope,
+  Search, CheckCircle2, XCircle, Microscope, RefreshCw,
 } from "lucide-react";
 import DOMPurify from "isomorphic-dompurify";
 import { useRouter } from "next/navigation";
@@ -154,6 +154,7 @@ export function UnifiedTabView({
   const [sections, setSections] = useState<Section[]>([]);
   const [allResources, setAllResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [showTOC, setShowTOC] = useState(true);
   const [showRefs, setShowRefs] = useState(true);
   const [showGaps, setShowGaps] = useState(true);
@@ -168,6 +169,15 @@ export function UnifiedTabView({
   const [researchTitle, setResearchTitle] = useState("");
   const [researchType, setResearchType] = useState<"article" | "pdf" | "youtube" | "notion" | "link">("article");
   const [submittingResource, setSubmittingResource] = useState(false);
+
+  useEffect(() => {
+    const handleWikiUpdate = () => {
+      setLoading(true);
+      setRefreshKey(k => k + 1);
+    };
+    window.addEventListener("wiki-pages-updated", handleWikiUpdate);
+    return () => window.removeEventListener("wiki-pages-updated", handleWikiUpdate);
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -283,7 +293,7 @@ export function UnifiedTabView({
       setLoading(false);
     }
     load();
-  }, [groupId]);
+  }, [groupId, refreshKey]);
 
   // Compute gaps
   const gaps = useMemo(() => analyzeGaps(sections), [sections]);
@@ -530,6 +540,16 @@ export function UnifiedTabView({
               {allContributors.length > 5 && ` 외 ${allContributors.length - 5}명`}
             </p>
           )}
+
+          {/* Refresh button */}
+          <div className="flex justify-center mb-3">
+            <button
+              onClick={() => { setLoading(true); setRefreshKey(k => k + 1); }}
+              className="flex items-center gap-1.5 font-mono-nu text-[11px] uppercase tracking-widest px-3 py-1.5 border border-nu-ink/15 text-nu-muted hover:text-nu-ink hover:border-nu-ink/40 transition-colors"
+            >
+              <RefreshCw size={11} /> 새로고침
+            </button>
+          </div>
 
           {/* Date & Version */}
           <div className="flex items-center justify-center gap-4 font-mono-nu text-[11px] text-nu-muted mb-6">

@@ -123,7 +123,7 @@ export function WorkspaceLinks({ workspaceType, workspaceId, canEdit, kakaoUrl, 
   return (
     <div className="bg-nu-white border border-nu-ink/[0.06] p-4">
       <div className="flex items-center justify-between mb-3">
-        <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">
+        <span className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted">
           외부 도구 & 링크
         </span>
         {canEdit && (
@@ -179,7 +179,7 @@ export function WorkspaceLinks({ workspaceType, workspaceId, canEdit, kakaoUrl, 
               <button
                 key={t.key}
                 onClick={() => setNewType(t.key)}
-                className={`text-center py-1.5 text-[9px] font-mono-nu uppercase tracking-widest border transition-colors ${
+                className={`text-center py-1.5 text-[11px] font-mono-nu uppercase tracking-widest border transition-colors ${
                   newType === t.key ? "bg-nu-ink text-nu-paper border-nu-ink" : "border-nu-ink/10 text-nu-muted hover:border-nu-ink/30"
                 }`}
               >
@@ -200,10 +200,10 @@ export function WorkspaceLinks({ workspaceType, workspaceId, canEdit, kakaoUrl, 
             className="text-xs border-nu-ink/15 bg-transparent"
           />
           <div className="flex gap-2">
-            <button onClick={handleAdd} disabled={saving || !newUrl.trim()} className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors disabled:opacity-40 flex items-center gap-1.5">
+            <button onClick={handleAdd} disabled={saving || !newUrl.trim()} className="font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors disabled:opacity-40 flex items-center gap-1.5">
               {saving ? <Loader2 size={10} className="animate-spin" /> : <Save size={10} />} 추가
             </button>
-            <button onClick={() => setShowAdd(false)} className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 text-nu-muted hover:text-nu-ink">취소</button>
+            <button onClick={() => setShowAdd(false)} className="font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2 text-nu-muted hover:text-nu-ink">취소</button>
           </div>
         </div>
       )}

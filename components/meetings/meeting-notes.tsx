@@ -73,13 +73,13 @@ export function MeetingNotes({ meetingId, members, userId }: MeetingNotesProps) 
   return (
     <Tabs defaultValue="notes">
       <TabsList variant="line" className="mb-4">
-        <TabsTrigger value="notes" className="font-mono-nu text-[11px] uppercase tracking-widest">
+        <TabsTrigger value="notes" className="font-mono-nu text-[13px] uppercase tracking-widest">
           <StickyNote size={14} className="mr-1" /> 노트 ({noteItems.length})
         </TabsTrigger>
-        <TabsTrigger value="actions" className="font-mono-nu text-[11px] uppercase tracking-widest">
+        <TabsTrigger value="actions" className="font-mono-nu text-[13px] uppercase tracking-widest">
           <ListTodo size={14} className="mr-1" /> 액션 아이템 ({actionItems.length})
         </TabsTrigger>
-        <TabsTrigger value="decisions" className="font-mono-nu text-[11px] uppercase tracking-widest">
+        <TabsTrigger value="decisions" className="font-mono-nu text-[13px] uppercase tracking-widest">
           <Gavel size={14} className="mr-1" /> 결정 사항 ({decisions.length})
         </TabsTrigger>
       </TabsList>
@@ -199,11 +199,11 @@ function NoteSection({
                 </p>
                 <div className="flex items-center gap-3 mt-2">
                   {item.creator && (
-                    <span className="font-mono-nu text-[10px] text-nu-muted flex items-center gap-1">
+                    <span className="font-mono-nu text-[12px] text-nu-muted flex items-center gap-1">
                       <User size={10} /> {item.creator.nickname}
                     </span>
                   )}
-                  <span className="font-mono-nu text-[10px] text-nu-muted">
+                  <span className="font-mono-nu text-[12px] text-nu-muted">
                     {new Date(item.created_at).toLocaleDateString("ko")}
                   </span>
                 </div>
@@ -237,7 +237,7 @@ function NoteSection({
         <Button
           onClick={handleAdd}
           disabled={saving}
-          className="self-start bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[10px] uppercase tracking-widest"
+          className="self-start bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[12px] uppercase tracking-widest"
         >
           <Plus size={12} /> {saving ? "추가 중..." : `${label} 추가`}
         </Button>
@@ -361,18 +361,18 @@ function ActionItemSection({
                 </p>
                 <div className="flex items-center gap-3 mt-2 flex-wrap">
                   {item.owner && (
-                    <span className="font-mono-nu text-[10px] text-nu-muted flex items-center gap-1">
+                    <span className="font-mono-nu text-[12px] text-nu-muted flex items-center gap-1">
                       <User size={10} /> {item.owner.nickname}
                     </span>
                   )}
                   {item.due_date && (
-                    <span className="font-mono-nu text-[10px] text-nu-muted flex items-center gap-1">
+                    <span className="font-mono-nu text-[12px] text-nu-muted flex items-center gap-1">
                       <CalendarDays size={10} />{" "}
                       {new Date(item.due_date).toLocaleDateString("ko")}
                     </span>
                   )}
                   {item.creator && (
-                    <span className="font-mono-nu text-[10px] text-nu-muted">
+                    <span className="font-mono-nu text-[12px] text-nu-muted">
                       작성: {item.creator.nickname}
                     </span>
                   )}
@@ -402,7 +402,7 @@ function ActionItemSection({
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <span className="font-mono-nu text-[10px] text-nu-muted block mb-1">
+            <span className="font-mono-nu text-[12px] text-nu-muted block mb-1">
               담당자
             </span>
             <Select value={ownerId} onValueChange={(v) => v && setOwnerId(v)}>
@@ -419,7 +419,7 @@ function ActionItemSection({
             </Select>
           </div>
           <div>
-            <span className="font-mono-nu text-[10px] text-nu-muted block mb-1">
+            <span className="font-mono-nu text-[12px] text-nu-muted block mb-1">
               마감일
             </span>
             <Input
@@ -433,7 +433,7 @@ function ActionItemSection({
         <Button
           onClick={handleAdd}
           disabled={saving}
-          className="self-start bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[10px] uppercase tracking-widest"
+          className="self-start bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[12px] uppercase tracking-widest"
         >
           <Plus size={12} /> {saving ? "추가 중..." : "액션 아이템 추가"}
         </Button>

@@ -99,7 +99,7 @@ export default function MeetingsPage() {
   return (
     <div className="max-w-4xl mx-auto px-8 py-12">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-1.5 mb-6 font-mono-nu text-[11px] uppercase tracking-widest">
+      <nav className="flex items-center gap-1.5 mb-6 font-mono-nu text-[13px] uppercase tracking-widest">
         <Link href={`/groups/${groupId}`}
           className="text-nu-muted hover:text-nu-ink no-underline flex items-center gap-1 transition-colors">
           <ArrowLeft size={12} /> {groupName}
@@ -118,7 +118,7 @@ export default function MeetingsPage() {
         </div>
         {isMember && (
           <Link href={`/groups/${groupId}/meetings/create`}
-            className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-3 bg-nu-ink text-nu-paper no-underline hover:bg-nu-pink transition-colors inline-flex items-center gap-2">
+            className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-5 py-3 bg-nu-ink text-nu-paper no-underline hover:bg-nu-pink transition-colors inline-flex items-center gap-2">
             <Plus size={14} /> 미팅 만들기
           </Link>
         )}
@@ -129,7 +129,7 @@ export default function MeetingsPage() {
         <div className="bg-nu-yellow/10 border border-nu-yellow/30 p-5 mb-8 flex items-start gap-3">
           <Lightbulb size={18} className="text-nu-amber shrink-0 mt-0.5" />
           <div>
-            <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-amber font-bold mb-1">
+            <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-amber font-bold mb-1">
               다음 미팅 예정 주제
             </p>
             <p className="text-sm text-nu-ink">{lastNextTopic}</p>
@@ -142,14 +142,14 @@ export default function MeetingsPage() {
         <h2 className="font-head text-xl font-extrabold flex items-center gap-2 mb-4">
           <Calendar size={18} className="text-nu-blue" />
           예정된 미팅
-          <span className="font-mono-nu text-[11px] text-nu-muted font-normal">({upcoming.length})</span>
+          <span className="font-mono-nu text-[13px] text-nu-muted font-normal">({upcoming.length})</span>
         </h2>
         {upcoming.length === 0 ? (
           <div className="bg-nu-white border border-nu-ink/[0.08] p-8 text-center">
             <p className="text-nu-gray text-sm">예정된 미팅이 없습니다</p>
             {isMember && (
               <Link href={`/groups/${groupId}/meetings/create`}
-                className="mt-3 inline-block font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink no-underline hover:underline">
+                className="mt-3 inline-block font-mono-nu text-[12px] uppercase tracking-widest text-nu-pink no-underline hover:underline">
                 + 미팅 만들기
               </Link>
             )}
@@ -166,7 +166,7 @@ export default function MeetingsPage() {
         <h2 className="font-head text-xl font-extrabold flex items-center gap-2 mb-4">
           <ListChecks size={18} className="text-nu-pink" />
           완료된 미팅
-          <span className="font-mono-nu text-[11px] text-nu-muted font-normal">({completed.length})</span>
+          <span className="font-mono-nu text-[13px] text-nu-muted font-normal">({completed.length})</span>
         </h2>
         {completed.length === 0 ? (
           <div className="bg-nu-white border border-nu-ink/[0.08] p-8 text-center">
@@ -198,19 +198,19 @@ function MeetingCard({
       <div className="flex items-center gap-5">
         <div className="w-14 h-14 bg-nu-pink/10 flex flex-col items-center justify-center shrink-0">
           <span className="font-head text-lg font-extrabold text-nu-pink leading-none">{date.getDate()}</span>
-          <span className="font-mono-nu text-[9px] uppercase text-nu-pink/70">
+          <span className="font-mono-nu text-[11px] uppercase text-nu-pink/70">
             {date.toLocaleDateString("ko", { month: "short" })}
           </span>
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <h3 className="font-head text-sm font-bold text-nu-ink truncate">{meeting.title}</h3>
-            <Badge className={`text-[10px] shrink-0 ${cfg.className} ${meeting.status === "in_progress" ? "animate-pulse" : ""}`}>
+            <Badge className={`text-[12px] shrink-0 ${cfg.className} ${meeting.status === "in_progress" ? "animate-pulse" : ""}`}>
               {meeting.status === "in_progress" && <span className="w-1.5 h-1.5 rounded-full bg-nu-amber mr-1" />}
               {cfg.label}
             </Badge>
             {meeting.status === "completed" && meeting.summary && (
-              <span className="font-mono-nu text-[9px] text-nu-pink">📝 회의록</span>
+              <span className="font-mono-nu text-[11px] text-nu-pink">📝 회의록</span>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs text-nu-muted">
@@ -237,7 +237,7 @@ function MeetingCard({
       </div>
       {/* Summary preview for completed meetings */}
       {meeting.status === "completed" && meeting.summary && (
-        <p className="mt-2 ml-[76px] text-[11px] text-nu-gray line-clamp-2 leading-relaxed">
+        <p className="mt-2 ml-[76px] text-[13px] text-nu-gray line-clamp-2 leading-relaxed">
           {meeting.summary}
         </p>
       )}
@@ -245,7 +245,7 @@ function MeetingCard({
       {meeting.status === "completed" && (meeting as any).next_topic && (
         <div className="mt-2 ml-[76px] flex items-center gap-1.5">
           <Lightbulb size={10} className="text-nu-amber shrink-0" />
-          <span className="font-mono-nu text-[9px] text-nu-amber uppercase tracking-widest truncate">
+          <span className="font-mono-nu text-[11px] text-nu-amber uppercase tracking-widest truncate">
             다음 주제: {(meeting as any).next_topic}
           </span>
         </div>

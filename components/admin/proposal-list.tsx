@@ -193,7 +193,7 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
               <button
                 key={f.key}
                 onClick={() => setFilter(f.key)}
-                className={`font-mono-nu text-[9px] uppercase tracking-widest px-2.5 py-1 border cursor-pointer transition-all ${
+                className={`font-mono-nu text-[11px] uppercase tracking-widest px-2.5 py-1 border cursor-pointer transition-all ${
                   filter === f.key
                     ? "bg-nu-ink text-nu-paper border-nu-ink"
                     : "bg-nu-white text-nu-muted border-nu-ink/10 hover:border-nu-ink/30"
@@ -226,12 +226,12 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
               >
                 <div className="flex items-start justify-between gap-2 mb-1">
                   <p className="text-sm font-bold text-nu-ink truncate flex-1">{p.project_title}</p>
-                  <span className={`font-mono-nu text-[8px] uppercase tracking-widest px-2 py-0.5 font-bold border shrink-0 ${st.bg} ${st.color}`}>
+                  <span className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 font-bold border shrink-0 ${st.bg} ${st.color}`}>
                     {st.label}
                   </span>
                 </div>
-                <p className="text-[11px] text-nu-muted truncate">{p.company_name} · {p.contact_email}</p>
-                <p className="font-mono-nu text-[9px] text-nu-muted mt-1">{formatDate(p.created_at)}</p>
+                <p className="text-[13px] text-nu-muted truncate">{p.company_name} · {p.contact_email}</p>
+                <p className="font-mono-nu text-[11px] text-nu-muted mt-1">{formatDate(p.created_at)}</p>
               </button>
             );
           })}
@@ -252,7 +252,7 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
             <div className="bg-nu-ink text-nu-paper px-6 py-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="font-mono-nu text-[9px] uppercase tracking-[0.25em] text-nu-pink font-bold">
+                  <span className="font-mono-nu text-[11px] uppercase tracking-[0.25em] text-nu-pink font-bold">
                     {STATUS_CONFIG[selected.status]?.label || selected.status}
                   </span>
                   <h2 className="font-head text-lg font-extrabold mt-1">{selected.project_title}</h2>
@@ -272,14 +272,14 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
                 <div className="flex items-center gap-2">
                   <Briefcase size={14} className="text-nu-muted" />
                   <div>
-                    <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted">회사/단체</p>
+                    <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">회사/단체</p>
                     <p className="text-sm font-medium">{selected.company_name}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail size={14} className="text-nu-muted" />
                   <div>
-                    <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted">이메일</p>
+                    <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">이메일</p>
                     <p className="text-sm font-medium">{selected.contact_email}</p>
                   </div>
                 </div>
@@ -287,7 +287,7 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
                   <div className="flex items-center gap-2">
                     <User size={14} className="text-nu-muted" />
                     <div>
-                      <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted">담당자</p>
+                      <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">담당자</p>
                       <p className="text-sm font-medium">{selected.contact_name}</p>
                     </div>
                   </div>
@@ -296,7 +296,7 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
                   <div className="flex items-center gap-2">
                     <Phone size={14} className="text-nu-muted" />
                     <div>
-                      <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted">연락처</p>
+                      <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">연락처</p>
                       <p className="text-sm font-medium">{selected.contact_phone}</p>
                     </div>
                   </div>
@@ -308,13 +308,13 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
                 <div className="grid grid-cols-2 gap-4 mb-3">
                   {selected.budget && (
                     <div>
-                      <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted mb-0.5">예산</p>
+                      <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-0.5">예산</p>
                       <p className="text-sm font-medium">{BUDGET_LABELS[selected.budget] || selected.budget}</p>
                     </div>
                   )}
                   {selected.timeline && (
                     <div>
-                      <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted mb-0.5">일정</p>
+                      <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-0.5">일정</p>
                       <p className="text-sm font-medium">{TIMELINE_LABELS[selected.timeline] || selected.timeline}</p>
                     </div>
                   )}
@@ -322,10 +322,10 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
 
                 {selected.required_skills && selected.required_skills.length > 0 && (
                   <div className="mb-3">
-                    <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted mb-1.5">필요 역량</p>
+                    <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-1.5">필요 역량</p>
                     <div className="flex flex-wrap gap-1">
                       {selected.required_skills.map((s: string) => (
-                        <span key={s} className="font-mono-nu text-[9px] bg-nu-pink/10 text-nu-pink px-2 py-0.5 font-bold">{s}</span>
+                        <span key={s} className="font-mono-nu text-[11px] bg-nu-pink/10 text-nu-pink px-2 py-0.5 font-bold">{s}</span>
                       ))}
                     </div>
                   </div>
@@ -333,7 +333,7 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
 
                 {selected.description && (
                   <div>
-                    <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted mb-1.5">상세 설명</p>
+                    <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-1.5">상세 설명</p>
                     <p className="text-sm text-nu-graphite leading-relaxed whitespace-pre-wrap bg-nu-cream/20 p-3 border border-nu-ink/5">
                       {selected.description}
                     </p>
@@ -344,9 +344,9 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
               {/* Submitter info */}
               {selected.submitter && (
                 <div className="border-t border-nu-ink/[0.06] pt-4">
-                  <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted mb-1.5">제출자 (회원)</p>
+                  <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-1.5">제출자 (회원)</p>
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-nu-ink/5 flex items-center justify-center font-head text-[10px] text-nu-muted shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-nu-ink/5 flex items-center justify-center font-head text-[12px] text-nu-muted shrink-0">
                       {selected.submitter.avatar_url ? (
                         <img src={selected.submitter.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
                       ) : (
@@ -355,7 +355,7 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
                     </div>
                     <div>
                       <p className="text-sm font-medium">{selected.submitter.nickname}</p>
-                      <p className="text-[10px] text-nu-muted">{selected.submitter.email}</p>
+                      <p className="text-[12px] text-nu-muted">{selected.submitter.email}</p>
                     </div>
                   </div>
                 </div>
@@ -364,13 +364,13 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
               {/* Admin notes / reject reason display */}
               {selected.admin_notes && (
                 <div className="bg-blue-50 border border-blue-200 p-3">
-                  <p className="font-mono-nu text-[8px] uppercase tracking-widest text-blue-600 mb-1">관리자 메모</p>
+                  <p className="font-mono-nu text-[10px] uppercase tracking-widest text-blue-600 mb-1">관리자 메모</p>
                   <p className="text-sm text-blue-800">{selected.admin_notes}</p>
                 </div>
               )}
               {selected.reject_reason && (
                 <div className="bg-red-50 border border-red-200 p-3">
-                  <p className="font-mono-nu text-[8px] uppercase tracking-widest text-red-500 mb-1">반려 사유</p>
+                  <p className="font-mono-nu text-[10px] uppercase tracking-widest text-red-500 mb-1">반려 사유</p>
                   <p className="text-sm text-red-700">{selected.reject_reason}</p>
                 </div>
               )}
@@ -378,7 +378,7 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
               {/* Converted project link */}
               {selected.converted_project_id && (
                 <div className="bg-nu-pink/5 border border-nu-pink/20 p-3">
-                  <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-pink mb-1">전환된 프로젝트</p>
+                  <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink mb-1">전환된 프로젝트</p>
                   <Link
                     href={`/projects/${selected.converted_project_id}`}
                     className="text-sm text-nu-pink font-bold hover:underline flex items-center gap-1 no-underline"
@@ -386,13 +386,13 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
                     {selected.project?.title || "프로젝트 보기"} <ExternalLink size={12} />
                   </Link>
                   {selected.pm && (
-                    <p className="text-[10px] text-nu-muted mt-1">PM: {selected.pm.nickname} ({selected.pm.email})</p>
+                    <p className="text-[12px] text-nu-muted mt-1">PM: {selected.pm.nickname} ({selected.pm.email})</p>
                   )}
                 </div>
               )}
 
               {/* Timestamps */}
-              <div className="border-t border-nu-ink/[0.06] pt-3 flex items-center gap-4 text-[10px] text-nu-muted">
+              <div className="border-t border-nu-ink/[0.06] pt-3 flex items-center gap-4 text-[12px] text-nu-muted">
                 <span>접수: {formatDate(selected.created_at)}</span>
                 {selected.reviewed_at && <span>검토: {formatDate(selected.reviewed_at)}</span>}
               </div>
@@ -402,7 +402,7 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
                 <div className="border-t border-nu-ink/[0.06] pt-4">
                   {/* Admin notes input */}
                   <div className="mb-3">
-                    <label className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted block mb-1">관리자 메모</label>
+                    <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-1">관리자 메모</label>
                     <textarea
                       value={adminNotes}
                       onChange={e => setAdminNotes(e.target.value)}
@@ -417,7 +417,7 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
                       <button
                         onClick={() => handleAction(selected.id, "review")}
                         disabled={!!actionLoading}
-                        className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                        className="font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2 bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                       >
                         {actionLoading === "review" ? <Loader2 size={12} className="animate-spin" /> : <Clock size={12} />}
                         검토 시작
@@ -429,7 +429,7 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
                         <button
                           onClick={() => handleAction(selected.id, "approve")}
                           disabled={!!actionLoading}
-                          className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                          className="font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2 bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                         >
                           {actionLoading === "approve" ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
                           승인
@@ -438,7 +438,7 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
                         <button
                           onClick={() => setShowRejectModal(true)}
                           disabled={!!actionLoading}
-                          className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 bg-red-50 text-red-500 border border-red-200 hover:bg-red-100 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                          className="font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2 bg-red-50 text-red-500 border border-red-200 hover:bg-red-100 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                         >
                           <XCircle size={12} /> 반려
                         </button>
@@ -449,7 +449,7 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
                       <button
                         onClick={() => setShowConvertModal(true)}
                         disabled={!!actionLoading}
-                        className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 bg-nu-ink text-nu-paper border border-nu-ink hover:bg-nu-graphite transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                        className="font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2 bg-nu-ink text-nu-paper border border-nu-ink hover:bg-nu-graphite transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                       >
                         <ArrowRight size={12} /> 프로젝트 전환
                       </button>
@@ -471,7 +471,7 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
                       <strong>{selected.project_title}</strong> 의뢰를 반려하시겠습니까?
                     </p>
                     <div>
-                      <label className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted block mb-1">반려 사유</label>
+                      <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-1">반려 사유</label>
                       <textarea
                         value={rejectReason}
                         onChange={e => setRejectReason(e.target.value)}
@@ -483,14 +483,14 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
                     <div className="flex gap-2 justify-end">
                       <button
                         onClick={() => { setShowRejectModal(false); setRejectReason(""); }}
-                        className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 border border-nu-ink/10 text-nu-muted hover:bg-nu-ink/5 transition-all cursor-pointer"
+                        className="font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2 border border-nu-ink/10 text-nu-muted hover:bg-nu-ink/5 transition-all cursor-pointer"
                       >
                         취소
                       </button>
                       <button
                         onClick={() => handleAction(selected.id, "reject")}
                         disabled={!!actionLoading}
-                        className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 bg-red-500 text-white border border-red-500 hover:bg-red-600 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                        className="font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2 bg-red-500 text-white border border-red-500 hover:bg-red-600 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                       >
                         {actionLoading === "reject" ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />}
                         반려 확인
@@ -514,7 +514,7 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
                     </p>
 
                     <div>
-                      <label className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted block mb-1.5">PM 배정 *</label>
+                      <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-1.5">PM 배정 *</label>
                       <select
                         value={selectedPmId}
                         onChange={e => setSelectedPmId(e.target.value)}
@@ -532,7 +532,7 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
                     <div className="flex gap-2 justify-end">
                       <button
                         onClick={() => { setShowConvertModal(false); setSelectedPmId(""); }}
-                        className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 border border-nu-ink/10 text-nu-muted hover:bg-nu-ink/5 transition-all cursor-pointer"
+                        className="font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2 border border-nu-ink/10 text-nu-muted hover:bg-nu-ink/5 transition-all cursor-pointer"
                       >
                         취소
                       </button>
@@ -545,7 +545,7 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
                           handleAction(selected.id, "convert");
                         }}
                         disabled={!!actionLoading || !selectedPmId}
-                        className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 bg-nu-ink text-nu-paper border border-nu-ink hover:bg-nu-graphite transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                        className="font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2 bg-nu-ink text-nu-paper border border-nu-ink hover:bg-nu-graphite transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                       >
                         {actionLoading === "convert" ? <Loader2 size={12} className="animate-spin" /> : <ArrowRight size={12} />}
                         프로젝트 전환

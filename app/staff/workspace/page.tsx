@@ -84,13 +84,13 @@ export default function StaffProjectsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-head text-3xl font-extrabold text-nu-ink">프로젝트</h1>
-          <p className="font-mono-nu text-[11px] text-nu-muted mt-1 uppercase tracking-widest">
+          <p className="font-mono-nu text-[13px] text-nu-muted mt-1 uppercase tracking-widest">
             Internal Projects · {filtered.length}개
           </p>
         </div>
         <Link
           href="/staff/workspace/create"
-          className="inline-flex items-center gap-2 font-mono-nu text-[11px] uppercase tracking-widest px-5 py-2.5 bg-indigo-600 text-white no-underline hover:bg-indigo-700 transition-colors"
+          className="inline-flex items-center gap-2 font-mono-nu text-[13px] uppercase tracking-widest px-5 py-2.5 bg-indigo-600 text-white no-underline hover:bg-indigo-700 transition-colors"
         >
           <Plus size={14} /> <span className="hidden sm:inline">새 프로젝트</span><span className="sm:hidden">추가</span>
         </Link>
@@ -117,7 +117,7 @@ export default function StaffProjectsPage() {
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              className={`font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 border transition-colors cursor-pointer ${
+              className={`font-mono-nu text-[12px] uppercase tracking-widest px-3 py-1.5 border transition-colors cursor-pointer ${
                 statusFilter === s ? "bg-indigo-600 text-white border-indigo-600" : "bg-transparent text-nu-muted border-nu-ink/15 hover:border-indigo-300"
               }`}
             >
@@ -142,10 +142,10 @@ export default function StaffProjectsPage() {
                 className="block bg-white border border-nu-ink/[0.06] p-6 hover:border-indigo-200 hover:shadow-sm transition-all no-underline group"
               >
                 <div className="flex items-center gap-2 mb-3">
-                  <span className={`font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 ${sl.color}`}>
+                  <span className={`font-mono-nu text-[11px] uppercase tracking-widest px-2 py-0.5 ${sl.color}`}>
                     {sl.text}
                   </span>
-                  <span className="font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 bg-indigo-50 text-indigo-600">
+                  <span className="font-mono-nu text-[11px] uppercase tracking-widest px-2 py-0.5 bg-indigo-50 text-indigo-600">
                     {p.category || "general"}
                   </span>
                 </div>
@@ -158,17 +158,17 @@ export default function StaffProjectsPage() {
                     <div className="h-1 bg-nu-ink/5 w-full">
                       <div className="h-1 bg-indigo-600 transition-all" style={{ width: `${progress}%` }} />
                     </div>
-                    <p className="font-mono-nu text-[8px] text-nu-muted mt-1">{progress}% 완료 ({tc.done}/{totalTasks})</p>
+                    <p className="font-mono-nu text-[10px] text-nu-muted mt-1">{progress}% 완료 ({tc.done}/{totalTasks})</p>
                   </div>
                 )}
                 <div className="flex items-center gap-4 text-nu-muted">
-                  <span className="flex items-center gap-1 font-mono-nu text-[9px]">
+                  <span className="flex items-center gap-1 font-mono-nu text-[11px]">
                     <Users size={11} /> {memberCounts[p.id] || 0}
                   </span>
-                  <span className="flex items-center gap-1 font-mono-nu text-[9px]">
+                  <span className="flex items-center gap-1 font-mono-nu text-[11px]">
                     <CheckSquare size={11} /> {totalTasks}
                   </span>
-                  <span className="flex items-center gap-1 font-mono-nu text-[9px]">
+                  <span className="flex items-center gap-1 font-mono-nu text-[11px]">
                     <Clock size={11} /> {new Date(p.updated_at).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}
                   </span>
                 </div>
@@ -184,7 +184,7 @@ export default function StaffProjectsPage() {
               <p className="text-sm text-nu-muted mb-2">검색 결과가 없습니다</p>
               <button
                 onClick={() => { setSearch(""); setStatusFilter("active"); }}
-                className="font-mono-nu text-[10px] text-indigo-600 underline bg-transparent border-none cursor-pointer"
+                className="font-mono-nu text-[12px] text-indigo-600 underline bg-transparent border-none cursor-pointer"
               >
                 필터 초기화
               </button>
@@ -192,7 +192,7 @@ export default function StaffProjectsPage() {
           ) : (
             <>
               <p className="text-nu-muted text-sm mb-4">아직 내부 프로젝트가 없습니다</p>
-              <Link href="/staff/workspace/create" className="font-mono-nu text-[10px] uppercase tracking-widest px-5 py-2.5 bg-indigo-600 text-white no-underline hover:bg-indigo-700 inline-flex items-center gap-1.5">
+              <Link href="/staff/workspace/create" className="font-mono-nu text-[12px] uppercase tracking-widest px-5 py-2.5 bg-indigo-600 text-white no-underline hover:bg-indigo-700 inline-flex items-center gap-1.5">
                 <Plus size={12} /> 첫 프로젝트 만들기
               </Link>
             </>

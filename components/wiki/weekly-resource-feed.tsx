@@ -445,13 +445,13 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
               <Link2 size={18} className="text-[#ff6f00]" />
               주간 리소스 피드
             </h3>
-            <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest mt-1">
+            <p className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest mt-1">
               {resources.length > 0 ? `${resources.length}개 자료 공유됨` : "이번 주 자료를 공유하세요"}
             </p>
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 bg-[#ff6f00] text-white hover:bg-[#ff6f00]/90 transition-colors flex items-center gap-1.5 shadow-[2px_2px_0px_rgba(255,111,0,0.2)]"
+            className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2.5 bg-[#ff6f00] text-white hover:bg-[#ff6f00]/90 transition-colors flex items-center gap-1.5 shadow-[2px_2px_0px_rgba(255,111,0,0.2)]"
           >
             <Plus size={12} /> 자료 공유
           </button>
@@ -460,13 +460,13 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={openLibrary}
-            className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-ink/15 text-nu-ink hover:border-[#ff6f00] hover:text-[#ff6f00] transition-colors flex items-center gap-1.5 bg-white"
+            className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-ink/15 text-nu-ink hover:border-[#ff6f00] hover:text-[#ff6f00] transition-colors flex items-center gap-1.5 bg-white"
           >
             <FolderOpen size={12} /> 자료실에서 가져오기
           </button>
           <button
             onClick={() => setShowUpload(true)}
-            className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-ink/15 text-nu-ink hover:border-nu-pink hover:text-nu-pink transition-colors flex items-center gap-1.5 bg-white"
+            className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-ink/15 text-nu-ink hover:border-nu-pink hover:text-nu-pink transition-colors flex items-center gap-1.5 bg-white"
           >
             <Upload size={12} /> 파일 업로드
           </button>
@@ -503,7 +503,7 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
               <button
                 onClick={handleSubmit}
                 disabled={submitting || !url.trim()}
-                className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-2 bg-nu-ink text-white hover:bg-nu-graphite transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-5 py-2 bg-nu-ink text-white hover:bg-nu-graphite transition-colors disabled:opacity-50 flex items-center gap-1.5"
               >
                 {submitting ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
                 등록
@@ -529,19 +529,19 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
             <div className="flex gap-2 mb-2">
               <button
                 onClick={() => { setUploadFile(null); fileInputRef.current?.click(); }}
-                className={`flex-1 font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-2 border-[2px] transition-colors flex items-center justify-center gap-1.5 ${
+                className={`flex-1 font-mono-nu text-[12px] font-bold uppercase tracking-widest px-3 py-2 border-[2px] transition-colors flex items-center justify-center gap-1.5 ${
                   uploadFile ? "border-nu-pink text-nu-pink bg-nu-pink/5" : "border-nu-ink/15 text-nu-ink hover:border-nu-pink"
                 }`}
               >
                 <Upload size={12} /> 파일 선택
               </button>
-              <span className="font-mono-nu text-[9px] text-nu-muted self-center px-1">또는</span>
+              <span className="font-mono-nu text-[11px] text-nu-muted self-center px-1">또는</span>
               <div className="flex-1">
                 <input
                   value={uploadUrl}
                   onChange={(e) => setUploadUrl(e.target.value)}
                   placeholder="URL 입력 (Drive, YouTube, Notion...)"
-                  className="w-full px-3 py-2 bg-white border-[2px] border-nu-ink/15 text-[11px] focus:outline-none focus:border-nu-blue transition-colors"
+                  className="w-full px-3 py-2 bg-white border-[2px] border-nu-ink/15 text-[13px] focus:outline-none focus:border-nu-blue transition-colors"
                 />
               </div>
             </div>
@@ -561,7 +561,7 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
               <div className="flex items-center gap-2 px-3 py-2 bg-white border border-nu-ink/10 text-xs">
                 <FileText size={14} className="text-nu-blue shrink-0" />
                 <span className="truncate flex-1 text-nu-ink font-medium">{uploadFile.name}</span>
-                <span className="text-nu-muted font-mono-nu text-[9px]">
+                <span className="text-nu-muted font-mono-nu text-[11px]">
                   {(uploadFile.size / 1024).toFixed(0)} KB
                 </span>
                 <button onClick={() => setUploadFile(null)} className="text-nu-muted hover:text-red-500 transition-colors">
@@ -579,7 +579,7 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
               <button
                 onClick={handleFileUpload}
                 disabled={uploadSubmitting || (!uploadFile && !uploadUrl.trim())}
-                className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-2 bg-nu-pink text-white hover:bg-nu-pink/90 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-5 py-2 bg-nu-pink text-white hover:bg-nu-pink/90 transition-colors disabled:opacity-50 flex items-center gap-1.5"
               >
                 {uploadSubmitting ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
                 업로드 & 등록
@@ -591,10 +591,10 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
 
       {/* Week Navigation */}
       <div className="px-5 py-3 border-b border-nu-ink/5 flex items-center justify-between bg-nu-paper/50">
-        <button onClick={prevWeek} className="font-mono-nu text-[10px] text-nu-muted hover:text-nu-ink transition-colors">
+        <button onClick={prevWeek} className="font-mono-nu text-[12px] text-nu-muted hover:text-nu-ink transition-colors">
           ← 이전 주
         </button>
-        <span className="font-mono-nu text-[10px] font-bold text-nu-ink flex items-center gap-1.5">
+        <span className="font-mono-nu text-[12px] font-bold text-nu-ink flex items-center gap-1.5">
           <Calendar size={11} />
           {new Date(selectedWeek).toLocaleDateString("ko", { month: "long", day: "numeric" })} 주
           {isCurrentWeek && <span className="text-nu-pink ml-1">· 이번 주</span>}
@@ -602,7 +602,7 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
         <button
           onClick={nextWeek}
           disabled={isCurrentWeek}
-          className="font-mono-nu text-[10px] text-nu-muted hover:text-nu-ink transition-colors disabled:opacity-30"
+          className="font-mono-nu text-[12px] text-nu-muted hover:text-nu-ink transition-colors disabled:opacity-30"
         >
           다음 주 →
         </button>
@@ -623,13 +623,13 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
             <div className="flex justify-center gap-2 flex-wrap">
               <button
                 onClick={() => setShowForm(true)}
-                className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-2.5 bg-nu-blue text-white hover:bg-nu-blue/90 transition-colors inline-flex items-center gap-1.5"
+                className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-5 py-2.5 bg-nu-blue text-white hover:bg-nu-blue/90 transition-colors inline-flex items-center gap-1.5"
               >
                 <Plus size={12} /> URL 공유하기
               </button>
               <button
                 onClick={openLibrary}
-                className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-2.5 border-[2px] border-nu-ink/15 text-nu-ink hover:border-nu-blue transition-colors inline-flex items-center gap-1.5"
+                className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-5 py-2.5 border-[2px] border-nu-ink/15 text-nu-ink hover:border-nu-blue transition-colors inline-flex items-center gap-1.5"
               >
                 <FolderOpen size={12} /> 자료실에서 가져오기
               </button>
@@ -644,7 +644,7 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
                 <div key={type}>
                   <div className="flex items-center gap-2 mb-2">
                     <Icon size={13} className={cfg.color} />
-                    <span className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-muted">
+                    <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-muted">
                       {cfg.label} ({items.length})
                     </span>
                   </div>
@@ -692,7 +692,7 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
                                 <Sparkles size={9} /> {r.auto_summary.slice(0, 80)}...
                               </p>
                             )}
-                            <div className="flex items-center gap-3 mt-1.5 font-mono-nu text-[8px] text-nu-muted/60">
+                            <div className="flex items-center gap-3 mt-1.5 font-mono-nu text-[10px] text-nu-muted/60">
                               <span>{r.sharer?.nickname || "멤버"}</span>
                               <span>·</span>
                               <span>{relativeTime(r.created_at)}</span>
@@ -749,7 +749,7 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
                                 <div className="p-3 text-xs text-nu-muted">탭 페이지가 없습니다</div>
                               ) : (
                                 <>
-                                  <div className="px-3 py-2 border-b border-nu-ink/10 font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">
+                                  <div className="px-3 py-2 border-b border-nu-ink/10 font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest">
                                     탭 페이지 선택
                                   </div>
                                   {wikiPages.map(page => (
@@ -797,7 +797,7 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
                   <FolderOpen size={18} className="text-nu-blue" />
                   자료실에서 가져오기
                 </h3>
-                <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest mt-1">
+                <p className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest mt-1">
                   그룹 자료실 · {libraryFiles.length} files
                 </p>
               </div>
@@ -859,7 +859,7 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-bold text-nu-ink truncate">{file.file_name}</p>
-                          <div className="font-mono-nu text-[8px] text-nu-muted/60 flex items-center gap-2 mt-0.5">
+                          <div className="font-mono-nu text-[10px] text-nu-muted/60 flex items-center gap-2 mt-0.5">
                             <span>{file.uploader?.nickname || "멤버"}</span>
                             <span>·</span>
                             <span>{relativeTime(file.created_at)}</span>
@@ -872,14 +872,14 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
                           </div>
                         </div>
                         {alreadyAdded ? (
-                          <span className="font-mono-nu text-[9px] text-green-600 flex items-center gap-1 px-2 py-1">
+                          <span className="font-mono-nu text-[11px] text-green-600 flex items-center gap-1 px-2 py-1">
                             <Check size={10} /> 추가됨
                           </span>
                         ) : (
                           <button
                             onClick={() => importFromLibrary(file)}
                             disabled={isImporting}
-                            className="font-mono-nu text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 bg-nu-blue text-white hover:bg-nu-blue/90 transition-colors disabled:opacity-50 flex items-center gap-1 shrink-0"
+                            className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 bg-nu-blue text-white hover:bg-nu-blue/90 transition-colors disabled:opacity-50 flex items-center gap-1 shrink-0"
                           >
                             {isImporting ? <Loader2 size={10} className="animate-spin" /> : <Plus size={10} />}
                             추가

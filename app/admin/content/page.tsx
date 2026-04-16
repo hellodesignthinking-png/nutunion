@@ -79,7 +79,7 @@ export default async function ContentManagementPage() {
         </div>
         <Link
           href="/admin/media"
-          className="font-mono-nu text-[11px] uppercase tracking-widest px-5 py-3 bg-nu-ink text-nu-paper no-underline hover:bg-nu-pink transition-colors inline-flex items-center gap-2"
+          className="font-mono-nu text-[13px] uppercase tracking-widest px-5 py-3 bg-nu-ink text-nu-paper no-underline hover:bg-nu-pink transition-colors inline-flex items-center gap-2"
         >
           <Image size={14} /> 미디어 라이브러리
         </Link>
@@ -120,26 +120,26 @@ export default async function ContentManagementPage() {
                       </p>
                       <ChevronRight size={14} className="text-nu-muted shrink-0" />
                     </div>
-                    <p className="text-[11px] text-nu-muted mt-0.5">
+                    <p className="text-[13px] text-nu-muted mt-0.5">
                       {sectionDescriptions[section] || ""}
                     </p>
                     <div className="flex items-center gap-3 mt-2">
-                      <span className="font-mono-nu text-[9px] text-nu-muted flex items-center gap-1">
+                      <span className="font-mono-nu text-[11px] text-nu-muted flex items-center gap-1">
                         <Type size={10} /> {info.fields} 필드
                       </span>
                       {info.images > 0 && (
-                        <span className="font-mono-nu text-[9px] text-nu-blue flex items-center gap-1">
+                        <span className="font-mono-nu text-[11px] text-nu-blue flex items-center gap-1">
                           <Image size={10} /> {info.images} 이미지
                         </span>
                       )}
                       {info.hasVideo && (
-                        <span className="font-mono-nu text-[9px] text-nu-pink flex items-center gap-1">
+                        <span className="font-mono-nu text-[11px] text-nu-pink flex items-center gap-1">
                           <Video size={10} /> 영상
                         </span>
                       )}
                     </div>
                     {info.preview && (
-                      <p className="text-[10px] text-nu-muted/60 mt-1 truncate italic">
+                      <p className="text-[12px] text-nu-muted/60 mt-1 truncate italic">
                         &ldquo;{info.preview}&rdquo;
                       </p>
                     )}

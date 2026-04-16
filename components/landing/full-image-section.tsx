@@ -27,10 +27,10 @@ export function FullImageSection() {
           <img src="/space-photo.png" alt="" className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-[0.85] pointer-events-none transition-transform duration-[2s] hover:scale-105" aria-hidden="true" />
 
           {/* Registration mark */}
-          <div className="absolute top-4 left-4 font-mono-nu text-[10px] text-nu-paper/15" aria-hidden="true">⊕</div>
+          <div className="absolute top-4 left-4 font-mono-nu text-[12px] text-nu-paper/15" aria-hidden="true">⊕</div>
 
           <div className="absolute top-8 left-8 z-10">
-            <span className="font-mono-nu text-[9px] uppercase tracking-[0.3em] text-nu-blue/60 border-[2px] border-nu-blue/20 px-2 py-1">Space</span>
+            <span className="font-mono-nu text-[11px] uppercase tracking-[0.3em] text-nu-blue/60 border-[2px] border-nu-blue/20 px-2 py-1">Space</span>
           </div>
           <div className="absolute bottom-8 left-8 z-10">
             <h3 className="font-head text-3xl lg:text-4xl font-extrabold text-nu-paper/90 leading-tight tracking-tighter">
@@ -54,10 +54,10 @@ export function FullImageSection() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/culture-photo.png" alt="" className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-[0.85] pointer-events-none transition-transform duration-[2s] hover:scale-105" aria-hidden="true" />
 
-            <div className="absolute top-4 right-4 font-mono-nu text-[10px] text-nu-paper/15" aria-hidden="true">⊕</div>
+            <div className="absolute top-4 right-4 font-mono-nu text-[12px] text-nu-paper/15" aria-hidden="true">⊕</div>
 
             <div className="absolute bottom-6 left-8 z-10">
-              <span className="font-mono-nu text-[9px] uppercase tracking-[0.3em] text-nu-amber/60 border-[2px] border-nu-amber/20 px-2 py-1 block mb-2">Culture</span>
+              <span className="font-mono-nu text-[11px] uppercase tracking-[0.3em] text-nu-amber/60 border-[2px] border-nu-amber/20 px-2 py-1 block mb-2">Culture</span>
               <h3 className="font-head text-2xl font-extrabold text-nu-paper/85 tracking-tight">문화를 큐레이션합니다</h3>
             </div>
           </div>
@@ -80,10 +80,10 @@ export function FullImageSection() {
                   <div className="w-3 h-3 bg-nu-pink/70" />
                   <div className="w-3 h-3 bg-nu-yellow/70" />
                   <div className="w-3 h-3 bg-nu-blue/50" />
-                  <span className="ml-4 font-mono-nu text-[9px] text-nu-paper/25">scene.config.ts</span>
+                  <span className="ml-4 font-mono-nu text-[11px] text-nu-paper/25">scene.config.ts</span>
                 </div>
                 {/* Code */}
-                <div className="p-4 font-mono-nu text-[11px] leading-6">
+                <div className="p-4 font-mono-nu text-[13px] leading-6">
                   <div><span className="text-nu-pink/70">const</span> <span className="text-nu-paper/60">scene</span> <span className="text-nu-paper/30">=</span> <span className="text-nu-blue/70">Scene</span><span className="text-nu-paper/40">.create({"{"}</span></div>
                   <div className="ml-4"><span className="text-nu-paper/40">name:</span> <span className="text-nu-yellow/60">&apos;nutunion&apos;</span><span className="text-nu-paper/25">,</span></div>
                   <div className="ml-4"><span className="text-nu-paper/40">crews:</span> <span className="text-nu-blue/60">152</span><span className="text-nu-paper/25">,</span></div>
@@ -96,7 +96,7 @@ export function FullImageSection() {
             </div>
 
             <div className="absolute bottom-6 left-8 z-10">
-              <span className="font-mono-nu text-[9px] uppercase tracking-[0.3em] text-nu-paper/40 border-[2px] border-nu-paper/10 px-2 py-1 block mb-2">Platform</span>
+              <span className="font-mono-nu text-[11px] uppercase tracking-[0.3em] text-nu-paper/40 border-[2px] border-nu-paper/10 px-2 py-1 block mb-2">Platform</span>
               <h3 className="font-head text-2xl font-extrabold text-nu-paper/85 tracking-tight">플랫폼을 빌드합니다</h3>
             </div>
           </div>
@@ -121,15 +121,15 @@ export function FullImageSection() {
         <img src="/vibe-photo.png" alt="" className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-[0.8] pointer-events-none transition-transform duration-[2s] hover:scale-105" aria-hidden="true" />
 
         {/* Registration marks */}
-        <div className="absolute top-4 left-4 font-mono-nu text-[10px] text-nu-pink/20" aria-hidden="true">⊕</div>
-        <div className="absolute top-4 right-4 font-mono-nu text-[10px] text-nu-pink/20" aria-hidden="true">⊕</div>
+        <div className="absolute top-4 left-4 font-mono-nu text-[12px] text-nu-pink/20" aria-hidden="true">⊕</div>
+        <div className="absolute top-4 right-4 font-mono-nu text-[12px] text-nu-pink/20" aria-hidden="true">⊕</div>
 
         {/* Stage lights — risograph style */}
         <div className="absolute top-0 left-[25%] w-[150px] h-[70%] bg-gradient-to-b from-nu-pink/8 to-transparent rotate-3 origin-top" />
         <div className="absolute top-0 right-[30%] w-[120px] h-[65%] bg-gradient-to-b from-[#6600ff]/6 to-transparent -rotate-2 origin-top" />
 
         <div className="absolute top-8 left-8 z-10">
-          <span className="font-mono-nu text-[9px] uppercase tracking-[0.3em] text-nu-pink/50 border-[2px] border-nu-pink/15 px-2 py-1">Vibe</span>
+          <span className="font-mono-nu text-[11px] uppercase tracking-[0.3em] text-nu-pink/50 border-[2px] border-nu-pink/15 px-2 py-1">Vibe</span>
         </div>
         <div className="absolute bottom-12 left-8 lg:left-16 z-10 reveal-item">
           <h3 className="font-head text-4xl lg:text-5xl font-extrabold text-nu-paper/90 leading-tight tracking-tighter">
@@ -173,7 +173,7 @@ export function FullImageSection() {
             <div className={`absolute inset-0 ${item.halftone} opacity-[0.2] pointer-events-none`} />
 
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-nu-ink/60 border-[3px] border-nu-paper/20">
-              <span className="font-mono-nu text-[10px] uppercase tracking-[0.2em] text-nu-paper/80 font-bold">{item.label}</span>
+              <span className="font-mono-nu text-[12px] uppercase tracking-[0.2em] text-nu-paper/80 font-bold">{item.label}</span>
             </div>
           </div>
         ))}

@@ -36,7 +36,7 @@ export function TestimonialsSection() {
     <section ref={ref} className="py-24 px-8 border-t-[3px] border-nu-ink">
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-16 reveal-item">
-          <span className="font-mono-nu text-[10px] uppercase tracking-[0.3em] text-nu-pink mb-4 block">
+          <span className="font-mono-nu text-[12px] uppercase tracking-[0.3em] text-nu-pink mb-4 block">
             Why nutunion
           </span>
           <h2 className="font-head text-[clamp(32px,4.5vw,48px)] font-extrabold text-nu-ink tracking-tighter leading-[0.9]">
@@ -61,7 +61,7 @@ export function TestimonialsSection() {
               </span>
 
               {/* Registration mark */}
-              <span className="absolute top-2 left-3 font-mono-nu text-[8px] text-nu-ink/10" aria-hidden="true">⊕</span>
+              <span className="absolute top-2 left-3 font-mono-nu text-[10px] text-nu-ink/10" aria-hidden="true">⊕</span>
 
               <div className="w-20 h-20 mx-auto mb-6 border-[3px] border-nu-ink overflow-hidden rounded-full rotate-3 bg-nu-paper relative group-hover:rotate-12 transition-transform duration-300">
                 {/* eslint-disable-next-line @next/next/no-img-element */}

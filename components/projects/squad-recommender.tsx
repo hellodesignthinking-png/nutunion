@@ -125,11 +125,11 @@ export function SquadRecommender({ projectId, projectTitle }: { projectId: strin
         <div className="flex items-center gap-2 mb-1">
           <Sparkles size={16} className="text-nu-pink" />
           <h3 className="font-head text-sm font-bold uppercase tracking-wider">AI Squad Recommender</h3>
-          <span className="ml-auto font-mono-nu text-[9px] bg-nu-pink/20 text-nu-pink px-2 py-0.5 rounded-sm">
+          <span className="ml-auto font-mono-nu text-[11px] bg-nu-pink/20 text-nu-pink px-2 py-0.5 rounded-sm">
             BETA
           </span>
         </div>
-        <p className="text-[11px] text-nu-paper/60">
+        <p className="text-[13px] text-nu-paper/60">
           &ldquo;{projectTitle}&rdquo; 프로젝트에 최적화된 팀을 AI가 추천합니다
         </p>
       </div>
@@ -142,7 +142,7 @@ export function SquadRecommender({ projectId, projectTitle }: { projectId: strin
           </div>
           <div>
             <p className="font-head text-2xl font-extrabold text-nu-ink">{totalSynergy}%</p>
-            <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">Team Synergy Score</p>
+            <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">Team Synergy Score</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -160,7 +160,7 @@ export function SquadRecommender({ projectId, projectTitle }: { projectId: strin
               <div className="w-12 h-12 rounded-full bg-nu-pink/10 flex items-center justify-center font-head text-lg font-bold text-nu-pink">
                 {member.nickname.charAt(0).toUpperCase()}
               </div>
-              <div className="absolute -top-1 -left-1 w-5 h-5 bg-nu-ink text-nu-paper rounded-full flex items-center justify-center font-mono-nu text-[8px] font-bold">
+              <div className="absolute -top-1 -left-1 w-5 h-5 bg-nu-ink text-nu-paper rounded-full flex items-center justify-center font-mono-nu text-[10px] font-bold">
                 {idx + 1}
               </div>
             </div>
@@ -168,11 +168,11 @@ export function SquadRecommender({ projectId, projectTitle }: { projectId: strin
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
                 <p className="font-head text-sm font-bold text-nu-ink truncate">{member.nickname}</p>
-                <span className="font-mono-nu text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 bg-nu-blue/10 text-nu-blue">
+                <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 bg-nu-blue/10 text-nu-blue">
                   {member.strength} 특화
                 </span>
               </div>
-              <p className="font-mono-nu text-[9px] text-nu-muted">
+              <p className="font-mono-nu text-[11px] text-nu-muted">
                 시너지 점수: <span className="text-nu-pink font-bold">{member.synergy}%</span>
               </p>
             </div>
@@ -186,7 +186,7 @@ export function SquadRecommender({ projectId, projectTitle }: { projectId: strin
       <div className="px-6 py-4 bg-nu-cream/20 border-t border-nu-ink/5">
         <button 
           onClick={() => toast.success("🚀 추천 스쿼드에게 초대장이 발송되었습니다!", { duration: 3000 })}
-          className="w-full font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-3 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-all flex items-center justify-center gap-2"
+          className="w-full font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-3 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-all flex items-center justify-center gap-2"
         >
           <Zap size={14} /> 이 스쿼드로 프로젝트 시작하기
         </button>

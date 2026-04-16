@@ -72,7 +72,7 @@ export function ProjectRadarChart({ projectId }: { projectId: string }) {
         <h3 className="font-head text-sm font-bold text-nu-ink flex items-center gap-2">
           <TrendingUp size={16} className="text-nu-pink" /> 프로젝트 역량 지표
         </h3>
-        <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted bg-nu-cream/50 px-2 py-1 border border-nu-ink/5">
+        <span className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted bg-nu-cream/50 px-2 py-1 border border-nu-ink/5">
           AVG {avgScore}%
         </span>
       </div>
@@ -105,7 +105,7 @@ export function ProjectRadarChart({ projectId }: { projectId: string }) {
             const ly = cy + (radius + 16) * Math.sin(angle);
             return (
               <text key={d.key} x={lx} y={ly} textAnchor="middle" dominantBaseline="central"
-                className="font-mono-nu text-[7px] font-black uppercase fill-nu-muted">
+                className="font-mono-nu text-[9px] font-black uppercase fill-nu-muted">
                 {d.label}
               </text>
             );
@@ -114,10 +114,10 @@ export function ProjectRadarChart({ projectId }: { projectId: string }) {
       </div>
 
       <div className="mt-3 text-center">
-        <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-pink font-bold">
+        <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-pink font-bold">
           {identity}
         </p>
-        <p className="text-[10px] text-nu-muted mt-1">멤버 {memberCount} · 미팅 {meetingCount} · 자료 {resourceCount}</p>
+        <p className="text-[12px] text-nu-muted mt-1">멤버 {memberCount} · 미팅 {meetingCount} · 자료 {resourceCount}</p>
       </div>
     </div>
   );
@@ -186,7 +186,7 @@ export function ProjectActivityHeatmap({ projectId }: { projectId: string }) {
         <h3 className="font-head text-sm font-bold text-nu-ink flex items-center gap-2">
           <Activity size={16} className="text-nu-pink" /> 활동 히트맵
         </h3>
-        <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted flex items-center gap-1">
+        <span className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted flex items-center gap-1">
           <Flame size={10} className={totalActivity > 10 ? "text-nu-pink" : "text-nu-muted"} />
           {totalActivity} activities / 12w
         </span>
@@ -210,11 +210,11 @@ export function ProjectActivityHeatmap({ projectId }: { projectId: string }) {
       </div>
 
       <div className="flex items-center justify-end gap-1 mt-3">
-        <span className="font-mono-nu text-[8px] text-nu-muted mr-1">Less</span>
+        <span className="font-mono-nu text-[10px] text-nu-muted mr-1">Less</span>
         {[0, 1, 2, 3, 5].map((v) => (
           <div key={v} className={`w-[8px] h-[8px] rounded-[1px] ${getColor(v)}`} />
         ))}
-        <span className="font-mono-nu text-[8px] text-nu-muted ml-1">More</span>
+        <span className="font-mono-nu text-[10px] text-nu-muted ml-1">More</span>
       </div>
     </div>
   );

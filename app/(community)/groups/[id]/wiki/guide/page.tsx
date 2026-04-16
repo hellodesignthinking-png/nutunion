@@ -47,7 +47,7 @@ export default async function WikiGuidePage({ params }: { params: Promise<{ id: 
         <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: "radial-gradient(circle, #0d0d0d 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
 
         <div className="max-w-5xl mx-auto px-4 sm:px-8 py-10 md:py-12 relative z-10">
-          <div className="flex items-center gap-2 font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest mb-6">
+          <div className="flex items-center gap-2 font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest mb-6">
             <Link href={`/groups/${id}`} className="hover:text-nu-ink no-underline transition-colors">{group.name}</Link>
             <ChevronRight size={12} />
             <Link href={`/groups/${id}/wiki`} className="hover:text-nu-ink no-underline transition-colors">탭</Link>
@@ -63,7 +63,7 @@ export default async function WikiGuidePage({ params }: { params: Promise<{ id: 
               <h1 className="font-head text-3xl md:text-4xl font-extrabold text-nu-ink tracking-tight leading-none">
                 Wiki AI 사용 가이드
               </h1>
-              <p className="font-mono-nu text-[10px] text-nu-pink uppercase tracking-[0.3em] font-bold">
+              <p className="font-mono-nu text-[12px] text-nu-pink uppercase tracking-[0.3em] font-bold">
                 Living Wiki Manual
               </p>
             </div>
@@ -95,7 +95,7 @@ export default async function WikiGuidePage({ params }: { params: Promise<{ id: 
                   <div className={`w-12 h-12 mx-auto mb-3 bg-nu-ink/5 flex items-center justify-center ${s.color}`}>
                     {s.icon}
                   </div>
-                  <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest mb-1">Step {s.step}</p>
+                  <p className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest mb-1">Step {s.step}</p>
                   <p className="font-head text-sm font-bold text-nu-ink">{s.label}</p>
                   <p className="text-xs text-nu-muted mt-1">{s.desc}</p>
                   {i < 3 && (
@@ -136,7 +136,7 @@ export default async function WikiGuidePage({ params }: { params: Promise<{ id: 
             </div>
             {isHost && (
               <div className="mt-4 p-3 bg-nu-pink/10 border border-nu-pink/20">
-                <p className="font-mono-nu text-[10px] text-nu-pink font-bold uppercase tracking-widest">
+                <p className="font-mono-nu text-[12px] text-nu-pink font-bold uppercase tracking-widest">
                   현재 호스트 권한으로 모든 AI 기능을 사용할 수 있습니다
                 </p>
               </div>
@@ -309,7 +309,7 @@ export default async function WikiGuidePage({ params }: { params: Promise<{ id: 
               ].map((w, i) => (
                 <div key={i} className="flex gap-4">
                   <div className="w-20 shrink-0">
-                    <span className="font-mono-nu text-[10px] font-bold text-nu-pink uppercase tracking-widest">{w.period}</span>
+                    <span className="font-mono-nu text-[12px] font-bold text-nu-pink uppercase tracking-widest">{w.period}</span>
                   </div>
                   <div className="flex-1 border-l border-white/10 pl-4">
                     <ul className="space-y-1.5">
@@ -363,18 +363,18 @@ function GuideSection({
         <h2 className="font-head text-2xl font-extrabold text-nu-ink flex items-center gap-3">
           {icon} {title}
         </h2>
-        <span className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest bg-nu-cream px-3 py-1 border border-nu-ink/10 shrink-0">
+        <span className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest bg-nu-cream px-3 py-1 border border-nu-ink/10 shrink-0">
           {tag}
         </span>
       </div>
       <div className="bg-white border-[2px] border-nu-ink/[0.08] p-6 md:p-8">
         <p className="text-sm text-nu-graphite leading-relaxed mb-6">{description}</p>
 
-        <h3 className="font-mono-nu text-[10px] font-bold text-nu-ink uppercase tracking-[0.2em] mb-4">사용 방법</h3>
+        <h3 className="font-mono-nu text-[12px] font-bold text-nu-ink uppercase tracking-[0.2em] mb-4">사용 방법</h3>
         <ol className="space-y-3 mb-6">
           {steps.map((step, i) => (
             <li key={i} className="flex gap-3 text-sm text-nu-graphite">
-              <span className="w-6 h-6 bg-nu-ink text-white flex items-center justify-center shrink-0 font-mono-nu text-[10px] font-bold">
+              <span className="w-6 h-6 bg-nu-ink text-white flex items-center justify-center shrink-0 font-mono-nu text-[12px] font-bold">
                 {i + 1}
               </span>
               <span className="leading-relaxed">{step}</span>

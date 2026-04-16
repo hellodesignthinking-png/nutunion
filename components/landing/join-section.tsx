@@ -23,10 +23,10 @@ export function JoinSection({ content }: JoinSectionProps) {
         <div className="absolute bottom-0 right-0 w-2/3 h-1/2 bg-nu-blue/[0.06] mix-blend-screen" aria-hidden="true" />
 
         {/* Registration marks */}
-        <div className="absolute top-4 left-4 font-mono-nu text-[10px] text-nu-paper/15 select-none" aria-hidden="true">⊕</div>
-        <div className="absolute top-4 right-4 font-mono-nu text-[10px] text-nu-paper/15 select-none" aria-hidden="true">⊕</div>
-        <div className="absolute bottom-4 left-4 font-mono-nu text-[10px] text-nu-paper/15 select-none" aria-hidden="true">⊕</div>
-        <div className="absolute bottom-4 right-4 font-mono-nu text-[10px] text-nu-paper/15 select-none" aria-hidden="true">⊕</div>
+        <div className="absolute top-4 left-4 font-mono-nu text-[12px] text-nu-paper/15 select-none" aria-hidden="true">⊕</div>
+        <div className="absolute top-4 right-4 font-mono-nu text-[12px] text-nu-paper/15 select-none" aria-hidden="true">⊕</div>
+        <div className="absolute bottom-4 left-4 font-mono-nu text-[12px] text-nu-paper/15 select-none" aria-hidden="true">⊕</div>
+        <div className="absolute bottom-4 right-4 font-mono-nu text-[12px] text-nu-paper/15 select-none" aria-hidden="true">⊕</div>
 
         {/* Large JOIN text — misregistered */}
         <div className="relative">
@@ -56,14 +56,14 @@ export function JoinSection({ content }: JoinSectionProps) {
         </div>
 
         <div className="absolute inset-0 flex flex-col justify-end p-12">
-          <span className="font-mono-nu text-[10px] uppercase tracking-[0.3em] text-nu-paper/25">
+          <span className="font-mono-nu text-[12px] uppercase tracking-[0.3em] text-nu-paper/25">
             become a city changer
           </span>
         </div>
 
         {/* Decorative stamp */}
         <div className="absolute top-12 right-12 w-20 h-20 border-[3px] border-nu-pink/30 rotate-12 flex items-center justify-center">
-          <span className="font-mono-nu text-[7px] font-bold text-nu-pink/30 tracking-widest uppercase -rotate-12">OPEN</span>
+          <span className="font-mono-nu text-[9px] font-bold text-nu-pink/30 tracking-widest uppercase -rotate-12">OPEN</span>
         </div>
       </div>
 
@@ -81,13 +81,13 @@ export function JoinSection({ content }: JoinSectionProps) {
         <div className="flex flex-wrap items-center gap-3 mt-8">
           <Link
             href="/signup"
-            className="font-mono-nu text-[11px] font-bold tracking-[0.1em] uppercase px-7 py-4 bg-nu-ink text-nu-paper border-[3px] border-nu-ink hover:bg-nu-pink hover:border-nu-pink transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[-4px_4px_0_#0D0D0D] no-underline"
+            className="font-mono-nu text-[13px] font-bold tracking-[0.1em] uppercase px-7 py-4 bg-nu-ink text-nu-paper border-[3px] border-nu-ink hover:bg-nu-pink hover:border-nu-pink transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[-4px_4px_0_#0D0D0D] no-underline"
           >
             회원가입
           </Link>
           <Link
             href="/login"
-            className="font-mono-nu text-[11px] font-bold tracking-[0.1em] uppercase px-7 py-4 bg-transparent text-nu-ink border-[3px] border-nu-ink hover:bg-nu-yellow hover:border-nu-yellow transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[-4px_4px_0_#0D0D0D] no-underline"
+            className="font-mono-nu text-[13px] font-bold tracking-[0.1em] uppercase px-7 py-4 bg-transparent text-nu-ink border-[3px] border-nu-ink hover:bg-nu-yellow hover:border-nu-yellow transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[-4px_4px_0_#0D0D0D] no-underline"
           >
             로그인
           </Link>

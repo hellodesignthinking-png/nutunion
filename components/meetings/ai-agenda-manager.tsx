@@ -209,7 +209,7 @@ export function AiAgendaManager({ groupId, onAccept }: { groupId: string; onAcce
           <Brain size={20} className="text-nu-pink animate-pulse" />
           <div>
             <p className="font-head text-sm font-bold text-nu-ink">AI가 아젠다를 분석하고 있습니다...</p>
-            <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">Analyzing previous meetings & milestones</p>
+            <p className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest">Analyzing previous meetings & milestones</p>
           </div>
         </div>
         <div className="space-y-2">
@@ -225,11 +225,11 @@ export function AiAgendaManager({ groupId, onAccept }: { groupId: string; onAcce
       <div className="bg-gradient-to-r from-nu-ink to-nu-ink/90 text-nu-paper px-5 py-4">
         <div className="flex items-center gap-2 mb-1">
           <Sparkles size={14} className="text-nu-pink" />
-          <span className="font-mono-nu text-[9px] font-black uppercase tracking-[0.25em] text-nu-pink">
+          <span className="font-mono-nu text-[11px] font-black uppercase tracking-[0.25em] text-nu-pink">
             AI_Agenda_Manager
           </span>
         </div>
-        <p className="text-[11px] text-nu-paper/60">
+        <p className="text-[13px] text-nu-paper/60">
           이전 미팅과 프로젝트 현황을 분석하여 최적의 아젠다를 제안합니다
         </p>
       </div>
@@ -258,17 +258,17 @@ export function AiAgendaManager({ groupId, onAccept }: { groupId: string; onAcce
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
                   <TypeIcon size={10} className={type.color} />
-                  <span className={`font-mono-nu text-[7px] font-bold uppercase tracking-widest ${type.color}`}>
+                  <span className={`font-mono-nu text-[9px] font-bold uppercase tracking-widest ${type.color}`}>
                     {type.label}
                   </span>
-                  <span className={`font-mono-nu text-[7px] font-bold uppercase tracking-widest px-1.5 py-0.5 border ${badge.color}`}>
+                  <span className={`font-mono-nu text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 border ${badge.color}`}>
                     {badge.label}
                   </span>
                 </div>
                 <p className={`text-[12px] font-bold ${isSelected ? "text-nu-ink" : "text-nu-muted"}`}>
                   {item.title}
                 </p>
-                <p className="text-[10px] text-nu-muted mt-0.5">{item.reason}</p>
+                <p className="text-[12px] text-nu-muted mt-0.5">{item.reason}</p>
               </div>
             </button>
           );
@@ -277,13 +277,13 @@ export function AiAgendaManager({ groupId, onAccept }: { groupId: string; onAcce
 
       {/* Action */}
       <div className="px-5 py-4 bg-nu-cream/15 border-t border-nu-ink/5 flex items-center justify-between">
-        <span className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">
+        <span className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest">
           {selectedItems.size}/{suggestions.length} selected
         </span>
         <button
           onClick={handleAccept}
           disabled={selectedItems.size === 0}
-          className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-all disabled:opacity-30 flex items-center gap-2"
+          className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-5 py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-all disabled:opacity-30 flex items-center gap-2"
         >
           <Sparkles size={12} /> 아젠다 적용하기
         </button>

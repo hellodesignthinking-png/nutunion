@@ -178,7 +178,7 @@ export default function SignupPage() {
                 <span className="text-sm flex-1">
                   <span className="text-nu-pink font-medium">[필수]</span> 이용약관 동의
                 </span>
-                <button type="button" className="font-mono-nu text-[9px] text-nu-muted underline">보기</button>
+                <button type="button" className="font-mono-nu text-[11px] text-nu-muted underline">보기</button>
               </label>
 
               <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-nu-cream/20 transition-colors">
@@ -191,7 +191,7 @@ export default function SignupPage() {
                 <span className="text-sm flex-1">
                   <span className="text-nu-pink font-medium">[필수]</span> 개인정보 수집 및 이용 동의
                 </span>
-                <button type="button" className="font-mono-nu text-[9px] text-nu-muted underline">보기</button>
+                <button type="button" className="font-mono-nu text-[11px] text-nu-muted underline">보기</button>
               </label>
 
               <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-nu-cream/20 transition-colors">
@@ -204,7 +204,7 @@ export default function SignupPage() {
                 <span className="text-sm flex-1">
                   <span className="text-nu-pink font-medium">[필수]</span> 커뮤니티 이용 규칙 동의
                 </span>
-                <button type="button" className="font-mono-nu text-[9px] text-nu-muted underline">보기</button>
+                <button type="button" className="font-mono-nu text-[11px] text-nu-muted underline">보기</button>
               </label>
 
               <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-nu-cream/20 transition-colors">
@@ -223,7 +223,7 @@ export default function SignupPage() {
             <Button
               onClick={() => setStep("form")}
               disabled={!canProceed}
-              className="w-full bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[11px] uppercase tracking-widest py-6 disabled:opacity-40"
+              className="w-full bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[13px] uppercase tracking-widest py-6 disabled:opacity-40"
             >
               동의하고 계속하기
             </Button>
@@ -260,7 +260,7 @@ export default function SignupPage() {
           {/* Divider */}
           <div className="flex items-center gap-4 my-6">
             <div className="flex-1 h-px bg-nu-ink/10" />
-            <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">
+            <span className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted">
               또는 이메일로 가입
             </span>
             <div className="flex-1 h-px bg-nu-ink/10" />
@@ -269,17 +269,17 @@ export default function SignupPage() {
           {/* Email signup */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
-              <Label htmlFor="name" className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
+              <Label htmlFor="name" className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
                 이름 *
               </Label>
               <Input id="name" name="name" required placeholder="홍길동" className="mt-1.5 border-nu-ink/15 bg-transparent focus:border-nu-pink" />
             </div>
 
             <div>
-              <Label htmlFor="nickname" className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray flex items-center gap-2">
+              <Label htmlFor="nickname" className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray flex items-center gap-2">
                 닉네임 * <StatusIcon status={nicknameStatus} />
-                {nicknameStatus === "taken" && <span className="text-nu-red text-[9px] normal-case tracking-normal">이미 사용 중</span>}
-                {nicknameStatus === "available" && <span className="text-green-600 text-[9px] normal-case tracking-normal">사용 가능</span>}
+                {nicknameStatus === "taken" && <span className="text-nu-red text-[11px] normal-case tracking-normal">이미 사용 중</span>}
+                {nicknameStatus === "available" && <span className="text-green-600 text-[11px] normal-case tracking-normal">사용 가능</span>}
               </Label>
               <Input
                 id="nickname"
@@ -294,9 +294,9 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <Label htmlFor="email" className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray flex items-center gap-2">
+              <Label htmlFor="email" className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray flex items-center gap-2">
                 이메일 * <StatusIcon status={emailStatus} />
-                {emailStatus === "taken" && <span className="text-nu-red text-[9px] normal-case tracking-normal">이미 가입됨</span>}
+                {emailStatus === "taken" && <span className="text-nu-red text-[11px] normal-case tracking-normal">이미 가입됨</span>}
               </Label>
               <Input
                 id="email"
@@ -310,7 +310,7 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <Label htmlFor="phone" className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
+              <Label htmlFor="phone" className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
                 전화번호
               </Label>
               <Input
@@ -323,7 +323,7 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <Label htmlFor="password" className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
+              <Label htmlFor="password" className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
                 비밀번호 *
               </Label>
               <Input
@@ -338,7 +338,7 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
+              <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
                 전문분야
               </Label>
               <Select value={specialty} onValueChange={(v) => v && setSpecialty(v)}>
@@ -357,7 +357,7 @@ export default function SignupPage() {
             <Button
               type="submit"
               disabled={loading || nicknameStatus === "taken" || emailStatus === "taken"}
-              className="w-full bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[11px] uppercase tracking-widest py-6 mt-2 disabled:opacity-40"
+              className="w-full bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[13px] uppercase tracking-widest py-6 mt-2 disabled:opacity-40"
             >
               {loading ? "가입 중..." : "가입하기"}
             </Button>
@@ -366,7 +366,7 @@ export default function SignupPage() {
           <div className="flex items-center justify-between mt-6">
             <button
               onClick={() => setStep("terms")}
-              className="font-mono-nu text-[10px] text-nu-muted hover:text-nu-ink"
+              className="font-mono-nu text-[12px] text-nu-muted hover:text-nu-ink"
             >
               ← 약관으로 돌아가기
             </button>

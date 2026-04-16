@@ -63,7 +63,7 @@ export default function LoginPage() {
           {/* Divider */}
           <div className="flex items-center gap-4 my-6">
             <div className="flex-1 h-px bg-nu-ink/10" />
-            <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">
+            <span className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted">
               또는
             </span>
             <div className="flex-1 h-px bg-nu-ink/10" />
@@ -72,7 +72,7 @@ export default function LoginPage() {
           {/* Email login */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             <div>
-              <Label htmlFor="email" className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
+              <Label htmlFor="email" className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
                 이메일
               </Label>
               <Input
@@ -85,7 +85,7 @@ export default function LoginPage() {
               />
             </div>
             <div>
-              <Label htmlFor="password" className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
+              <Label htmlFor="password" className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
                 비밀번호
               </Label>
               <Input
@@ -100,7 +100,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[11px] uppercase tracking-widest py-6 mt-2"
+              className="w-full bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[13px] uppercase tracking-widest py-6 mt-2"
             >
               {loading ? "로그인 중..." : "이메일로 로그인"}
             </Button>

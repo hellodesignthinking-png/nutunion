@@ -154,12 +154,12 @@ export function IdentityGeneratorSection() {
         <div className="mb-12">
           <div className="flex items-center gap-3 mb-4">
             <span
-              className="font-mono-nu text-[9px] font-bold uppercase tracking-[0.2em] px-3 py-1.5 text-nu-paper"
+              className="font-mono-nu text-[11px] font-bold uppercase tracking-[0.2em] px-3 py-1.5 text-nu-paper"
               style={{ background: cfg.primary }}
             >
               Identity Engine
             </span>
-            <span className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">
+            <span className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest">
               Nut-Cell System v1.0
             </span>
           </div>
@@ -180,7 +180,7 @@ export function IdentityGeneratorSection() {
           <div className="border-r-[3px] border-nu-ink">
             {/* Category selector */}
             <div className="border-b-[2px] border-nu-ink/20 p-6">
-              <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-4">
+              <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-4">
                 01 — 카테고리 선택
               </p>
               <div className="grid grid-cols-2 gap-2">
@@ -206,7 +206,7 @@ export function IdentityGeneratorSection() {
                       >
                         {c.label}
                       </p>
-                      <p className="font-mono-nu text-[9px] opacity-70">
+                      <p className="font-mono-nu text-[11px] opacity-70">
                         {g.cats.join(" · ")}
                       </p>
                     </button>
@@ -218,12 +218,12 @@ export function IdentityGeneratorSection() {
             {/* Mix / Overprint */}
             <div className="border-b-[2px] border-nu-ink/20 p-6">
               <div className="flex items-center justify-between mb-4">
-                <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">
+                <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted">
                   02 — 오버프린트 믹스
                 </p>
                 <button
                   onClick={() => setShowMix(!showMix)}
-                  className="font-mono-nu text-[10px] uppercase tracking-widest flex items-center gap-1"
+                  className="font-mono-nu text-[12px] uppercase tracking-widest flex items-center gap-1"
                   style={{ color: showMix ? cfg.primary : undefined }}
                   id="identity-mix-toggle"
                 >
@@ -249,7 +249,7 @@ export function IdentityGeneratorSection() {
                   </div>
                   {mixGroup && (
                     <div>
-                      <div className="flex justify-between font-mono-nu text-[10px] text-nu-muted mb-1">
+                      <div className="flex justify-between font-mono-nu text-[12px] text-nu-muted mb-1">
                         <span>{MATRIX[activeGroup].label}</span>
                         <span>{Math.round(mixRatio * 100)}%</span>
                         <span>{MATRIX[mixGroup].label}</span>
@@ -272,7 +272,7 @@ export function IdentityGeneratorSection() {
 
             {/* Color Palette */}
             <div className="p-6">
-              <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-4">
+              <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-4">
                 03 — 컬러 팔레트
               </p>
               <div className="flex gap-2 mb-3">
@@ -284,7 +284,7 @@ export function IdentityGeneratorSection() {
                       onClick={() => { navigator.clipboard.writeText(color); toast.success(`${color} 복사!`); }}
                       title={color}
                     />
-                    <p className="font-mono-nu text-[8px] text-nu-muted mt-1 text-center truncate">{color}</p>
+                    <p className="font-mono-nu text-[10px] text-nu-muted mt-1 text-center truncate">{color}</p>
                   </div>
                 ))}
                 {cfg2 && [cfg2.primary, cfg2.accent].map((color, i) => (
@@ -295,11 +295,11 @@ export function IdentityGeneratorSection() {
                       onClick={() => { navigator.clipboard.writeText(color); toast.success(`${color} 복사!`); }}
                       title={`${color} (mix)`}
                     />
-                    <p className="font-mono-nu text-[8px] text-nu-muted mt-1 text-center truncate">{color}</p>
+                    <p className="font-mono-nu text-[10px] text-nu-muted mt-1 text-center truncate">{color}</p>
                   </div>
                 ))}
               </div>
-              <p className="font-mono-nu text-[10px] text-nu-muted">
+              <p className="font-mono-nu text-[12px] text-nu-muted">
                 컬러 칩 클릭 시 HEX 코드 복사
               </p>
             </div>
@@ -348,7 +348,7 @@ export function IdentityGeneratorSection() {
                     NUT UNION
                   </p>
                   <p
-                    className="font-mono-nu text-[10px] uppercase tracking-[0.3em] text-nu-muted mt-1"
+                    className="font-mono-nu text-[12px] uppercase tracking-[0.3em] text-nu-muted mt-1"
                   >
                     {cfg.tagline}
                     {cfg2 ? ` × ${cfg2.tagline}` : ""}
@@ -361,7 +361,7 @@ export function IdentityGeneratorSection() {
                   style={{ borderColor: `${cfg.primary}40` }}
                 >
                   <Zap size={11} style={{ color: cfg.primary }} />
-                  <span className="font-mono-nu text-[10px] text-nu-muted">
+                  <span className="font-mono-nu text-[12px] text-nu-muted">
                     {cfg.font}
                     {cfg2 ? ` × ${cfg2.font}` : ""}
                   </span>
@@ -371,12 +371,12 @@ export function IdentityGeneratorSection() {
 
             {/* Download bar */}
             <div className="border-t-[3px] border-nu-ink p-4 flex flex-wrap gap-2">
-              <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted self-center mr-auto">
+              <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted self-center mr-auto">
                 Download My Identity
               </p>
               <button
                 onClick={downloadSvg}
-                className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 border-[2px] border-nu-ink text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-colors flex items-center gap-1.5"
+                className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2.5 border-[2px] border-nu-ink text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-colors flex items-center gap-1.5"
                 id="identity-download-svg"
               >
                 <Download size={12} /> SVG
@@ -384,14 +384,14 @@ export function IdentityGeneratorSection() {
               <button
                 onClick={downloadPng}
                 disabled={downloading}
-                className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 border-[2px] border-nu-ink text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2.5 border-[2px] border-nu-ink text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-colors flex items-center gap-1.5 disabled:opacity-50"
                 id="identity-download-png"
               >
                 {downloading ? <RefreshCw size={12} className="animate-spin" /> : <Download size={12} />} PNG
               </button>
               <button
                 onClick={downloadBrandKit}
-                className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 text-nu-paper transition-colors flex items-center gap-1.5"
+                className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2.5 text-nu-paper transition-colors flex items-center gap-1.5"
                 style={{ background: cfg.primary }}
                 id="identity-download-kit"
               >
@@ -403,7 +403,7 @@ export function IdentityGeneratorSection() {
             <div className="border-t border-nu-ink/10 p-4">
               <Link
                 href="/brand"
-                className="font-mono-nu text-[10px] uppercase tracking-widest no-underline flex items-center gap-1 hover:gap-2 transition-all"
+                className="font-mono-nu text-[12px] uppercase tracking-widest no-underline flex items-center gap-1 hover:gap-2 transition-all"
                 style={{ color: cfg.primary }}
               >
                 전체 브랜드 가이드 보기 <ChevronRight size={12} />

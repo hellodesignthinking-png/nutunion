@@ -126,7 +126,7 @@ export default async function CommunityWikiPage({
               <Link
                 key={key}
                 href={`/wiki${key !== "전체" ? `?category=${key}` : ""}${q ? `${key !== "전체" ? "&" : "?"}q=${q}` : ""}`}
-                className={`font-mono-nu text-[10px] uppercase tracking-[0.12em] px-4 py-2 border-[2px] no-underline transition-all ${
+                className={`font-mono-nu text-[12px] uppercase tracking-[0.12em] px-4 py-2 border-[2px] no-underline transition-all ${
                   activeCategory === key
                     ? "border-nu-ink bg-nu-ink text-nu-paper font-bold"
                     : "border-nu-ink/20 text-nu-graphite hover:border-nu-ink/50"
@@ -150,7 +150,7 @@ export default async function CommunityWikiPage({
               name="q"
               defaultValue={q || ""}
               placeholder="제목 검색..."
-              className="font-mono-nu text-[11px] pl-9 pr-4 py-2.5 border-[2px] border-nu-ink/20 bg-transparent w-full sm:w-[220px] focus:border-nu-ink focus:outline-none placeholder:text-nu-muted"
+              className="font-mono-nu text-[13px] pl-9 pr-4 py-2.5 border-[2px] border-nu-ink/20 bg-transparent w-full sm:w-[220px] focus:border-nu-ink focus:outline-none placeholder:text-nu-muted"
             />
           </form>
         </div>
@@ -181,19 +181,19 @@ export default async function CommunityWikiPage({
                     className="group relative block border-[2px] border-amber-400/60 bg-gradient-to-br from-amber-50/50 to-nu-paper p-6 no-underline hover:border-amber-500 transition-all"
                   >
                     {/* BEST badge */}
-                    <span className="absolute top-3 right-3 font-mono-nu text-[8px] font-bold uppercase tracking-[0.2em] px-2.5 py-1 bg-gradient-to-r from-amber-400 to-pink-400 text-white">
+                    <span className="absolute top-3 right-3 font-mono-nu text-[10px] font-bold uppercase tracking-[0.2em] px-2.5 py-1 bg-gradient-to-r from-amber-400 to-pink-400 text-white">
                       BEST
                     </span>
 
                     {/* Group badge */}
                     <span
-                      className={`inline-block font-mono-nu text-[8px] uppercase tracking-[0.15em] px-2 py-0.5 mb-3 ${catColor}`}
+                      className={`inline-block font-mono-nu text-[10px] uppercase tracking-[0.15em] px-2 py-0.5 mb-3 ${catColor}`}
                     >
                       {group?.name || "Unknown"}
                     </span>
 
                     {/* Topic */}
-                    <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest mb-1.5">
+                    <p className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest mb-1.5">
                       {page.topic?.name}
                     </p>
 
@@ -203,7 +203,7 @@ export default async function CommunityWikiPage({
                     </h3>
 
                     {/* Preview */}
-                    <p className="text-[11px] text-nu-graphite leading-relaxed line-clamp-3 mb-4">
+                    <p className="text-[13px] text-nu-graphite leading-relaxed line-clamp-3 mb-4">
                       {preview || "내용 없음"}
                     </p>
 
@@ -217,16 +217,16 @@ export default async function CommunityWikiPage({
                         />
                       ) : (
                         <div className="w-5 h-5 rounded-full bg-nu-pink/20 flex items-center justify-center">
-                          <span className="text-[7px] font-bold text-nu-pink">
+                          <span className="text-[9px] font-bold text-nu-pink">
                             {(page.author?.nickname || "?")[0]}
                           </span>
                         </div>
                       )}
-                      <span className="font-mono-nu text-[9px] text-nu-muted">
+                      <span className="font-mono-nu text-[11px] text-nu-muted">
                         {page.author?.nickname || "익명"}
                       </span>
                       <span className="text-nu-muted/30">|</span>
-                      <span className="font-mono-nu text-[9px] text-nu-muted">
+                      <span className="font-mono-nu text-[11px] text-nu-muted">
                         {timeAgo(page.updated_at)}
                       </span>
                     </div>
@@ -256,11 +256,11 @@ export default async function CommunityWikiPage({
                     {/* Group badge */}
                     <div className="flex items-center gap-2 mb-3">
                       <span
-                        className={`font-mono-nu text-[8px] uppercase tracking-[0.15em] px-2 py-0.5 ${catColor}`}
+                        className={`font-mono-nu text-[10px] uppercase tracking-[0.15em] px-2 py-0.5 ${catColor}`}
                       >
                         {group?.name || "Unknown"}
                       </span>
-                      <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">
+                      <span className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
                         {page.topic?.name}
                       </span>
                     </div>
@@ -276,7 +276,7 @@ export default async function CommunityWikiPage({
                     </Link>
 
                     {/* Preview */}
-                    <p className="text-[11px] text-nu-graphite leading-relaxed line-clamp-3 mb-4 flex-1">
+                    <p className="text-[13px] text-nu-graphite leading-relaxed line-clamp-3 mb-4 flex-1">
                       {preview || "내용 없음"}
                     </p>
 
@@ -290,16 +290,16 @@ export default async function CommunityWikiPage({
                         />
                       ) : (
                         <div className="w-5 h-5 rounded-full bg-nu-pink/20 flex items-center justify-center">
-                          <span className="text-[7px] font-bold text-nu-pink">
+                          <span className="text-[9px] font-bold text-nu-pink">
                             {(page.author?.nickname || "?")[0]}
                           </span>
                         </div>
                       )}
-                      <span className="font-mono-nu text-[9px] text-nu-muted">
+                      <span className="font-mono-nu text-[11px] text-nu-muted">
                         {page.author?.nickname || "익명"}
                       </span>
                       <span className="text-nu-muted/30">|</span>
-                      <span className="font-mono-nu text-[9px] text-nu-muted">
+                      <span className="font-mono-nu text-[11px] text-nu-muted">
                         {timeAgo(page.updated_at)}
                       </span>
                     </div>
@@ -307,25 +307,25 @@ export default async function CommunityWikiPage({
                     {/* Stats + actions */}
                     <div className="pt-3 border-t border-nu-ink/[0.06] flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <span className="flex items-center gap-1 font-mono-nu text-[9px] text-nu-muted">
+                        <span className="flex items-center gap-1 font-mono-nu text-[11px] text-nu-muted">
                           <Eye size={11} /> {page.version || 1}
                         </span>
-                        <span className="flex items-center gap-1 font-mono-nu text-[9px] text-nu-muted">
+                        <span className="flex items-center gap-1 font-mono-nu text-[11px] text-nu-muted">
                           <Heart size={11} /> 0
                         </span>
-                        <span className="flex items-center gap-1 font-mono-nu text-[9px] text-nu-muted">
+                        <span className="flex items-center gap-1 font-mono-nu text-[11px] text-nu-muted">
                           <MessageCircle size={11} /> 0
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
-                          className="font-mono-nu text-[8px] uppercase tracking-[0.1em] px-2.5 py-1 border border-nu-ink/10 text-nu-muted hover:text-nu-pink hover:border-nu-pink/30 transition-colors flex items-center gap-1"
+                          className="font-mono-nu text-[10px] uppercase tracking-[0.1em] px-2.5 py-1 border border-nu-ink/10 text-nu-muted hover:text-nu-pink hover:border-nu-pink/30 transition-colors flex items-center gap-1"
                           title="좋아요"
                         >
                           <Heart size={10} /> 좋아요
                         </button>
                         <button
-                          className="font-mono-nu text-[8px] uppercase tracking-[0.1em] px-2.5 py-1 border border-nu-ink/10 text-nu-muted hover:text-nu-blue hover:border-nu-blue/30 transition-colors flex items-center gap-1"
+                          className="font-mono-nu text-[10px] uppercase tracking-[0.1em] px-2.5 py-1 border border-nu-ink/10 text-nu-muted hover:text-nu-blue hover:border-nu-blue/30 transition-colors flex items-center gap-1"
                           title="공유"
                         >
                           <Share2 size={10} /> 공유
@@ -343,7 +343,7 @@ export default async function CommunityWikiPage({
             <p className="font-head text-xl font-extrabold text-nu-ink/30 mb-2">
               아직 탭 페이지가 없습니다
             </p>
-            <p className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest">
+            <p className="font-mono-nu text-[13px] text-nu-muted uppercase tracking-widest">
               너트에서 탭을 작성하면 여기에 모입니다
             </p>
           </div>

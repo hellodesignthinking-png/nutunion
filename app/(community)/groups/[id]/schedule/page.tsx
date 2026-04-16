@@ -145,7 +145,7 @@ export default function SchedulePage() {
   return (
     <div className="max-w-6xl mx-auto px-8 py-12">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-1.5 mb-6 font-mono-nu text-[11px] uppercase tracking-widest">
+      <nav className="flex items-center gap-1.5 mb-6 font-mono-nu text-[13px] uppercase tracking-widest">
         <Link href={`/groups/${groupId}`}
           className="text-nu-muted hover:text-nu-ink no-underline flex items-center gap-1 transition-colors">
           <ArrowLeft size={12} /> {groupName}
@@ -161,20 +161,20 @@ export default function SchedulePage() {
         <div className="flex items-center gap-2">
           <button
             onClick={exportIcs}
-            className="font-mono-nu text-[11px] uppercase tracking-widest px-4 py-2.5 border-[2px] border-nu-ink/20 text-nu-graphite hover:bg-nu-ink hover:text-nu-paper transition-colors inline-flex items-center gap-2"
+            className="font-mono-nu text-[13px] uppercase tracking-widest px-4 py-2.5 border-[2px] border-nu-ink/20 text-nu-graphite hover:bg-nu-ink hover:text-nu-paper transition-colors inline-flex items-center gap-2"
           >
             <Download size={13} /> .ics 구독
           </button>
           <Link
             href={`/groups/${groupId}/meetings/create`}
-            className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-2.5 border-[2px] border-nu-blue text-nu-blue no-underline hover:bg-nu-blue hover:text-nu-paper transition-colors inline-flex items-center gap-2"
+            className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-5 py-2.5 border-[2px] border-nu-blue text-nu-blue no-underline hover:bg-nu-blue hover:text-nu-paper transition-colors inline-flex items-center gap-2"
           >
             <Plus size={13} /> 미팅 만들기
           </Link>
           {isHost && (
             <Link
               href={`/groups/${groupId}/events/create`}
-              className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-2.5 bg-nu-pink text-nu-paper no-underline hover:bg-nu-pink/90 transition-colors inline-flex items-center gap-2"
+              className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-5 py-2.5 bg-nu-pink text-nu-paper no-underline hover:bg-nu-pink/90 transition-colors inline-flex items-center gap-2"
             >
               <Plus size={13} /> 이벤트 추가
             </Link>
@@ -195,7 +195,7 @@ export default function SchedulePage() {
         <div className="flex border-[2px] border-nu-ink/15 overflow-hidden">
           {(["month", "list"] as const).map((v) => (
             <button key={v} onClick={() => setView(v)}
-              className={`font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 transition-colors ${view === v ? "bg-nu-ink text-nu-paper" : "text-nu-gray hover:bg-nu-cream"}`}>
+              className={`font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2 transition-colors ${view === v ? "bg-nu-ink text-nu-paper" : "text-nu-gray hover:bg-nu-cream"}`}>
               {v === "month" ? "월별" : "목록"}
             </button>
           ))}
@@ -207,7 +207,7 @@ export default function SchedulePage() {
           <div className="min-w-[600px]">
             <div className="grid grid-cols-7 border-b-[2px] border-nu-ink/[0.08]">
               {["일", "월", "화", "수", "목", "금", "토"].map((d) => (
-                <div key={d} className="p-3 text-center font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">{d}</div>
+                <div key={d} className="p-3 text-center font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted">{d}</div>
               ))}
             </div>
             <div className="grid grid-cols-7">
@@ -226,11 +226,11 @@ export default function SchedulePage() {
                         className={`block border-l-[3px] px-2 py-1 mb-1 no-underline text-nu-ink hover:opacity-80 transition-opacity ${
                           evt.itemType === "meeting" ? "bg-nu-blue/10 border-nu-blue" : "bg-nu-pink/10 border-nu-pink"
                         }`}>
-                        <p className="text-[10px] font-medium truncate">
+                        <p className="text-[12px] font-medium truncate">
                           {evt.itemType === "meeting" && <BookOpen size={9} className="inline mr-1 text-nu-blue" />}
                           {evt.title}
                         </p>
-                        <p className="text-[9px] text-nu-muted">{new Date(evt.start_at).toLocaleTimeString("ko", { hour: "2-digit", minute: "2-digit" })}</p>
+                        <p className="text-[11px] text-nu-muted">{new Date(evt.start_at).toLocaleTimeString("ko", { hour: "2-digit", minute: "2-digit" })}</p>
                       </Link>
                     ))}
                   </div>
@@ -252,21 +252,21 @@ export default function SchedulePage() {
                     <span className={`font-head text-base font-extrabold leading-none ${evt.itemType === "meeting" ? "text-nu-blue" : "text-nu-pink"}`}>
                       {new Date(evt.start_at).getDate()}
                     </span>
-                    <span className={`font-mono-nu text-[8px] ${evt.itemType === "meeting" ? "text-nu-blue/70" : "text-nu-pink/70"}`}>
+                    <span className={`font-mono-nu text-[10px] ${evt.itemType === "meeting" ? "text-nu-blue/70" : "text-nu-pink/70"}`}>
                       {new Date(evt.start_at).toLocaleDateString("ko", { month: "short" })}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-head text-sm font-bold text-nu-ink truncate">{evt.title}</p>
-                      {evt.itemType === "meeting" && <span className="font-mono-nu text-[9px] bg-nu-blue/10 text-nu-blue px-1.5 py-0.5">미팅</span>}
+                      {evt.itemType === "meeting" && <span className="font-mono-nu text-[11px] bg-nu-blue/10 text-nu-blue px-1.5 py-0.5">미팅</span>}
                     </div>
                     <div className="flex flex-wrap gap-3 mt-1 text-xs text-nu-muted">
                       <span className="flex items-center gap-1"><Clock size={10} />{new Date(evt.start_at).toLocaleTimeString("ko", { hour: "2-digit", minute: "2-digit" })}{evt.duration_min && ` (${evt.duration_min}분)`}</span>
                       {evt.location && <span className="flex items-center gap-1"><MapPin size={10} />{evt.location}</span>}
                     </div>
                   </div>
-                  <GoogleCalendarButton title={evt.title} startAt={evt.start_at} endAt={evt.end_at} location={evt.location || ""} className="shrink-0 hidden md:inline-flex text-[9px] px-2 py-1.5" />
+                  <GoogleCalendarButton title={evt.title} startAt={evt.start_at} endAt={evt.end_at} location={evt.location || ""} className="shrink-0 hidden md:inline-flex text-[11px] px-2 py-1.5" />
                 </Link>
                 {evt.itemType === "event" && userId && (
                   <div className="border-t border-nu-ink/[0.06] px-4 py-2.5">
@@ -284,12 +284,12 @@ export default function SchedulePage() {
           <p className="text-nu-muted text-xs mt-1">미팅이나 이벤트를 추가하면 여기에 표시됩니다</p>
           <div className="mt-4 flex items-center justify-center gap-4">
             <Link href={`/groups/${groupId}/meetings/create`}
-              className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-blue no-underline hover:underline">
+              className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-blue no-underline hover:underline">
               + 미팅 만들기
             </Link>
             {isHost && (
               <Link href={`/groups/${groupId}/events/create`}
-                className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink no-underline hover:underline">
+                className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-pink no-underline hover:underline">
                 + 이벤트 추가하기
               </Link>
             )}

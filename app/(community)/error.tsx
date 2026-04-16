@@ -25,23 +25,23 @@ export default function CommunityError({
           잠시 후 다시 시도해 주세요.
         </p>
         {error.digest && (
-          <p className="font-mono-nu text-[9px] text-nu-muted bg-nu-cream/50 px-4 py-2 mb-6 break-all border border-nu-ink/5 inline-block">
+          <p className="font-mono-nu text-[11px] text-nu-muted bg-nu-cream/50 px-4 py-2 mb-6 break-all border border-nu-ink/5 inline-block">
             Error ID: {error.digest}
           </p>
         )}
-        <p className="font-mono-nu text-[10px] text-red-500 bg-red-50 px-4 py-2 mb-6 break-all max-h-32 overflow-auto text-left">
+        <p className="font-mono-nu text-[12px] text-red-500 bg-red-50 px-4 py-2 mb-6 break-all max-h-32 overflow-auto text-left">
           {error.message}
         </p>
         <div className="flex gap-3 justify-center">
           <button
             onClick={reset}
-            className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-8 py-3 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-all"
+            className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-8 py-3 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-all"
           >
             다시 시도
           </button>
           <a
             href="/"
-            className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-8 py-3 border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all"
+            className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-8 py-3 border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all"
           >
             홈으로
           </a>

@@ -83,7 +83,7 @@ function renderMarkdown(md: string): string {
         const cells = row.split("|").filter((c) => c.trim() !== "");
         const tag = i === 0 ? "th" : "td";
         const cls = i === 0
-          ? 'class="text-left px-3 py-2 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted border-b-2 border-nu-ink/10 bg-nu-cream/30 font-normal"'
+          ? 'class="text-left px-3 py-2 font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted border-b-2 border-nu-ink/10 bg-nu-cream/30 font-normal"'
           : 'class="px-3 py-2 border-b border-nu-ink/[0.06] text-nu-graphite"';
         out += `<tr>${cells.map((c) => `<${tag} ${cls}>${c.trim()}</${tag}>`).join("")}</tr>`;
       });
@@ -221,7 +221,7 @@ export function ResourceEditor({
           <p className="font-head text-[12px] font-black text-nu-ink truncate uppercase tracking-tight">
             {name}
           </p>
-          <p className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest mt-0.5">
+          <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest mt-0.5">
             {mode === "edit" ? "편집 모드" : "미리보기"}
             {hasChanges && <span className="ml-2 text-nu-pink">● 변경사항 있음</span>}
           </p>
@@ -243,7 +243,7 @@ export function ResourceEditor({
               <button
                 onClick={handleSave}
                 disabled={saving || !hasChanges}
-                className="flex items-center gap-1 px-3 py-1 font-mono-nu text-[9px] uppercase tracking-widest bg-nu-pink text-white hover:bg-nu-pink/90 disabled:opacity-40 transition-colors"
+                className="flex items-center gap-1 px-3 py-1 font-mono-nu text-[11px] uppercase tracking-widest bg-nu-pink text-white hover:bg-nu-pink/90 disabled:opacity-40 transition-colors"
               >
                 {saving ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />}
                 저장
@@ -310,13 +310,13 @@ export function ResourceEditor({
       {/* Unsaved changes warning */}
       {hasChanges && mode === "edit" && (
         <div className="px-4 py-2 border-t border-nu-amber/30 bg-nu-amber/5 shrink-0 flex items-center justify-between">
-          <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-amber">
+          <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-amber">
             저장되지 않은 변경사항이 있습니다
           </p>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="font-mono-nu text-[9px] uppercase tracking-widest px-3 py-1 bg-nu-amber text-white hover:bg-nu-amber/90 disabled:opacity-40"
+            className="font-mono-nu text-[11px] uppercase tracking-widest px-3 py-1 bg-nu-amber text-white hover:bg-nu-amber/90 disabled:opacity-40"
           >
             {saving ? "저장 중..." : "지금 저장"}
           </button>

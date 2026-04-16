@@ -17,7 +17,7 @@ export default function WikiNotFound() {
         </p>
         <Link
           href="/"
-          className="inline-flex items-center gap-2 font-mono-nu text-[10px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-ink text-white hover:bg-nu-pink transition-colors no-underline"
+          className="inline-flex items-center gap-2 font-mono-nu text-[12px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-ink text-white hover:bg-nu-pink transition-colors no-underline"
         >
           <ArrowLeft size={12} /> 홈으로 돌아가기
         </Link>

@@ -362,14 +362,14 @@ export default function StaffFilesPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-head text-3xl font-extrabold text-nu-ink">파일</h1>
-          <p className="font-mono-nu text-[11px] text-nu-muted mt-1 uppercase tracking-widest">
+          <p className="font-mono-nu text-[13px] text-nu-muted mt-1 uppercase tracking-widest">
             자료실 + Google Drive · {tab === "files" ? `${filtered.length}개` : `Drive 탐색`}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button
             onClick={() => setShowCreate(!showCreate)}
-            className="bg-indigo-600 text-white hover:bg-indigo-700 font-mono-nu text-[10px] uppercase tracking-widest gap-1.5"
+            className="bg-indigo-600 text-white hover:bg-indigo-700 font-mono-nu text-[12px] uppercase tracking-widest gap-1.5"
           >
             {showCreate ? <X size={12} /> : <Plus size={12} />}
             {showCreate ? "닫기" : "새 파일"}
@@ -381,7 +381,7 @@ export default function StaffFilesPage() {
       <div className="flex gap-1 mb-6">
         <button
           onClick={() => setTab("files")}
-          className={`font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 border cursor-pointer transition-colors ${
+          className={`font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2 border cursor-pointer transition-colors ${
             tab === "files" ? "bg-indigo-600 text-white border-indigo-600" : "bg-transparent text-nu-muted border-nu-ink/15 hover:border-indigo-300"
           }`}
         >
@@ -389,7 +389,7 @@ export default function StaffFilesPage() {
         </button>
         <button
           onClick={() => { setTab("drive"); if (driveFiles.length === 0 && !driveLoading) loadDriveFiles(); }}
-          className={`font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 border cursor-pointer transition-colors ${
+          className={`font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2 border cursor-pointer transition-colors ${
             tab === "drive" ? "bg-blue-600 text-white border-blue-600" : "bg-transparent text-nu-muted border-nu-ink/15 hover:border-blue-300"
           }`}
         >
@@ -412,7 +412,7 @@ export default function StaffFilesPage() {
                 key={m.key}
                 type="button"
                 onClick={() => setCreateMode(m.key)}
-                className={`font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 border cursor-pointer transition-colors ${
+                className={`font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2 border cursor-pointer transition-colors ${
                   createMode === m.key ? "bg-indigo-600 text-white border-indigo-600" : "bg-transparent text-nu-muted border-nu-ink/15 hover:border-indigo-300"
                 }`}
               >
@@ -422,7 +422,7 @@ export default function StaffFilesPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className={createMode === "link" ? "" : "sm:col-span-2"}>
-              <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-gray block mb-1">
+              <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-gray block mb-1">
                 {createMode === "link" ? "파일명" : "제목"}
               </label>
               <Input value={newTitle} onChange={e => setNewTitle(e.target.value)}
@@ -431,13 +431,13 @@ export default function StaffFilesPage() {
             </div>
             {createMode === "link" && (
               <div>
-                <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-gray block mb-1">Google Drive URL</label>
+                <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-gray block mb-1">Google Drive URL</label>
                 <Input value={linkUrl} onChange={e => setLinkUrl(e.target.value)}
                   placeholder="https://drive.google.com/..." className="border-nu-ink/15 bg-transparent" />
               </div>
             )}
             <div>
-              <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-gray block mb-1">프로젝트 (선택)</label>
+              <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-gray block mb-1">프로젝트 (선택)</label>
               <select value={newProjectId} onChange={e => setNewProjectId(e.target.value)}
                 className="w-full px-3 py-2 border border-nu-ink/15 bg-transparent text-sm">
                 <option value="">프로젝트 미연결</option>
@@ -448,7 +448,7 @@ export default function StaffFilesPage() {
             </div>
           </div>
           <Button type="submit" disabled={creating || !newTitle.trim() || (createMode === "link" && !linkUrl.trim())}
-            className="bg-indigo-600 text-white hover:bg-indigo-700 font-mono-nu text-[10px] uppercase tracking-widest">
+            className="bg-indigo-600 text-white hover:bg-indigo-700 font-mono-nu text-[12px] uppercase tracking-widest">
             {creating ? "처리 중..." : createMode === "link" ? "연결" : "생성"}
           </Button>
         </form>
@@ -470,12 +470,12 @@ export default function StaffFilesPage() {
               )}
             </div>
             <select value={projectFilter} onChange={e => setProjectFilter(e.target.value)}
-              className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-2 border border-nu-ink/15 bg-transparent cursor-pointer">
+              className="font-mono-nu text-[12px] uppercase tracking-widest px-3 py-2 border border-nu-ink/15 bg-transparent cursor-pointer">
               <option value="all">모든 프로젝트</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
             </select>
             <select value={sortBy} onChange={e => setSortBy(e.target.value as any)}
-              className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-2 border border-nu-ink/15 bg-transparent cursor-pointer">
+              className="font-mono-nu text-[12px] uppercase tracking-widest px-3 py-2 border border-nu-ink/15 bg-transparent cursor-pointer">
               <option value="newest">최신순</option>
               <option value="name">이름순</option>
               <option value="size">크기순</option>
@@ -490,14 +490,14 @@ export default function StaffFilesPage() {
                   <span className="text-lg">{mimeIcon(selectedFile.mime_type)}</span>
                   <div>
                     <h3 className="font-head text-sm font-bold text-nu-ink">{selectedFile.title}</h3>
-                    <p className="font-mono-nu text-[9px] text-nu-muted">
+                    <p className="font-mono-nu text-[11px] text-nu-muted">
                       {selectedFile.creator?.nickname} · {new Date(selectedFile.created_at).toLocaleDateString("ko-KR")}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <a href={selectedFile.drive_url} target="_blank" rel="noopener noreferrer"
-                    className="font-mono-nu text-[9px] text-indigo-600 hover:underline flex items-center gap-1 no-underline">
+                    className="font-mono-nu text-[11px] text-indigo-600 hover:underline flex items-center gap-1 no-underline">
                     <ExternalLink size={10} /> 열기
                   </a>
                   <button onClick={() => setSelectedFile(null)} className="p-1 bg-transparent border-none cursor-pointer text-nu-muted hover:text-nu-ink">
@@ -508,7 +508,7 @@ export default function StaffFilesPage() {
 
               {/* Comments */}
               <div className="px-5 py-4">
-                <h4 className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted font-bold mb-3">
+                <h4 className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted font-bold mb-3">
                   리뷰 · 답글 ({comments.length})
                 </h4>
                 {commentLoading ? (
@@ -519,13 +519,13 @@ export default function StaffFilesPage() {
                   <div className="space-y-3 max-h-60 overflow-y-auto mb-3">
                     {comments.map(c => (
                       <div key={c.id} className="flex gap-3">
-                        <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center font-head text-[9px] font-bold text-indigo-600 shrink-0 mt-0.5">
+                        <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center font-head text-[11px] font-bold text-indigo-600 shrink-0 mt-0.5">
                           {c.user_name.charAt(0)}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <span className="font-head text-xs font-bold text-nu-ink">{c.user_name}</span>
-                            <span className="font-mono-nu text-[8px] text-nu-muted">
+                            <span className="font-mono-nu text-[10px] text-nu-muted">
                               {new Date(c.created_at).toLocaleDateString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                             </span>
                           </div>
@@ -567,11 +567,11 @@ export default function StaffFilesPage() {
                     </a>
                     <div className="flex items-center gap-2 mt-0.5">
                       {f.project?.title && (
-                        <Link href={`/staff/workspace/${f.project.id}`} className="font-mono-nu text-[8px] text-indigo-600 no-underline hover:underline" onClick={e => e.stopPropagation()}>
+                        <Link href={`/staff/workspace/${f.project.id}`} className="font-mono-nu text-[10px] text-indigo-600 no-underline hover:underline" onClick={e => e.stopPropagation()}>
                           {f.project.title}
                         </Link>
                       )}
-                      <span className="font-mono-nu text-[8px] text-nu-muted">
+                      <span className="font-mono-nu text-[10px] text-nu-muted">
                         · {f.creator?.nickname || "Unknown"} · {new Date(f.created_at).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}
                         {formatSize(f.file_size) && ` · ${formatSize(f.file_size)}`}
                       </span>
@@ -581,7 +581,7 @@ export default function StaffFilesPage() {
                     <div className="hidden sm:flex gap-1">
                       {f.ai_tags.slice(0, 3).map((tag: string) => (
                         <button key={tag} onClick={() => setSearch(tag)}
-                          className="font-mono-nu text-[8px] px-1.5 py-0.5 bg-indigo-50 text-indigo-600 border-none cursor-pointer hover:bg-indigo-100 transition-colors">
+                          className="font-mono-nu text-[10px] px-1.5 py-0.5 bg-indigo-50 text-indigo-600 border-none cursor-pointer hover:bg-indigo-100 transition-colors">
                           {tag}
                         </button>
                       ))}
@@ -604,7 +604,7 @@ export default function StaffFilesPage() {
                 <>
                   <p className="text-sm text-nu-muted mb-2">검색 결과가 없습니다</p>
                   <button onClick={() => { setSearch(""); setProjectFilter("all"); }}
-                    className="font-mono-nu text-[10px] text-indigo-600 underline bg-transparent border-none cursor-pointer">
+                    className="font-mono-nu text-[12px] text-indigo-600 underline bg-transparent border-none cursor-pointer">
                     필터 초기화
                   </button>
                 </>
@@ -625,7 +625,7 @@ export default function StaffFilesPage() {
           {/* Breadcrumb */}
           <div className="flex items-center gap-1 mb-4 flex-wrap">
             <button onClick={() => navigateDriveTo(-1)}
-              className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 border-none bg-transparent cursor-pointer ${
+              className={`font-mono-nu text-[12px] uppercase tracking-widest px-2 py-1 border-none bg-transparent cursor-pointer ${
                 drivePath.length === 0 ? "text-indigo-600 font-bold" : "text-nu-muted hover:text-indigo-600"
               }`}>
               내 드라이브
@@ -634,7 +634,7 @@ export default function StaffFilesPage() {
               <span key={p.id} className="flex items-center gap-1">
                 <ChevronRight size={10} className="text-nu-muted" />
                 <button onClick={() => navigateDriveTo(i)}
-                  className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 border-none bg-transparent cursor-pointer ${
+                  className={`font-mono-nu text-[12px] uppercase tracking-widest px-2 py-1 border-none bg-transparent cursor-pointer ${
                     i === drivePath.length - 1 ? "text-indigo-600 font-bold" : "text-nu-muted hover:text-indigo-600"
                   }`}>
                   {p.name}
@@ -683,7 +683,7 @@ export default function StaffFilesPage() {
                           {f.name}
                         </a>
                       )}
-                      <p className="font-mono-nu text-[8px] text-nu-muted mt-0.5">
+                      <p className="font-mono-nu text-[10px] text-nu-muted mt-0.5">
                         {f.owners?.[0]?.displayName || ""}
                         {f.modifiedTime && ` · ${new Date(f.modifiedTime).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}`}
                         {f.size && ` · ${formatSize(parseInt(f.size))}`}
@@ -691,7 +691,7 @@ export default function StaffFilesPage() {
                     </div>
                     {!isFolder && (
                       <button onClick={() => linkDriveFile(f)}
-                        className="font-mono-nu text-[8px] uppercase tracking-widest px-2 py-1 bg-transparent border border-indigo-200 text-indigo-600 cursor-pointer hover:bg-indigo-50 transition-colors opacity-0 group-hover:opacity-100 shrink-0">
+                        className="font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 bg-transparent border border-indigo-200 text-indigo-600 cursor-pointer hover:bg-indigo-50 transition-colors opacity-0 group-hover:opacity-100 shrink-0">
                         + 자료실
                       </button>
                     )}

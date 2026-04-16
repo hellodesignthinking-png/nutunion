@@ -30,13 +30,13 @@ export default function Error({
         <div className="flex items-center justify-center gap-3">
           <button
             onClick={reset}
-            className="font-mono-nu text-[11px] uppercase tracking-widest px-6 py-3 border-[2px] border-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-all flex items-center gap-2"
+            className="font-mono-nu text-[13px] uppercase tracking-widest px-6 py-3 border-[2px] border-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-all flex items-center gap-2"
           >
             <RotateCcw size={14} /> 다시 시도
           </button>
           <Link
             href="/dashboard"
-            className="font-mono-nu text-[11px] uppercase tracking-widest px-6 py-3 bg-nu-pink text-nu-paper hover:bg-nu-pink/90 transition-all no-underline flex items-center gap-2"
+            className="font-mono-nu text-[13px] uppercase tracking-widest px-6 py-3 bg-nu-pink text-nu-paper hover:bg-nu-pink/90 transition-all no-underline flex items-center gap-2"
           >
             <Home size={14} /> 대시보드
           </Link>

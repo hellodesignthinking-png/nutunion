@@ -206,7 +206,7 @@ const DOC_TEMPLATES: DocTemplate[] = [
     name: "체크리스트",
     icon: CheckSquare,
     iconColor: "text-green-500",
-    description: "할 일 목록을 체크리스트로 관리합니다",
+    description: "할일 목록을 체크리스트로 관리합니다",
     fileType: "checklist",
     content: `# 체크리스트
 
@@ -376,9 +376,9 @@ export function NewDocumentModal({ targetType, targetId, stage, onCreated, onClo
           <div>
             <div className="flex items-center gap-2 mb-0.5">
               <Plus size={14} className="text-nu-pink" />
-              <span className="font-mono-nu text-[9px] font-black uppercase tracking-[0.25em] text-nu-pink">New_Document</span>
+              <span className="font-mono-nu text-[11px] font-black uppercase tracking-[0.25em] text-nu-pink">New_Document</span>
             </div>
-            <p className="text-[11px] text-nu-paper/60">새 문서를 만들어 자료실에서 바로 편집하세요</p>
+            <p className="text-[13px] text-nu-paper/60">새 문서를 만들어 자료실에서 바로 편집하세요</p>
           </div>
           <button onClick={onClose} className="text-nu-paper/50 hover:text-nu-paper transition-colors cursor-pointer bg-transparent border-none">
             <X size={18} />
@@ -388,7 +388,7 @@ export function NewDocumentModal({ targetType, targetId, stage, onCreated, onClo
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {/* Document name */}
           <div>
-            <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-1.5">문서 이름 *</label>
+            <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted block mb-1.5">문서 이름 *</label>
             <input
               value={docName}
               onChange={e => setDocName(e.target.value)}
@@ -400,7 +400,7 @@ export function NewDocumentModal({ targetType, targetId, stage, onCreated, onClo
 
           {/* Template selection */}
           <div>
-            <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-2">문서 유형 선택</label>
+            <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted block mb-2">문서 유형 선택</label>
             <div className="grid grid-cols-2 gap-2">
               {DOC_TEMPLATES.map(t => {
                 const isSelected = selectedTemplate === t.key;
@@ -418,7 +418,7 @@ export function NewDocumentModal({ targetType, targetId, stage, onCreated, onClo
                       <t.icon size={16} className={t.iconColor} />
                       <span className="text-sm font-bold text-nu-ink">{t.name}</span>
                     </div>
-                    <p className="text-[10px] text-nu-muted leading-snug">{t.description}</p>
+                    <p className="text-[12px] text-nu-muted leading-snug">{t.description}</p>
                   </button>
                 );
               })}
@@ -430,14 +430,14 @@ export function NewDocumentModal({ targetType, targetId, stage, onCreated, onClo
         <div className="px-5 py-3 border-t-2 border-nu-ink/10 flex items-center justify-between bg-nu-cream/20">
           <button
             onClick={onClose}
-            className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 border border-nu-ink/10 text-nu-muted hover:bg-nu-ink/5 transition-all cursor-pointer"
+            className="font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2 border border-nu-ink/10 text-nu-muted hover:bg-nu-ink/5 transition-all cursor-pointer"
           >
             취소
           </button>
           <button
             onClick={handleCreate}
             disabled={creating || !docName.trim() || !selectedTemplate}
-            className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-all disabled:opacity-40 cursor-pointer flex items-center gap-1.5 border-none"
+            className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-5 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-all disabled:opacity-40 cursor-pointer flex items-center gap-1.5 border-none"
           >
             {creating ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
             문서 만들기

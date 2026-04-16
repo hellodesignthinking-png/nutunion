@@ -5,9 +5,9 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import {
   Bold, Italic, Heading1, Heading2, Heading3,
-  List, ListOrdered, Code, Link2, Image,
+  List, ListOrdered, Code, Link2,
   Eye, Edit3, Save, History, Clock,
-  Tag, Users, GitBranch, ChevronRight, Loader2, ExternalLink
+  Tag, Loader2, ExternalLink, LayoutTemplate, ChevronDown, ChevronUp,
 } from "lucide-react";
 import DOMPurify from "isomorphic-dompurify";
 
@@ -34,6 +34,51 @@ const TOOLBAR_ACTIONS = [
   { icon: Link2, label: "Link", markdown: "[link](url)", insert: true, shortcut: "⌘K" },
 ];
 
+const PLAYBOOK_TEMPLATE = `## ⚡ Layer 1: AI 익스프레스 (TL;DR)
+
+> 💡 핵심 요약 3줄을 여기에 작성하세요. AI가 자동 요약하거나 직접 채워주세요.
+
+**주요 키워드:** \`#키워드1\` \`#키워드2\` \`#키워드3\`
+
+---
+
+## 🎯 Layer 2: 코어 컨셉 (Core Concept)
+
+### 정의 및 배경
+- 왜 이 지식이 우리 소모임/프로젝트에 필요한가요?
+- 우리가 정의하는 이 개념의 범위는 어디까지인가요?
+
+---
+
+## 🛠️ Layer 3: 액션 가이드 (Action Checklist)
+
+- [ ] **Step 1:** 구체적인 행동 지침을 입력하세요
+- [ ] **Step 2:** 관련 도구 및 링크를 확인하세요
+- [ ] **Step 3:** 결과물을 검토하고 공유하세요
+
+> ⚠️ 주의사항: 자주 하는 실수나 리스크를 여기에 기록하세요.
+
+---
+
+## 🔗 Layer 4: 지식 연결 (Contextual Links)
+
+- **관련 프로젝트:** 프로젝트 링크 또는 이름
+- **참고 미팅 로그:** YYYY-MM-DD 미팅 기록
+- **활용 자료:** 자료실 파일 링크
+
+---
+
+## 📚 Layer 5: 딥 다이브 (Deep Dive)
+
+### 이론적 배경
+- 원문 출처: 논문 제목 또는 아티클 링크
+- 핵심 내용: 상세 분석 내용을 여기에 작성하세요
+
+---
+
+> 🛠 관련 도구: 이 주제와 관련된 도구 링크를 여기에 추가하세요.
+`;
+
 export function WikiPageEditor({
   pageId,
   topicId,
@@ -56,6 +101,7 @@ export function WikiPageEditor({
   const [draftRestored, setDraftRestored] = useState(false);
   const [syncingToDrive, setSyncingToDrive] = useState(false);
   const [driveDocUrl, setDriveDocUrl] = useState<string | null>(null);
+  const [showTemplates, setShowTemplates] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
 
@@ -388,7 +434,7 @@ export function WikiPageEditor({
         <div className="flex flex-wrap items-center gap-2">
           <Tag size={14} className="text-nu-muted" />
           {tags.map(t => (
-            <span key={t} className="font-mono-nu text-[9px] px-2 py-1 bg-nu-pink/10 text-nu-pink border border-nu-pink/20 flex items-center gap-1">
+            <span key={t} className="font-mono-nu text-[11px] px-2 py-1 bg-nu-pink/10 text-nu-pink border border-nu-pink/20 flex items-center gap-1">
               {t}
               <button onClick={() => setTags(tags.filter(x => x !== t))} className="hover:text-red-500 ml-1">&times;</button>
             </span>
@@ -401,7 +447,7 @@ export function WikiPageEditor({
             onFocus={() => setShowTagSuggestions(true)}
             onBlur={() => setTimeout(() => setShowTagSuggestions(false), 200)}
             placeholder="태그 추가..."
-            className="font-mono-nu text-[10px] px-2 py-1 bg-transparent border border-nu-ink/10 focus:border-nu-pink focus:outline-none w-28 transition-colors"
+            className="font-mono-nu text-[12px] px-2 py-1 bg-transparent border border-nu-ink/10 focus:border-nu-pink focus:outline-none w-28 transition-colors"
           />
         </div>
         {/* Tag auto-complete dropdown */}
@@ -412,7 +458,7 @@ export function WikiPageEditor({
                 key={s.id}
                 type="button"
                 onMouseDown={(e) => { e.preventDefault(); setTags([...tags, s.name]); setNewTag(""); setShowTagSuggestions(false); }}
-                className="w-full text-left px-3 py-2 font-mono-nu text-[10px] text-nu-ink hover:bg-nu-cream/50 transition-colors flex items-center gap-2"
+                className="w-full text-left px-3 py-2 font-mono-nu text-[12px] text-nu-ink hover:bg-nu-cream/50 transition-colors flex items-center gap-2"
               >
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color || '#e91e63' }} />
                 {s.name}
@@ -425,12 +471,12 @@ export function WikiPageEditor({
       {/* Draft restored banner */}
       {draftRestored && (
         <div className="flex items-center justify-between bg-nu-blue/5 border border-nu-blue/20 px-4 py-2 animate-in fade-in">
-          <span className="font-mono-nu text-[10px] text-nu-blue">
+          <span className="font-mono-nu text-[12px] text-nu-blue">
             💾 이전에 저장된 초안이 복원되었습니다
           </span>
           <button
             onClick={() => { setTitle(initialTitle); setContent(initialContent); clearDraft(); setDraftRestored(false); }}
-            className="font-mono-nu text-[9px] text-nu-muted hover:text-red-500 transition-colors"
+            className="font-mono-nu text-[11px] text-nu-muted hover:text-red-500 transition-colors"
           >
             초안 삭제
           </button>
@@ -450,10 +496,28 @@ export function WikiPageEditor({
             <action.icon size={16} />
           </button>
         ))}
+        <div className="w-px h-5 bg-nu-ink/10 mx-1" />
+        {/* Callout insert shortcuts */}
+        <button onClick={() => setContent(c => c + "\n> 💡 ")} title="인사이트 박스" aria-label="인사이트 박스" className="p-2 hover:bg-nu-pink/10 text-nu-pink/70 hover:text-nu-pink transition-colors font-bold text-sm">💡</button>
+        <button onClick={() => setContent(c => c + "\n> ⚠️ ")} title="경고 박스" aria-label="경고 박스" className="p-2 hover:bg-nu-amber/10 text-nu-amber/70 hover:text-nu-amber transition-colors font-bold text-sm">⚠️</button>
+        <button onClick={() => setContent(c => c + "\n> 🛠 ")} title="도구 박스" aria-label="도구 박스" className="p-2 hover:bg-nu-blue/10 text-nu-blue/70 hover:text-nu-blue transition-colors font-bold text-sm">🛠</button>
+        <button onClick={() => setContent(c => c + "\n- [ ] ")} title="체크리스트 항목" aria-label="체크리스트 항목" className="p-2 hover:bg-nu-ink/10 text-nu-graphite hover:text-nu-ink transition-colors font-mono-nu text-[11px] font-bold">☐</button>
+        <div className="w-px h-5 bg-nu-ink/10 mx-1" />
+        {/* Template button */}
+        <button
+          onClick={() => setShowTemplates(!showTemplates)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 font-mono-nu text-[11px] font-bold uppercase tracking-widest transition-colors border ${
+            showTemplates ? "border-nu-pink text-nu-pink bg-nu-pink/5" : "border-nu-ink/10 text-nu-muted hover:text-nu-ink"
+          }`}
+          title="플레이북 템플릿 삽입"
+        >
+          <LayoutTemplate size={13} /> 템플릿
+          {showTemplates ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+        </button>
         <div className="flex-1" />
         <button
           onClick={() => setPreview(!preview)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 font-mono-nu text-[10px] font-bold uppercase tracking-widest transition-colors ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 font-mono-nu text-[12px] font-bold uppercase tracking-widest transition-colors ${
             preview ? "bg-nu-ink text-white" : "text-nu-muted hover:text-nu-ink"
           }`}
         >
@@ -461,6 +525,38 @@ export function WikiPageEditor({
           {preview ? "Edit" : "Preview"}
         </button>
       </div>
+
+      {/* Template picker */}
+      {showTemplates && (
+        <div className="border-[2px] border-nu-pink/30 bg-nu-pink/[0.03] p-4 animate-in slide-in-from-top-2 duration-200">
+          <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-3">템플릿 선택</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button
+              onClick={() => { setContent(PLAYBOOK_TEMPLATE); setShowTemplates(false); }}
+              className="text-left p-3 border-[2px] border-nu-pink/20 hover:border-nu-pink bg-white hover:bg-nu-pink/5 transition-all"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <LayoutTemplate size={14} className="text-nu-pink" />
+                <span className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-ink">모듈형 플레이북</span>
+              </div>
+              <p className="text-[11px] text-nu-muted">TL;DR + 코어 컨셉 + 액션 가이드 + 딥 다이브</p>
+            </button>
+            <button
+              onClick={() => {
+                setContent(`## 📝 회의 개요\n\n**일시:** \n**참석자:** \n**목적:** \n\n---\n\n## ✅ 결정 사항\n\n- [ ] \n- [ ] \n\n## 🎯 액션 아이템\n\n- [ ] **[담당자]:** 내용 — 기한: \n\n## 📌 다음 미팅 안건\n\n- `);
+                setShowTemplates(false);
+              }}
+              className="text-left p-3 border-[2px] border-nu-blue/20 hover:border-nu-blue bg-white hover:bg-nu-blue/5 transition-all"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-nu-blue text-sm">📝</span>
+                <span className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-ink">미팅 노트</span>
+              </div>
+              <p className="text-[11px] text-nu-muted">회의록 · 결정사항 · 액션 아이템</p>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Editor / Preview */}
       {preview ? (
@@ -482,10 +578,16 @@ export function WikiPageEditor({
 ## 소제목
 
 - 핵심 개념 1
-- 핵심 개념 2
+- [ ] 체크리스트 항목
 
-**중요한 내용**은 볼드로 강조하세요.
-`코드`는 백틱으로 감싸세요."
+> 💡 인사이트 박스 (핑크)
+> ⚠️ 경고 박스 (앰버)
+> 🛠 도구 박스 (블루)
+
+#태그 로 키워드를 클릭 가능한 배지로 만드세요.
+**중요한 내용**은 볼드로, `코드`는 백틱으로.
+
+위 [템플릿] 버튼으로 모듈형 플레이북을 바로 시작하세요!"
           className="w-full min-h-[400px] bg-white border-[2px] border-nu-ink/[0.08] p-6 font-mono-nu text-sm text-nu-graphite leading-relaxed focus:outline-none focus:border-nu-pink resize-y transition-colors placeholder:text-nu-ink/15"
         />
       )}
@@ -505,14 +607,14 @@ export function WikiPageEditor({
 
       {/* Save */}
       <div className="flex items-center justify-between">
-        <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest flex items-center gap-1">
+        <p className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest flex items-center gap-1">
           <Clock size={10} /> Markdown · 자동 버전 관리 · 초안 자동 저장
         </p>
         <div className="flex items-center gap-3">
           <button
             onClick={handleSyncToDrive}
             disabled={syncingToDrive || !title.trim() || !content.trim()}
-            className="flex items-center gap-2 font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2.5 bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2.5 bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
             title="Google Docs로 저장"
           >
             {syncingToDrive ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />}
@@ -523,7 +625,7 @@ export function WikiPageEditor({
               href={driveDocUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 font-mono-nu text-[10px] text-green-600 hover:underline"
+              className="flex items-center gap-1 font-mono-nu text-[12px] text-green-600 hover:underline"
             >
               <ExternalLink size={10} /> 문서 열기
             </a>

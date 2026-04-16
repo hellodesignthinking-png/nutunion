@@ -81,7 +81,7 @@ export function StatsBanner({ stats }: StatsBannerProps) {
                 <AnimatedNumber target={s.num} suffix={s.suffix} />
               </span>
             </span>
-            <span className="font-mono-nu text-[10px] uppercase tracking-[0.25em] text-nu-paper/40 mt-3 block">
+            <span className="font-mono-nu text-[12px] uppercase tracking-[0.25em] text-nu-paper/40 mt-3 block">
               {s.label}
             </span>
           </div>

@@ -328,14 +328,14 @@ export default function IntegrationSettings({
           <h3 className="font-head text-lg font-bold text-nu-ink">
             외부 연동
           </h3>
-          <p className="text-[11px] text-nu-muted mt-0.5">
+          <p className="text-[13px] text-nu-muted mt-0.5">
             Slack, Discord, Notion 등과 연동하여 알림을 받을 수 있습니다
           </p>
         </div>
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-1.5 font-mono-nu text-[10px] font-bold uppercase tracking-[0.1em] px-4 py-2 bg-nu-ink text-nu-paper hover:bg-nu-ink/90 transition-colors"
+            className="flex items-center gap-1.5 font-mono-nu text-[12px] font-bold uppercase tracking-[0.1em] px-4 py-2 bg-nu-ink text-nu-paper hover:bg-nu-ink/90 transition-colors"
           >
             <Plus size={12} />
             연동 추가
@@ -361,7 +361,7 @@ export default function IntegrationSettings({
           <form onSubmit={handleAdd} className="space-y-4">
             {/* Name */}
             <div>
-              <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">
+              <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
                 연동 이름 *
               </label>
               <input
@@ -376,7 +376,7 @@ export default function IntegrationSettings({
 
             {/* Type */}
             <div>
-              <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">
+              <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
                 연동 유형 *
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -397,7 +397,7 @@ export default function IntegrationSettings({
                       }`}
                     >
                       <Icon size={18} />
-                      <span className="font-mono-nu text-[10px] uppercase tracking-widest">
+                      <span className="font-mono-nu text-[12px] uppercase tracking-widest">
                         {t.label}
                       </span>
                     </button>
@@ -405,7 +405,7 @@ export default function IntegrationSettings({
                 })}
               </div>
               {selectedType && (
-                <p className="mt-2 text-[11px] text-nu-muted">
+                <p className="mt-2 text-[13px] text-nu-muted">
                   {selectedType.description}
                 </p>
               )}
@@ -414,7 +414,7 @@ export default function IntegrationSettings({
             {/* Dynamic fields */}
             {selectedType?.fields.map((field) => (
               <div key={field.key}>
-                <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">
+                <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
                   {field.label} {field.required && "*"}
                 </label>
                 <input
@@ -437,7 +437,7 @@ export default function IntegrationSettings({
               <button
                 type="submit"
                 disabled={saving}
-                className="flex items-center gap-1.5 font-mono-nu text-[10px] font-bold uppercase tracking-[0.1em] px-6 py-2.5 bg-nu-pink text-nu-paper hover:bg-nu-pink/90 transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 font-mono-nu text-[12px] font-bold uppercase tracking-[0.1em] px-6 py-2.5 bg-nu-pink text-nu-paper hover:bg-nu-pink/90 transition-colors disabled:opacity-50"
               >
                 {saving ? (
                   <Loader2 size={12} className="animate-spin" />
@@ -449,7 +449,7 @@ export default function IntegrationSettings({
               <button
                 type="button"
                 onClick={resetForm}
-                className="font-mono-nu text-[10px] font-bold uppercase tracking-[0.1em] px-6 py-2.5 border border-nu-ink/[0.12] text-nu-gray hover:text-nu-ink transition-colors"
+                className="font-mono-nu text-[12px] font-bold uppercase tracking-[0.1em] px-6 py-2.5 border border-nu-ink/[0.12] text-nu-gray hover:text-nu-ink transition-colors"
               >
                 취소
               </button>
@@ -465,7 +465,7 @@ export default function IntegrationSettings({
           <p className="text-sm text-nu-gray">
             아직 연동이 없습니다
           </p>
-          <p className="text-[11px] text-nu-muted mt-1">
+          <p className="text-[13px] text-nu-muted mt-1">
             위의 &ldquo;연동 추가&rdquo; 버튼을 눌러 시작하세요
           </p>
         </div>
@@ -499,22 +499,22 @@ export default function IntegrationSettings({
                       <p className="font-head font-bold text-nu-ink text-sm truncate">
                         {integration.name}
                       </p>
-                      <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted bg-nu-cream px-1.5 py-0.5 shrink-0">
+                      <span className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted bg-nu-cream px-1.5 py-0.5 shrink-0">
                         {integration.type}
                       </span>
                     </div>
                     {integration.config.webhook_url && (
-                      <p className="text-[11px] text-nu-muted truncate mt-0.5">
+                      <p className="text-[13px] text-nu-muted truncate mt-0.5">
                         {integration.config.webhook_url}
                       </p>
                     )}
                     {integration.config.channel && (
-                      <p className="text-[11px] text-nu-muted mt-0.5">
+                      <p className="text-[13px] text-nu-muted mt-0.5">
                         채널: {integration.config.channel}
                       </p>
                     )}
                     {integration.config.events && (
-                      <p className="text-[11px] text-nu-muted mt-0.5">
+                      <p className="text-[13px] text-nu-muted mt-0.5">
                         이벤트: {integration.config.events}
                       </p>
                     )}

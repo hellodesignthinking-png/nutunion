@@ -346,7 +346,7 @@ export function ProjectSplitView({
         {/* Header */}
         <div className="bg-nu-ink px-5 py-3 flex items-center justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-white/60 block mb-1">
+            <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-white/60 block mb-1">
               리소스 선택
             </label>
             <div className="relative">
@@ -414,7 +414,7 @@ export function ProjectSplitView({
         {fullscreenDoc && (
           <button
             onClick={() => setFullscreenDoc(false)}
-            className="absolute top-6 right-6 z-50 bg-nu-ink text-nu-white px-4 py-2 font-mono-nu text-[10px] uppercase tracking-widest hover:bg-nu-ink/90"
+            className="absolute top-6 right-6 z-50 bg-nu-ink text-nu-white px-4 py-2 font-mono-nu text-[12px] uppercase tracking-widest hover:bg-nu-ink/90"
           >
             닫기
           </button>
@@ -428,7 +428,7 @@ export function ProjectSplitView({
           <div className="bg-nu-ink flex border-b border-nu-ink/[0.1]">
             <button
               onClick={() => setActiveTab("feedback")}
-              className={`flex-1 px-4 py-3 font-mono-nu text-[10px] uppercase tracking-widest border-b-2 transition-colors ${
+              className={`flex-1 px-4 py-3 font-mono-nu text-[12px] uppercase tracking-widest border-b-2 transition-colors ${
                 activeTab === "feedback"
                   ? "border-nu-pink text-nu-pink"
                   : "border-transparent text-nu-white/60 hover:text-nu-white"
@@ -439,7 +439,7 @@ export function ProjectSplitView({
             </button>
             <button
               onClick={() => setActiveTab("actions")}
-              className={`flex-1 px-4 py-3 font-mono-nu text-[10px] uppercase tracking-widest border-b-2 transition-colors ${
+              className={`flex-1 px-4 py-3 font-mono-nu text-[12px] uppercase tracking-widest border-b-2 transition-colors ${
                 activeTab === "actions"
                   ? "border-nu-pink text-nu-pink"
                   : "border-transparent text-nu-white/60 hover:text-nu-white"
@@ -459,7 +459,7 @@ export function ProjectSplitView({
                   <div className="flex gap-2 border-b border-nu-ink/[0.08] pb-3">
                     <button
                       onClick={() => setFeedbackFilter("all")}
-                      className={`px-3 py-1.5 font-mono-nu text-[8px] uppercase tracking-widest transition-colors ${
+                      className={`px-3 py-1.5 font-mono-nu text-[10px] uppercase tracking-widest transition-colors ${
                         feedbackFilter === "all"
                           ? "bg-nu-ink text-nu-white"
                           : "bg-nu-cream text-nu-ink hover:bg-nu-cream/70"
@@ -469,7 +469,7 @@ export function ProjectSplitView({
                     </button>
                     <button
                       onClick={() => setFeedbackFilter("current")}
-                      className={`px-3 py-1.5 font-mono-nu text-[8px] uppercase tracking-widest transition-colors ${
+                      className={`px-3 py-1.5 font-mono-nu text-[10px] uppercase tracking-widest transition-colors ${
                         feedbackFilter === "current"
                           ? "bg-nu-ink text-nu-white"
                           : "bg-nu-cream text-nu-ink hover:bg-nu-cream/70"
@@ -485,7 +485,7 @@ export function ProjectSplitView({
                   {filteredFeedback.slice(0, 20).map((update) => (
                     <div key={update.id} className="border border-nu-ink/[0.08] p-3 bg-nu-cream/20">
                       <div className="flex items-start gap-2">
-                        <div className="w-7 h-7 rounded-full bg-nu-cream flex items-center justify-center font-head text-[10px] font-bold shrink-0">
+                        <div className="w-7 h-7 rounded-full bg-nu-cream flex items-center justify-center font-head text-[12px] font-bold shrink-0">
                           {(update.author?.nickname || "U")
                             .charAt(0)
                             .toUpperCase()}
@@ -495,7 +495,7 @@ export function ProjectSplitView({
                             <span className="font-medium text-xs">
                               {update.author?.nickname || "Unknown"}
                             </span>
-                            <span className="font-mono-nu text-[7px] text-nu-muted">
+                            <span className="font-mono-nu text-[9px] text-nu-muted">
                               {timeAgo(update.created_at)}
                             </span>
                           </div>
@@ -521,7 +521,7 @@ export function ProjectSplitView({
                     <button
                       onClick={handlePostFeedback}
                       disabled={postingFeedback || !newFeedback.trim()}
-                      className="w-full font-mono-nu text-[9px] uppercase tracking-widest py-2 bg-nu-pink text-nu-white hover:bg-nu-pink/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
+                      className="w-full font-mono-nu text-[11px] uppercase tracking-widest py-2 bg-nu-pink text-nu-white hover:bg-nu-pink/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
                     >
                       {postingFeedback ? (
                         <Loader2 size={11} className="animate-spin" />
@@ -571,15 +571,15 @@ export function ProjectSplitView({
                               </p>
                               <div className="flex items-center gap-2 flex-wrap mt-1">
                                 <span
-                                  className={`font-mono-nu text-[7px] uppercase tracking-widest px-1.5 py-0.5 ${priorityStyle.bg} ${priorityStyle.text}`}
+                                  className={`font-mono-nu text-[9px] uppercase tracking-widest px-1.5 py-0.5 ${priorityStyle.bg} ${priorityStyle.text}`}
                                 >
                                   {priorityStyle.label}
                                 </span>
-                                <span className="font-mono-nu text-[7px] text-nu-muted">
+                                <span className="font-mono-nu text-[9px] text-nu-muted">
                                   {statusLabels[item.status]}
                                 </span>
                                 {item.due_date && (
-                                  <span className="font-mono-nu text-[7px] text-nu-muted flex items-center gap-0.5">
+                                  <span className="font-mono-nu text-[9px] text-nu-muted flex items-center gap-0.5">
                                     <Clock size={8} />
                                     {new Date(item.due_date).toLocaleDateString("ko", {
                                       month: "short",
@@ -591,7 +591,7 @@ export function ProjectSplitView({
                             </div>
                             {item.assignee && (
                               <div
-                                className="w-6 h-6 rounded-full bg-nu-blue/20 flex items-center justify-center font-head text-[7px] font-bold text-nu-blue shrink-0"
+                                className="w-6 h-6 rounded-full bg-nu-blue/20 flex items-center justify-center font-head text-[9px] font-bold text-nu-blue shrink-0"
                                 title={item.assignee.nickname}
                               >
                                 {item.assignee.nickname.charAt(0).toUpperCase()}
@@ -645,7 +645,7 @@ export function ProjectSplitView({
                     <button
                       onClick={handleAddActionItem}
                       disabled={savingAction || !newActionTitle.trim()}
-                      className="w-full font-mono-nu text-[9px] uppercase tracking-widest py-2 bg-nu-ink text-nu-white hover:bg-nu-ink/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
+                      className="w-full font-mono-nu text-[11px] uppercase tracking-widest py-2 bg-nu-ink text-nu-white hover:bg-nu-ink/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
                     >
                       {savingAction ? (
                         <Loader2 size={11} className="animate-spin" />

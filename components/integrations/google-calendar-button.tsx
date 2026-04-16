@@ -37,7 +37,7 @@ export function GoogleCalendarButton({
   return (
     <button
       onClick={openGoogleCalendar}
-      className={`inline-flex items-center gap-2 font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2.5 border border-nu-ink/15 text-nu-graphite hover:bg-nu-blue/5 hover:border-nu-blue/30 hover:text-nu-blue transition-colors ${className}`}
+      className={`inline-flex items-center gap-2 font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2.5 border border-nu-ink/15 text-nu-graphite hover:bg-nu-blue/5 hover:border-nu-blue/30 hover:text-nu-blue transition-colors ${className}`}
     >
       <Calendar size={13} />
       Google 캘린더에 추가

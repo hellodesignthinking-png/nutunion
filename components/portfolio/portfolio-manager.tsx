@@ -260,7 +260,7 @@ export function PortfolioManager({ userId }: { userId: string }) {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Title */}
             <div>
-              <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-ink mb-2 font-semibold">
+              <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-ink mb-2 font-semibold">
                 제목 *
               </label>
               <Input
@@ -275,7 +275,7 @@ export function PortfolioManager({ userId }: { userId: string }) {
 
             {/* Category */}
             <div>
-              <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-ink mb-2 font-semibold">
+              <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-ink mb-2 font-semibold">
                 카테고리
               </label>
               <Select
@@ -299,7 +299,7 @@ export function PortfolioManager({ userId }: { userId: string }) {
 
             {/* Description */}
             <div>
-              <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-ink mb-2 font-semibold">
+              <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-ink mb-2 font-semibold">
                 설명
               </label>
               <Textarea
@@ -315,7 +315,7 @@ export function PortfolioManager({ userId }: { userId: string }) {
 
             {/* Tags */}
             <div>
-              <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-ink mb-2 font-semibold">
+              <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-ink mb-2 font-semibold">
                 태그 (쉼표로 구분)
               </label>
               <Input
@@ -330,7 +330,7 @@ export function PortfolioManager({ userId }: { userId: string }) {
 
             {/* External Link */}
             <div>
-              <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-ink mb-2 font-semibold">
+              <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-ink mb-2 font-semibold">
                 외부 링크
               </label>
               <Input
@@ -346,7 +346,7 @@ export function PortfolioManager({ userId }: { userId: string }) {
 
             {/* Image URL */}
             <div>
-              <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-ink mb-2 font-semibold">
+              <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-ink mb-2 font-semibold">
                 이미지 URL
               </label>
               <Input
@@ -363,7 +363,7 @@ export function PortfolioManager({ userId }: { userId: string }) {
             {/* Date Range */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-ink mb-2 font-semibold">
+                <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-ink mb-2 font-semibold">
                   시작일
                 </label>
                 <Input
@@ -376,7 +376,7 @@ export function PortfolioManager({ userId }: { userId: string }) {
                 />
               </div>
               <div>
-                <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-ink mb-2 font-semibold">
+                <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-ink mb-2 font-semibold">
                   종료일
                 </label>
                 <Input
@@ -475,11 +475,11 @@ export function PortfolioManager({ userId }: { userId: string }) {
                   )}
                   <div className="absolute top-2 right-2 flex gap-1">
                     <span
-                      className={`${catConfig.color} text-[8px] px-2 py-1 font-bold uppercase tracking-widest`}
+                      className={`${catConfig.color} text-[10px] px-2 py-1 font-bold uppercase tracking-widest`}
                     >
                       {catConfig.label}
                     </span>
-                    <span className="bg-nu-ink/80 text-white text-[8px] px-2 py-1 font-bold uppercase tracking-widest">
+                    <span className="bg-nu-ink/80 text-white text-[10px] px-2 py-1 font-bold uppercase tracking-widest">
                       {portfolio.source === "self" ? "Self-Registered" : "Verified"}
                     </span>
                   </div>
@@ -494,7 +494,7 @@ export function PortfolioManager({ userId }: { userId: string }) {
 
                   {/* Description */}
                   {portfolio.description && (
-                    <p className="text-[10px] text-nu-muted mb-3 line-clamp-2 font-mono-nu">
+                    <p className="text-[12px] text-nu-muted mb-3 line-clamp-2 font-mono-nu">
                       {portfolio.description}
                     </p>
                   )}
@@ -505,7 +505,7 @@ export function PortfolioManager({ userId }: { userId: string }) {
                       {portfolio.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="inline-flex items-center gap-1 bg-nu-cream text-nu-ink text-[8px] px-1.5 py-0.5 font-mono-nu font-semibold uppercase border border-nu-ink/10"
+                          className="inline-flex items-center gap-1 bg-nu-cream text-nu-ink text-[10px] px-1.5 py-0.5 font-mono-nu font-semibold uppercase border border-nu-ink/10"
                         >
                           <Tag size={8} />
                           {tag}
@@ -515,7 +515,7 @@ export function PortfolioManager({ userId }: { userId: string }) {
                   )}
 
                   {/* Date range */}
-                  <div className="flex items-center gap-1 text-[10px] text-nu-muted mb-3 font-mono-nu">
+                  <div className="flex items-center gap-1 text-[12px] text-nu-muted mb-3 font-mono-nu">
                     {portfolio.started_at && (
                       <>
                         <Calendar size={10} />
@@ -538,7 +538,7 @@ export function PortfolioManager({ userId }: { userId: string }) {
                           href={portfolio.external_link}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex items-center gap-1 text-nu-blue text-[9px] font-mono-nu font-bold uppercase tracking-widest hover:underline"
+                          className="flex items-center gap-1 text-nu-blue text-[11px] font-mono-nu font-bold uppercase tracking-widest hover:underline"
                         >
                           VIEW <ExternalLink size={10} />
                         </a>

@@ -73,11 +73,11 @@ export function DailyDigest({ groupId }: { groupId: string }) {
       <div className="relative px-6 py-5">
         <div className="flex items-center gap-2 mb-3">
           <Sparkles size={14} className="text-nu-pink" />
-          <span className="font-mono-nu text-[9px] font-black uppercase tracking-[0.25em] text-nu-pink">
+          <span className="font-mono-nu text-[11px] font-black uppercase tracking-[0.25em] text-nu-pink">
             Daily_Digest · Yesterday
           </span>
           {digest.streak > 0 && (
-            <span className="ml-auto flex items-center gap-1 font-mono-nu text-[9px] font-bold text-nu-amber">
+            <span className="ml-auto flex items-center gap-1 font-mono-nu text-[11px] font-bold text-nu-amber">
               <Flame size={10} /> {digest.streak}일 연속 활동 중
             </span>
           )}
@@ -100,8 +100,8 @@ export function DailyDigest({ groupId }: { groupId: string }) {
               ].map((item) => (
                 <div key={item.label} className="flex items-center gap-1.5">
                   <item.icon size={12} className={item.color} />
-                  <span className="font-mono-nu text-[10px] font-bold">{item.count}</span>
-                  <span className="font-mono-nu text-[9px] text-nu-paper/50 uppercase tracking-widest">{item.label}</span>
+                  <span className="font-mono-nu text-[12px] font-bold">{item.count}</span>
+                  <span className="font-mono-nu text-[11px] text-nu-paper/50 uppercase tracking-widest">{item.label}</span>
                 </div>
               ))}
             </div>

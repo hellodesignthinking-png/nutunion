@@ -105,7 +105,7 @@ export function RelatedGroups({ groupId, category }: { groupId: string; category
           </div>
           <div>
             <h2 className="font-head text-lg font-extrabold text-nu-ink">추천 너트</h2>
-            <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">
+            <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">
               Similar communities you might like
             </p>
           </div>
@@ -119,10 +119,10 @@ export function RelatedGroups({ groupId, category }: { groupId: string; category
               className="group bg-nu-white border-[2px] border-nu-ink/[0.08] p-5 no-underline hover:border-nu-pink/40 transition-all hover:-translate-y-0.5"
             >
               <div className="flex items-center gap-2 mb-3">
-                <span className={`font-mono-nu text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 text-white ${CAT_COLORS[g.category] || "bg-nu-gray"}`}>
+                <span className={`font-mono-nu text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 text-white ${CAT_COLORS[g.category] || "bg-nu-gray"}`}>
                   {CAT_LABELS[g.category] || g.category}
                 </span>
-                <span className="ml-auto font-mono-nu text-[9px] text-nu-pink font-bold">
+                <span className="ml-auto font-mono-nu text-[11px] text-nu-pink font-bold">
                   {Math.round(g.matchScore)}% match
                 </span>
               </div>
@@ -130,10 +130,10 @@ export function RelatedGroups({ groupId, category }: { groupId: string; category
                 {g.name}
               </h3>
               {g.description && (
-                <p className="text-[11px] text-nu-muted line-clamp-2 mb-3">{g.description}</p>
+                <p className="text-[13px] text-nu-muted line-clamp-2 mb-3">{g.description}</p>
               )}
               <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1 font-mono-nu text-[9px] text-nu-muted">
+                <span className="flex items-center gap-1 font-mono-nu text-[11px] text-nu-muted">
                   <Users size={10} /> {g.memberCount}명
                 </span>
                 <ChevronRight size={14} className="text-nu-muted group-hover:text-nu-pink transition-colors" />

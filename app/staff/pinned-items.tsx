@@ -88,7 +88,7 @@ export function PinnedItems() {
     return (
       <section className="bg-white border border-nu-ink/[0.06]">
         <div className="p-4 border-b border-nu-ink/5 flex items-center justify-between">
-          <h3 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
+          <h3 className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
             <Pin size={14} className="text-amber-500" /> 즐겨찾기
           </h3>
           <button
@@ -100,10 +100,10 @@ export function PinnedItems() {
           </button>
         </div>
         <div className="p-5 text-center">
-          <p className="font-mono-nu text-[10px] text-nu-muted">자주 사용하는 항목을 고정하세요</p>
+          <p className="font-mono-nu text-[12px] text-nu-muted">자주 사용하는 항목을 고정하세요</p>
           <button
             onClick={loadSuggestions}
-            className="font-mono-nu text-[9px] text-indigo-600 mt-1 bg-transparent border-none cursor-pointer underline"
+            className="font-mono-nu text-[11px] text-indigo-600 mt-1 bg-transparent border-none cursor-pointer underline"
           >
             추가하기
           </button>
@@ -115,7 +115,7 @@ export function PinnedItems() {
   return (
     <section className="bg-white border border-nu-ink/[0.06]">
       <div className="p-4 border-b border-nu-ink/5 flex items-center justify-between">
-        <h3 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
+        <h3 className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-ink flex items-center gap-2">
           <Pin size={14} className="text-amber-500" /> 즐겨찾기
         </h3>
         <button
@@ -135,7 +135,7 @@ export function PinnedItems() {
             <Link href={item.href} className="flex-1 min-w-0 no-underline">
               <p className="font-head text-xs font-bold text-nu-ink truncate group-hover:text-indigo-600 transition-colors">{item.title}</p>
               {item.subtitle && (
-                <p className="font-mono-nu text-[7px] text-nu-muted truncate">{item.subtitle}</p>
+                <p className="font-mono-nu text-[9px] text-nu-muted truncate">{item.subtitle}</p>
               )}
             </Link>
             <button
@@ -152,7 +152,7 @@ export function PinnedItems() {
       {/* Add picker */}
       {showAdd && (
         <div className="border-t border-indigo-200 bg-indigo-50/30 p-3 max-h-48 overflow-y-auto">
-          <p className="font-mono-nu text-[8px] uppercase tracking-widest text-indigo-600 font-bold mb-2">프로젝트</p>
+          <p className="font-mono-nu text-[10px] uppercase tracking-widest text-indigo-600 font-bold mb-2">프로젝트</p>
           {projects.filter(p => !items.some(i => i.id === `proj-${p.id}`)).map(p => (
             <button
               key={p.id}
@@ -163,7 +163,7 @@ export function PinnedItems() {
               <span className="text-xs text-nu-ink truncate">{p.title}</span>
             </button>
           ))}
-          <p className="font-mono-nu text-[8px] uppercase tracking-widest text-indigo-600 font-bold mb-2 mt-3">할일</p>
+          <p className="font-mono-nu text-[10px] uppercase tracking-widest text-indigo-600 font-bold mb-2 mt-3">할일</p>
           {tasks.filter(t => !items.some(i => i.id === `task-${t.id}`)).slice(0, 5).map(t => (
             <button
               key={t.id}
@@ -176,7 +176,7 @@ export function PinnedItems() {
           ))}
           <button
             onClick={() => setShowAdd(false)}
-            className="font-mono-nu text-[9px] text-nu-muted mt-2 bg-transparent border-none cursor-pointer underline"
+            className="font-mono-nu text-[11px] text-nu-muted mt-2 bg-transparent border-none cursor-pointer underline"
           >
             닫기
           </button>

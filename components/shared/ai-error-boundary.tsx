@@ -40,7 +40,7 @@ export class AiErrorBoundary extends Component<Props, State> {
           </p>
           <button
             onClick={() => this.setState({ hasError: false, error: null })}
-            className="inline-flex items-center gap-2 px-4 py-2 font-mono-nu text-[10px] uppercase tracking-widest bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 font-mono-nu text-[12px] uppercase tracking-widest bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors"
           >
             <RefreshCw size={12} /> 다시 시도
           </button>

@@ -113,7 +113,7 @@ export default async function AdminDashboard() {
           <h1 className="font-head text-3xl font-extrabold text-nu-ink">관리자 대시보드</h1>
           <p className="text-nu-gray text-sm mt-1">nutunion 플랫폼 현황</p>
         </div>
-        <Link href="/" className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted hover:text-nu-ink flex items-center gap-1.5 px-3 py-2 border border-nu-ink/10 hover:border-nu-ink/30 transition-colors no-underline">
+        <Link href="/" className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted hover:text-nu-ink flex items-center gap-1.5 px-3 py-2 border border-nu-ink/10 hover:border-nu-ink/30 transition-colors no-underline">
           <ExternalLink size={12} /> 사이트 보기
         </Link>
       </div>
@@ -127,7 +127,7 @@ export default async function AdminDashboard() {
             <p className="text-xs text-orange-700 mt-1">
               <code>grade</code> 컬럼이 없습니다. Supabase SQL Editor에서 migration_member_grades.sql을 실행하세요.
             </p>
-            <pre className="bg-orange-100 text-orange-900 text-[10px] px-3 py-2 mt-2 font-mono overflow-x-auto">
+            <pre className="bg-orange-100 text-orange-900 text-[12px] px-3 py-2 mt-2 font-mono overflow-x-auto">
               alter table profiles add column if not exists grade text default &apos;bronze&apos;;{"\n"}
               alter table profiles add column if not exists can_create_project boolean default false;
             </pre>
@@ -145,7 +145,7 @@ export default async function AdminDashboard() {
                 <s.icon size={18} />
               </div>
               <div>
-                <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">{s.label}</p>
+                <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">{s.label}</p>
                 <p className={`font-head text-2xl font-extrabold ${s.urgent ? "text-orange-600" : "text-nu-ink"}`}>{s.count}</p>
               </div>
             </div>
@@ -170,7 +170,7 @@ export default async function AdminDashboard() {
               return (
                 <div key={g}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className={`inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 ${bg} ${color}`}>
+                    <span className={`inline-flex items-center gap-1 font-mono-nu text-[11px] uppercase tracking-widest px-2 py-0.5 ${bg} ${color}`}>
                       <Icon size={9} /> {LABELS[g]}
                     </span>
                     <span className="font-head text-sm font-bold text-nu-ink">{cnt}명</span>
@@ -179,13 +179,13 @@ export default async function AdminDashboard() {
                     <div className={`h-full ${bg.replace("bg-", "bg-").replace("/5", "").replace("/10", "")}`}
                       style={{ width: `${pct}%`, backgroundColor: g === "admin" ? "#FF1F5A" : g === "vip" ? "#FF1F5A" : g === "gold" ? "#EAB308" : g === "silver" ? "#94A3B8" : "#F59E0B" }} />
                   </div>
-                  <p className="font-mono-nu text-[9px] text-nu-muted mt-0.5">{pct}%</p>
+                  <p className="font-mono-nu text-[11px] text-nu-muted mt-0.5">{pct}%</p>
                 </div>
               );
             })}
           </div>
           <Link href="/admin/users"
-            className="block text-center font-mono-nu text-[10px] uppercase tracking-widest text-nu-blue hover:underline mt-4 no-underline">
+            className="block text-center font-mono-nu text-[12px] uppercase tracking-widest text-nu-blue hover:underline mt-4 no-underline">
             등급 관리 →
           </Link>
         </div>
@@ -208,22 +208,22 @@ export default async function AdminDashboard() {
                 const group = Array.isArray(r.group) ? r.group[0] : r.group;
                 return (
                   <div key={r.id} className="flex items-center gap-2.5 py-2 border-b border-nu-ink/[0.04] last:border-0">
-                    <div className="w-7 h-7 rounded-full bg-orange-100 flex items-center justify-center font-head text-[10px] font-bold text-orange-600 shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-orange-100 flex items-center justify-center font-head text-[12px] font-bold text-orange-600 shrink-0">
                       {(profile?.nickname || "?").charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-nu-ink truncate">{profile?.nickname || "Unknown"}</p>
-                      <p className="text-[10px] text-nu-muted truncate">→ {group?.name}</p>
+                      <p className="text-[12px] text-nu-muted truncate">→ {group?.name}</p>
                     </div>
                     <Link href={`/groups/${r.group_id}/settings`}
-                      className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-blue hover:underline no-underline shrink-0">
+                      className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-blue hover:underline no-underline shrink-0">
                       승인
                     </Link>
                   </div>
                 );
               })}
               {(pendingMembersCount || 0) > 8 && (
-                <p className="font-mono-nu text-[10px] text-nu-muted text-center pt-1">
+                <p className="font-mono-nu text-[12px] text-nu-muted text-center pt-1">
                   +{(pendingMembersCount || 0) - 8}개 더
                 </p>
               )}
@@ -246,7 +246,7 @@ export default async function AdminDashboard() {
               <Link key={a.href} href={a.href}
                 className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-nu-cream/40 transition-colors no-underline group">
                 <a.icon size={14} className={a.color} />
-                <span className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-graphite group-hover:text-nu-ink">{a.label}</span>
+                <span className="font-mono-nu text-[13px] uppercase tracking-widest text-nu-graphite group-hover:text-nu-ink">{a.label}</span>
                 <ArrowUpRight size={11} className="ml-auto text-nu-muted/30 group-hover:text-nu-pink transition-colors" />
               </Link>
             ))}
@@ -278,19 +278,19 @@ export default async function AdminDashboard() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       <span className="font-medium text-sm truncate">{u.nickname || "unnamed"}</span>
-                      <span className={`inline-flex items-center gap-0.5 font-mono-nu text-[7px] uppercase tracking-widest px-1.5 py-0.5 shrink-0 ${gi.bg} ${gi.color}`}>
+                      <span className={`inline-flex items-center gap-0.5 font-mono-nu text-[9px] uppercase tracking-widest px-1.5 py-0.5 shrink-0 ${gi.bg} ${gi.color}`}>
                         <GI size={7} />
                       </span>
                     </div>
-                    <p className="text-[10px] text-nu-muted truncate">{u.email}</p>
+                    <p className="text-[12px] text-nu-muted truncate">{u.email}</p>
                   </div>
-                  <span className="font-mono-nu text-[9px] text-nu-muted shrink-0">{timeAgo(u.created_at)}</span>
+                  <span className="font-mono-nu text-[11px] text-nu-muted shrink-0">{timeAgo(u.created_at)}</span>
                 </div>
               );
             })}
           </div>
           <Link href="/admin/users"
-            className="block text-center py-3 border-t border-nu-ink/[0.06] font-mono-nu text-[10px] uppercase tracking-widest text-nu-blue hover:bg-nu-blue/5 transition-colors no-underline">
+            className="block text-center py-3 border-t border-nu-ink/[0.06] font-mono-nu text-[12px] uppercase tracking-widest text-nu-blue hover:bg-nu-blue/5 transition-colors no-underline">
             전체 보기
           </Link>
         </div>
@@ -312,20 +312,20 @@ export default async function AdminDashboard() {
                 <div key={u.id} className="px-5 py-3">
                   <div className="flex items-center gap-2 mb-0.5">
                     <span className="text-sm font-medium truncate">{au?.nickname || "unknown"}</span>
-                    <span className="font-mono-nu text-[8px] uppercase tracking-widest bg-green-50 text-green-600 px-1.5 py-0.5 shrink-0">
+                    <span className="font-mono-nu text-[10px] uppercase tracking-widest bg-green-50 text-green-600 px-1.5 py-0.5 shrink-0">
                       {updateTypeLabels[u.type] || u.type}
                     </span>
                   </div>
                   <Link href={pr?.id ? `/projects/${pr.id}` : "#"}
-                    className="text-[10px] text-nu-blue hover:underline no-underline truncate block">{pr?.title}</Link>
-                  <p className="text-[10px] text-nu-graphite truncate mt-0.5">{u.content}</p>
-                  <p className="font-mono-nu text-[9px] text-nu-muted mt-1">{timeAgo(u.created_at)}</p>
+                    className="text-[12px] text-nu-blue hover:underline no-underline truncate block">{pr?.title}</Link>
+                  <p className="text-[12px] text-nu-graphite truncate mt-0.5">{u.content}</p>
+                  <p className="font-mono-nu text-[11px] text-nu-muted mt-1">{timeAgo(u.created_at)}</p>
                 </div>
               );
             })}
           </div>
           <Link href="/admin/projects"
-            className="block text-center py-3 border-t border-nu-ink/[0.06] font-mono-nu text-[10px] uppercase tracking-widest text-nu-blue hover:bg-nu-blue/5 transition-colors no-underline">
+            className="block text-center py-3 border-t border-nu-ink/[0.06] font-mono-nu text-[12px] uppercase tracking-widest text-nu-blue hover:bg-nu-blue/5 transition-colors no-underline">
             전체 보기
           </Link>
         </div>
@@ -347,20 +347,20 @@ export default async function AdminDashboard() {
                 <div key={p.id} className="px-5 py-3">
                   <div className="flex items-center gap-2 mb-0.5">
                     <span className="text-sm font-medium truncate">{au?.nickname || "unknown"}</span>
-                    <span className="font-mono-nu text-[8px] uppercase tracking-widest bg-nu-pink/10 text-nu-pink px-1.5 py-0.5 shrink-0">
+                    <span className="font-mono-nu text-[10px] uppercase tracking-widest bg-nu-pink/10 text-nu-pink px-1.5 py-0.5 shrink-0">
                       {updateTypeLabels[p.type] || "게시"}
                     </span>
                   </div>
                   <Link href={gr?.id ? `/groups/${gr.id}` : "#"}
-                    className="text-[10px] text-nu-pink hover:underline no-underline truncate block">{gr?.name}</Link>
-                  <p className="text-[10px] text-nu-graphite truncate mt-0.5">{p.content}</p>
-                  <p className="font-mono-nu text-[9px] text-nu-muted mt-1">{timeAgo(p.created_at)}</p>
+                    className="text-[12px] text-nu-pink hover:underline no-underline truncate block">{gr?.name}</Link>
+                  <p className="text-[12px] text-nu-graphite truncate mt-0.5">{p.content}</p>
+                  <p className="font-mono-nu text-[11px] text-nu-muted mt-1">{timeAgo(p.created_at)}</p>
                 </div>
               );
             })}
           </div>
           <Link href="/admin/groups"
-            className="block text-center py-3 border-t border-nu-ink/[0.06] font-mono-nu text-[10px] uppercase tracking-widest text-nu-blue hover:bg-nu-blue/5 transition-colors no-underline">
+            className="block text-center py-3 border-t border-nu-ink/[0.06] font-mono-nu text-[12px] uppercase tracking-widest text-nu-blue hover:bg-nu-blue/5 transition-colors no-underline">
             전체 보기
           </Link>
         </div>

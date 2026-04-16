@@ -49,24 +49,24 @@ export default async function GroupsPage() {
             <div>
               <div className="flex items-center gap-3 mb-1">
                 <h2 className="font-head text-2xl font-black text-white uppercase tracking-tight">Success Templates</h2>
-                <span className="font-mono-nu text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 bg-[#FF2E97]/15 text-[#FF2E97] border border-[#FF2E97]/20">PRO</span>
+                <span className="font-mono-nu text-[10px] font-black uppercase tracking-[0.2em] px-2 py-0.5 bg-[#FF2E97]/15 text-[#FF2E97] border border-[#FF2E97]/20">PRO</span>
               </div>
-              <p className="font-mono-nu text-[10px] text-white/40 uppercase tracking-[0.2em]">검증된 구조로 커뮤니티를 스케일하세요</p>
+              <p className="font-mono-nu text-[12px] text-white/40 uppercase tracking-[0.2em]">검증된 구조로 커뮤니티를 스케일하세요</p>
             </div>
           </div>
         </div>
 
         {/* Mobile-only compact template pills */}
         <div className="md:hidden mb-6">
-          <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest mb-3">인기 템플릿</p>
+          <p className="font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest mb-3">인기 템플릿</p>
           <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
-            <Link href="/templates/sprint" className="shrink-0 px-4 py-2.5 bg-nu-blue/5 border border-nu-blue/20 text-nu-blue font-mono-nu text-[10px] uppercase tracking-widest no-underline hover:bg-nu-blue/10 transition-colors">
+            <Link href="/templates/sprint" className="shrink-0 px-4 py-2.5 bg-nu-blue/5 border border-nu-blue/20 text-nu-blue font-mono-nu text-[12px] uppercase tracking-widest no-underline hover:bg-nu-blue/10 transition-colors">
               🚀 Sprint
             </Link>
-            <Link href="/templates/paper-review" className="shrink-0 px-4 py-2.5 bg-nu-pink/5 border border-nu-pink/20 text-nu-pink font-mono-nu text-[10px] uppercase tracking-widest no-underline hover:bg-nu-pink/10 transition-colors">
+            <Link href="/templates/paper-review" className="shrink-0 px-4 py-2.5 bg-nu-pink/5 border border-nu-pink/20 text-nu-pink font-mono-nu text-[12px] uppercase tracking-widest no-underline hover:bg-nu-pink/10 transition-colors">
               📖 Paper Review
             </Link>
-            <Link href="/templates/venture" className="shrink-0 px-4 py-2.5 bg-nu-amber/5 border border-nu-amber/20 text-nu-amber font-mono-nu text-[10px] uppercase tracking-widest no-underline hover:bg-nu-amber/10 transition-colors">
+            <Link href="/templates/venture" className="shrink-0 px-4 py-2.5 bg-nu-amber/5 border border-nu-amber/20 text-nu-amber font-mono-nu text-[12px] uppercase tracking-widest no-underline hover:bg-nu-amber/10 transition-colors">
               ⚡ Venture
             </Link>
           </div>
@@ -144,7 +144,7 @@ export default async function GroupsPage() {
            <h2 className="font-head text-2xl font-black text-nu-ink uppercase tracking-tight">Active Communities</h2>
         </div>
 
-        <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest mb-6">
+        <p className="font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest mb-6">
           활발하게 운영 중인 너트를 탐색하세요
         </p>
 

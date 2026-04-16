@@ -63,7 +63,7 @@ export function MyCalendarWidget() {
         <div className="text-center py-4">
           <Calendar size={22} className="mx-auto mb-2 text-nu-muted/30" />
           <p className="text-xs text-nu-muted">예정된 일정이 없습니다</p>
-          <p className="text-[10px] text-nu-muted/60 mt-1">Google Calendar에 일정을 추가해보세요</p>
+          <p className="text-[12px] text-nu-muted/60 mt-1">Google Calendar에 일정을 추가해보세요</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -74,18 +74,18 @@ export function MyCalendarWidget() {
                 <span className="font-head text-xs font-extrabold text-nu-pink leading-none">
                   {new Date(evt.start).getDate()}
                 </span>
-                <span className="font-mono-nu text-[7px] uppercase text-nu-pink/70">
+                <span className="font-mono-nu text-[9px] uppercase text-nu-pink/70">
                   {formatDay(evt.start)}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-nu-ink truncate group-hover:text-nu-pink transition-colors">{evt.summary}</p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="flex items-center gap-0.5 text-[9px] text-nu-muted">
+                  <span className="flex items-center gap-0.5 text-[11px] text-nu-muted">
                     <Clock size={8} /> {formatTime(evt.start)}
                   </span>
                   {evt.location && (
-                    <span className="flex items-center gap-0.5 text-[9px] text-nu-muted truncate">
+                    <span className="flex items-center gap-0.5 text-[11px] text-nu-muted truncate">
                       <MapPin size={8} /> {evt.location}
                     </span>
                   )}

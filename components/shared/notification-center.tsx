@@ -314,7 +314,7 @@ export function NotificationCenter() {
         <Bell size={20} className="text-nu-ink" />
         {unreadCount > 0 && (
           <div className="absolute top-1 right-1 w-5 h-5 bg-nu-pink rounded-full flex items-center justify-center">
-            <span className="font-mono-nu text-[9px] font-bold text-white">
+            <span className="font-mono-nu text-[11px] font-bold text-white">
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           </div>
@@ -331,7 +331,7 @@ export function NotificationCenter() {
             </h2>
             <button
               onClick={handleMarkAllAsRead}
-              className="text-[11px] font-mono-nu font-bold text-nu-blue hover:text-nu-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-nu-blue focus-visible:ring-offset-1"
+              className="text-[13px] font-mono-nu font-bold text-nu-blue hover:text-nu-ink transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-nu-blue focus-visible:ring-offset-1"
               aria-label="모든 알림을 읽음으로 표시"
             >
               모두 읽음
@@ -348,7 +348,7 @@ export function NotificationCenter() {
                     setSelectedCategory(cat);
                     setPage(0);
                   }}
-                  className={`px-3 py-1.5 text-[11px] font-bold font-mono-nu rounded-full whitespace-nowrap transition-all ${
+                  className={`px-3 py-1.5 text-[13px] font-bold font-mono-nu rounded-full whitespace-nowrap transition-all ${
                     selectedCategory === cat
                       ? "bg-nu-pink text-white"
                       : "bg-nu-ink/5 text-nu-ink hover:bg-nu-ink/10"
@@ -376,7 +376,7 @@ export function NotificationCenter() {
                 {groupedNotifications.map((group) => (
                   <div key={group.label}>
                     <div className="sticky top-0 z-10 px-4 py-1.5 bg-nu-cream/60 backdrop-blur-sm border-b border-nu-ink/5">
-                      <span className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-muted">
+                      <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-muted">
                         {group.label}
                       </span>
                     </div>
@@ -433,7 +433,7 @@ export function NotificationCenter() {
                                     {notification.body}
                                   </p>
                                 )}
-                                <p className="font-mono-nu text-[9px] text-nu-muted/60 mt-1.5">
+                                <p className="font-mono-nu text-[11px] text-nu-muted/60 mt-1.5">
                                   {timeAgo(notification.created_at)}
                                 </p>
                               </div>
@@ -454,7 +454,7 @@ export function NotificationCenter() {
               <button
                 onClick={handleLoadMore}
                 disabled={loadingMore}
-                className="w-full px-4 py-2 text-[11px] font-bold font-mono-nu text-nu-blue hover:text-nu-ink transition-colors disabled:opacity-50"
+                className="w-full px-4 py-2 text-[13px] font-bold font-mono-nu text-nu-blue hover:text-nu-ink transition-colors disabled:opacity-50"
               >
                 {loadingMore ? (
                   <span className="flex items-center justify-center gap-2">

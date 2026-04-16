@@ -403,7 +403,7 @@ export default function StaffTasksPage() {
 
   const sections = [
     { key: "inProgress", label: "진행중", tasks: grouped.inProgress, color: "text-indigo-600" },
-    { key: "todo", label: "할 일", tasks: grouped.todo, color: "text-nu-ink" },
+    { key: "todo", label: "할일", tasks: grouped.todo, color: "text-nu-ink" },
     { key: "done", label: "완료", tasks: grouped.done, color: "text-green-600" },
   ];
 
@@ -421,7 +421,7 @@ export default function StaffTasksPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-head text-3xl font-extrabold text-nu-ink">할일</h1>
-          <p className="font-mono-nu text-[11px] text-nu-muted mt-1 uppercase tracking-widest">
+          <p className="font-mono-nu text-[13px] text-nu-muted mt-1 uppercase tracking-widest">
             스태프 + 볼트 + Google Tasks · {allFilteredTasks.length}개
             {overdueCount > 0 && (
               <span className="ml-2 text-red-600">· {overdueCount}개 지연</span>
@@ -431,7 +431,7 @@ export default function StaffTasksPage() {
         </div>
         <Button
           onClick={() => setShowQuickAdd(!showQuickAdd)}
-          className="bg-indigo-600 text-white hover:bg-indigo-700 font-mono-nu text-[10px] uppercase tracking-widest gap-1.5"
+          className="bg-indigo-600 text-white hover:bg-indigo-700 font-mono-nu text-[12px] uppercase tracking-widest gap-1.5"
         >
           {showQuickAdd ? <X size={12} /> : <Plus size={12} />}
           {showQuickAdd ? "닫기" : "새 할일"}
@@ -452,7 +452,7 @@ export default function StaffTasksPage() {
             </div>
             {/* Source type */}
             <div>
-              <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-gray block mb-1">연결</label>
+              <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-gray block mb-1">연결</label>
               <select
                 value={quickSource}
                 onChange={e => { setQuickSource(e.target.value as any); setQuickProjectId(""); }}
@@ -464,7 +464,7 @@ export default function StaffTasksPage() {
             </div>
             {/* Project select */}
             <div>
-              <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-gray block mb-1">프로젝트</label>
+              <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-gray block mb-1">프로젝트</label>
               <select
                 value={quickProjectId}
                 onChange={e => setQuickProjectId(e.target.value)}
@@ -478,7 +478,7 @@ export default function StaffTasksPage() {
             </div>
             {/* Assignee */}
             <div>
-              <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-gray block mb-1">담당자</label>
+              <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-gray block mb-1">담당자</label>
               <select
                 value={quickAssignee}
                 onChange={e => setQuickAssignee(e.target.value)}
@@ -490,7 +490,7 @@ export default function StaffTasksPage() {
               </select>
             </div>
           </div>
-          <Button type="submit" disabled={adding || !quickTitle.trim() || !quickProjectId} className="bg-indigo-600 text-white hover:bg-indigo-700 font-mono-nu text-[10px] uppercase tracking-widest">
+          <Button type="submit" disabled={adding || !quickTitle.trim() || !quickProjectId} className="bg-indigo-600 text-white hover:bg-indigo-700 font-mono-nu text-[12px] uppercase tracking-widest">
             {adding ? "추가 중..." : "추가"}
           </Button>
         </form>
@@ -504,7 +504,7 @@ export default function StaffTasksPage() {
             <button
               key={f}
               onClick={() => { setFilter(f); setMemberFilter("all"); }}
-              className={`font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 border transition-colors cursor-pointer ${
+              className={`font-mono-nu text-[12px] uppercase tracking-widest px-3 py-1.5 border transition-colors cursor-pointer ${
                 filter === f && memberFilter === "all" ? "bg-indigo-600 text-white border-indigo-600" : "bg-transparent text-nu-muted border-nu-ink/15 hover:border-indigo-300"
               }`}
             >
@@ -518,7 +518,7 @@ export default function StaffTasksPage() {
           <select
             value={memberFilter}
             onChange={e => setMemberFilter(e.target.value)}
-            className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 border border-nu-ink/15 bg-transparent cursor-pointer"
+            className="font-mono-nu text-[12px] uppercase tracking-widest px-3 py-1.5 border border-nu-ink/15 bg-transparent cursor-pointer"
           >
             <option value="all">모든 멤버</option>
             {staffMembers.map(s => (
@@ -533,7 +533,7 @@ export default function StaffTasksPage() {
         <select
           value={sourceFilter}
           onChange={e => setSourceFilter(e.target.value as any)}
-          className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 border border-nu-ink/15 bg-transparent cursor-pointer"
+          className="font-mono-nu text-[12px] uppercase tracking-widest px-3 py-1.5 border border-nu-ink/15 bg-transparent cursor-pointer"
         >
           <option value="all">전체 (스태프+볼트+Google)</option>
           <option value="staff">스태프만</option>
@@ -545,7 +545,7 @@ export default function StaffTasksPage() {
         <select
           value={projectFilter}
           onChange={e => setProjectFilter(e.target.value)}
-          className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 border border-nu-ink/15 bg-transparent cursor-pointer"
+          className="font-mono-nu text-[12px] uppercase tracking-widest px-3 py-1.5 border border-nu-ink/15 bg-transparent cursor-pointer"
         >
           <option value="all">모든 프로젝트</option>
           <optgroup label="스태프">
@@ -564,7 +564,7 @@ export default function StaffTasksPage() {
         <select
           value={priorityFilter}
           onChange={e => setPriorityFilter(e.target.value)}
-          className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 border border-nu-ink/15 bg-transparent cursor-pointer"
+          className="font-mono-nu text-[12px] uppercase tracking-widest px-3 py-1.5 border border-nu-ink/15 bg-transparent cursor-pointer"
         >
           <option value="all">모든 우선순위</option>
           <option value="urgent">긴급</option>
@@ -577,7 +577,7 @@ export default function StaffTasksPage() {
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
-          className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 border border-nu-ink/15 bg-transparent cursor-pointer"
+          className="font-mono-nu text-[12px] uppercase tracking-widest px-3 py-1.5 border border-nu-ink/15 bg-transparent cursor-pointer"
         >
           <option value="active">미완료</option>
           <option value="all">전체</option>
@@ -588,7 +588,7 @@ export default function StaffTasksPage() {
         <select
           value={sortBy}
           onChange={e => setSortBy(e.target.value as any)}
-          className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 border border-nu-ink/15 bg-transparent cursor-pointer"
+          className="font-mono-nu text-[12px] uppercase tracking-widest px-3 py-1.5 border border-nu-ink/15 bg-transparent cursor-pointer"
         >
           <option value="default">기본 정렬</option>
           <option value="due_date">마감일순</option>
@@ -598,7 +598,7 @@ export default function StaffTasksPage() {
         {(projectFilter !== "all" || priorityFilter !== "all" || statusFilter !== "active" || sourceFilter !== "all" || memberFilter !== "all") && (
           <button
             onClick={() => { setProjectFilter("all"); setPriorityFilter("all"); setStatusFilter("active"); setSourceFilter("all"); setMemberFilter("all"); }}
-            className="font-mono-nu text-[10px] text-nu-muted hover:text-nu-ink bg-transparent border-none cursor-pointer underline"
+            className="font-mono-nu text-[12px] text-nu-muted hover:text-nu-ink bg-transparent border-none cursor-pointer underline"
           >
             필터 초기화
           </button>
@@ -608,7 +608,7 @@ export default function StaffTasksPage() {
       <div className="space-y-8">
         {sections.map(section => (
           <div key={section.key}>
-            <h2 className={`font-mono-nu text-[11px] uppercase tracking-widest font-bold mb-3 ${section.color}`}>
+            <h2 className={`font-mono-nu text-[13px] uppercase tracking-widest font-bold mb-3 ${section.color}`}>
               {section.label} ({section.tasks.length})
             </h2>
             {section.tasks.length > 0 ? (
@@ -639,7 +639,7 @@ export default function StaffTasksPage() {
                         <p className={`font-head text-sm font-bold truncate ${t.status === "done" ? "line-through text-nu-muted" : "text-nu-ink"}`}>{t.title}</p>
                         <div className="flex items-center gap-2 mt-0.5">
                           {/* Source badge */}
-                          <span className={`font-mono-nu text-[7px] uppercase px-1.5 py-px ${
+                          <span className={`font-mono-nu text-[9px] uppercase px-1.5 py-px ${
                             t._source === "google" ? "bg-blue-100 text-blue-600" :
                             isBolt ? "bg-purple-100 text-purple-600" : "bg-indigo-50 text-indigo-600"
                           }`}>
@@ -650,7 +650,7 @@ export default function StaffTasksPage() {
                           {t._projectTitle && (
                             <Link
                               href={t._projectHref}
-                              className={`font-mono-nu text-[8px] no-underline hover:underline flex items-center gap-0.5 ${
+                              className={`font-mono-nu text-[10px] no-underline hover:underline flex items-center gap-0.5 ${
                                 isBolt ? "text-purple-600" : "text-indigo-600"
                               }`}
                               onClick={e => e.stopPropagation()}
@@ -662,30 +662,30 @@ export default function StaffTasksPage() {
 
                           {/* Assignee */}
                           {t.assignee ? (
-                            <span className="font-mono-nu text-[8px] text-nu-muted flex items-center gap-0.5">
+                            <span className="font-mono-nu text-[10px] text-nu-muted flex items-center gap-0.5">
                               <Users size={7} />
                               {t.assignee.nickname}
                               {t.assignee.id === userId && " (나)"}
                             </span>
                           ) : isBolt && t.assigned_to ? (
-                            <span className="font-mono-nu text-[8px] text-nu-muted flex items-center gap-0.5">
+                            <span className="font-mono-nu text-[10px] text-nu-muted flex items-center gap-0.5">
                               <Users size={7} />
                               {staffMembers.find(s => s.id === t.assigned_to)?.nickname || ""}
                             </span>
                           ) : null}
 
                           {t.completed_at && t.status === "done" && (
-                            <span className="font-mono-nu text-[8px] text-green-600">
+                            <span className="font-mono-nu text-[10px] text-green-600">
                               {new Date(t.completed_at).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })} 완료
                             </span>
                           )}
                         </div>
                       </div>
-                      <span className={`font-mono-nu text-[9px] uppercase px-2 py-0.5 ${priorityColor[t.priority] || ""}`}>
+                      <span className={`font-mono-nu text-[11px] uppercase px-2 py-0.5 ${priorityColor[t.priority] || ""}`}>
                         {t.priority}
                       </span>
                       {t.due_date && (
-                        <span className={`font-mono-nu text-[9px] flex items-center gap-1 ${dueStatus ? dueDateStyle[dueStatus] : "text-nu-muted"}`}>
+                        <span className={`font-mono-nu text-[11px] flex items-center gap-1 ${dueStatus ? dueDateStyle[dueStatus] : "text-nu-muted"}`}>
                           {dueStatus ? dueDateIcon[dueStatus] : <Clock size={10} />}
                           {dueStatus === "overdue" ? "지연" : ""}
                           {new Date(t.due_date).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}
@@ -696,7 +696,7 @@ export default function StaffTasksPage() {
                 })}
               </div>
             ) : (
-              <p className="font-mono-nu text-[10px] text-nu-muted pl-4 py-2">해당하는 할일이 없습니다</p>
+              <p className="font-mono-nu text-[12px] text-nu-muted pl-4 py-2">해당하는 할일이 없습니다</p>
             )}
           </div>
         ))}

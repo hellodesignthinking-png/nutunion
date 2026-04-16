@@ -185,7 +185,7 @@ export function CrewActivityFeed({
               <FileUploadButton targetType="crew_post" targetId={groupId} userId={userId} />
               <button
                 onClick={() => setShowDriveInput(!showDriveInput)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-nu-muted hover:text-nu-blue hover:bg-nu-blue/5 transition-colors font-mono-nu text-[10px]"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-nu-muted hover:text-nu-blue hover:bg-nu-blue/5 transition-colors font-mono-nu text-[12px]"
               >
                 <FolderOpen size={12} />
                 Drive 링크
@@ -194,7 +194,7 @@ export function CrewActivityFeed({
             <button
               onClick={handlePost}
               disabled={posting || (!content.trim() && !driveLink.trim())}
-              className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-5 py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors disabled:opacity-50 flex items-center gap-1.5"
             >
               {posting ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
               게시
@@ -226,7 +226,7 @@ export function CrewActivityFeed({
                    }`}>
                       {(post.author?.nickname || "U").charAt(0).toUpperCase()}
                    </div>
-                   {!isSystem && <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-nu-pink rounded-full border-2 border-nu-white flex items-center justify-center text-[8px] text-white">
+                   {!isSystem && <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-nu-pink rounded-full border-2 border-nu-white flex items-center justify-center text-[10px] text-white">
                       <Sparkles size={8} />
                    </div>}
                 </div>
@@ -238,11 +238,11 @@ export function CrewActivityFeed({
                       {isSystem ? "Community Discovery" : (post.author?.nickname || "Manager")}
                     </span>
                     
-                    <span className={`inline-flex items-center gap-1 font-mono-nu text-[8px] font-black uppercase tracking-[0.2em] px-2 py-1 rounded ${typeInfo.bgColor} ${typeInfo.color}`}>
+                    <span className={`inline-flex items-center gap-1 font-mono-nu text-[10px] font-black uppercase tracking-[0.2em] px-2 py-1 rounded ${typeInfo.bgColor} ${typeInfo.color}`}>
                       <Icon size={9} />
                       {typeInfo.label}
                     </span>
-                    <span className="font-mono-nu text-[9px] text-nu-muted/60">
+                    <span className="font-mono-nu text-[11px] text-nu-muted/60">
                       {timeAgo(post.created_at)}
                     </span>
                   </div>
@@ -265,7 +265,7 @@ export function CrewActivityFeed({
                   {isSystem && (
                     <div className="mt-3 py-1.5 px-3 bg-nu-ink/5 border-l-2 border-nu-ink/20 inline-flex items-center gap-2">
                        <Zap size={10} className="text-nu-ink/40" />
-                       <span className="font-mono-nu text-[8px] text-nu-ink/40 uppercase tracking-widest">Autonomous Activity Log</span>
+                       <span className="font-mono-nu text-[10px] text-nu-ink/40 uppercase tracking-widest">Autonomous Activity Log</span>
                     </div>
                   )}
 

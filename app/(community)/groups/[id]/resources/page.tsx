@@ -127,13 +127,17 @@ export default function ResourcesPage() {
   const [files, setFiles] = useState<(FileAttachment & { uploader?: { nickname: string | null } })[]>([]);
   const [meetingResources, setMeetingResources] = useState<MeetingResource[]>([]);
   const [wikiPages, setWikiPages] = useState<{id: string; title: string; content: string; updated_at: string; topic_name: string; google_doc_url?: string; author_nickname?: string}[]>([]);
+  // wiki_weekly_resources — links/articles shared via wiki tab gap analysis or synthesis
+  const [wikiResources, setWikiResources] = useState<{id: string; title: string; url: string; resource_type: string; auto_summary: string | null; contributor: string | null; created_at: string; linked_wiki_page_id: string | null; linked_page_title: string | null}[]>([]);
+  // set of file_attachment IDs that are linked to a wiki page
+  const [wikiLinkedIds, setWikiLinkedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
   const [isManager, setIsManager] = useState(false);
   const [hostId, setHostId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"all" | "files" | "drive" | "links" | "meetings" | "wiki">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "files" | "drive" | "links" | "meetings" | "wiki" | "wiki-resources">("all");
   const [groupName, setGroupName] = useState("");
   const [previewData, setPreviewData] = useState<{ url: string; name: string; id?: string; content?: string | null } | null>(null);
   const [isSplitView, setIsSplitView] = useState(true);
@@ -258,6 +262,42 @@ export default function ResourcesPage() {
           }))
       );
     }
+
+    // Fetch wiki_weekly_resources — all links/articles shared via wiki
+    try {
+      const { data: wikiRes } = await supabase
+        .from("wiki_weekly_resources")
+        .select("id, title, url, resource_type, auto_summary, created_at, linked_wiki_page_id, contributor:profiles!wiki_weekly_resources_shared_by_fkey(nickname), linked_page:wiki_pages!wiki_weekly_resources_linked_wiki_page_id_fkey(title)")
+        .eq("group_id", groupId)
+        .order("created_at", { ascending: false });
+
+      if (wikiRes) {
+        const mapped = (wikiRes as any[]).map((r: any) => ({
+          id: r.id,
+          title: r.title,
+          url: r.url || "",
+          resource_type: r.resource_type || "link",
+          auto_summary: r.auto_summary || null,
+          contributor: r.contributor?.nickname || null,
+          created_at: r.created_at,
+          linked_wiki_page_id: r.linked_wiki_page_id || null,
+          linked_page_title: r.linked_page?.title || null,
+        }));
+        setWikiResources(mapped);
+
+        // Build a set of file_attachment URLs that are in wiki resources
+        // Cross-reference by URL to find linked ones
+        const wikiUrls = new Set(mapped.map((r: any) => r.url).filter(Boolean));
+        if (filesData) {
+          const linkedFileIds = new Set(
+            (filesData as any[])
+              .filter((f: any) => f.file_url && wikiUrls.has(f.file_url))
+              .map((f: any) => f.id)
+          );
+          setWikiLinkedIds(linkedFileIds);
+        }
+      }
+    } catch { /* wiki_weekly_resources table may not exist */ }
 
     setLoading(false);
   }, [groupId]);
@@ -737,6 +777,16 @@ export default function ResourcesPage() {
             >
               <span className="flex items-center gap-1.5">탭 ({wikiPages.length})</span>
             </button>
+            <button
+              onClick={() => setActiveTab("wiki-resources")}
+              className={`font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-3 border-b-[3px] transition-all whitespace-nowrap ${
+                activeTab === "wiki-resources" ? "border-nu-blue text-nu-blue" : "border-transparent text-nu-muted hover:text-nu-ink"
+              }`}
+            >
+              <span className="flex items-center gap-1.5">
+                탭 자료 ({wikiResources.length})
+              </span>
+            </button>
           </div>
 
           {/* Tab Content Area */}
@@ -800,6 +850,12 @@ export default function ResourcesPage() {
                                 ) : null;
                               })}
                             </div>
+                          )}
+                          {/* 탭 사용됨 badge */}
+                          {wikiLinkedIds.has(f.id) && (
+                            <span className="inline-flex items-center gap-0.5 font-mono-nu text-[9px] uppercase tracking-widest px-1.5 py-0.5 bg-nu-pink/10 text-nu-pink border border-nu-pink/20 shrink-0">
+                              <Check size={7} /> 탭에서 사용됨
+                            </span>
                           )}
                         </div>
                         <span className="font-mono-nu text-[11px] text-nu-muted/60">{f.uploader?.nickname || ""} · {timeAgo(f.created_at)}</span>
@@ -980,6 +1036,7 @@ export default function ResourcesPage() {
                         onToggleTag={(tag) => toggleTag(file.id, tag)}
                         onAddToWiki={() => addToWikiResources(file)}
                         addingWiki={addingWikiResource === file.id}
+                        isWikiLinked={wikiLinkedIds.has(file.id)}
                       />
                     ))}
                   </div>
@@ -998,7 +1055,7 @@ export default function ResourcesPage() {
                   <div className="grid grid-cols-1 gap-4">
                     {filteredDriveFiles.map((file) => (
                       <FileCard
-                        key={file.id} file={file} userId={userId} hostId={hostId} isManager={isManager} onDelete={handleDelete} onRename={handleRename} isDrive
+                        key={file.id} file={file} userId={userId} hostId={hostId} isManager={isManager} onDelete={handleDelete} onRename={handleRename} isDrive isWikiLinked={wikiLinkedIds.has(file.id)}
                         onPreview={(url, name) => setPreviewData({ url, name, id: file.id, content: resolveTemplateContent(url, file.content) })}
                         onToggleComments={() => toggleComments(file.id)}
                         commentsExpanded={!!expandedComments[file.id]}
@@ -1030,7 +1087,7 @@ export default function ResourcesPage() {
                   <div className="grid grid-cols-1 gap-4">
                     {filteredExternalLinks.map((file) => (
                       <FileCard
-                        key={file.id} file={file} userId={userId} hostId={hostId} isManager={isManager} onDelete={handleDelete} onRename={handleRename} isLink
+                        key={file.id} file={file} userId={userId} hostId={hostId} isManager={isManager} onDelete={handleDelete} onRename={handleRename} isLink isWikiLinked={wikiLinkedIds.has(file.id)}
                         onPreview={(url, name) => setPreviewData({ url, name, id: file.id, content: resolveTemplateContent(url, file.content) })}
                         onToggleComments={() => toggleComments(file.id)}
                         commentsExpanded={!!expandedComments[file.id]}
@@ -1077,7 +1134,7 @@ export default function ResourcesPage() {
                           </p>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
-                          <button 
+                          <button
                             onClick={() => setPreviewData({ url: resource.url, name: resource.name })}
                             className="p-1.5 text-nu-muted hover:text-nu-pink transition-colors"
                             title="미리보기"
@@ -1090,6 +1147,96 @@ export default function ResourcesPage() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {activeTab === "wiki-resources" && (
+              <section className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                {/* Header info */}
+                <div className="mb-4 p-3 bg-nu-blue/5 border border-nu-blue/20 flex items-start gap-2">
+                  <Sparkles size={14} className="text-nu-blue mt-0.5 shrink-0" />
+                  <p className="text-[12px] text-nu-graphite leading-relaxed">
+                    AI 지식 통합 엔진이 탭(위키) 작성 중 참고한 자료들이 자동으로 아카이브됩니다.
+                    <span className="font-bold text-nu-pink"> 사용됨</span> 표시가 있는 항목은 실제 탭 페이지에 반영된 자료입니다.
+                  </p>
+                </div>
+                {wikiResources.filter(r => r.title.toLowerCase().includes(searchQuery.toLowerCase()) || (r.url || "").toLowerCase().includes(searchQuery.toLowerCase())).length === 0 ? (
+                  <div className="border-2 border-dashed border-nu-ink/10 p-12 text-center">
+                    <BookOpen size={32} className="text-nu-blue/30 mx-auto mb-3" />
+                    <p className="text-nu-gray text-sm mb-1">탭에서 참고된 자료가 없습니다</p>
+                    <p className="text-nu-muted text-xs">AI 지식 통합 엔진으로 탭 페이지를 작성하면 자료가 자동으로 여기에 추가됩니다</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {wikiResources
+                      .filter(r => r.title.toLowerCase().includes(searchQuery.toLowerCase()) || (r.url || "").toLowerCase().includes(searchQuery.toLowerCase()))
+                      .map((r) => {
+                        const typeIcon = getWikiResourceTypeIcon(r.resource_type, r.url);
+                        return (
+                          <div key={r.id} className="bg-nu-white border-[2px] border-nu-ink/[0.08] hover:border-nu-blue/40 transition-all p-4 flex items-start gap-3 group">
+                            <div className="w-9 h-9 flex items-center justify-center shrink-0 bg-nu-blue/5 border border-nu-blue/10 text-base">
+                              {typeIcon}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                                {r.url ? (
+                                  <a
+                                    href={r.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-sm font-medium text-nu-ink hover:text-nu-blue truncate no-underline transition-colors"
+                                  >
+                                    {r.title}
+                                  </a>
+                                ) : (
+                                  <span className="text-sm font-medium text-nu-ink truncate">{r.title}</span>
+                                )}
+                                {/* 사용됨 badge */}
+                                {r.linked_wiki_page_id && (
+                                  <span className="inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-1.5 py-0.5 bg-nu-pink/10 text-nu-pink border border-nu-pink/20 shrink-0">
+                                    <Check size={8} /> 사용됨
+                                    {r.linked_page_title && (
+                                      <span className="text-nu-pink/70"> · {r.linked_page_title}</span>
+                                    )}
+                                  </span>
+                                )}
+                                {/* Resource type badge */}
+                                <span className="font-mono-nu text-[9px] uppercase tracking-widest px-1.5 py-0.5 bg-nu-blue/10 text-nu-blue/70 border border-nu-blue/10 shrink-0">
+                                  {getWikiResourceTypeLabel(r.resource_type, r.url)}
+                                </span>
+                              </div>
+                              {/* AI summary */}
+                              {r.auto_summary && (
+                                <p className="text-[11px] text-nu-muted line-clamp-2 mt-0.5 leading-relaxed">{r.auto_summary}</p>
+                              )}
+                              <div className="flex items-center gap-2 mt-1">
+                                {r.contributor && (
+                                  <span className="font-mono-nu text-[10px] text-nu-muted/60">by {r.contributor}</span>
+                                )}
+                                <span className="font-mono-nu text-[10px] text-nu-muted/40">{timeAgo(r.created_at)}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {r.url && (
+                                <>
+                                  <button
+                                    onClick={() => setPreviewData({ url: r.url, name: r.title })}
+                                    className="p-1.5 text-nu-muted hover:text-nu-blue transition-colors"
+                                    title="미리보기"
+                                  >
+                                    <Eye size={14} />
+                                  </button>
+                                  <a href={r.url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-nu-muted hover:text-nu-ink transition-colors">
+                                    <ExternalLink size={14} />
+                                  </a>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                   </div>
                 )}
               </section>
@@ -1320,7 +1467,7 @@ function InlineComments({
 function FileCard({
   file, userId, hostId, isManager, onDelete, onRename, isDrive, isLink, onPreview, showAiSummary, aiSummary,
   onToggleComments, commentsExpanded, comments, commentInput, onCommentInputChange, onPostComment, onDeleteComment, postingComment,
-  tags, onToggleTag, onAddToWiki, addingWiki,
+  tags, onToggleTag, onAddToWiki, addingWiki, isWikiLinked,
 }: {
   file: FileAttachment & { uploader?: { nickname: string | null } };
   userId: string | null;
@@ -1345,6 +1492,7 @@ function FileCard({
   onToggleTag?: (tag: string) => void;
   onAddToWiki?: () => void;
   addingWiki?: boolean;
+  isWikiLinked?: boolean;
 }) {
   const [status, setStatus] = useState<"draft" | "review" | "asset">("draft");
   const [isEditing, setIsEditing] = useState(false);
@@ -1480,6 +1628,11 @@ function FileCard({
             {!isEditing && isNew && (
               <span className="shrink-0 font-mono-nu text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 bg-nu-pink text-white animate-pulse">
                 NEW
+              </span>
+            )}
+            {!isEditing && isWikiLinked && (
+              <span className="inline-flex items-center gap-0.5 shrink-0 font-mono-nu text-[9px] uppercase tracking-widest px-1.5 py-0.5 bg-nu-pink/10 text-nu-pink border border-nu-pink/20">
+                <Check size={8} /> 탭에서 사용됨
               </span>
             )}
           </div>
@@ -1638,6 +1791,32 @@ function FileCard({
     </div>
   );
 }
+function getWikiResourceTypeIcon(resourceType: string, url: string): string {
+  if (url?.includes("youtube.com") || url?.includes("youtu.be")) return "▶";
+  if (url?.includes("notion.so")) return "N";
+  if (url?.includes("github.com")) return "⌥";
+  if (url?.includes("figma.com")) return "◈";
+  if (resourceType === "video") return "▶";
+  if (resourceType === "notion") return "N";
+  if (resourceType === "article") return "✦";
+  if (resourceType === "blog") return "✐";
+  if (resourceType === "pdf") return "P";
+  return "⊕";
+}
+
+function getWikiResourceTypeLabel(resourceType: string, url: string): string {
+  if (url?.includes("youtube.com") || url?.includes("youtu.be")) return "YouTube";
+  if (url?.includes("notion.so")) return "Notion";
+  if (url?.includes("github.com")) return "GitHub";
+  if (url?.includes("figma.com")) return "Figma";
+  if (resourceType === "video") return "동영상";
+  if (resourceType === "article") return "아티클";
+  if (resourceType === "blog") return "블로그";
+  if (resourceType === "pdf") return "PDF";
+  if (resourceType === "link") return "링크";
+  return resourceType || "링크";
+}
+
 function getEmbedUrl(url: string | null) {
   if (!url) return "";
   if (url.includes("notion.so")) {

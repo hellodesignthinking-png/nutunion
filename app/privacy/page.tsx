@@ -12,11 +12,11 @@ export default function PrivacyPage() {
       {/* Header */}
       <div className="bg-nu-ink text-white py-16">
         <div className="max-w-4xl mx-auto px-8">
-          <Link href="/" className="font-mono-nu text-[10px] uppercase tracking-widest text-white/40 hover:text-nu-pink transition-colors">
+          <Link href="/" className="font-mono-nu text-[12px] uppercase tracking-widest text-white/40 hover:text-nu-pink transition-colors">
             &larr; nutunion
           </Link>
           <h1 className="font-head text-4xl md:text-5xl font-extrabold mt-6">개인정보처리방침</h1>
-          <p className="font-mono-nu text-[11px] uppercase tracking-widest text-white/50 mt-4">
+          <p className="font-mono-nu text-[13px] uppercase tracking-widest text-white/50 mt-4">
             Privacy Policy &middot; 시행일: 2026년 4월 8일
           </p>
         </div>
@@ -140,10 +140,10 @@ export default function PrivacyPage() {
 
         {/* Footer nav */}
         <div className="mt-20 pt-8 border-t border-nu-ink/10 flex items-center justify-between">
-          <Link href="/terms" className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted hover:text-nu-pink transition-colors">
+          <Link href="/terms" className="font-mono-nu text-[13px] uppercase tracking-widest text-nu-muted hover:text-nu-pink transition-colors">
             서비스약관 보기 &rarr;
           </Link>
-          <Link href="/" className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted hover:text-nu-pink transition-colors">
+          <Link href="/" className="font-mono-nu text-[13px] uppercase tracking-widest text-nu-muted hover:text-nu-pink transition-colors">
             홈으로
           </Link>
         </div>
@@ -158,7 +158,7 @@ function Section({ num, title, children }: { num: string; title: string; childre
   return (
     <section>
       <h2 className="font-head text-xl font-extrabold text-nu-ink flex items-baseline gap-3 mb-4">
-        <span className="font-mono-nu text-[11px] text-nu-pink font-bold">제{num}조</span>
+        <span className="font-mono-nu text-[13px] text-nu-pink font-bold">제{num}조</span>
         {title}
       </h2>
       <div className="space-y-3 text-[15px]">{children}</div>
@@ -171,7 +171,7 @@ function Ul({ items }: { items: string[] }) {
     <ul className="space-y-2 ml-1">
       {items.map((item, i) => (
         <li key={i} className="flex items-start gap-2 text-[15px]">
-          <span className="text-nu-pink mt-1.5 text-[8px]">&#9632;</span>
+          <span className="text-nu-pink mt-1.5 text-[10px]">&#9632;</span>
           <span>{item}</span>
         </li>
       ))}

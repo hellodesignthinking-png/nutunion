@@ -812,7 +812,7 @@ export default async function TemplatePage({
           </Link>
           <div className="flex items-center gap-3 mb-2">
             <span
-              className="px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border border-white/20"
+              className="px-2 py-0.5 text-[11px] font-bold uppercase tracking-widest border border-white/20"
               style={{ fontFamily: "'JetBrains Mono', monospace" }}
             >
               {template.category} Template
@@ -881,7 +881,7 @@ export default async function TemplatePage({
               if (line.startsWith("- ")) {
                 return (
                   <div key={i} className="flex items-start gap-2 ml-4 my-0.5">
-                    <span className="text-[#FF6B8A] mt-1.5 text-[8px]">●</span>
+                    <span className="text-[#FF6B8A] mt-1.5 text-[10px]">●</span>
                     <span className="text-sm">{line.replace("- ", "")}</span>
                   </div>
                 );
@@ -909,7 +909,7 @@ export default async function TemplatePage({
           >
             <ArrowLeft size={12} /> 돌아가기
           </Link>
-          <p className="text-[10px] text-[#999]" style={{ fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.05em" }}>
+          <p className="text-[12px] text-[#999]" style={{ fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.05em" }}>
             Powered by NutUnion Templates
           </p>
         </div>

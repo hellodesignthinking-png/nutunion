@@ -128,7 +128,7 @@ export function Nav() {
             key={l.label}
             href={getHref(l.href)}
             prefetch={true}
-            className={`font-mono-nu text-[11px] no-underline tracking-[0.1em] uppercase transition-all relative ${
+            className={`font-mono-nu text-[13px] no-underline tracking-[0.1em] uppercase transition-all relative ${
               pathname === l.href || (l.href !== "/" && pathname.startsWith(l.href) && l.href.length > 1)
                 ? "text-nu-ink font-bold"
                 : "text-nu-graphite opacity-70 hover:opacity-100"
@@ -144,7 +144,7 @@ export function Nav() {
           <Link
             href="/admin"
             prefetch={true}
-            className={`font-mono-nu text-[11px] no-underline tracking-[0.08em] uppercase transition-colors inline-flex items-center gap-1.5 px-3 py-1.5 ${
+            className={`font-mono-nu text-[13px] no-underline tracking-[0.08em] uppercase transition-colors inline-flex items-center gap-1.5 px-3 py-1.5 ${
               pathname.startsWith("/admin") ? "bg-nu-pink text-white" : "text-nu-pink hover:bg-nu-pink/10"
             }`}
           >
@@ -165,7 +165,7 @@ export function Nav() {
               aria-label="검색"
             >
               <Search size={13} />
-              <kbd className="font-mono-nu text-[8px] text-nu-muted">⌘K</kbd>
+              <kbd className="font-mono-nu text-[10px] text-nu-muted">⌘K</kbd>
             </button>
             {/* 알림 센터 (드롭다운) */}
             <NotificationCenter />
@@ -191,13 +191,13 @@ export function Nav() {
           <>
             <Link
               href="/login"
-              className="font-mono-nu text-[11px] font-bold tracking-[0.08em] uppercase px-5 py-2.5 border-[2px] border-nu-graphite text-nu-graphite bg-transparent hover:bg-nu-graphite hover:text-nu-paper transition-all no-underline"
+              className="font-mono-nu text-[13px] font-bold tracking-[0.08em] uppercase px-5 py-2.5 border-[2px] border-nu-graphite text-nu-graphite bg-transparent hover:bg-nu-graphite hover:text-nu-paper transition-all no-underline"
             >
               Login
             </Link>
             <Link
               href="/signup"
-              className="font-mono-nu text-[11px] font-bold tracking-[0.08em] uppercase px-5 py-2.5 border-[2px] border-nu-pink bg-nu-pink text-nu-paper hover:bg-nu-ink hover:border-nu-ink transition-all no-underline"
+              className="font-mono-nu text-[13px] font-bold tracking-[0.08em] uppercase px-5 py-2.5 border-[2px] border-nu-pink bg-nu-pink text-nu-paper hover:bg-nu-ink hover:border-nu-ink transition-all no-underline"
             >
               Join
             </Link>
@@ -220,7 +220,7 @@ export function Nav() {
                   </div>
                   <div>
                     <p className="font-head text-sm font-bold">{profile.nickname}</p>
-                    <span className={`inline-flex items-center gap-1 font-mono-nu text-[8px] uppercase tracking-widest px-1.5 py-0.5 ${grade.cls}`}>
+                    <span className={`inline-flex items-center gap-1 font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 ${grade.cls}`}>
                       <GIcon size={8} /> {grade.label}
                     </span>
                   </div>
@@ -254,7 +254,7 @@ export function Nav() {
                     >
                       알림
                       {notifCount > 0 && (
-                        <span className="w-5 h-5 bg-nu-pink text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                        <span className="w-5 h-5 bg-nu-pink text-white text-[11px] font-bold rounded-full flex items-center justify-center">
                           {notifCount > 9 ? "9+" : notifCount}
                         </span>
                       )}
@@ -268,7 +268,7 @@ export function Nav() {
 
               {isAdmin && (
                 <div className="border-t border-nu-pink/20 pt-4 flex flex-col gap-3">
-                  <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-pink font-bold">관리자</span>
+                  <span className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-pink font-bold">관리자</span>
                   {[
                     { href: "/admin", label: "관리자 대시보드" },
                     { href: "/admin/users", label: "회원 관리" },
@@ -276,7 +276,7 @@ export function Nav() {
                     { href: "/admin/projects", label: "볼트 관리" },
                     { href: "/admin/content", label: "콘텐츠 관리" },
                   ].map(a => (
-                    <Link key={a.href} href={a.href} onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[11px] text-nu-graphite no-underline">
+                    <Link key={a.href} href={a.href} onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[13px] text-nu-graphite no-underline">
                       {a.label}
                     </Link>
                   ))}
@@ -285,15 +285,15 @@ export function Nav() {
 
               <div className="border-t border-nu-ink/10 pt-4 flex flex-col gap-3">
                 {user ? (
-                  <button onClick={() => { handleLogout(); setOpen(false); }} className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-red text-left">
+                  <button onClick={() => { handleLogout(); setOpen(false); }} className="font-mono-nu text-[13px] uppercase tracking-widest text-nu-red text-left">
                     로그아웃
                   </button>
                 ) : (
                   <>
-                    <Link href="/login" onClick={() => setOpen(false)} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-center py-3 border-[2px] border-nu-graphite text-nu-graphite no-underline">
+                    <Link href="/login" onClick={() => setOpen(false)} className="font-mono-nu text-[13px] font-bold uppercase tracking-widest text-center py-3 border-[2px] border-nu-graphite text-nu-graphite no-underline">
                       Login
                     </Link>
-                    <Link href="/signup" onClick={() => setOpen(false)} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-center py-3 bg-nu-pink text-nu-paper border-[2px] border-nu-pink no-underline">
+                    <Link href="/signup" onClick={() => setOpen(false)} className="font-mono-nu text-[13px] font-bold uppercase tracking-widest text-center py-3 bg-nu-pink text-nu-paper border-[2px] border-nu-pink no-underline">
                       Join
                     </Link>
                   </>

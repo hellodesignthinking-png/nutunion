@@ -28,7 +28,7 @@ export function AdminNavClient({ navItems, adminName }: AdminNavClientProps) {
               nutunion
             </span>
           </Link>
-          <span className="font-mono-nu text-[10px] uppercase tracking-widest bg-nu-pink text-white px-2.5 py-1">
+          <span className="font-mono-nu text-[12px] uppercase tracking-widest bg-nu-pink text-white px-2.5 py-1">
             Admin
           </span>
         </div>
@@ -39,7 +39,7 @@ export function AdminNavClient({ navItems, adminName }: AdminNavClientProps) {
             <Link
               key={item.href}
               href={item.href}
-              className={`font-mono-nu text-[11px] no-underline tracking-[0.08em] uppercase transition-all ${
+              className={`font-mono-nu text-[13px] no-underline tracking-[0.08em] uppercase transition-all ${
                 isActive(item.href)
                   ? "text-nu-pink font-bold opacity-100"
                   : "text-nu-graphite opacity-70 hover:opacity-100"
@@ -51,12 +51,12 @@ export function AdminNavClient({ navItems, adminName }: AdminNavClientProps) {
         </div>
 
         <div className="hidden md:flex items-center gap-4">
-          <span className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
+          <span className="font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest">
             {adminName}
           </span>
           <Link
             href="/dashboard"
-            className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-gray no-underline hover:text-nu-ink"
+            className="font-mono-nu text-[13px] uppercase tracking-widest text-nu-gray no-underline hover:text-nu-ink"
           >
             &larr; 사이트로
           </Link>
@@ -90,13 +90,13 @@ export function AdminNavClient({ navItems, adminName }: AdminNavClientProps) {
             </Link>
           ))}
           <div className="border-t border-nu-ink/[0.06] pt-3 mt-1 flex items-center justify-between">
-            <span className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
+            <span className="font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest">
               {adminName}
             </span>
             <Link
               href="/dashboard"
               onClick={() => setMobileOpen(false)}
-              className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-gray no-underline hover:text-nu-ink"
+              className="font-mono-nu text-[13px] uppercase tracking-widest text-nu-gray no-underline hover:text-nu-ink"
             >
               &larr; 사이트로
             </Link>

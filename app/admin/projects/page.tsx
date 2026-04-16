@@ -134,12 +134,12 @@ export default async function AdminProjectsPage() {
       {/* Stats summary */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
         <div className="bg-nu-white border border-nu-ink/[0.08] p-4">
-          <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-1">전체</p>
+          <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-1">전체</p>
           <p className="font-head text-2xl font-extrabold">{formatted.length}</p>
         </div>
         {Object.entries(statusBreakdown).map(([status, count]) => (
           <div key={status} className="bg-nu-white border border-nu-ink/[0.08] p-4">
-            <p className={`font-mono-nu text-[10px] uppercase tracking-widest mb-1 ${statusColors[status]}`}>
+            <p className={`font-mono-nu text-[12px] uppercase tracking-widest mb-1 ${statusColors[status]}`}>
               {statusLabels[status]}
             </p>
             <p className="font-head text-2xl font-extrabold">{count}</p>

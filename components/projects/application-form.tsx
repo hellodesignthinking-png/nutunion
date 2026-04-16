@@ -85,7 +85,7 @@ export default function ApplicationForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Message */}
       <div>
-        <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">
+        <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
           지원 메시지 *
         </label>
         <textarea
@@ -96,14 +96,14 @@ export default function ApplicationForm({
           className="w-full px-4 py-3 bg-nu-white border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink transition-colors resize-none"
           required
         />
-        <p className="mt-1 text-[11px] text-nu-muted">
+        <p className="mt-1 text-[13px] text-nu-muted">
           프로젝트 리드에게 전달됩니다
         </p>
       </div>
 
       {/* Portfolio URL */}
       <div>
-        <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">
+        <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
           <LinkIcon size={12} className="inline mr-1" />
           포트폴리오 URL
         </label>
@@ -118,7 +118,7 @@ export default function ApplicationForm({
 
       {/* Crew Select */}
       <div>
-        <label className="block font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">
+        <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
           <Users size={12} className="inline mr-1" />
           소속 너트 (선택)
         </label>
@@ -145,7 +145,7 @@ export default function ApplicationForm({
             ))}
           </select>
         )}
-        <p className="mt-1 text-[11px] text-nu-muted">
+        <p className="mt-1 text-[13px] text-nu-muted">
           어떤 너트를 대표하여 참여하는지 알려주세요
         </p>
       </div>
@@ -154,7 +154,7 @@ export default function ApplicationForm({
       <button
         type="submit"
         disabled={loading}
-        className="w-full font-mono-nu text-[11px] font-bold uppercase tracking-[0.1em] py-4 bg-nu-pink text-nu-paper hover:bg-nu-pink/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        className="w-full font-mono-nu text-[13px] font-bold uppercase tracking-[0.1em] py-4 bg-nu-pink text-nu-paper hover:bg-nu-pink/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
         {loading ? (
           <>

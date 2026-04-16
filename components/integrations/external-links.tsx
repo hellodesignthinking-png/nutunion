@@ -15,7 +15,7 @@ export function ExternalLinks({ kakaoUrl, driveUrl, chatUrl, label = "연동" }:
 
   return (
     <div className="bg-nu-white border border-nu-ink/[0.06] p-4">
-      <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-3">
+      <span className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted block mb-3">
         {label}
       </span>
       <div className="flex flex-col gap-2">

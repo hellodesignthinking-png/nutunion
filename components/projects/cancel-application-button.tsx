@@ -38,7 +38,7 @@ export function CancelApplicationButton({ projectId, userId }: CancelApplication
     <button
       onClick={handleCancel}
       disabled={loading}
-      className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-2.5 border border-nu-muted text-nu-muted hover:border-nu-red hover:text-nu-red transition-colors flex items-center gap-1 disabled:opacity-50"
+      className="font-mono-nu text-[12px] uppercase tracking-widest px-3 py-2.5 border border-nu-muted text-nu-muted hover:border-nu-red hover:text-nu-red transition-colors flex items-center gap-1 disabled:opacity-50"
     >
       <XCircle size={12} /> 취소
     </button>

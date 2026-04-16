@@ -129,7 +129,7 @@ export function AiAssistantWidget() {
                 {iconMap[s.type]}
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-nu-ink">{s.title}</p>
-                  {s.detail && <p className="text-[9px] text-nu-muted">{s.detail}</p>}
+                  {s.detail && <p className="text-[11px] text-nu-muted">{s.detail}</p>}
                 </div>
               </a>
             ) : (
@@ -137,7 +137,7 @@ export function AiAssistantWidget() {
                 {iconMap[s.type]}
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-nu-ink">{s.title}</p>
-                  {s.detail && <p className="text-[9px] text-nu-muted">{s.detail}</p>}
+                  {s.detail && <p className="text-[11px] text-nu-muted">{s.detail}</p>}
                 </div>
               </div>
             )
@@ -149,7 +149,7 @@ export function AiAssistantWidget() {
         <div className="flex flex-wrap gap-1.5">
           {["할일 추가: ", "오늘 일정", "내 너트", "내 볼트"].map(q => (
             <button key={q} onClick={() => { setInput(q); }}
-              className="font-mono-nu text-[8px] uppercase tracking-widest px-2 py-1 bg-white border border-indigo-100 text-indigo-500 cursor-pointer hover:bg-indigo-50 transition-colors">
+              className="font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 bg-white border border-indigo-100 text-indigo-500 cursor-pointer hover:bg-indigo-50 transition-colors">
               {q}
             </button>
           ))}

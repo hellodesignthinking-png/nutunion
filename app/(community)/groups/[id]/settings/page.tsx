@@ -284,7 +284,7 @@ export default function GroupSettingsPage() {
         <h2 className="font-head text-lg font-extrabold mb-4">기본 정보</h2>
         <form onSubmit={handleSave} className="flex flex-col gap-5">
           <div>
-            <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">썸네일 이미지</Label>
+            <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">썸네일 이미지</Label>
             <div className="mt-2 border border-dashed border-nu-ink/20 p-4 text-center">
               {imagePreview ? (
                 <div className="relative inline-block">
@@ -320,11 +320,11 @@ export default function GroupSettingsPage() {
           </div>
 
           <div>
-            <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">이름</Label>
+            <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">이름</Label>
             <Input name="name" defaultValue={group.name} required className="mt-1.5 border-nu-ink/15 bg-transparent" />
           </div>
           <div>
-            <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">카테고리</Label>
+            <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">카테고리</Label>
             <Select value={group.category} onValueChange={(v) => v && setGroup({ ...group, category: v })}>
               <SelectTrigger className="mt-1.5 border-nu-ink/15 bg-transparent">
                 <SelectValue />
@@ -338,30 +338,30 @@ export default function GroupSettingsPage() {
             </Select>
           </div>
           <div>
-            <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">소개</Label>
+            <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">소개</Label>
             <Textarea name="description" defaultValue={group.description} rows={4} className="mt-1.5 border-nu-ink/15 bg-transparent resize-none" />
           </div>
           <div>
-            <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">최대 인원 (2~200)</Label>
+            <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">최대 인원 (2~200)</Label>
             <Input name="maxMembers" type="number" defaultValue={group.max_members} min={2} max={200} className="mt-1.5 border-nu-ink/15 bg-transparent w-32" />
           </div>
 
           {/* External integrations */}
           <div className="border-t border-nu-ink/[0.06] pt-5 mt-2">
-            <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink block mb-4">외부 연동</span>
+            <span className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-pink block mb-4">외부 연동</span>
             <div className="flex flex-col gap-4">
               <div>
-                <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">카카오톡 오픈채팅 URL</Label>
+                <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">카카오톡 오픈채팅 URL</Label>
                 <Input name="kakao_chat_url" defaultValue={group.kakao_chat_url || ""} placeholder="https://open.kakao.com/o/..." className="mt-1.5 border-nu-ink/15 bg-transparent" />
               </div>
               <div>
-                <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">Google Drive URL</Label>
+                <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">Google Drive URL</Label>
                 <Input name="google_drive_url" defaultValue={group.google_drive_url || ""} placeholder="https://drive.google.com/drive/folders/..." className="mt-1.5 border-nu-ink/15 bg-transparent" />
               </div>
             </div>
           </div>
 
-          <Button type="submit" disabled={loading} className="self-start bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[11px] uppercase tracking-widest">
+          <Button type="submit" disabled={loading} className="self-start bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[13px] uppercase tracking-widest">
             {loading ? "저장 중..." : "저장"}
           </Button>
         </form>
@@ -371,7 +371,7 @@ export default function GroupSettingsPage() {
       <div className="bg-nu-white border border-nu-ink/[0.08] p-8 mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-head text-lg font-extrabold">와셔 ({activeMembers.length})</h2>
-          <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">매니저는 일정·파일·와셔 관리 가능</p>
+          <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">매니저는 일정·파일·와셔 관리 가능</p>
         </div>
         <div className="flex flex-col divide-y divide-nu-ink/5">
           {activeMembers.map((m) => {
@@ -387,13 +387,13 @@ export default function GroupSettingsPage() {
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium">{m.profile?.nickname}</p>
                       {isCurrentHost && (
-                        <span className="font-mono-nu text-[8px] uppercase tracking-widest bg-nu-pink text-white px-1.5 py-0.5">호스트</span>
+                        <span className="font-mono-nu text-[10px] uppercase tracking-widest bg-nu-pink text-white px-1.5 py-0.5">호스트</span>
                       )}
                       {isModerator && (
-                        <span className="font-mono-nu text-[8px] uppercase tracking-widest bg-nu-blue/10 text-nu-blue px-1.5 py-0.5">매니저</span>
+                        <span className="font-mono-nu text-[10px] uppercase tracking-widest bg-nu-blue/10 text-nu-blue px-1.5 py-0.5">매니저</span>
                       )}
                     </div>
-                    <p className="text-[10px] text-nu-muted">
+                    <p className="text-[12px] text-nu-muted">
                       {isCurrentHost ? "너트 호스트" : isModerator ? "너트 매니저 · 일정/파일/와셔 관리 가능" : "일반 와셔"}
                       {m.profile?.email && ` · ${m.profile.email}`}
                     </p>
@@ -403,7 +403,7 @@ export default function GroupSettingsPage() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handlePromoteManager(m.user_id, isModerator)}
-                      className={`font-mono-nu text-[9px] uppercase tracking-widest px-2.5 py-1.5 border transition-colors ${
+                      className={`font-mono-nu text-[11px] uppercase tracking-widest px-2.5 py-1.5 border transition-colors ${
                         isModerator
                           ? "border-nu-muted/30 text-nu-muted hover:border-nu-red/40 hover:text-nu-red"
                           : "border-nu-blue/30 text-nu-blue hover:bg-nu-blue hover:text-white"
@@ -444,13 +444,13 @@ export default function GroupSettingsPage() {
                   </div>
                   <div>
                     <p className="text-sm font-medium">{m.profile?.nickname || "Unknown"}</p>
-                    <p className="text-[10px] text-nu-amber">가입 신청 대기중</p>
+                    <p className="text-[12px] text-nu-amber">가입 신청 대기중</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleApproveMember(m.user_id, m.profile?.nickname || "와셔")}
-                    className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 bg-nu-blue text-white hover:bg-nu-blue/90 transition-colors flex items-center gap-1"
+                    className="font-mono-nu text-[12px] uppercase tracking-widest px-3 py-1.5 bg-nu-blue text-white hover:bg-nu-blue/90 transition-colors flex items-center gap-1"
                     id={`approve-${m.user_id}`}
                   >
                     <UserPlus size={12} /> 승인
@@ -474,7 +474,7 @@ export default function GroupSettingsPage() {
         <p className="text-sm text-nu-gray mb-4">너트를 삭제하면 모든 일정과 와셔 데이터가 함께 삭제됩니다.</p>
         <button
           onClick={handleDelete}
-          className="font-mono-nu text-[11px] uppercase tracking-widest px-6 py-3 border border-nu-red text-nu-red hover:bg-nu-red hover:text-white transition-colors"
+          className="font-mono-nu text-[13px] uppercase tracking-widest px-6 py-3 border border-nu-red text-nu-red hover:bg-nu-red hover:text-white transition-colors"
         >
           너트 삭제
         </button>

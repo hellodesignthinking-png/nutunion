@@ -154,13 +154,13 @@ export default function NotificationsPage() {
         <div className="flex items-center justify-end gap-3 mb-8">
            {unreadCount > 0 && (
              <button onClick={markAllRead}
-               className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-blue hover:bg-nu-blue/5 px-4 py-2 border border-nu-blue/20 transition-all">
+               className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-blue hover:bg-nu-blue/5 px-4 py-2 border border-nu-blue/20 transition-all">
                <CheckCheck size={12} className="inline mr-1" /> Mark All Read
              </button>
            )}
            {notifications.length > 0 && (
              <button onClick={deleteAll}
-               className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-muted hover:text-nu-red px-4 py-2 border border-nu-ink/10 hover:border-nu-red/30 transition-all">
+               className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-muted hover:text-nu-red px-4 py-2 border border-nu-ink/10 hover:border-nu-red/30 transition-all">
                <Trash2 size={12} className="inline mr-1" /> Clear All
              </button>
            )}
@@ -170,7 +170,7 @@ export default function NotificationsPage() {
       <div className="flex border-b border-nu-ink/[0.08] mb-6">
         {(["all", "unread"] as const).map((f) => (
           <button key={f} onClick={() => setFilter(f)}
-            className={`font-mono-nu text-[11px] uppercase tracking-widest px-5 py-2.5 border-b-2 transition-colors ${filter === f ? "border-nu-pink text-nu-pink" : "border-transparent text-nu-muted hover:text-nu-ink"}`}>
+            className={`font-mono-nu text-[13px] uppercase tracking-widest px-5 py-2.5 border-b-2 transition-colors ${filter === f ? "border-nu-pink text-nu-pink" : "border-transparent text-nu-muted hover:text-nu-ink"}`}>
             {f === "all" ? `전체 (${notifications.length})` : `읽지 않음 (${unreadCount})`}
           </button>
         ))}
@@ -202,7 +202,7 @@ export default function NotificationsPage() {
         <div className="space-y-6">
           {groups.map((group) => (
             <div key={group}>
-              <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-3">{group}</p>
+              <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-3">{group}</p>
               <div className="space-y-2">
                 {grouped[group].map((n) => {
                   const cfg    = getConfig(n.type);
@@ -220,7 +220,7 @@ export default function NotificationsPage() {
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <span className={`font-mono-nu text-[8px] uppercase tracking-widest px-1.5 py-0.5 ${cfg.bg} ${cfg.color}`}>
+                          <span className={`font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 ${cfg.bg} ${cfg.color}`}>
                             {cfg.label}
                           </span>
                           {!n.is_read && <span className="w-1.5 h-1.5 rounded-full bg-nu-pink shrink-0" />}
@@ -229,7 +229,7 @@ export default function NotificationsPage() {
                         {(n as any).body && (
                           <p className="text-xs text-nu-gray mt-0.5 line-clamp-2">{(n as any).body}</p>
                         )}
-                        <p className="font-mono-nu text-[10px] text-nu-muted mt-1.5">{timeAgo(n.created_at)}</p>
+                        <p className="font-mono-nu text-[12px] text-nu-muted mt-1.5">{timeAgo(n.created_at)}</p>
                       </div>
                       {/* Actions */}
                       <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">

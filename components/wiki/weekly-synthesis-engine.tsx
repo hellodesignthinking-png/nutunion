@@ -344,13 +344,60 @@ export function WeeklySynthesisEngine({ groupId, isHost }: { groupId: string; is
       }
     }
 
+    // ── Auto-archive source resources from suggestions ──
+    let archivedResources = 0;
+    try {
+      const now = new Date();
+      const day = now.getDay();
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+      const weekStart = monday.toISOString().split("T")[0];
+
+      for (const idx of Array.from(selectedPages)) {
+        const suggestion = result.wikiPageSuggestions[idx];
+        // Save sourceResources as wiki_weekly_resources linked to the saved page
+        const savedPage = newlyCreated.find(p => p.title === suggestion.title);
+        const linkedPageId = savedPage?.id || null;
+
+        if (suggestion.sourceResources && suggestion.sourceResources.length > 0) {
+          for (const resourceTitle of suggestion.sourceResources) {
+            // Skip if it looks like a bare description (not a URL)
+            const isUrl = resourceTitle.startsWith("http") || resourceTitle.includes("://");
+            await supabase.from("wiki_weekly_resources").upsert(
+              {
+                group_id: groupId,
+                week_start: weekStart,
+                shared_by: user.id,
+                title: resourceTitle,
+                url: isUrl ? resourceTitle : null,
+                resource_type: isUrl ? "link" : "article",
+                description: `'${suggestion.title}' 페이지의 출처 자료`,
+                linked_wiki_page_id: linkedPageId,
+                auto_summary: `${suggestion.keyInsight || ""}`.slice(0, 500),
+              },
+              { onConflict: "group_id,url,week_start", ignoreDuplicates: true }
+            );
+            archivedResources++;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Source resource archiving error:", err);
+    }
+
     setCreatedPages(newlyCreated);
     setApplyingIndex(null);
     setPhase("done");
     const parts = [`${created}개 탭 페이지가 생성/업데이트 되었습니다`];
-    if (linkedCount > 0) parts.push(`${linkedCount}개 교차 참조가 연결되었습니다`);
+    if (linkedCount > 0) parts.push(`${linkedCount}개 교차 참조`);
+    if (archivedResources > 0) parts.push(`${archivedResources}개 자료 자동 보관`);
     if (failed > 0) parts.push(`${failed}개 실패`);
     toast.success(parts.join(" · "));
+
+    // Notify UnifiedTabView to reload
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("wiki-pages-updated", { detail: { groupId } }));
+    }
   }
 
   function togglePage(idx: number) {

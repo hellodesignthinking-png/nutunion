@@ -191,7 +191,7 @@ export function SkillBadgeDisplay({
         <span className="font-head text-sm font-bold text-nu-ink">
           스킬 배지
         </span>
-        <span className="font-mono-nu text-[9px] bg-nu-pink/10 text-nu-pink px-2 py-0.5 font-bold uppercase tracking-widest">
+        <span className="font-mono-nu text-[11px] bg-nu-pink/10 text-nu-pink px-2 py-0.5 font-bold uppercase tracking-widest">
           {earnedCount}/{badges.length}
         </span>
       </div>
@@ -201,7 +201,7 @@ export function SkillBadgeDisplay({
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setSelectedCategory(null)}
-            className={`px-3 py-1.5 font-mono-nu text-[9px] font-bold uppercase tracking-widest transition-all border border-nu-ink/[0.08] ${
+            className={`px-3 py-1.5 font-mono-nu text-[11px] font-bold uppercase tracking-widest transition-all border border-nu-ink/[0.08] ${
               selectedCategory === null
                 ? "bg-nu-pink text-white border-nu-pink"
                 : "bg-white text-nu-ink hover:border-nu-pink/30"
@@ -213,7 +213,7 @@ export function SkillBadgeDisplay({
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 font-mono-nu text-[9px] font-bold uppercase tracking-widest transition-all border border-nu-ink/[0.08] ${
+              className={`px-3 py-1.5 font-mono-nu text-[11px] font-bold uppercase tracking-widest transition-all border border-nu-ink/[0.08] ${
                 selectedCategory === cat
                   ? "bg-nu-pink text-white border-nu-pink"
                   : "bg-white text-nu-ink hover:border-nu-pink/30"
@@ -265,7 +265,7 @@ export function SkillBadgeDisplay({
                   {isEarned ? (
                     <div className="flex items-center gap-1">
                       <Award size={12} className="text-nu-pink" />
-                      <span className="font-mono-nu text-[7px] font-bold text-nu-pink uppercase">
+                      <span className="font-mono-nu text-[9px] font-bold text-nu-pink uppercase">
                         Earned
                       </span>
                     </div>
@@ -283,24 +283,24 @@ export function SkillBadgeDisplay({
                 </h3>
 
                 {/* Description */}
-                <p className="text-[9px] text-nu-graphite mb-3 leading-relaxed">
+                <p className="text-[11px] text-nu-graphite mb-3 leading-relaxed">
                   {badgeData.description}
                 </p>
 
                 {/* Award Date or Progress */}
                 {isEarned && awardedAt ? (
                   <div className="mb-3">
-                    <span className="font-mono-nu text-[8px] text-nu-muted">
+                    <span className="font-mono-nu text-[10px] text-nu-muted">
                       {new Date(awardedAt).toLocaleDateString("ko-KR")}
                     </span>
                   </div>
                 ) : !isEarned ? (
                   <div className="mb-3 space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="font-mono-nu text-[8px] font-bold text-nu-ink">
+                      <span className="font-mono-nu text-[10px] font-bold text-nu-ink">
                         진행도
                       </span>
-                      <span className="font-mono-nu text-[8px] text-nu-muted">
+                      <span className="font-mono-nu text-[10px] text-nu-muted">
                         {endorserCount}/{badgeData.requirement_count}
                       </span>
                     </div>
@@ -310,7 +310,7 @@ export function SkillBadgeDisplay({
                         style={{ width: `${progressPercent}%` }}
                       />
                     </div>
-                    <p className="font-mono-nu text-[7px] text-nu-muted">
+                    <p className="font-mono-nu text-[9px] text-nu-muted">
                       {badgeData.requirement_count - endorserCount} 보증 남음
                     </p>
                   </div>
@@ -320,7 +320,7 @@ export function SkillBadgeDisplay({
                 {endorserCount > 0 && (
                   <div className="flex items-center gap-1 pt-2 border-t border-nu-ink/5">
                     <Users size={12} className="text-nu-muted" />
-                    <span className="font-mono-nu text-[8px] text-nu-muted font-bold">
+                    <span className="font-mono-nu text-[10px] text-nu-muted font-bold">
                       {endorserCount} {isEarned ? "보증자" : "보증"}
                     </span>
                   </div>
@@ -331,7 +331,7 @@ export function SkillBadgeDisplay({
         </div>
       ) : (
         <div className="py-8 text-center">
-          <p className="text-[11px] text-nu-muted">
+          <p className="text-[13px] text-nu-muted">
             {showAll
               ? "아직 배지가 없습니다"
               : "취득한 배지가 없습니다"}
@@ -343,7 +343,7 @@ export function SkillBadgeDisplay({
       {showAll && badges.length === 0 && (
         <div className="py-8 border-2 border-dashed border-nu-ink/10 text-center">
           <Award size={32} className="mx-auto text-nu-muted/30 mb-2" />
-          <p className="text-[11px] text-nu-muted">
+          <p className="text-[13px] text-nu-muted">
             사용 가능한 배지가 없습니다
           </p>
         </div>

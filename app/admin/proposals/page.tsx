@@ -64,7 +64,7 @@ export default async function AdminProposalsPage() {
       {/* Status summary */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
         <div className="bg-nu-white border border-nu-ink/[0.08] p-4">
-          <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-1">전체</p>
+          <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-1">전체</p>
           <p className="font-head text-2xl font-extrabold">{proposals.length}</p>
         </div>
         {[
@@ -75,7 +75,7 @@ export default async function AdminProposalsPage() {
           { key: "rejected", label: "반려", color: "text-red-500" },
         ].map(s => (
           <div key={s.key} className="bg-nu-white border border-nu-ink/[0.08] p-4">
-            <p className={`font-mono-nu text-[10px] uppercase tracking-widest mb-1 ${s.color}`}>{s.label}</p>
+            <p className={`font-mono-nu text-[12px] uppercase tracking-widest mb-1 ${s.color}`}>{s.label}</p>
             <p className="font-head text-2xl font-extrabold">{statusCounts[s.key] || 0}</p>
           </div>
         ))}

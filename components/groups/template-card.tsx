@@ -136,7 +136,7 @@ export function TemplateCard({
         <div className="relative z-10 p-6">
           {/* Tag badge */}
           <div className="flex items-center gap-2 mb-5">
-            <span className="font-mono-nu text-[8px] font-black uppercase tracking-[0.2em] px-2.5 py-1 bg-white/10 text-white/90 border border-white/10 backdrop-blur-sm">
+            <span className="font-mono-nu text-[10px] font-black uppercase tracking-[0.2em] px-2.5 py-1 bg-white/10 text-white/90 border border-white/10 backdrop-blur-sm">
               <Sparkles size={8} className="inline -mt-0.5 mr-1 opacity-70" />
               {tag}
             </span>
@@ -153,22 +153,22 @@ export function TemplateCard({
           </div>
 
           {/* Description */}
-          <p className="text-[11px] leading-relaxed text-white/55 mb-6 pl-[52px]">
+          <p className="text-[13px] leading-relaxed text-white/55 mb-6 pl-[52px]">
             {description}
           </p>
 
           {/* Meta info */}
           <div className="flex items-center gap-4 mb-5 pl-[52px]">
-            <span className="flex items-center gap-1.5 font-mono-nu text-[9px] text-white/40">
+            <span className="flex items-center gap-1.5 font-mono-nu text-[11px] text-white/40">
               <Users size={10} /> {details.groupSize}
             </span>
-            <span className="flex items-center gap-1.5 font-mono-nu text-[9px] text-white/40">
+            <span className="flex items-center gap-1.5 font-mono-nu text-[11px] text-white/40">
               <Clock size={10} /> {details.duration}
             </span>
           </div>
 
           {/* CTA */}
-          <div className="flex items-center gap-2 pl-[52px] font-mono-nu text-[10px] font-black uppercase tracking-widest text-white/80 group-hover:text-white transition-colors">
+          <div className="flex items-center gap-2 pl-[52px] font-mono-nu text-[12px] font-black uppercase tracking-widest text-white/80 group-hover:text-white transition-colors">
             템플릿 상세보기
             <ArrowRight
               size={12}
@@ -209,7 +209,7 @@ export function TemplateCard({
               <div className="relative z-10 p-8">
                 <div className="flex items-start justify-between mb-5">
                   <div className="flex-1">
-                    <span className="font-mono-nu text-[8px] font-black uppercase tracking-[0.2em] px-2.5 py-1 bg-white/15 text-white/90 border border-white/15 inline-block mb-5">
+                    <span className="font-mono-nu text-[10px] font-black uppercase tracking-[0.2em] px-2.5 py-1 bg-white/15 text-white/90 border border-white/15 inline-block mb-5">
                       <Sparkles size={8} className="inline -mt-0.5 mr-1 opacity-70" />
                       {tag}
                     </span>
@@ -237,7 +237,7 @@ export function TemplateCard({
                 {/* Quick Stats */}
                 <div className="flex items-center gap-6 mt-6 pt-5 border-t border-white/10">
                   <div>
-                    <p className="font-mono-nu text-[8px] uppercase tracking-[0.15em] text-white/35 mb-1">
+                    <p className="font-mono-nu text-[10px] uppercase tracking-[0.15em] text-white/35 mb-1">
                       권장 규모
                     </p>
                     <p className="font-head text-lg font-bold text-white flex items-center gap-2">
@@ -247,7 +247,7 @@ export function TemplateCard({
                   </div>
                   <div className="w-px h-10 bg-white/10" />
                   <div>
-                    <p className="font-mono-nu text-[8px] uppercase tracking-[0.15em] text-white/35 mb-1">
+                    <p className="font-mono-nu text-[10px] uppercase tracking-[0.15em] text-white/35 mb-1">
                       예상 기간
                     </p>
                     <p className="font-head text-lg font-bold text-white flex items-center gap-2">
@@ -263,7 +263,7 @@ export function TemplateCard({
             <div className="p-8">
               {/* Features */}
               <div className="mb-8">
-                <h3 className="font-mono-nu text-[10px] font-bold uppercase tracking-[0.15em] text-nu-muted mb-5">
+                <h3 className="font-mono-nu text-[12px] font-bold uppercase tracking-[0.15em] text-nu-muted mb-5">
                   포함된 기능
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -286,7 +286,7 @@ export function TemplateCard({
               {/* CTA */}
               <button
                 onClick={handleStartTemplate}
-                className={`w-full relative overflow-hidden font-mono-nu text-[11px] font-bold tracking-[0.08em] uppercase px-6 py-4 text-white border-0 transition-all duration-300 hover:shadow-lg`}
+                className={`w-full relative overflow-hidden font-mono-nu text-[13px] font-bold tracking-[0.08em] uppercase px-6 py-4 text-white border-0 transition-all duration-300 hover:shadow-lg`}
               >
                 <div className={`absolute inset-0 bg-gradient-to-r ${theme.gradient}`} />
                 <span className="relative z-10 flex items-center justify-center gap-2">

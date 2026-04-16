@@ -89,7 +89,7 @@ export function EventRsvpButton({ eventId, userId, maxAttendees }: EventRsvpButt
   return (
     <div className="flex items-center justify-between gap-4 w-full">
       {/* Attendee count */}
-      <div className="flex items-center gap-1.5 font-mono-nu text-[11px] text-nu-muted">
+      <div className="flex items-center gap-1.5 font-mono-nu text-[13px] text-nu-muted">
         <Users size={12} />
         <span>{attendingCount}{maxAttendees ? `/${maxAttendees}` : ""}명 참여</span>
       </div>
@@ -99,7 +99,7 @@ export function EventRsvpButton({ eventId, userId, maxAttendees }: EventRsvpButt
         <button
           onClick={() => handleRsvp("attending")}
           disabled={loading || (isFull && !isAttending)}
-          className={`inline-flex items-center gap-1 font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 transition-all border ${
+          className={`inline-flex items-center gap-1 font-mono-nu text-[12px] uppercase tracking-widest px-3 py-1.5 transition-all border ${
             isAttending
               ? "bg-green-500 border-green-500 text-white"
               : "border-nu-ink/15 text-nu-graphite hover:border-green-400 hover:text-green-600"
@@ -112,7 +112,7 @@ export function EventRsvpButton({ eventId, userId, maxAttendees }: EventRsvpButt
         <button
           onClick={() => handleRsvp("maybe")}
           disabled={loading}
-          className={`inline-flex items-center gap-1 font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 transition-all border ${
+          className={`inline-flex items-center gap-1 font-mono-nu text-[12px] uppercase tracking-widest px-3 py-1.5 transition-all border ${
             status === "maybe"
               ? "bg-nu-amber/80 border-nu-amber text-white"
               : "border-nu-ink/15 text-nu-graphite hover:border-nu-amber hover:text-nu-amber"
@@ -125,7 +125,7 @@ export function EventRsvpButton({ eventId, userId, maxAttendees }: EventRsvpButt
         <button
           onClick={() => handleRsvp("declined")}
           disabled={loading}
-          className={`inline-flex items-center gap-1 font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 transition-all border ${
+          className={`inline-flex items-center gap-1 font-mono-nu text-[12px] uppercase tracking-widest px-3 py-1.5 transition-all border ${
             status === "declined"
               ? "bg-nu-red/70 border-nu-red/70 text-white"
               : "border-nu-ink/15 text-nu-graphite hover:border-red-400 hover:text-red-500"

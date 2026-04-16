@@ -124,7 +124,7 @@ export default function EditContentPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-8 py-12">
-      <Link href="/admin/content" className="inline-flex items-center gap-1 font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted no-underline hover:text-nu-ink mb-6">
+      <Link href="/admin/content" className="inline-flex items-center gap-1 font-mono-nu text-[13px] uppercase tracking-widest text-nu-muted no-underline hover:text-nu-ink mb-6">
         <ArrowLeft size={14} /> 콘텐츠 목록
       </Link>
 
@@ -133,11 +133,11 @@ export default function EditContentPage() {
           <h1 className="font-head text-3xl font-extrabold text-nu-ink">
             {sectionLabels[section] || section}
           </h1>
-          <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mt-1">
+          <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mt-1">
             {page} / {section}
           </p>
         </div>
-        <Button onClick={handleSave} disabled={loading} className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[11px] uppercase tracking-widest inline-flex items-center gap-2">
+        <Button onClick={handleSave} disabled={loading} className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[13px] uppercase tracking-widest inline-flex items-center gap-2">
           <Save size={14} />
           {loading ? "저장 중..." : "저장"}
         </Button>
@@ -146,7 +146,7 @@ export default function EditContentPage() {
       <div className="flex flex-col gap-4">
         {items.map((item) => (
           <div key={item.id} className="bg-nu-white border border-nu-ink/[0.08] p-5">
-            <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray mb-2 flex items-center gap-2">
+            <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray mb-2 flex items-center gap-2">
               {isImageField(item) && <ImageIcon size={12} className="text-nu-blue" />}
               {isVideoField(item) && <Video size={12} className="text-nu-pink" />}
               {item.field_key}
@@ -165,7 +165,7 @@ export default function EditContentPage() {
                       className="border-nu-ink/15 bg-transparent"
                     />
                   </div>
-                  <label className="shrink-0 cursor-pointer font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2.5 border border-nu-ink/15 text-nu-graphite hover:bg-nu-cream transition-colors inline-flex items-center gap-1.5">
+                  <label className="shrink-0 cursor-pointer font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2.5 border border-nu-ink/15 text-nu-graphite hover:bg-nu-cream transition-colors inline-flex items-center gap-1.5">
                     <Upload size={12} />
                     {uploading === item.id ? "업로드중..." : "파일선택"}
                     <input
@@ -195,7 +195,7 @@ export default function EditContentPage() {
                   className="border-nu-ink/15 bg-transparent"
                 />
                 {item.field_value && (
-                  <p className="font-mono-nu text-[9px] text-green-600 mt-1.5">
+                  <p className="font-mono-nu text-[11px] text-green-600 mt-1.5">
                     영상 URL이 설정되었습니다. 저장하면 랜딩페이지에 반영됩니다.
                   </p>
                 )}
@@ -225,7 +225,7 @@ export default function EditContentPage() {
         ))}
       </div>
 
-      <button onClick={handleAddField} className="mt-4 font-mono-nu text-[11px] uppercase tracking-widest text-nu-pink hover:underline">
+      <button onClick={handleAddField} className="mt-4 font-mono-nu text-[13px] uppercase tracking-widest text-nu-pink hover:underline">
         + 새 필드 추가
       </button>
     </div>

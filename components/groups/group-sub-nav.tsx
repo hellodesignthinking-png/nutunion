@@ -67,7 +67,7 @@ export function GroupSubNav({ groupId, groupName, isHost = false, isManager = fa
               <Link
                 key={item.key}
                 href={`${basePath}${item.href}`}
-                className={`shrink-0 flex items-center gap-1.5 px-3 py-4 sm:py-3.5 font-mono-nu text-[10px] uppercase tracking-widest no-underline transition-all border-b-[3px] ${
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-4 sm:py-3.5 font-mono-nu text-[12px] uppercase tracking-widest no-underline transition-all border-b-[3px] ${
                   active
                     ? "text-nu-pink border-nu-pink font-bold bg-nu-pink/5"
                     : "text-nu-muted border-transparent hover:text-nu-ink hover:border-nu-ink/20 hover:bg-nu-cream/30"
@@ -83,7 +83,7 @@ export function GroupSubNav({ groupId, groupName, isHost = false, isManager = fa
           {(isHost || isManager) && (
             <Link
               href={`${basePath}/settings`}
-              className={`shrink-0 flex items-center gap-1.5 px-3 py-4 sm:py-3.5 font-mono-nu text-[10px] uppercase tracking-widest no-underline transition-all border-b-[3px] ${
+              className={`shrink-0 flex items-center gap-1.5 px-3 py-4 sm:py-3.5 font-mono-nu text-[12px] uppercase tracking-widest no-underline transition-all border-b-[3px] ${
                 isActive("/settings")
                   ? "text-nu-pink border-nu-pink font-bold bg-nu-pink/5"
                   : "text-nu-muted border-transparent hover:text-nu-ink hover:border-nu-ink/20 hover:bg-nu-cream/30"

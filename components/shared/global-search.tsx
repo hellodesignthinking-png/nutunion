@@ -133,8 +133,8 @@ export function GlobalSearch() {
       className="flex items-center gap-2 px-3 py-1.5 text-nu-muted hover:text-nu-ink bg-nu-ink/[0.03] hover:bg-nu-ink/[0.06] border border-nu-ink/10 transition-colors"
     >
       <Search size={14} />
-      <span className="font-mono-nu text-[10px] tracking-wider hidden sm:inline">검색</span>
-      <kbd className="font-mono-nu text-[8px] text-nu-muted/60 bg-nu-ink/5 border border-nu-ink/10 px-1.5 py-0.5 hidden sm:inline">⌘K</kbd>
+      <span className="font-mono-nu text-[12px] tracking-wider hidden sm:inline">검색</span>
+      <kbd className="font-mono-nu text-[10px] text-nu-muted/60 bg-nu-ink/5 border border-nu-ink/10 px-1.5 py-0.5 hidden sm:inline">⌘K</kbd>
     </button>
   );
 
@@ -157,7 +157,7 @@ export function GlobalSearch() {
               placeholder="와셔, 너트, 볼트 검색..."
               className="flex-1 bg-transparent text-nu-ink text-sm font-medium placeholder:text-nu-muted/50 focus:outline-none"
             />
-            <kbd className="font-mono-nu text-[9px] text-nu-muted bg-nu-cream/50 border border-nu-ink/10 px-2 py-1">
+            <kbd className="font-mono-nu text-[11px] text-nu-muted bg-nu-cream/50 border border-nu-ink/10 px-2 py-1">
               ESC
             </kbd>
           </div>
@@ -167,7 +167,7 @@ export function GlobalSearch() {
             {loading && (
               <div className="px-5 py-8 text-center">
                 <div className="w-5 h-5 border-2 border-nu-pink border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">Searching...</p>
+                <p className="font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest">Searching...</p>
               </div>
             )}
 
@@ -175,7 +175,7 @@ export function GlobalSearch() {
               <div className="px-5 py-8 text-center">
                 <Search size={24} className="text-nu-muted/30 mx-auto mb-3" />
                 <p className="text-sm font-medium text-nu-ink mb-1">"{query}"에 대한 검색 결과가 없습니다</p>
-                <p className="text-[11px] text-nu-muted mb-4">다른 키워드로 검색하거나, 아래 바로가기를 이용해보세요</p>
+                <p className="text-[13px] text-nu-muted mb-4">다른 키워드로 검색하거나, 아래 바로가기를 이용해보세요</p>
                 <div className="flex justify-center gap-2">
                   {[
                     { label: "너트 탐색", href: "/groups" },
@@ -185,7 +185,7 @@ export function GlobalSearch() {
                     <button
                       key={a.href}
                       onClick={() => { setOpen(false); router.push(a.href); }}
-                      className="font-mono-nu text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 border border-nu-ink/10 text-nu-muted hover:text-nu-ink hover:border-nu-ink/20 transition-colors"
+                      className="font-mono-nu text-[12px] font-bold uppercase tracking-wider px-3 py-1.5 border border-nu-ink/10 text-nu-muted hover:text-nu-ink hover:border-nu-ink/20 transition-colors"
                     >
                       {a.label}
                     </button>
@@ -213,9 +213,9 @@ export function GlobalSearch() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold text-nu-ink truncate">{r.title}</p>
-                        <p className="text-[10px] text-nu-muted truncate">{r.subtitle}</p>
+                        <p className="text-[12px] text-nu-muted truncate">{r.subtitle}</p>
                       </div>
-                      <span className={`font-mono-nu text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 border ${cfg.color} bg-current/5`}>
+                      <span className={`font-mono-nu text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 border ${cfg.color} bg-current/5`}>
                         {cfg.label}
                       </span>
                       <ArrowRight size={12} className="text-nu-muted/30" />
@@ -227,7 +227,7 @@ export function GlobalSearch() {
 
             {!loading && query.length < 2 && (
               <div className="px-5 py-6">
-                <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest mb-3">Quick Actions</p>
+                <p className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest mb-3">Quick Actions</p>
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { label: "너트 탐색", href: "/groups", icon: Hash },
@@ -238,7 +238,7 @@ export function GlobalSearch() {
                     <button
                       key={a.href}
                       onClick={() => { setOpen(false); router.push(a.href); }}
-                      className="flex items-center gap-2 px-3 py-2.5 text-[11px] font-medium text-nu-muted hover:text-nu-ink bg-nu-cream/20 hover:bg-nu-cream/40 transition-colors"
+                      className="flex items-center gap-2 px-3 py-2.5 text-[13px] font-medium text-nu-muted hover:text-nu-ink bg-nu-cream/20 hover:bg-nu-cream/40 transition-colors"
                     >
                       <a.icon size={14} /> {a.label}
                     </button>
@@ -251,14 +251,14 @@ export function GlobalSearch() {
           {/* Footer */}
           <div className="px-5 py-2.5 border-t border-nu-ink/5 flex items-center justify-between bg-nu-cream/10">
             <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1 font-mono-nu text-[8px] text-nu-muted">
-                <kbd className="px-1 py-0.5 bg-nu-ink/5 border border-nu-ink/10 text-[7px]">↑↓</kbd> 이동
+              <span className="flex items-center gap-1 font-mono-nu text-[10px] text-nu-muted">
+                <kbd className="px-1 py-0.5 bg-nu-ink/5 border border-nu-ink/10 text-[9px]">↑↓</kbd> 이동
               </span>
-              <span className="flex items-center gap-1 font-mono-nu text-[8px] text-nu-muted">
-                <kbd className="px-1 py-0.5 bg-nu-ink/5 border border-nu-ink/10 text-[7px]">↵</kbd> 선택
+              <span className="flex items-center gap-1 font-mono-nu text-[10px] text-nu-muted">
+                <kbd className="px-1 py-0.5 bg-nu-ink/5 border border-nu-ink/10 text-[9px]">↵</kbd> 선택
               </span>
             </div>
-            <span className="font-mono-nu text-[7px] text-nu-muted uppercase tracking-widest">
+            <span className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">
               Powered by nutunion
             </span>
           </div>

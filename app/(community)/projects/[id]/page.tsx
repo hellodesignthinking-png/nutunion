@@ -91,9 +91,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       {/* Detail Meta & Actions — constrained width */}
       <div className="max-w-6xl mx-auto px-4 md:px-8 pt-10 pb-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-0 border-b border-nu-ink/5 pb-6">
-          <div className="flex flex-wrap items-center gap-4 font-mono-nu text-[11px]">
+          <div className="flex flex-wrap items-center gap-4 font-mono-nu text-[13px]">
             {/* Prominent status badge */}
-            <span className={`font-mono-nu text-[11px] font-black uppercase tracking-[0.12em] px-4 py-2 inline-flex items-center gap-2 ${statusCfg.bg}`}>
+            <span className={`font-mono-nu text-[13px] font-black uppercase tracking-[0.12em] px-4 py-2 inline-flex items-center gap-2 ${statusCfg.bg}`}>
               {statusCfg.icon === "clock" && <Clock size={14} />}
               {statusCfg.icon === "check" && <CheckCircle2 size={14} />}
               {statusCfg.icon === "pencil" && <AlertCircle size={14} />}
@@ -121,7 +121,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <div className="flex flex-wrap gap-2">
             {/* Milestone quick progress (visible without entering tabs) */}
             {totalMilestones > 0 && (
-              <div className="flex items-center gap-2 px-4 py-2 border-[2px] border-nu-ink/10 font-mono-nu text-[10px] uppercase tracking-widest">
+              <div className="flex items-center gap-2 px-4 py-2 border-[2px] border-nu-ink/10 font-mono-nu text-[12px] uppercase tracking-widest">
                 <TrendingUp size={13} className="text-nu-pink" />
                 <span className="text-nu-ink font-bold">진행률 {milestoneProgressPct}%</span>
                 <span className="text-nu-muted">· 마일스톤 {completedMilestones}/{totalMilestones}</span>
@@ -131,19 +131,19 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             {/* Application button states */}
             {!isAdmin && applicationStatus === "pending" && (
               <div className="flex items-center gap-2">
-                <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-2.5 bg-amber-500 text-white inline-flex items-center gap-2">
+                <span className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-5 py-2.5 bg-amber-500 text-white inline-flex items-center gap-2">
                   <Clock size={14} /> 승인 대기 중
                 </span>
                 <CancelApplicationButton projectId={id} userId={user.id} />
               </div>
             )}
             {!isAdmin && applicationStatus === "approved" && (
-              <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-5 py-2.5 bg-green-600 text-white inline-flex items-center gap-2">
+              <span className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-5 py-2.5 bg-green-600 text-white inline-flex items-center gap-2">
                 <CheckCircle2 size={14} /> 참여중
               </span>
             )}
             {!isAdmin && applicationStatus === "rejected" && (
-              <Link href={`/projects/${id}/apply`} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-2.5 border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all inline-flex items-center gap-2">
+              <Link href={`/projects/${id}/apply`} className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-6 py-2.5 border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all inline-flex items-center gap-2">
                 다시 지원하기
               </Link>
             )}
@@ -153,7 +153,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               </Link>
             )}
             {isAdmin && (
-              <Link href={`/projects/${id}/settings`} className="font-mono-nu text-[11px] uppercase tracking-widest px-5 py-2.5 border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all inline-flex items-center gap-2">
+              <Link href={`/projects/${id}/settings`} className="font-mono-nu text-[13px] uppercase tracking-widest px-5 py-2.5 border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all inline-flex items-center gap-2">
                 <Settings size={14} /> 볼트 설정
               </Link>
             )}

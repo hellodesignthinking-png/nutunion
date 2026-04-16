@@ -143,7 +143,7 @@ export default function AdminMediaPage() {
             <p className="font-head text-sm font-bold text-nu-ink">
               {uploading ? "업로드 중..." : "클릭하여 파일 선택"}
             </p>
-            <p className="font-mono-nu text-[10px] text-nu-muted mt-1">
+            <p className="font-mono-nu text-[12px] text-nu-muted mt-1">
               JPG, PNG, GIF, SVG, MP4, WEBM (최대 50MB)
             </p>
           </div>
@@ -159,7 +159,7 @@ export default function AdminMediaPage() {
         <div className="bg-nu-white border border-nu-ink/[0.08] p-12 text-center">
           <ImageIcon size={32} className="mx-auto text-nu-muted mb-3" />
           <p className="text-nu-gray text-sm">업로드된 미디어가 없습니다</p>
-          <p className="font-mono-nu text-[10px] text-nu-muted mt-2">
+          <p className="font-mono-nu text-[12px] text-nu-muted mt-2">
             이미지나 영상을 업로드해주세요
           </p>
         </div>
@@ -191,10 +191,10 @@ export default function AdminMediaPage() {
 
               {/* Info */}
               <div className="p-3">
-                <p className="text-[11px] text-nu-graphite truncate font-medium">{f.name}</p>
+                <p className="text-[13px] text-nu-graphite truncate font-medium">{f.name}</p>
                 <div className="flex items-center justify-between mt-1">
-                  <span className="font-mono-nu text-[9px] text-nu-muted uppercase">{f.type}</span>
-                  <span className="font-mono-nu text-[9px] text-nu-muted">{formatSize(f.size)}</span>
+                  <span className="font-mono-nu text-[11px] text-nu-muted uppercase">{f.type}</span>
+                  <span className="font-mono-nu text-[11px] text-nu-muted">{formatSize(f.size)}</span>
                 </div>
               </div>
             </div>

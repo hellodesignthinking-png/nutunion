@@ -92,12 +92,12 @@ export function EventActions({
   if (myStatus === "registered") {
     return (
       <div className="bg-nu-white border border-nu-ink/[0.08] p-6">
-        <p className="font-mono-nu text-[11px] uppercase tracking-widest text-green-600 mb-3">
+        <p className="font-mono-nu text-[13px] uppercase tracking-widest text-green-600 mb-3">
           참석 확정
         </p>
         <button
           onClick={handleCancel}
-          className="font-mono-nu text-[11px] uppercase tracking-widest px-6 py-3 border border-nu-red/30 text-nu-red hover:bg-nu-red hover:text-white transition-colors"
+          className="font-mono-nu text-[13px] uppercase tracking-widest px-6 py-3 border border-nu-red/30 text-nu-red hover:bg-nu-red hover:text-white transition-colors"
         >
           참석 취소
         </button>
@@ -108,7 +108,7 @@ export function EventActions({
   if (myStatus === "waitlist") {
     return (
       <div className="bg-nu-white border border-nu-ink/[0.08] p-6">
-        <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-amber mb-3">
+        <p className="font-mono-nu text-[13px] uppercase tracking-widest text-nu-amber mb-3">
           대기 중
         </p>
         <p className="text-sm text-nu-gray mb-3">
@@ -116,7 +116,7 @@ export function EventActions({
         </p>
         <button
           onClick={handleCancel}
-          className="font-mono-nu text-[11px] uppercase tracking-widest px-6 py-3 border border-nu-ink/20 text-nu-graphite hover:bg-nu-ink hover:text-nu-paper transition-colors"
+          className="font-mono-nu text-[13px] uppercase tracking-widest px-6 py-3 border border-nu-ink/20 text-nu-graphite hover:bg-nu-ink hover:text-nu-paper transition-colors"
         >
           대기 취소
         </button>
@@ -129,7 +129,7 @@ export function EventActions({
       <div className="bg-nu-white border border-nu-ink/[0.08] p-6">
         <button
           onClick={handleRegister}
-          className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors"
+          className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors"
         >
           다시 참석하기
         </button>
@@ -141,7 +141,7 @@ export function EventActions({
     <div className="bg-nu-white border border-nu-ink/[0.08] p-6">
       <button
         onClick={handleRegister}
-        className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors"
+        className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors"
       >
         {maxAttendees && registeredCount >= maxAttendees
           ? "대기자 등록"

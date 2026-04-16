@@ -45,10 +45,10 @@ function FullRadar({ scores, endorseCounts }: { scores: number[]; endorseCounts:
         const ly = cy + (r + 22) * Math.sin(a);
         return (
           <g key={label}>
-            <text x={lx} y={ly - 5} textAnchor="middle" className="font-mono-nu text-[8px] font-black uppercase fill-nu-ink">
+            <text x={lx} y={ly - 5} textAnchor="middle" className="font-mono-nu text-[10px] font-black uppercase fill-nu-ink">
               {label}
             </text>
-            <text x={lx} y={ly + 6} textAnchor="middle" className="font-mono-nu text-[7px] fill-nu-muted">
+            <text x={lx} y={ly + 6} textAnchor="middle" className="font-mono-nu text-[9px] fill-nu-muted">
               {scores[i]}pt · {endorseCounts[i]}↑
             </text>
           </g>
@@ -330,13 +330,13 @@ export default function PublicPortfolioPage() {
             <div className="flex items-center justify-between gap-2 mb-6">
               <div className="flex items-center gap-2">
                 <Shield size={14} className="text-nu-pink" />
-                <span className="font-mono-nu text-[9px] font-black uppercase tracking-[0.25em] text-nu-pink">
+                <span className="font-mono-nu text-[11px] font-black uppercase tracking-[0.25em] text-nu-pink">
                   Verified_Portfolio · nutunion.co.kr
                 </span>
               </div>
               <button
                 onClick={handlePrint}
-                className="no-print font-mono-nu text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 border border-nu-paper/30 text-nu-paper hover:bg-nu-paper/10 transition-all flex items-center gap-1"
+                className="no-print font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 border border-nu-paper/30 text-nu-paper hover:bg-nu-paper/10 transition-all flex items-center gap-1"
               >
                 <Printer size={12} /> PDF
               </button>
@@ -355,7 +355,7 @@ export default function PublicPortfolioPage() {
             {/* Badges */}
             <div className="flex flex-wrap gap-2 mb-6">
               {badges.map(b => (
-                <span key={b} className="font-mono-nu text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 bg-nu-paper/10 border border-nu-paper/10 text-nu-paper">
+                <span key={b} className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 bg-nu-paper/10 border border-nu-paper/10 text-nu-paper">
                   {b}
                 </span>
               ))}
@@ -373,7 +373,7 @@ export default function PublicPortfolioPage() {
                 <div key={s.label} className="text-center p-3 bg-nu-paper/5 border border-nu-paper/10">
                   <s.icon size={14} className="mx-auto text-nu-paper/40 mb-1" />
                   <p className="font-head text-lg font-extrabold">{s.value}</p>
-                  <p className="font-mono-nu text-[7px] uppercase tracking-widest text-nu-paper/40">{s.label}</p>
+                  <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-paper/40">{s.label}</p>
                 </div>
               ))}
             </div>
@@ -389,7 +389,7 @@ export default function PublicPortfolioPage() {
               <h2 className="font-head text-lg font-bold text-nu-ink flex items-center gap-2">
                 <TrendingUp size={18} className="text-nu-pink" /> 역량 레이더
               </h2>
-              <span className="font-mono-nu text-[10px] bg-nu-pink/10 text-nu-pink px-2 py-1 font-bold uppercase">
+              <span className="font-mono-nu text-[12px] bg-nu-pink/10 text-nu-pink px-2 py-1 font-bold uppercase">
                 AVG {avgScore}pt
               </span>
             </div>
@@ -404,23 +404,23 @@ export default function PublicPortfolioPage() {
             <div className="bg-nu-ink text-nu-paper p-5">
               <div className="flex items-center gap-2 mb-3">
                 <Shield size={16} className="text-nu-blue" />
-                <span className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-blue">
+                <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-blue">
                   Trust Verification
                 </span>
               </div>
-              <p className="text-[11px] text-nu-paper/70 leading-relaxed mb-3">
+              <p className="text-[13px] text-nu-paper/70 leading-relaxed mb-3">
                 이 데이터는 넛유니온 생태계 내 <span className="text-nu-paper font-bold">{stats.meetings + stats.posts + stats.projects + stats.resources}건</span>의 실제 활동으로 검증되었습니다.
               </p>
               <div className="flex items-center gap-2">
                 <CheckCircle2 size={12} className="text-green-400" />
-                <span className="font-mono-nu text-[8px] text-nu-paper/50 uppercase tracking-widest">Verified by nutunion · {new Date().getFullYear()}</span>
+                <span className="font-mono-nu text-[10px] text-nu-paper/50 uppercase tracking-widest">Verified by nutunion · {new Date().getFullYear()}</span>
               </div>
             </div>
 
             {/* Share */}
             <button
               onClick={handleCopyLink}
-              className="w-full font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-3 border-[2px] border-nu-ink text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-all flex items-center justify-center gap-2"
+              className="w-full font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-3 border-[2px] border-nu-ink text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-all flex items-center justify-center gap-2"
             >
               <Share2 size={14} /> 포트폴리오 링크 공유하기
             </button>
@@ -452,7 +452,7 @@ export default function PublicPortfolioPage() {
                   <div className="p-4">
                     {/* Category Badge */}
                     <div className="mb-3">
-                      <span className={`inline-block font-mono-nu text-[8px] font-bold uppercase tracking-widest px-2 py-1 border-[1px] ${
+                      <span className={`inline-block font-mono-nu text-[10px] font-bold uppercase tracking-widest px-2 py-1 border-[1px] ${
                         item.source === "nutunion"
                           ? "border-nu-blue/30 bg-nu-blue/5 text-nu-blue"
                           : "border-nu-ink/20 bg-nu-ink/5 text-nu-ink/60"
@@ -466,7 +466,7 @@ export default function PublicPortfolioPage() {
                     <p className="text-[12px] text-nu-muted mb-3 line-clamp-2">{item.description || "No description"}</p>
 
                     {/* Date Range */}
-                    <p className="font-mono-nu text-[10px] text-nu-muted mb-3">
+                    <p className="font-mono-nu text-[12px] text-nu-muted mb-3">
                       {formatDate(item.started_at)} {item.ended_at ? `~ ${formatDate(item.ended_at)}` : "~ 진행 중"}
                     </p>
 
@@ -474,7 +474,7 @@ export default function PublicPortfolioPage() {
                     {item.tags && item.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mb-3">
                         {item.tags.slice(0, 3).map((tag: string, ti: number) => (
-                          <span key={ti} className="font-mono-nu text-[9px] px-2 py-0.5 bg-nu-cream border border-nu-ink/20 text-nu-ink/70 rounded">
+                          <span key={ti} className="font-mono-nu text-[11px] px-2 py-0.5 bg-nu-cream border border-nu-ink/20 text-nu-ink/70 rounded">
                             #{tag}
                           </span>
                         ))}
@@ -487,7 +487,7 @@ export default function PublicPortfolioPage() {
                         href={item.external_link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 font-mono-nu text-[10px] font-bold text-nu-pink hover:text-nu-ink transition-colors"
+                        className="inline-flex items-center gap-1 font-mono-nu text-[12px] font-bold text-nu-pink hover:text-nu-ink transition-colors"
                       >
                         View <ExternalLink size={12} />
                       </a>
@@ -523,10 +523,10 @@ export default function PublicPortfolioPage() {
                     {/* Content */}
                     <div className="pb-2 pt-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-muted">
+                        <span className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-muted">
                           {formatDate(item.date)}
                         </span>
-                        <span className={`font-mono-nu text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${
+                        <span className={`font-mono-nu text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${
                           item.sourceColor === "blue"
                             ? "bg-nu-blue/10 text-nu-blue"
                             : "bg-nu-ink/5 text-nu-ink/60"

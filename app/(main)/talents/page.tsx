@@ -354,7 +354,7 @@ export default function TalentSearchPage() {
            </div>
            <div className="text-center md:text-right shrink-0">
              <p className="font-head text-4xl font-extrabold text-nu-pink">{talents.filter(t => t.activity_score >= 80).length}</p>
-             <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink/60 font-bold">Available Talents</p>
+             <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-pink/60 font-bold">Available Talents</p>
            </div>
         </div>
 
@@ -375,7 +375,7 @@ export default function TalentSearchPage() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="flex-1 h-12 border border-nu-ink/10 bg-nu-cream/10 px-3 text-sm focus:outline-none font-mono-nu text-[10px] uppercase tracking-widest"
+              className="flex-1 h-12 border border-nu-ink/10 bg-nu-cream/10 px-3 text-sm focus:outline-none font-mono-nu text-[12px] uppercase tracking-widest"
             >
               <option value="activity">최신 활동순</option>
               <option value="competency">역량 점수 높은순</option>
@@ -384,7 +384,7 @@ export default function TalentSearchPage() {
             <Button
               variant="outline"
               onClick={resetFilters}
-              className="font-mono-nu text-[9px] uppercase tracking-widest"
+              className="font-mono-nu text-[11px] uppercase tracking-widest"
             >
               필터 초기화
             </Button>
@@ -404,7 +404,7 @@ export default function TalentSearchPage() {
             onClick={() => toggleSection("basic")}
             className="w-full flex items-center justify-between p-3 bg-nu-cream/20 border border-nu-ink/5 hover:bg-nu-cream/30 transition-colors"
           >
-            <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-ink font-bold flex items-center gap-2">
+            <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-ink font-bold flex items-center gap-2">
               <Filter size={12} /> 기본 필터
             </p>
             <ChevronDown
@@ -415,7 +415,7 @@ export default function TalentSearchPage() {
           {expandedSections.basic && (
             <div className="p-4 border border-t-0 border-nu-ink/5 grid grid-cols-1 lg:grid-cols-4 gap-4">
               <div>
-                <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-2">
+                <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted block mb-2">
                   강성 ({minActivity}%+)
                 </label>
                 <input
@@ -429,7 +429,7 @@ export default function TalentSearchPage() {
                 />
               </div>
               <div>
-                <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-2">
+                <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted block mb-2">
                   최소 출석
                 </label>
                 <select
@@ -444,7 +444,7 @@ export default function TalentSearchPage() {
                 </select>
               </div>
               <div>
-                <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-2">
+                <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted block mb-2">
                   희망 분야
                 </label>
                 <div className="flex flex-wrap gap-1.5">
@@ -456,7 +456,7 @@ export default function TalentSearchPage() {
                           prev.includes(field) ? prev.filter((f) => f !== field) : [...prev, field]
                         );
                       }}
-                      className={`text-[9px] px-2 py-1 transition-all ${
+                      className={`text-[11px] px-2 py-1 transition-all ${
                         selectedDesiredFields.includes(field)
                           ? "bg-nu-pink text-white"
                           : "border border-nu-ink/10 text-nu-muted hover:border-nu-pink"
@@ -468,7 +468,7 @@ export default function TalentSearchPage() {
                 </div>
               </div>
               <div>
-                <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-2">
+                <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted block mb-2">
                   가용 시간
                 </label>
                 <select
@@ -492,7 +492,7 @@ export default function TalentSearchPage() {
             onClick={() => toggleSection("competency")}
             className="w-full flex items-center justify-between p-3 bg-nu-cream/20 border border-nu-ink/5 hover:bg-nu-cream/30 transition-colors"
           >
-            <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-ink font-bold flex items-center gap-2">
+            <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-ink font-bold flex items-center gap-2">
               <Layers size={12} /> 역량 필터
             </p>
             <ChevronDown
@@ -503,7 +503,7 @@ export default function TalentSearchPage() {
           {expandedSections.competency && (
             <div className="p-4 border border-t-0 border-nu-ink/5 grid grid-cols-3 gap-4">
               <div>
-                <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-blue font-bold block mb-1">
+                <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-blue font-bold block mb-1">
                   기획 ({minPlanning}+)
                 </label>
                 <input
@@ -517,7 +517,7 @@ export default function TalentSearchPage() {
                 />
               </div>
               <div>
-                <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-pink font-bold block mb-1">
+                <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-pink font-bold block mb-1">
                   실행 ({minExecution}+)
                 </label>
                 <input
@@ -531,7 +531,7 @@ export default function TalentSearchPage() {
                 />
               </div>
               <div>
-                <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-amber font-bold block mb-1">
+                <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-amber font-bold block mb-1">
                   협업 ({minCollab}+)
                 </label>
                 <input
@@ -554,7 +554,7 @@ export default function TalentSearchPage() {
             onClick={() => toggleSection("advanced")}
             className="w-full flex items-center justify-between p-3 bg-nu-cream/20 border border-nu-ink/5 hover:bg-nu-cream/30 transition-colors"
           >
-            <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-ink font-bold flex items-center gap-2">
+            <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-ink font-bold flex items-center gap-2">
               <Award size={12} /> 고급 필터
             </p>
             <ChevronDown
@@ -565,7 +565,7 @@ export default function TalentSearchPage() {
           {expandedSections.advanced && (
             <div className="p-4 border border-t-0 border-nu-ink/5 space-y-4">
               <div>
-                <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-3">
+                <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted block mb-3">
                   최소 보증 수 ({minEndorsements})
                 </label>
                 <div className="grid grid-cols-4 gap-2">
@@ -573,7 +573,7 @@ export default function TalentSearchPage() {
                     <button
                       key={val}
                       onClick={() => setMinEndorsements(val)}
-                      className={`py-2 text-[10px] font-bold uppercase tracking-widest transition-all ${
+                      className={`py-2 text-[12px] font-bold uppercase tracking-widest transition-all ${
                         minEndorsements === val
                           ? "bg-nu-pink text-white"
                           : "border border-nu-ink/10 text-nu-muted hover:border-nu-pink"
@@ -585,7 +585,7 @@ export default function TalentSearchPage() {
                 </div>
               </div>
               <div>
-                <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-3 flex items-center gap-2">
+                <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-3 flex items-center gap-2">
                   인기 태그:
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -593,7 +593,7 @@ export default function TalentSearchPage() {
                     <button
                       key={tag}
                       onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
-                      className={`text-[10px] px-2.5 py-1 transition-all ${
+                      className={`text-[12px] px-2.5 py-1 transition-all ${
                         selectedTag === tag
                           ? "bg-nu-ink text-white"
                           : "border border-nu-ink/10 text-nu-muted hover:border-nu-pink"
@@ -619,7 +619,7 @@ export default function TalentSearchPage() {
             <div key={talent.profile_id} className="bg-nu-white border border-nu-ink/[0.08] relative group hover:border-nu-pink/30 hover:shadow-xl hover:shadow-nu-ink/5 transition-all duration-500 overflow-hidden">
                {isProjectReady && (
                  <div className="absolute top-0 right-0 z-10">
-                    <div className="bg-nu-pink text-white text-[9px] font-bold uppercase tracking-widest px-3 py-1 flex items-center gap-1 shadow-lg">
+                    <div className="bg-nu-pink text-white text-[11px] font-bold uppercase tracking-widest px-3 py-1 flex items-center gap-1 shadow-lg">
                       <Zap size={10} fill="currentColor" /> PROJECT READY
                     </div>
                  </div>
@@ -642,11 +642,11 @@ export default function TalentSearchPage() {
                     <div className="flex-1 min-w-0">
                        <h3 className="font-head text-xl font-extrabold text-nu-ink group-hover:text-nu-pink transition-colors truncate">{talent.nickname}</h3>
                        <div className="flex items-center gap-2 mt-1">
-                          <span className={`text-[9px] px-1.5 py-0.5 font-bold uppercase ${tier.className}`}>
+                          <span className={`text-[11px] px-1.5 py-0.5 font-bold uppercase ${tier.className}`}>
                              {tier.label}
                           </span>
                           {talent.specialty && (
-                            <span className={`text-[9px] px-1.5 py-0.5 font-bold uppercase ${specialtyColors[talent.specialty] || "bg-nu-muted text-white"}`}>
+                            <span className={`text-[11px] px-1.5 py-0.5 font-bold uppercase ${specialtyColors[talent.specialty] || "bg-nu-muted text-white"}`}>
                                {talent.specialty}
                             </span>
                           )}
@@ -659,27 +659,27 @@ export default function TalentSearchPage() {
                     <div className="flex-1 grid grid-cols-3 gap-1.5">
                        <div className="text-center p-1.5 bg-nu-cream/30 border border-nu-ink/5">
                           <p className="font-head text-xs font-extrabold">{talent.activity_score}%</p>
-                          <p className="text-[7px] uppercase font-mono-nu text-nu-muted">활동</p>
+                          <p className="text-[9px] uppercase font-mono-nu text-nu-muted">활동</p>
                        </div>
                        <div className="text-center p-1.5 bg-nu-cream/30 border border-nu-ink/5">
                           <p className="font-head text-xs font-extrabold">{talent.total_attendances}</p>
-                          <p className="text-[7px] uppercase font-mono-nu text-nu-muted">출석</p>
+                          <p className="text-[9px] uppercase font-mono-nu text-nu-muted">출석</p>
                        </div>
                        <div className="text-center p-1.5 bg-nu-cream/30 border border-nu-ink/5">
                           <p className="font-head text-xs font-extrabold">{talent.endorsement_count}</p>
-                          <p className="text-[7px] uppercase font-mono-nu text-nu-muted">보증</p>
+                          <p className="text-[9px] uppercase font-mono-nu text-nu-muted">보증</p>
                        </div>
                     </div>
                  </div>
 
                  <div className="flex flex-wrap gap-1 mb-6 h-[44px] overflow-hidden">
                     {(talent.skill_tags || []).map((tag) => (
-                      <span key={tag} className="text-[10px] border border-nu-ink/10 px-2 py-0.5 text-nu-muted">
+                      <span key={tag} className="text-[12px] border border-nu-ink/10 px-2 py-0.5 text-nu-muted">
                         #{tag}
                       </span>
                     ))}
                     {talent.portfolio_count > 0 && (
-                      <span className="text-[10px] border border-nu-pink/30 bg-nu-pink/5 px-2 py-0.5 text-nu-pink font-bold flex items-center gap-1">
+                      <span className="text-[12px] border border-nu-pink/30 bg-nu-pink/5 px-2 py-0.5 text-nu-pink font-bold flex items-center gap-1">
                         <FileText size={10} /> 포트폴리오 {talent.portfolio_count}건
                       </span>
                     )}
@@ -688,7 +688,7 @@ export default function TalentSearchPage() {
                  <Link href={`/portfolio/${talent.profile_id}`}>
                    <Button
                      variant="outline"
-                     className="w-full font-mono-nu text-[10px] uppercase tracking-widest group-hover:bg-nu-pink group-hover:text-white transition-all group-hover:border-nu-pink"
+                     className="w-full font-mono-nu text-[12px] uppercase tracking-widest group-hover:bg-nu-pink group-hover:text-white transition-all group-hover:border-nu-pink"
                    >
                      VIEW PROFILE <ArrowRight size={14} className="ml-2 group-hover:translate-x-1 transition-transform" />
                    </Button>

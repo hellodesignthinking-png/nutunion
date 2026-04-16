@@ -56,7 +56,7 @@ export function ResourcePreviewModal({ isOpen, onClose, url, name }: ResourcePre
         <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b-2 border-nu-ink bg-nu-cream/30 z-20">
           <div className="flex-1 min-w-0 pr-4">
             <h3 className="font-head text-sm md:text-lg font-extrabold text-nu-ink truncate">{name}</h3>
-            <p className="font-mono-nu text-[9px] md:text-[10px] text-nu-muted truncate uppercase tracking-widest">{url}</p>
+            <p className="font-mono-nu text-[11px] md:text-[12px] text-nu-muted truncate uppercase tracking-widest">{url}</p>
           </div>
           
           <div className="flex items-center gap-2 md:gap-3">
@@ -64,7 +64,7 @@ export function ResourcePreviewModal({ isOpen, onClose, url, name }: ResourcePre
               href={url} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="font-mono-nu text-[9px] md:text-[11px] font-bold uppercase tracking-widest px-3 md:px-4 py-1.5 md:py-2 border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all flex items-center gap-2"
+              className="font-mono-nu text-[11px] md:text-[13px] font-bold uppercase tracking-widest px-3 md:px-4 py-1.5 md:py-2 border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all flex items-center gap-2"
             >
               <ExternalLink size={12} /> <span className="hidden sm:inline">ORIGINAL</span>
             </a>
@@ -108,7 +108,7 @@ export function ResourcePreviewModal({ isOpen, onClose, url, name }: ResourcePre
               <AlertCircle size={18} className="text-nu-pink shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs font-bold text-nu-ink">노션 임베드 안내</p>
-                <p className="text-[11px] text-nu-graphite leading-relaxed mt-1">
+                <p className="text-[13px] text-nu-graphite leading-relaxed mt-1">
                   노션 페이지가 보이지 않는다면 해당 페이지의 <b>[Share] - [Publish to web]</b> 설정이 활성화되어 있는지 확인해 주세요. 
                   보안 정책으로 차단된 경우 상단의 '원본 보기' 버튼을 이용해 주세요.
                 </p>
@@ -119,11 +119,11 @@ export function ResourcePreviewModal({ isOpen, onClose, url, name }: ResourcePre
 
         {/* Footer info */}
         <div className="px-6 py-2 border-t border-nu-ink/5 bg-nu-cream/10 flex items-center justify-between">
-          <span className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">
+          <span className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest">
             {isNotion ? "Notion Workspaces" : url.includes("google.com") ? "Google Workspace Integration" : "In-App Private Viewer"}
           </span>
           <div className="flex items-center gap-4">
-             <span className="flex items-center gap-1.5 font-mono-nu text-[9px] text-nu-muted">
+             <span className="flex items-center gap-1.5 font-mono-nu text-[11px] text-nu-muted">
                <Maximize2 size={10} /> 정식 임베드 모드 활성
              </span>
           </div>

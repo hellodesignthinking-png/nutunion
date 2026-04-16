@@ -369,7 +369,7 @@ export function AiMeetingAssistant({
         </div>
         <div className="flex items-center gap-2 mb-2">
           <Sparkles size={16} className="text-nu-pink" />
-          <span className="font-mono-nu text-[10px] font-black uppercase tracking-[0.2em] text-nu-pink">
+          <span className="font-mono-nu text-[12px] font-black uppercase tracking-[0.2em] text-nu-pink">
             AI_Meeting_Assistant
           </span>
         </div>
@@ -384,13 +384,13 @@ export function AiMeetingAssistant({
         <div className="bg-purple-50 border-[2px] border-purple-300 p-4 flex items-start gap-3">
           <Zap size={16} className="text-purple-600 shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
-            <p className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-purple-700 mb-1">
+            <p className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-purple-700 mb-1">
               📌 이전 주간 다이제스트 컨텍스트 로드됨
             </p>
-            <p className="text-[11px] text-purple-800/80 leading-relaxed">
+            <p className="text-[13px] text-purple-800/80 leading-relaxed">
               {previousDigest}
             </p>
-            <p className="font-mono-nu text-[7px] text-purple-400 mt-1.5 uppercase tracking-widest">
+            <p className="font-mono-nu text-[9px] text-purple-400 mt-1.5 uppercase tracking-widest">
               AI가 이 컨텍스트를 기반으로 분석합니다 · 과거 내용을 다시 입력할 필요 없음
             </p>
           </div>
@@ -402,12 +402,12 @@ export function AiMeetingAssistant({
         <div className="flex items-center justify-between px-4 py-3 border-b border-nu-ink/[0.06]">
           <div className="flex items-center gap-2">
             <MessageSquare size={14} className="text-nu-blue" />
-            <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink">회의 내용 기록</span>
+            <span className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-ink">회의 내용 기록</span>
           </div>
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setShowAudioInput(!showAudioInput)}
-              className={`flex items-center gap-1 px-2.5 py-1 font-mono-nu text-[9px] uppercase tracking-widest border transition-colors ${
+              className={`flex items-center gap-1 px-2.5 py-1 font-mono-nu text-[11px] uppercase tracking-widest border transition-colors ${
                 showAudioInput || audioUrl
                   ? "bg-nu-pink/10 text-nu-pink border-nu-pink/30"
                   : "text-nu-muted border-nu-ink/10 hover:text-nu-pink hover:border-nu-pink/20"
@@ -425,7 +425,7 @@ export function AiMeetingAssistant({
 
 💡 팁: 다음 형식을 사용하면 AI가 더 정확하게 분류합니다:
 • [결정] 결정된 내용
-• [액션] 할 일 @담당자
+• [액션] 할일 @담당자
 • 그 외 내용은 논의사항으로 분류됩니다`}
           rows={10}
           className="w-full p-4 text-sm leading-relaxed text-nu-ink bg-transparent border-0 focus:outline-none resize-none"
@@ -437,7 +437,7 @@ export function AiMeetingAssistant({
           <div className="border-t border-nu-ink/[0.06] p-4 bg-nu-cream/20">
             <div className="flex items-center gap-2 mb-3">
               <FileAudio size={14} className="text-nu-amber" />
-              <span className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-ink">녹음 파일 / 드라이브 링크</span>
+              <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-ink">녹음 파일 / 드라이브 링크</span>
             </div>
 
             <div className="flex flex-col gap-3">
@@ -453,12 +453,12 @@ export function AiMeetingAssistant({
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="flex items-center gap-1.5 px-3 py-2 font-mono-nu text-[9px] uppercase tracking-widest bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3 py-2 font-mono-nu text-[11px] uppercase tracking-widest bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors disabled:opacity-50"
                 >
                   {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
                   파일 업로드
                 </button>
-                <span className="text-[10px] text-nu-muted">mp3, wav, m4a, ogg, webm</span>
+                <span className="text-[12px] text-nu-muted">mp3, wav, m4a, ogg, webm</span>
               </div>
 
               {/* Google Drive link */}
@@ -476,7 +476,7 @@ export function AiMeetingAssistant({
               {audioUrl && (
                 <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200">
                   <CheckCircle2 size={14} className="text-green-600" />
-                  <span className="text-[11px] text-green-700 truncate flex-1">{audioUrl}</span>
+                  <span className="text-[13px] text-green-700 truncate flex-1">{audioUrl}</span>
                   <button onClick={() => { setAudioUrl(""); setAudioFile(null); }} className="text-green-400 hover:text-red-500">
                     <X size={14} />
                   </button>
@@ -490,21 +490,21 @@ export function AiMeetingAssistant({
         {canEdit && (
           <div className="border-t border-nu-ink/[0.06] p-4 flex items-center justify-between bg-nu-cream/10">
             <div className="flex items-center gap-1.5">
-              <p className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">
+              <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
                 {rawNotes.trim().split(/\s+/).filter(Boolean).length} words
               </p>
               {draftSaved && rawNotes.trim() && (
-                <span className="px-1.5 py-0.5 bg-green-100 text-green-600 font-mono-nu text-[7px] uppercase tracking-widest flex items-center gap-0.5">
+                <span className="px-1.5 py-0.5 bg-green-100 text-green-600 font-mono-nu text-[9px] uppercase tracking-widest flex items-center gap-0.5">
                   <CheckCircle2 size={8} /> saved
                 </span>
               )}
               {previousDigest && (
-                <span className="px-1.5 py-0.5 bg-purple-100 text-purple-600 font-mono-nu text-[7px] uppercase tracking-widest">
+                <span className="px-1.5 py-0.5 bg-purple-100 text-purple-600 font-mono-nu text-[9px] uppercase tracking-widest">
                   ⚡ digest
                 </span>
               )}
               {audioUrl && (
-                <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 font-mono-nu text-[7px] uppercase tracking-widest">
+                <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 font-mono-nu text-[9px] uppercase tracking-widest">
                   🎤 audio
                 </span>
               )}
@@ -523,7 +523,7 @@ export function AiMeetingAssistant({
                   }
                 }}
                 disabled={!rawNotes.trim()}
-                className="flex items-center gap-1.5 px-3 py-2 font-mono-nu text-[10px] font-bold uppercase tracking-widest bg-nu-ink text-nu-paper hover:bg-nu-graphite disabled:opacity-40 transition-all"
+                className="flex items-center gap-1.5 px-3 py-2 font-mono-nu text-[12px] font-bold uppercase tracking-widest bg-nu-ink text-nu-paper hover:bg-nu-graphite disabled:opacity-40 transition-all"
               >
                 <Save size={12} /> 메모 저장
               </button>
@@ -531,7 +531,7 @@ export function AiMeetingAssistant({
                 onClick={handleAiProcess}
                 disabled={processing || (!rawNotes.trim() && !audioUrl)}
                 title="⌘+Enter 또는 Ctrl+Enter"
-                className="flex items-center gap-2 px-4 py-2 font-mono-nu text-[10px] font-bold uppercase tracking-widest bg-gradient-to-r from-nu-pink to-purple-500 text-white hover:opacity-90 disabled:opacity-40 transition-all"
+                className="flex items-center gap-2 px-4 py-2 font-mono-nu text-[12px] font-bold uppercase tracking-widest bg-gradient-to-r from-nu-pink to-purple-500 text-white hover:opacity-90 disabled:opacity-40 transition-all"
               >
                 {processing ? (
                   <>
@@ -540,7 +540,7 @@ export function AiMeetingAssistant({
                 ) : (
                   <>
                     <Sparkles size={13} /> AI 정리하기
-                    <kbd className="ml-1 px-1 py-0.5 bg-white/20 text-[7px] rounded">⌘↵</kbd>
+                    <kbd className="ml-1 px-1 py-0.5 bg-white/20 text-[9px] rounded">⌘↵</kbd>
                   </>
                 )}
               </button>
@@ -554,25 +554,25 @@ export function AiMeetingAssistant({
         <div className="bg-nu-ink text-white p-6 border-[2px] border-nu-ink animate-in fade-in duration-300">
           <div className="flex items-center gap-3 mb-4">
             <Loader2 size={20} className="animate-spin text-nu-pink" />
-            <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-pink">
+            <span className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-pink">
               Gemini 2.5 Flash 분석 중
             </span>
           </div>
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-[11px] text-green-400">
+            <div className="flex items-center gap-2 text-[13px] text-green-400">
               <CheckCircle2 size={11} /> 회의 내용 전송
             </div>
             {previousDigest && (
-              <div className="flex items-center gap-2 text-[11px] text-purple-400">
+              <div className="flex items-center gap-2 text-[13px] text-purple-400">
                 <Zap size={11} /> 이전 다이제스트 컨텍스트 주입
               </div>
             )}
             {audioFile && (
-              <div className="flex items-center gap-2 text-[11px] text-amber-400">
+              <div className="flex items-center gap-2 text-[13px] text-amber-400">
                 <Mic size={11} /> 녹음 파일 분석
               </div>
             )}
-            <div className="flex items-center gap-2 text-[11px] text-white/40 animate-pulse">
+            <div className="flex items-center gap-2 text-[13px] text-white/40 animate-pulse">
               <div className="w-1.5 h-1.5 rounded-full bg-nu-pink animate-ping" />
               AI 회의록 생성 중...
             </div>
@@ -603,7 +603,7 @@ export function AiMeetingAssistant({
             <div className="flex items-center gap-2 mt-3">
               <button
                 onClick={() => setEditingResult(!editingResult)}
-                className="flex items-center gap-1 font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted hover:text-nu-pink"
+                className="flex items-center gap-1 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted hover:text-nu-pink"
               >
                 <Edit3 size={10} /> {editingResult ? "미리보기" : "수정"}
               </button>
@@ -661,7 +661,7 @@ export function AiMeetingAssistant({
                     <div className="flex-1 min-w-0">
                       <span className="text-sm text-nu-ink">{item.task}</span>
                       {item.assignee && (
-                        <span className="ml-2 font-mono-nu text-[9px] uppercase tracking-widest text-nu-pink bg-nu-pink/10 px-1.5 py-0.5">
+                        <span className="ml-2 font-mono-nu text-[11px] uppercase tracking-widest text-nu-pink bg-nu-pink/10 px-1.5 py-0.5">
                           @{item.assignee}
                         </span>
                       )}
@@ -732,7 +732,7 @@ export function AiMeetingAssistant({
             <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-100 p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Sparkles size={14} className="text-purple-500" />
-                <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-purple-700">토론 품질 분석</span>
+                <span className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-purple-700">토론 품질 분석</span>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 {[
@@ -741,8 +741,8 @@ export function AiMeetingAssistant({
                   { label: "실행 가능성", value: (aiResult as any).discussionQuality.actionability, color: "text-green-600" },
                 ].map((q, i) => (
                   <div key={i} className="text-center">
-                    <p className="font-mono-nu text-[7px] uppercase tracking-widest text-nu-muted mb-1">{q.label}</p>
-                    <p className={`text-[11px] font-semibold ${q.color}`}>{q.value || "-"}</p>
+                    <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-1">{q.label}</p>
+                    <p className={`text-[13px] font-semibold ${q.color}`}>{q.value || "-"}</p>
                   </div>
                 ))}
               </div>
@@ -753,20 +753,20 @@ export function AiMeetingAssistant({
           <div className="p-4 bg-nu-ink text-nu-paper space-y-3">
             {/* Context indicator */}
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-mono-nu text-[7px] uppercase tracking-widest text-nu-paper/30">AI 입력:</span>
-              <span className="px-1.5 py-0.5 bg-nu-paper/10 text-nu-paper/50 font-mono-nu text-[7px] uppercase tracking-widest">텍스트</span>
+              <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-paper/30">AI 입력:</span>
+              <span className="px-1.5 py-0.5 bg-nu-paper/10 text-nu-paper/50 font-mono-nu text-[9px] uppercase tracking-widest">텍스트</span>
               {previousDigest && (
-                <span className="px-1.5 py-0.5 bg-purple-500/30 text-purple-300 font-mono-nu text-[7px] uppercase tracking-widest">⚡ 다이제스트</span>
+                <span className="px-1.5 py-0.5 bg-purple-500/30 text-purple-300 font-mono-nu text-[9px] uppercase tracking-widest">⚡ 다이제스트</span>
               )}
               {agendas.length > 0 && (
-                <span className="px-1.5 py-0.5 bg-nu-paper/10 text-nu-paper/50 font-mono-nu text-[7px] uppercase tracking-widest">{agendas.length}개 안건</span>
+                <span className="px-1.5 py-0.5 bg-nu-paper/10 text-nu-paper/50 font-mono-nu text-[9px] uppercase tracking-widest">{agendas.length}개 안건</span>
               )}
             </div>
             <div className="flex items-center justify-between">
               <button
                 onClick={handleAiProcess}
                 disabled={processing}
-                className="flex items-center gap-1.5 font-mono-nu text-[9px] uppercase tracking-widest text-nu-paper/60 hover:text-nu-paper transition-colors"
+                className="flex items-center gap-1.5 font-mono-nu text-[11px] uppercase tracking-widest text-nu-paper/60 hover:text-nu-paper transition-colors"
               >
                 <RefreshCw size={12} /> 다시 분석
               </button>
@@ -796,7 +796,7 @@ export function AiMeetingAssistant({
                     toast.success("마크다운 형식으로 복사되었습니다");
                   } catch { toast.error("복사 실패"); }
                 }}
-                className="flex items-center gap-1.5 font-mono-nu text-[9px] uppercase tracking-widest text-nu-paper/60 hover:text-nu-paper transition-colors"
+                className="flex items-center gap-1.5 font-mono-nu text-[11px] uppercase tracking-widest text-nu-paper/60 hover:text-nu-paper transition-colors"
               >
                 <Copy size={12} /> MD 복사
               </button>
@@ -804,7 +804,7 @@ export function AiMeetingAssistant({
             <button
               onClick={handleSaveAll}
               disabled={saving || saved}
-              className={`w-full flex items-center justify-center gap-2 px-5 py-3 font-mono-nu text-[11px] font-bold uppercase tracking-widest transition-all shadow-lg ${
+              className={`w-full flex items-center justify-center gap-2 px-5 py-3 font-mono-nu text-[13px] font-bold uppercase tracking-widest transition-all shadow-lg ${
                 saved
                   ? "bg-green-600 text-white cursor-default"
                   : "bg-nu-pink text-white hover:bg-nu-pink/90 disabled:opacity-40"
@@ -821,24 +821,24 @@ export function AiMeetingAssistant({
             {/* Performance metadata */}
             {(aiResult as any)?._meta && (
               <div className="flex items-center justify-center gap-3 flex-wrap">
-                <span className="font-mono-nu text-[7px] text-nu-paper/30 uppercase tracking-widest">
+                <span className="font-mono-nu text-[9px] text-nu-paper/30 uppercase tracking-widest">
                   {(aiResult as any)._meta.model}
                 </span>
-                <span className="font-mono-nu text-[7px] text-nu-paper/30 uppercase tracking-widest">
+                <span className="font-mono-nu text-[9px] text-nu-paper/30 uppercase tracking-widest">
                   {((aiResult as any)._meta.responseTimeMs / 1000).toFixed(1)}s
                 </span>
-                <span className="font-mono-nu text-[7px] text-nu-paper/30 uppercase tracking-widest">
+                <span className="font-mono-nu text-[9px] text-nu-paper/30 uppercase tracking-widest">
                   ~{(aiResult as any)._meta.inputTokenEstimate} tokens
                 </span>
                 {(aiResult as any)._meta.usedDigest && (
-                  <span className="font-mono-nu text-[7px] text-purple-400 uppercase tracking-widest">
+                  <span className="font-mono-nu text-[9px] text-purple-400 uppercase tracking-widest">
                     ⚡ digest injected
                   </span>
                 )}
               </div>
             )}
             {!saved && (
-              <p className="font-mono-nu text-[8px] text-nu-paper/40 uppercase tracking-widest text-center">
+              <p className="font-mono-nu text-[10px] text-nu-paper/40 uppercase tracking-widest text-center">
                 요약·결정사항·액션아이템·다음주제가 모두 저장됩니다
                 {onArchiveToGoogleDoc && " · Google Docs에 자동 아카이브"}
               </p>
@@ -846,16 +846,16 @@ export function AiMeetingAssistant({
             {/* Post-save quick navigation */}
             {saved && onNavigateTab && (
               <div className="flex items-center justify-center gap-2 pt-1">
-                <span className="font-mono-nu text-[7px] text-nu-paper/40 uppercase tracking-widest">다음 단계 →</span>
+                <span className="font-mono-nu text-[9px] text-nu-paper/40 uppercase tracking-widest">다음 단계 →</span>
                 <button
                   onClick={() => onNavigateTab("wiki-sync")}
-                  className="px-3 py-1.5 bg-nu-pink/20 text-nu-pink font-mono-nu text-[8px] uppercase tracking-widest hover:bg-nu-pink/30 transition-colors"
+                  className="px-3 py-1.5 bg-nu-pink/20 text-nu-pink font-mono-nu text-[10px] uppercase tracking-widest hover:bg-nu-pink/30 transition-colors"
                 >
                   탭 동기화
                 </button>
                 <button
                   onClick={() => onNavigateTab("digest")}
-                  className="px-3 py-1.5 bg-purple-500/20 text-purple-300 font-mono-nu text-[8px] uppercase tracking-widest hover:bg-purple-500/30 transition-colors"
+                  className="px-3 py-1.5 bg-purple-500/20 text-purple-300 font-mono-nu text-[10px] uppercase tracking-widest hover:bg-purple-500/30 transition-colors"
                 >
                   주간 다이제스트
                 </button>
@@ -890,7 +890,7 @@ function ResultSection({
       >
         <div className="flex items-center gap-2">
           {icon}
-          <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink">{title}</span>
+          <span className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-ink">{title}</span>
         </div>
         {expanded ? <ChevronUp size={14} className="text-nu-muted" /> : <ChevronDown size={14} className="text-nu-muted" />}
       </button>

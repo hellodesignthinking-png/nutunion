@@ -173,7 +173,7 @@ export function ProjectActivityFeed({
               {milestones.length > 0 && (
                 <div className="relative">
                   <button onClick={() => setShowMsSelect(!showMsSelect)}
-                    className={`font-mono-nu text-[9px] uppercase tracking-widest px-3 py-1.5 border transition-colors flex items-center gap-1 ${
+                    className={`font-mono-nu text-[11px] uppercase tracking-widest px-3 py-1.5 border transition-colors flex items-center gap-1 ${
                       selectedMilestone ? "border-nu-pink bg-nu-pink/10 text-nu-pink" : "border-nu-ink/15 text-nu-muted hover:text-nu-ink"
                     }`}>
                     <Hash size={10} />
@@ -183,12 +183,12 @@ export function ProjectActivityFeed({
                   {showMsSelect && (
                     <div className="absolute top-full left-0 mt-1 bg-nu-white border-2 border-nu-ink/10 shadow-lg z-20 min-w-[200px]">
                       <button onClick={() => { setSelectedMilestone(""); setShowMsSelect(false); }}
-                        className="w-full text-left px-3 py-2 text-[11px] text-nu-muted hover:bg-nu-cream/30 transition-colors">
+                        className="w-full text-left px-3 py-2 text-[13px] text-nu-muted hover:bg-nu-cream/30 transition-colors">
                         태그 없음
                       </button>
                       {milestones.map((ms) => (
                         <button key={ms.id} onClick={() => { setSelectedMilestone(ms.id); setShowMsSelect(false); }}
-                          className={`w-full text-left px-3 py-2 text-[11px] hover:bg-nu-cream/30 transition-colors ${
+                          className={`w-full text-left px-3 py-2 text-[13px] hover:bg-nu-cream/30 transition-colors ${
                             selectedMilestone === ms.id ? "text-nu-pink font-bold" : "text-nu-ink"
                           }`}>
                           {ms.title}
@@ -200,7 +200,7 @@ export function ProjectActivityFeed({
               )}
             </div>
             <button onClick={handlePost} disabled={posting || !content.trim()}
-              className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-5 py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors disabled:opacity-50 flex items-center gap-1.5">
+              className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-5 py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors disabled:opacity-50 flex items-center gap-1.5">
               {posting ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
               게시
             </button>
@@ -215,7 +215,7 @@ export function ProjectActivityFeed({
           <button
             key={t.key}
             onClick={() => setTypeFilter(t.key)}
-            className={`font-mono-nu text-[9px] font-bold uppercase tracking-widest px-3 py-1.5 border transition-colors ${
+            className={`font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 border transition-colors ${
               typeFilter === t.key
                 ? "border-nu-pink bg-nu-pink/10 text-nu-pink"
                 : "border-nu-ink/10 text-nu-muted hover:text-nu-ink hover:border-nu-ink/20"
@@ -241,15 +241,15 @@ export function ProjectActivityFeed({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span className="text-sm font-medium">{update.author?.nickname || "Unknown"}</span>
-                    <span className={`inline-flex items-center gap-1 font-mono-nu text-[8px] uppercase tracking-widest px-2 py-0.5 ${typeInfo.color}`}>
+                    <span className={`inline-flex items-center gap-1 font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 ${typeInfo.color}`}>
                       <Icon size={9} /> {typeInfo.label}
                     </span>
                     {milestoneTitle && (
-                      <span className="inline-flex items-center gap-1 font-mono-nu text-[8px] uppercase tracking-widest px-2 py-0.5 bg-nu-yellow/10 text-nu-amber">
+                      <span className="inline-flex items-center gap-1 font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 bg-nu-yellow/10 text-nu-amber">
                         <Hash size={8} /> {milestoneTitle}
                       </span>
                     )}
-                    <span className="font-mono-nu text-[10px] text-nu-muted">{timeAgo(update.created_at)}</span>
+                    <span className="font-mono-nu text-[12px] text-nu-muted">{timeAgo(update.created_at)}</span>
                   </div>
                   <p className="text-sm text-nu-graphite leading-relaxed whitespace-pre-wrap">{update.content}</p>
                   <AttachedFiles targetType="project_update" targetId={update.id} />

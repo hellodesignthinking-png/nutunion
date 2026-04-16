@@ -75,7 +75,7 @@ function HostAvatar({ src, name }: { src?: string | null; name: string }) {
     );
   }
   return (
-    <span className="w-5 h-5 rounded-full bg-nu-ink/10 flex items-center justify-center font-mono-nu text-[8px] font-bold uppercase text-nu-ink/50">
+    <span className="w-5 h-5 rounded-full bg-nu-ink/10 flex items-center justify-center font-mono-nu text-[10px] font-bold uppercase text-nu-ink/50">
       {name.charAt(0)}
     </span>
   );
@@ -182,28 +182,28 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
   function StatusButton({ g, isJoining }: { g: GroupItem; isJoining: boolean }) {
     if (isJoining) {
       return (
-        <span className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-ink/50 flex items-center gap-1.5">
+        <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-ink/50 flex items-center gap-1.5">
           <Loader2 size={10} className="animate-spin" /> 요청 중...
         </span>
       );
     }
     if (g.user_status === "active") {
       return (
-        <span className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-green-600 flex items-center gap-1.5">
+        <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-green-600 flex items-center gap-1.5">
           <Check size={10} /> 참여중
         </span>
       );
     }
     if (g.user_status === "pending") {
       return (
-        <span className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-amber flex items-center gap-1.5">
+        <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-amber flex items-center gap-1.5">
           <Clock size={10} /> 승인 대기
         </span>
       );
     }
     if (g.user_status === "waitlist") {
       return (
-        <span className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-muted flex items-center gap-1.5">
+        <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-muted flex items-center gap-1.5">
           <Users size={10} /> 대기 중 (인원 마감)
         </span>
       );
@@ -211,7 +211,7 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
     return (
       <button
         onClick={() => handleJoin(g)}
-        className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-ink hover:text-nu-pink transition-colors flex items-center gap-1.5"
+        className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-ink hover:text-nu-pink transition-colors flex items-center gap-1.5"
       >
         <Plus size={10} /> 참여하기
       </button>
@@ -240,7 +240,7 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
               <button
                 key={f.key}
                 onClick={() => setFilter(f.key)}
-                className={`font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 border-[2px] transition-colors ${
+                className={`font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2 border-[2px] transition-colors ${
                   filter === f.key
                     ? "bg-nu-ink border-nu-ink text-nu-paper font-bold"
                     : "bg-white border-nu-ink/10 text-nu-graphite hover:border-nu-ink/20"
@@ -259,7 +259,7 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
               <button
                 key={s.key}
                 onClick={() => setSort(s.key)}
-                className={`text-[11px] font-mono-nu uppercase tracking-wider px-3 py-1.5 border-[2px] transition-colors ${
+                className={`text-[13px] font-mono-nu uppercase tracking-wider px-3 py-1.5 border-[2px] transition-colors ${
                   sort === s.key
                     ? "bg-nu-ink border-nu-ink text-nu-paper font-bold"
                     : "border-nu-ink/10 text-nu-muted hover:border-nu-ink/20"
@@ -288,7 +288,7 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
         </div>
       </div>
 
-      <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-6">
+      <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-6">
         {filtered.length} RESULTS
       </p>
 
@@ -312,7 +312,7 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
                     <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "16px 16px" }} />
                   )}
                   <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/20 to-transparent" />
-                  <span className={`absolute top-4 left-4 font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 ${cat.bg} ${cat.text} shadow-lg shadow-black/10`}>
+                  <span className={`absolute top-4 left-4 font-mono-nu text-[11px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 ${cat.bg} ${cat.text} shadow-lg shadow-black/10`}>
                     {cat.label}
                   </span>
                 </div>
@@ -332,12 +332,12 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
                   {/* Capacity indicator */}
                   <div className="mb-4">
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="font-mono-nu text-[11px] font-bold text-nu-ink flex items-center gap-1.5">
+                      <span className="font-mono-nu text-[13px] font-bold text-nu-ink flex items-center gap-1.5">
                         <Users size={12} className="text-nu-muted" />
                         {g.member_count}/{g.max_members}명
                       </span>
                       {isFull && (
-                        <span className="font-mono-nu text-[9px] font-bold text-nu-red flex items-center gap-1 uppercase tracking-wider">
+                        <span className="font-mono-nu text-[11px] font-bold text-nu-red flex items-center gap-1 uppercase tracking-wider">
                           <Lock size={10} /> FULL
                         </span>
                       )}
@@ -354,12 +354,12 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
                   <div className="pt-4 border-t-[2px] border-nu-ink/[0.05] flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <HostAvatar src={g.host_avatar_url} name={g.host_nickname} />
-                      <span className="font-mono-nu text-[10px] text-nu-muted">{g.host_nickname}</span>
+                      <span className="font-mono-nu text-[12px] text-nu-muted">{g.host_nickname}</span>
                     </div>
                     {isHost ? (
                       <Link
                         href={`/groups/${g.id}/settings`}
-                        className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-pink no-underline hover:underline flex items-center gap-1"
+                        className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-pink no-underline hover:underline flex items-center gap-1"
                         prefetch={true}
                       >
                         MANAGE <ArrowUpRight size={10} />
@@ -392,7 +392,7 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={`font-mono-nu text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 ${cat.bg} ${cat.text}`}>
+                    <span className={`font-mono-nu text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 ${cat.bg} ${cat.text}`}>
                       {cat.label}
                     </span>
                     <Link href={`/groups/${g.id}`} className="font-head text-base font-extrabold text-nu-ink no-underline hover:text-nu-pink truncate" prefetch={true}>
@@ -403,9 +403,9 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1.5">
                       <HostAvatar src={g.host_avatar_url} name={g.host_nickname} />
-                      <span className="font-mono-nu text-[10px] text-nu-muted">{g.host_nickname}</span>
+                      <span className="font-mono-nu text-[12px] text-nu-muted">{g.host_nickname}</span>
                     </div>
-                    <span className="font-mono-nu text-[10px] text-nu-muted">
+                    <span className="font-mono-nu text-[12px] text-nu-muted">
                       {g.member_count}/{g.max_members}명
                     </span>
                     <div className="w-16 h-1.5 bg-nu-ink/5 overflow-hidden">
@@ -415,7 +415,7 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
                 </div>
                 <div className="text-right shrink-0">
                   {isHost ? (
-                    <Link href={`/groups/${g.id}/settings`} className="text-[10px] font-bold text-nu-pink no-underline uppercase tracking-wider" prefetch={true}>MANAGE</Link>
+                    <Link href={`/groups/${g.id}/settings`} className="text-[12px] font-bold text-nu-pink no-underline uppercase tracking-wider" prefetch={true}>MANAGE</Link>
                   ) : (
                     <StatusButton g={g} isJoining={isJoining} />
                   )}
@@ -434,7 +434,7 @@ export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: s
           <p className="text-nu-muted text-xs mt-1 mb-6">다른 키워드나 카테고리로 검색해보세요</p>
           <button
             onClick={resetFilters}
-            className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-6 py-2.5 border-[2px] border-nu-ink text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-colors"
+            className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-6 py-2.5 border-[2px] border-nu-ink text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-colors"
           >
             모든 너트 보기
           </button>

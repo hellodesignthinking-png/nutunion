@@ -121,7 +121,7 @@ export function DrivePicker({ onFilePicked }: DrivePickerProps) {
     <>
       <button
         onClick={handleOpen}
-        className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-4 py-2.5 bg-green-600 text-white hover:bg-green-700 transition-colors inline-flex items-center gap-2"
+        className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-4 py-2.5 bg-green-600 text-white hover:bg-green-700 transition-colors inline-flex items-center gap-2"
       >
         <HardDrive size={13} />
         {connected === false ? "Drive 연결" : "Drive 연결"}
@@ -136,7 +136,7 @@ export function DrivePicker({ onFilePicked }: DrivePickerProps) {
               <div className="flex items-center gap-2">
                 <HardDrive size={18} className="text-green-600" />
                 <h3 className="font-head text-lg font-extrabold text-nu-ink">Google Drive</h3>
-                <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">파일 선택</span>
+                <span className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">파일 선택</span>
               </div>
               <button onClick={() => setOpen(false)} className="text-nu-muted hover:text-nu-ink transition-colors">
                 <X size={18} />
@@ -195,7 +195,7 @@ export function DrivePicker({ onFilePicked }: DrivePickerProps) {
                         <p className="text-sm font-medium text-nu-ink truncate group-hover:text-nu-pink transition-colors">
                           {file.name}
                         </p>
-                        <p className="text-[10px] text-nu-muted font-mono-nu">
+                        <p className="text-[12px] text-nu-muted font-mono-nu">
                           {new Date(file.modifiedTime).toLocaleDateString("ko-KR")}
                           {file.size ? ` · ${formatSize(file.size)}` : ""}
                         </p>
@@ -209,12 +209,12 @@ export function DrivePicker({ onFilePicked }: DrivePickerProps) {
 
             {/* Footer */}
             <div className="px-5 py-3 border-t border-nu-ink/10 flex items-center justify-between">
-              <span className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">
+              <span className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest">
                 {files.length}개 파일
               </span>
               <button
                 onClick={() => setOpen(false)}
-                className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-1.5 border border-nu-ink/15 hover:bg-nu-cream transition-colors"
+                className="font-mono-nu text-[12px] uppercase tracking-widest px-4 py-1.5 border border-nu-ink/15 hover:bg-nu-cream transition-colors"
               >
                 닫기
               </button>

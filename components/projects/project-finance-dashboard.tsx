@@ -236,7 +236,7 @@ export function ProjectFinanceDashboard({
         <div className="relative">
           <div className="flex items-center gap-2 mb-4">
             <Wallet size={16} className="text-nu-pink" />
-            <span className="font-mono-nu text-[9px] font-black uppercase tracking-[0.25em] text-nu-pink">
+            <span className="font-mono-nu text-[11px] font-black uppercase tracking-[0.25em] text-nu-pink">
               Finance_Dashboard
             </span>
           </div>
@@ -244,7 +244,7 @@ export function ProjectFinanceDashboard({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {/* Total Budget */}
             <div className="bg-nu-ink/40 backdrop-blur-sm border border-nu-pink/20 rounded-lg p-4">
-              <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink mb-1">
+              <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-pink mb-1">
                 총 예산
               </p>
               <p className="font-head text-2xl font-extrabold text-nu-paper">
@@ -254,7 +254,7 @@ export function ProjectFinanceDashboard({
 
             {/* Total Spent */}
             <div className="bg-nu-ink/40 backdrop-blur-sm border border-nu-blue/20 rounded-lg p-4">
-              <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-blue mb-1">
+              <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-blue mb-1">
                 총 지출
               </p>
               <p className="font-head text-2xl font-extrabold text-nu-paper">
@@ -264,7 +264,7 @@ export function ProjectFinanceDashboard({
 
             {/* Remaining */}
             <div className="bg-nu-ink/40 backdrop-blur-sm border border-green-500/20 rounded-lg p-4">
-              <p className="font-mono-nu text-[10px] uppercase tracking-widest text-green-400 mb-1">
+              <p className="font-mono-nu text-[12px] uppercase tracking-widest text-green-400 mb-1">
                 잔여 예산
               </p>
               <p className="font-head text-2xl font-extrabold text-green-300">
@@ -278,14 +278,14 @@ export function ProjectFinanceDashboard({
                 metrics.burnRate
               )}`}
             >
-              <p className="font-mono-nu text-[10px] uppercase tracking-widest mb-1">
+              <p className="font-mono-nu text-[12px] uppercase tracking-widest mb-1">
                 소진율
               </p>
               <p className={`font-head text-2xl font-extrabold ${getBurnRateColor(metrics.burnRate)}`}>
                 {metrics.burnRate.toFixed(1)}%
               </p>
               {metrics.burnRate > 80 && (
-                <p className="text-[9px] text-red-600 mt-1 flex items-center gap-1">
+                <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1">
                   <AlertTriangle size={10} /> 주의
                 </p>
               )}
@@ -297,14 +297,14 @@ export function ProjectFinanceDashboard({
       {/* Budget Breakdown Chart */}
       <div className="bg-nu-white border-[2px] border-nu-ink/[0.08] overflow-hidden">
         <div className="px-6 py-5 border-b border-nu-ink/[0.06]">
-          <h3 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-muted mb-4 flex items-center gap-2">
+          <h3 className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-muted mb-4 flex items-center gap-2">
             <PieChart size={12} /> 예산 배분 현황
           </h3>
 
           {/* Pure CSS/HTML Bar Chart */}
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <span className="font-mono-nu text-[10px] font-bold w-24 text-nu-muted">
+              <span className="font-mono-nu text-[12px] font-bold w-24 text-nu-muted">
                 예산 현황
               </span>
               <div className="flex-1 h-6 bg-nu-ink/5 rounded-full overflow-hidden flex">
@@ -347,10 +347,10 @@ export function ProjectFinanceDashboard({
                     }}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="font-mono-nu text-[9px] font-bold text-nu-muted">
+                    <p className="font-mono-nu text-[11px] font-bold text-nu-muted">
                       {CATEGORY_LABELS[cat].label}
                     </p>
-                    <p className="text-[10px] font-head font-bold text-nu-ink">
+                    <p className="text-[12px] font-head font-bold text-nu-ink">
                       {formatKRW(amount)}
                     </p>
                   </div>
@@ -365,7 +365,7 @@ export function ProjectFinanceDashboard({
       {milestones.length > 0 && (
         <div className="bg-nu-white border-[2px] border-nu-ink/[0.08] overflow-hidden">
           <div className="px-6 py-5 border-b border-nu-ink/[0.06]">
-            <h3 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-muted mb-4 flex items-center gap-2">
+            <h3 className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-muted mb-4 flex items-center gap-2">
               <TrendingUp size={12} /> 마일스톤 별 예산 현황
             </h3>
 
@@ -384,11 +384,11 @@ export function ProjectFinanceDashboard({
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-bold text-nu-ink">{ms.title}</p>
-                        <p className="font-mono-nu text-[9px] text-nu-muted">
+                        <p className="font-mono-nu text-[11px] text-nu-muted">
                           {formatKRW(msSpent)} / {formatKRW(msAllocated)}
                         </p>
                       </div>
-                      <span className="font-mono-nu text-[10px] font-bold text-nu-pink">
+                      <span className="font-mono-nu text-[12px] font-bold text-nu-pink">
                         {msAllocated > 0
                           ? Math.round((msSpent / msAllocated) * 100)
                           : 0}
@@ -404,7 +404,7 @@ export function ProjectFinanceDashboard({
                       />
                     </div>
                     {msTransactions.length > 0 && (
-                      <p className="font-mono-nu text-[8px] text-nu-muted">
+                      <p className="font-mono-nu text-[10px] text-nu-muted">
                         {msTransactions.length}건 거래
                       </p>
                     )}
@@ -419,14 +419,14 @@ export function ProjectFinanceDashboard({
       {/* Transaction List */}
       <div className="bg-nu-white border-[2px] border-nu-ink/[0.08] overflow-hidden">
         <div className="px-6 py-5 border-b border-nu-ink/[0.06] flex items-center justify-between">
-          <h3 className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-muted flex items-center gap-2">
+          <h3 className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-muted flex items-center gap-2">
             <Receipt size={12} /> 거래 내역
           </h3>
           <div className="flex items-center gap-2">
             {selectedCategory && (
               <button
                 onClick={() => setSelectedCategory(null)}
-                className="font-mono-nu text-[9px] px-2 py-1 bg-nu-pink/10 text-nu-pink border border-nu-pink/30 rounded hover:bg-nu-pink/20 transition-colors flex items-center gap-1"
+                className="font-mono-nu text-[11px] px-2 py-1 bg-nu-pink/10 text-nu-pink border border-nu-pink/30 rounded hover:bg-nu-pink/20 transition-colors flex items-center gap-1"
               >
                 <X size={10} /> {CATEGORY_LABELS[selectedCategory]?.label}
               </button>
@@ -434,7 +434,7 @@ export function ProjectFinanceDashboard({
             {isLead && (
               <button
                 onClick={() => setShowAddForm(!showAddForm)}
-                className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-2 bg-nu-pink text-white hover:bg-nu-pink/90 transition-colors flex items-center gap-1"
+                className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-3 py-2 bg-nu-pink text-white hover:bg-nu-pink/90 transition-colors flex items-center gap-1"
               >
                 <Plus size={12} /> 추가
               </button>
@@ -542,7 +542,7 @@ export function ProjectFinanceDashboard({
               <button
                 type="submit"
                 disabled={submitting}
-                className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors disabled:opacity-50 flex items-center gap-1"
+                className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors disabled:opacity-50 flex items-center gap-1"
               >
                 {submitting ? (
                   <Loader2 size={12} className="animate-spin" />
@@ -553,7 +553,7 @@ export function ProjectFinanceDashboard({
               <button
                 type="button"
                 onClick={() => setShowAddForm(false)}
-                className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted hover:text-nu-ink px-3 py-2"
+                className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted hover:text-nu-ink px-3 py-2"
               >
                 취소
               </button>
@@ -591,13 +591,13 @@ export function ProjectFinanceDashboard({
                         </p>
                         {catLabel && (
                           <span
-                            className={`font-mono-nu text-[8px] font-bold uppercase px-2 py-0.5 ${catLabel.bg} ${catLabel.color} border border-current/20 rounded`}
+                            className={`font-mono-nu text-[10px] font-bold uppercase px-2 py-0.5 ${catLabel.bg} ${catLabel.color} border border-current/20 rounded`}
                           >
                             {catLabel.label}
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-[11px] text-nu-muted">
+                      <div className="flex items-center gap-2 text-[13px] text-nu-muted">
                         <span>
                           {new Date(tx.recorded_at).toLocaleDateString("ko", {
                             month: "short",
@@ -653,7 +653,7 @@ export function ProjectFinanceDashboard({
       {!loading && transactions.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-green-50 border-2 border-green-200 px-4 py-3 rounded-lg">
-            <p className="font-mono-nu text-[9px] uppercase tracking-widest text-green-700 mb-1">
+            <p className="font-mono-nu text-[11px] uppercase tracking-widest text-green-700 mb-1">
               <ArrowDownRight size={12} className="inline mr-1" />
               총 수입
             </p>
@@ -663,7 +663,7 @@ export function ProjectFinanceDashboard({
           </div>
 
           <div className="bg-red-50 border-2 border-red-200 px-4 py-3 rounded-lg">
-            <p className="font-mono-nu text-[9px] uppercase tracking-widest text-red-700 mb-1">
+            <p className="font-mono-nu text-[11px] uppercase tracking-widest text-red-700 mb-1">
               <ArrowUpRight size={12} className="inline mr-1" />
               총 지출
             </p>
@@ -673,7 +673,7 @@ export function ProjectFinanceDashboard({
           </div>
 
           <div className="bg-nu-blue/5 border-2 border-nu-blue/20 px-4 py-3 rounded-lg">
-            <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-blue mb-1">
+            <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-blue mb-1">
               거래 건수
             </p>
             <p className="font-head text-lg font-bold text-nu-blue">

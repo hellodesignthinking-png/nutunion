@@ -153,7 +153,7 @@ export function AdminProjectList({ projects }: { projects: ProjectItem[] }) {
             style={{ width: `${pct}%` }}
           />
         </div>
-        <span className="font-mono-nu text-[10px] text-nu-muted">{pct}%</span>
+        <span className="font-mono-nu text-[12px] text-nu-muted">{pct}%</span>
       </div>
     );
   }
@@ -201,7 +201,7 @@ export function AdminProjectList({ projects }: { projects: ProjectItem[] }) {
       </div>
 
       {/* Count */}
-      <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-3">
+      <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-3">
         {filteredProjects.length}개 표시 / 전체 {projects.length}개
       </p>
 
@@ -210,14 +210,14 @@ export function AdminProjectList({ projects }: { projects: ProjectItem[] }) {
         <table className="w-full hidden md:table" role="table">
           <thead>
             <tr className="border-b border-nu-ink/[0.08]">
-              <th className="text-left px-5 py-3 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted font-normal">프로젝트</th>
-              <th className="text-left px-5 py-3 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted font-normal">카테고리</th>
-              <th className="text-left px-5 py-3 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted font-normal">상태</th>
-              <th className="text-left px-5 py-3 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted font-normal">생성자</th>
-              <th className="text-left px-5 py-3 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted font-normal">멤버</th>
-              <th className="text-left px-5 py-3 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted font-normal">진행률</th>
-              <th className="text-left px-5 py-3 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted font-normal">기간</th>
-              <th className="text-left px-5 py-3 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted font-normal">관리</th>
+              <th className="text-left px-5 py-3 font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted font-normal">프로젝트</th>
+              <th className="text-left px-5 py-3 font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted font-normal">카테고리</th>
+              <th className="text-left px-5 py-3 font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted font-normal">상태</th>
+              <th className="text-left px-5 py-3 font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted font-normal">생성자</th>
+              <th className="text-left px-5 py-3 font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted font-normal">멤버</th>
+              <th className="text-left px-5 py-3 font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted font-normal">진행률</th>
+              <th className="text-left px-5 py-3 font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted font-normal">기간</th>
+              <th className="text-left px-5 py-3 font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted font-normal">관리</th>
             </tr>
           </thead>
           <tbody>
@@ -231,7 +231,7 @@ export function AdminProjectList({ projects }: { projects: ProjectItem[] }) {
                   <td className="px-5 py-3 font-medium truncate max-w-[200px]">{p.title}</td>
                   <td className="px-5 py-3">
                     {p.category ? (
-                      <span className={`inline-block font-mono-nu text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 text-white ${catColors[p.category] || "bg-nu-gray"}`}>
+                      <span className={`inline-block font-mono-nu text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 text-white ${catColors[p.category] || "bg-nu-gray"}`}>
                         {catLabels[p.category] || p.category}
                       </span>
                     ) : (
@@ -242,7 +242,7 @@ export function AdminProjectList({ projects }: { projects: ProjectItem[] }) {
                     <select
                       value={p.status}
                       onChange={(e) => changeStatus(p.id, e.target.value as ProjectStatus)}
-                      className={`font-mono-nu text-[10px] uppercase tracking-widest bg-transparent border-none focus:outline-none cursor-pointer ${statusInfo.color}`}
+                      className={`font-mono-nu text-[12px] uppercase tracking-widest bg-transparent border-none focus:outline-none cursor-pointer ${statusInfo.color}`}
                     >
                       {allStatuses.map((s) => (
                         <option key={s} value={s}>{statusLabels[s].label}</option>
@@ -251,7 +251,7 @@ export function AdminProjectList({ projects }: { projects: ProjectItem[] }) {
                   </td>
                   <td className="px-5 py-3 text-nu-muted truncate max-w-[120px]">{p.creator_nickname}</td>
                   <td className="px-5 py-3">
-                    <div className="font-mono-nu text-[11px]">
+                    <div className="font-mono-nu text-[13px]">
                       <span>{p.member_count}명</span>
                       {p.crew_count > 0 && (
                         <span className="text-nu-muted ml-1">+{p.crew_count}크루</span>
@@ -261,14 +261,14 @@ export function AdminProjectList({ projects }: { projects: ProjectItem[] }) {
                   <td className="px-5 py-3">
                     <div className="space-y-1">
                       {p.milestone_count > 0 && (
-                        <div className="font-mono-nu text-[10px] text-nu-muted">
+                        <div className="font-mono-nu text-[12px] text-nu-muted">
                           MS {p.milestone_completed}/{p.milestone_count}
                         </div>
                       )}
                       {progressBar(p.task_done, p.task_total)}
                     </div>
                   </td>
-                  <td className="px-5 py-3 font-mono-nu text-[10px] text-nu-muted">
+                  <td className="px-5 py-3 font-mono-nu text-[12px] text-nu-muted">
                     {formatDate(p.start_date)} ~ {formatDate(p.end_date)}
                   </td>
                   <td className="px-5 py-3">
@@ -307,13 +307,13 @@ export function AdminProjectList({ projects }: { projects: ProjectItem[] }) {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2 min-w-0">
                     {p.category && (
-                      <span className={`font-mono-nu text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 text-white shrink-0 ${catColors[p.category] || "bg-nu-gray"}`}>
+                      <span className={`font-mono-nu text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 text-white shrink-0 ${catColors[p.category] || "bg-nu-gray"}`}>
                         {catLabels[p.category] || p.category}
                       </span>
                     )}
                     <span className="font-medium text-sm truncate">{p.title}</span>
                   </div>
-                  <span className={`font-mono-nu text-[9px] uppercase tracking-widest shrink-0 ${statusInfo.color}`}>
+                  <span className={`font-mono-nu text-[11px] uppercase tracking-widest shrink-0 ${statusInfo.color}`}>
                     {statusInfo.label}
                   </span>
                 </div>
@@ -326,7 +326,7 @@ export function AdminProjectList({ projects }: { projects: ProjectItem[] }) {
                 <div className="flex items-center justify-between">
                   <Link
                     href={`/projects/${p.id}`}
-                    className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted hover:text-nu-ink"
+                    className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted hover:text-nu-ink"
                   >
                     상세보기
                   </Link>
@@ -334,7 +334,7 @@ export function AdminProjectList({ projects }: { projects: ProjectItem[] }) {
                     <select
                       value={p.status}
                       onChange={(e) => changeStatus(p.id, e.target.value as ProjectStatus)}
-                      className="font-mono-nu text-[9px] uppercase tracking-widest bg-transparent border border-nu-ink/10 px-2 py-1 focus:outline-none"
+                      className="font-mono-nu text-[11px] uppercase tracking-widest bg-transparent border border-nu-ink/10 px-2 py-1 focus:outline-none"
                     >
                       {allStatuses.map((s) => (
                         <option key={s} value={s}>{statusLabels[s].label}</option>

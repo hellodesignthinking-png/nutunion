@@ -26,7 +26,7 @@ export function KakaoShareButton({ title, description, url, className = "" }: Ka
   return (
     <button
       onClick={handleShare}
-      className={`inline-flex items-center gap-2 font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2.5 bg-[#FEE500] text-[#191919] hover:bg-[#FDD835] transition-colors ${className}`}
+      className={`inline-flex items-center gap-2 font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2.5 bg-[#FEE500] text-[#191919] hover:bg-[#FDD835] transition-colors ${className}`}
     >
       <Share2 size={13} />
       카카오톡 공유

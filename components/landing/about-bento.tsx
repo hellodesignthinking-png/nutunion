@@ -70,7 +70,7 @@ export function AboutBento({ content }: AboutBentoProps) {
             className={`bento-cell reveal-item ${cell.bg} ${cell.wide ? "wide" : ""} relative`}
           >
             {/* Registration mark */}
-            <span className="absolute top-3 left-3 font-mono-nu text-[10px] opacity-10 select-none" aria-hidden="true">⊕</span>
+            <span className="absolute top-3 left-3 font-mono-nu text-[12px] opacity-10 select-none" aria-hidden="true">⊕</span>
 
             {/* Halftone corner decoration */}
             <div className={`absolute bottom-0 right-0 w-28 h-28 ${cell.halftone} opacity-[0.05]`} aria-hidden="true" />
@@ -83,7 +83,7 @@ export function AboutBento({ content }: AboutBentoProps) {
             )}
 
             <div className="relative z-10">
-              <span className="font-mono-nu text-[10px] font-bold tracking-[0.25em] uppercase opacity-45 mb-5 block">
+              <span className="font-mono-nu text-[12px] font-bold tracking-[0.25em] uppercase opacity-45 mb-5 block">
                 {cell.label}
               </span>
             {cell.huge && (

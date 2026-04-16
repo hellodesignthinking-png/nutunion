@@ -292,7 +292,7 @@ export function BestPracticeLibrary({ groupId }: BestPracticeLibraryProps) {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortBy)}
-              className="px-3 py-2 bg-nu-cream/30 border-2 border-nu-ink/10 text-[10px] font-mono-nu font-bold focus:outline-none focus:border-nu-pink"
+              className="px-3 py-2 bg-nu-cream/30 border-2 border-nu-ink/10 text-[12px] font-mono-nu font-bold focus:outline-none focus:border-nu-pink"
             >
               <option value="latest">최신순</option>
               <option value="views">조회수순</option>
@@ -317,7 +317,7 @@ export function BestPracticeLibrary({ groupId }: BestPracticeLibraryProps) {
               <button
                 key={tab}
                 onClick={() => setFilterTab(displayTab as FilterTab)}
-                className={`px-3 py-1.5 font-mono-nu text-[9px] font-bold uppercase tracking-widest whitespace-nowrap transition-all ${
+                className={`px-3 py-1.5 font-mono-nu text-[11px] font-bold uppercase tracking-widest whitespace-nowrap transition-all ${
                   isActive
                     ? "bg-nu-pink text-white"
                     : "bg-nu-ink/5 text-nu-ink hover:bg-nu-ink/10"
@@ -390,13 +390,13 @@ export function BestPracticeLibrary({ groupId }: BestPracticeLibraryProps) {
                       {practice.tags.slice(0, 3).map((tag, tidx) => (
                         <span
                           key={tidx}
-                          className={`px-1.5 py-0.5 text-[9px] font-mono-nu font-bold ${getTagColor(tidx)}`}
+                          className={`px-1.5 py-0.5 text-[11px] font-mono-nu font-bold ${getTagColor(tidx)}`}
                         >
                           {tag}
                         </span>
                       ))}
                       {practice.tags.length > 3 && (
-                        <span className="px-1.5 py-0.5 text-[9px] font-mono-nu font-bold text-nu-muted">
+                        <span className="px-1.5 py-0.5 text-[11px] font-mono-nu font-bold text-nu-muted">
                           +{practice.tags.length - 3}
                         </span>
                       )}
@@ -405,7 +405,7 @@ export function BestPracticeLibrary({ groupId }: BestPracticeLibraryProps) {
                 </div>
 
                 {/* Footer */}
-                <div className="mt-2 flex items-center justify-between text-[10px] text-nu-muted">
+                <div className="mt-2 flex items-center justify-between text-[12px] text-nu-muted">
                   <div className="flex items-center gap-2">
                     <Eye size={12} />
                     <span>{practice.view_count}</span>
@@ -419,7 +419,7 @@ export function BestPracticeLibrary({ groupId }: BestPracticeLibraryProps) {
                 <div className="px-4 py-3 border-t border-nu-ink/5 bg-nu-cream/10 space-y-3 animate-in slide-in-from-top-2 duration-200">
                   {/* Promoted By */}
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-nu-blue/20 flex items-center justify-center text-[10px] font-bold text-nu-blue shrink-0">
+                    <div className="w-6 h-6 rounded-full bg-nu-blue/20 flex items-center justify-center text-[12px] font-bold text-nu-blue shrink-0">
                       {practice.profiles?.avatar_url ? (
                         <img
                           src={practice.profiles.avatar_url}
@@ -431,10 +431,10 @@ export function BestPracticeLibrary({ groupId }: BestPracticeLibraryProps) {
                       )}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[10px] font-mono-nu font-bold text-nu-ink">
+                      <p className="text-[12px] font-mono-nu font-bold text-nu-ink">
                         {practice.profiles?.nickname || "Unknown"}
                       </p>
-                      <p className="text-[9px] text-nu-muted">
+                      <p className="text-[11px] text-nu-muted">
                         {practice.source_type === "meeting"
                           ? "미팅에서 승격"
                           : practice.source_type === "resource"
@@ -447,7 +447,7 @@ export function BestPracticeLibrary({ groupId }: BestPracticeLibraryProps) {
                   {/* Full Content */}
                   {practice.content?.sourceContent && (
                     <div className="space-y-1">
-                      <p className="font-mono-nu text-[9px] font-black uppercase tracking-widest text-nu-ink">
+                      <p className="font-mono-nu text-[11px] font-black uppercase tracking-widest text-nu-ink">
                         콘텐츠
                       </p>
                       <div className="px-3 py-2 bg-nu-white border border-nu-ink/5 text-[12px] text-nu-ink whitespace-pre-wrap break-words max-h-40 overflow-y-auto">
@@ -459,14 +459,14 @@ export function BestPracticeLibrary({ groupId }: BestPracticeLibraryProps) {
                   {/* All Tags */}
                   {practice.tags.length > 0 && (
                     <div className="space-y-1">
-                      <p className="font-mono-nu text-[9px] font-black uppercase tracking-widest text-nu-ink">
+                      <p className="font-mono-nu text-[11px] font-black uppercase tracking-widest text-nu-ink">
                         모든 태그
                       </p>
                       <div className="flex flex-wrap gap-1">
                         {practice.tags.map((tag, tidx) => (
                           <span
                             key={tidx}
-                            className={`px-2 py-0.5 text-[9px] font-mono-nu font-bold ${getTagColor(tidx)}`}
+                            className={`px-2 py-0.5 text-[11px] font-mono-nu font-bold ${getTagColor(tidx)}`}
                           >
                             {tag}
                           </span>
@@ -484,7 +484,7 @@ export function BestPracticeLibrary({ groupId }: BestPracticeLibraryProps) {
       {/* Promote Button - Visible to hosts/admins */}
       {isHostOrAdmin && (
         <div className="flex justify-center pt-4">
-          <button className="flex items-center gap-2 px-4 py-2.5 bg-nu-pink text-white font-mono-nu text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity">
+          <button className="flex items-center gap-2 px-4 py-2.5 bg-nu-pink text-white font-mono-nu text-[12px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity">
             <Plus size={12} />
             승격하기
           </button>

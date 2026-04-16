@@ -349,7 +349,7 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
           </p>
 
           {/* Pipeline visualization */}
-          <div className="flex items-center justify-center gap-2 mb-8 font-mono-nu text-[9px] text-nu-muted/60 uppercase tracking-widest">
+          <div className="flex items-center justify-center gap-2 mb-8 font-mono-nu text-[11px] text-nu-muted/60 uppercase tracking-widest">
             <span className="px-2 py-1 border border-nu-ink/10">기록</span>
             <ArrowRight size={12} />
             <span className="px-2 py-1 border border-nu-ink/10">분석</span>
@@ -400,13 +400,13 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
         <div className="flex gap-3 justify-center">
           <a
             href={`/groups/${groupId}/wiki`}
-            className="px-6 py-3 bg-green-600 text-white font-mono-nu text-[11px] font-bold uppercase tracking-widest hover:bg-green-700 transition-all no-underline flex items-center gap-2"
+            className="px-6 py-3 bg-green-600 text-white font-mono-nu text-[13px] font-bold uppercase tracking-widest hover:bg-green-700 transition-all no-underline flex items-center gap-2"
           >
             <BookOpen size={14} /> 탭 보기
           </a>
           <button
             onClick={() => { setPhase("idle"); setExtractedData(null); setSynced(false); }}
-            className="px-6 py-3 border-[2px] border-green-600 text-green-700 font-mono-nu text-[11px] font-bold uppercase tracking-widest hover:bg-green-100 transition-colors"
+            className="px-6 py-3 border-[2px] border-green-600 text-green-700 font-mono-nu text-[13px] font-bold uppercase tracking-widest hover:bg-green-100 transition-colors"
           >
             다시 분석
           </button>
@@ -422,7 +422,7 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
       {/* Extraction Source Badge */}
       {extractionSource && (
-        <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 font-mono-nu text-[9px] font-bold uppercase tracking-widest ${
+        <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 font-mono-nu text-[11px] font-bold uppercase tracking-widest ${
           extractionSource === "ai"
             ? "bg-nu-pink/10 text-nu-pink border border-nu-pink/20"
             : "bg-nu-amber/10 text-nu-amber border border-nu-amber/20"
@@ -435,7 +435,7 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
       {/* Entities & Tags */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white border-[2px] border-nu-ink p-6">
-          <h4 className="font-mono-nu text-[10px] font-bold text-nu-ink uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+          <h4 className="font-mono-nu text-[12px] font-bold text-nu-ink uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
             <GitBranch size={14} className="text-nu-pink" /> Key Entities & Concepts
           </h4>
           <div className="flex flex-wrap gap-2">
@@ -446,19 +446,19 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
                   : "bg-nu-ink/5 border-nu-ink text-nu-ink"
               }`}>
                 {e.name}
-                {e.isNew && <span className="ml-1.5 font-mono-nu text-[7px] uppercase">NEW</span>}
+                {e.isNew && <span className="ml-1.5 font-mono-nu text-[9px] uppercase">NEW</span>}
               </span>
             ))}
           </div>
         </div>
 
         <div className="bg-white border-[2px] border-nu-ink p-6">
-          <h4 className="font-mono-nu text-[10px] font-bold text-nu-ink uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+          <h4 className="font-mono-nu text-[12px] font-bold text-nu-ink uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
             <Tag size={14} className="text-nu-amber" /> Suggested Tags
           </h4>
           <div className="flex flex-wrap gap-2">
             {extractedData.suggestedTags.map((tag, i) => (
-              <span key={i} className="px-2 py-1 bg-nu-amber/10 border border-nu-amber/30 text-nu-amber font-mono-nu text-[9px] font-bold uppercase tracking-widest">
+              <span key={i} className="px-2 py-1 bg-nu-amber/10 border border-nu-amber/30 text-nu-amber font-mono-nu text-[11px] font-bold uppercase tracking-widest">
                 #{tag}
               </span>
             ))}
@@ -468,7 +468,7 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
 
       {/* Decisions */}
       <div className="bg-white border-[2px] border-nu-ink p-6">
-        <h4 className="font-mono-nu text-[10px] font-bold text-nu-blue uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+        <h4 className="font-mono-nu text-[12px] font-bold text-nu-blue uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
           <CheckCircle2 size={14} /> Confirmed Decisions ({extractedData.decisions.length})
         </h4>
         <div className="space-y-2">
@@ -483,7 +483,7 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
 
       {/* Open Questions */}
       <div className="bg-white border-[2px] border-nu-ink p-6">
-        <h4 className="font-mono-nu text-[10px] font-bold text-nu-amber uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+        <h4 className="font-mono-nu text-[12px] font-bold text-nu-amber uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
           <HelpCircle size={14} /> Open Questions ({extractedData.openQuestions.length})
         </h4>
         <div className="space-y-2">
@@ -498,7 +498,7 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
 
       {/* Wiki Updates (selectable) */}
       <div className="bg-nu-pink text-white p-6 border-[2px] border-nu-ink">
-        <h4 className="font-mono-nu text-[10px] font-bold uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+        <h4 className="font-mono-nu text-[12px] font-bold uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
           <RefreshCw size={14} /> Wiki Updates — 반영할 항목 선택 ({selectedUpdates.size}/{extractedData.wikiUpdates.length})
         </h4>
         <div className="space-y-3">
@@ -519,13 +519,13 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
                   {selectedUpdates.has(i) && <CheckCircle2 size={10} className="text-nu-pink" />}
                 </div>
                 <span className="font-head text-sm font-bold">{u.pageTitle}</span>
-                <span className={`font-mono-nu text-[8px] px-1.5 py-0.5 uppercase tracking-widest ${
+                <span className={`font-mono-nu text-[10px] px-1.5 py-0.5 uppercase tracking-widest ${
                   u.action === "create" ? "bg-green-400/20 text-green-200" : "bg-yellow-400/20 text-yellow-200"
                 }`}>
                   {u.action === "create" ? "New Page" : "Update"}
                 </span>
               </div>
-              <p className="text-[11px] text-white/70 ml-7">{u.suggestion}</p>
+              <p className="text-[13px] text-white/70 ml-7">{u.suggestion}</p>
             </button>
           ))}
         </div>
@@ -535,14 +535,14 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
       <div className="flex justify-end gap-3">
         <button
           onClick={() => { setPhase("idle"); setExtractedData(null); }}
-          className="px-6 py-3 border-[2px] border-nu-ink font-mono-nu text-[11px] font-bold uppercase tracking-widest hover:bg-nu-cream transition-all"
+          className="px-6 py-3 border-[2px] border-nu-ink font-mono-nu text-[13px] font-bold uppercase tracking-widest hover:bg-nu-cream transition-all"
         >
           다시 추출
         </button>
         <button
           onClick={handleApplySync}
           disabled={syncing || selectedUpdates.size === 0}
-          className="px-8 py-3 bg-nu-pink text-white font-mono-nu text-[11px] font-bold uppercase tracking-widest shadow-[4px_4px_0px_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center gap-2 disabled:opacity-50"
+          className="px-8 py-3 bg-nu-pink text-white font-mono-nu text-[13px] font-bold uppercase tracking-widest shadow-[4px_4px_0px_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all flex items-center gap-2 disabled:opacity-50"
         >
           {syncing ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
           {selectedUpdates.size}개 항목 탭에 반영

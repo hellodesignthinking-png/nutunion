@@ -202,9 +202,9 @@ export function MemberActivityReport({ userId }: { userId: string }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-head text-base font-bold">{report.nickname}</h3>
-            <span className={`font-mono-nu text-[8px] uppercase tracking-widest px-2 py-0.5 ${levelColor}`}>{level}</span>
+            <span className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 ${levelColor}`}>{level}</span>
             {report.specialty && (
-              <span className={`font-mono-nu text-[7px] uppercase tracking-widest px-1.5 py-0.5 text-white ${catColors[report.specialty] || "bg-nu-gray"}`}>
+              <span className={`font-mono-nu text-[9px] uppercase tracking-widest px-1.5 py-0.5 text-white ${catColors[report.specialty] || "bg-nu-gray"}`}>
                 {report.specialty}
               </span>
             )}
@@ -227,7 +227,7 @@ export function MemberActivityReport({ userId }: { userId: string }) {
           <div key={stat.label} className="bg-nu-white p-3 text-center">
             <stat.icon size={14} className={`mx-auto mb-1 ${stat.color}`} />
             <p className="font-head text-lg font-bold">{stat.value}</p>
-            <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted">{stat.label}</p>
+            <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">{stat.label}</p>
           </div>
         ))}
       </div>
@@ -235,7 +235,7 @@ export function MemberActivityReport({ userId }: { userId: string }) {
       {/* Expandable detail */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full py-2 text-center font-mono-nu text-[10px] text-nu-muted hover:text-nu-pink transition-colors"
+        className="w-full py-2 text-center font-mono-nu text-[12px] text-nu-muted hover:text-nu-pink transition-colors"
       >
         {expanded ? "접기 ▲" : "상세 활동 보기 ▼"}
       </button>
@@ -245,10 +245,10 @@ export function MemberActivityReport({ userId }: { userId: string }) {
           {/* Crews */}
           {report.crewNames.length > 0 && (
             <div>
-              <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-1">소속 너트</span>
+              <span className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted block mb-1">소속 너트</span>
               <div className="flex flex-wrap gap-1.5">
                 {report.crewNames.map((name) => (
-                  <span key={name} className="text-[11px] bg-nu-cream px-2 py-0.5">{name}</span>
+                  <span key={name} className="text-[13px] bg-nu-cream px-2 py-0.5">{name}</span>
                 ))}
               </div>
             </div>
@@ -257,10 +257,10 @@ export function MemberActivityReport({ userId }: { userId: string }) {
           {/* Projects */}
           {report.projectNames.length > 0 && (
             <div>
-              <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-1">참여 프로젝트</span>
+              <span className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted block mb-1">참여 프로젝트</span>
               <div className="flex flex-wrap gap-1.5">
                 {report.projectNames.map((name) => (
-                  <span key={name} className="text-[11px] bg-green-50 text-green-700 px-2 py-0.5">{name}</span>
+                  <span key={name} className="text-[13px] bg-green-50 text-green-700 px-2 py-0.5">{name}</span>
                 ))}
               </div>
             </div>
@@ -269,12 +269,12 @@ export function MemberActivityReport({ userId }: { userId: string }) {
           {/* Recent posts */}
           {report.recentPosts.length > 0 && (
             <div>
-              <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-2">최근 활동</span>
+              <span className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted block mb-2">최근 활동</span>
               <div className="space-y-2">
                 {report.recentPosts.map((p, i) => (
                   <div key={i} className="text-xs border-l-2 border-nu-pink/20 pl-3 py-1">
                     <p className="text-nu-graphite line-clamp-2">{p.content}</p>
-                    <p className="text-nu-muted mt-0.5 font-mono-nu text-[9px]">{p.source} · {timeAgo(p.created_at)}</p>
+                    <p className="text-nu-muted mt-0.5 font-mono-nu text-[11px]">{p.source} · {timeAgo(p.created_at)}</p>
                   </div>
                 ))}
               </div>

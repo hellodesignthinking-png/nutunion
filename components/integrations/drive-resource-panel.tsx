@@ -166,7 +166,7 @@ export function DriveResourcePanel({
         </p>
         {canManage && onCreateFolder && (
           <button onClick={onCreateFolder}
-            className="font-mono-nu text-[10px] uppercase tracking-widest px-5 py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors border-none cursor-pointer">
+            className="font-mono-nu text-[12px] uppercase tracking-widest px-5 py-2.5 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors border-none cursor-pointer">
             <Plus size={12} className="inline mr-1" /> Drive 폴더 만들기
           </button>
         )}
@@ -213,14 +213,14 @@ export function DriveResourcePanel({
       {tabs.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           <button onClick={goToRoot}
-            className={`font-mono-nu text-[8px] uppercase tracking-widest px-2.5 py-1 border cursor-pointer transition-colors ${
+            className={`font-mono-nu text-[10px] uppercase tracking-widest px-2.5 py-1 border cursor-pointer transition-colors ${
               !currentFolder ? "bg-nu-ink text-white border-nu-ink" : "bg-white text-nu-muted border-nu-ink/10 hover:bg-nu-cream/30"
             }`}>
             전체
           </button>
           {tabs.map(([name, id]) => (
             <button key={id} onClick={() => { setBreadcrumb([{ id, name }]); setCurrentFolder(id); loadFiles(id); }}
-              className={`font-mono-nu text-[8px] uppercase tracking-widest px-2.5 py-1 border cursor-pointer transition-colors ${
+              className={`font-mono-nu text-[10px] uppercase tracking-widest px-2.5 py-1 border cursor-pointer transition-colors ${
                 currentFolder === id ? "bg-nu-ink text-white border-nu-ink" : "bg-white text-nu-muted border-nu-ink/10 hover:bg-nu-cream/30"
               }`}>
               {name}
@@ -231,7 +231,7 @@ export function DriveResourcePanel({
 
       {/* Breadcrumb */}
       {breadcrumb.length > 0 && (
-        <div className="flex items-center gap-1 text-[10px] text-nu-muted">
+        <div className="flex items-center gap-1 text-[12px] text-nu-muted">
           <button onClick={goToRoot} className="bg-transparent border-none cursor-pointer text-nu-muted hover:text-nu-ink p-0">
             <ArrowLeft size={10} />
           </button>
@@ -293,14 +293,14 @@ export function DriveResourcePanel({
                   <p className="text-xs font-medium text-nu-ink truncate group-hover:text-indigo-600 transition-colors">{f.name}</p>
                   <div className="flex items-center gap-2 mt-0.5">
                     {f.owners?.[0]?.displayName && (
-                      <span className="text-[9px] text-nu-muted">{f.owners[0].displayName}</span>
+                      <span className="text-[11px] text-nu-muted">{f.owners[0].displayName}</span>
                     )}
                     {f.modifiedTime && (
-                      <span className="text-[9px] text-nu-muted">
+                      <span className="text-[11px] text-nu-muted">
                         {new Date(f.modifiedTime).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}
                       </span>
                     )}
-                    {f.size && <span className="text-[9px] text-nu-muted">{formatBytes(f.size)}</span>}
+                    {f.size && <span className="text-[11px] text-nu-muted">{formatBytes(f.size)}</span>}
                   </div>
                 </div>
                 <ExternalLink size={10} className="text-nu-muted/30 group-hover:text-indigo-400 shrink-0" />

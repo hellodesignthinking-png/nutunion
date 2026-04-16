@@ -577,40 +577,40 @@ export function KnowledgeGraph({ groupId }: { groupId: string }) {
 
       {/* Stats */}
       <div className="absolute top-4 left-4 z-10 flex gap-2">
-        <span className="bg-nu-ink/80 text-white px-2 py-1 font-mono-nu text-[8px] uppercase tracking-widest">
+        <span className="bg-nu-ink/80 text-white px-2 py-1 font-mono-nu text-[10px] uppercase tracking-widest">
           {stats.topics} topics
         </span>
-        <span className="bg-nu-pink/80 text-white px-2 py-1 font-mono-nu text-[8px] uppercase tracking-widest">
+        <span className="bg-nu-pink/80 text-white px-2 py-1 font-mono-nu text-[10px] uppercase tracking-widest">
           {stats.pages} pages
         </span>
-        <span className="bg-[#ff6f00]/80 text-white px-2 py-1 font-mono-nu text-[8px] uppercase tracking-widest">
+        <span className="bg-[#ff6f00]/80 text-white px-2 py-1 font-mono-nu text-[10px] uppercase tracking-widest">
           {stats.resources} resources
         </span>
-        <span className="bg-nu-blue/80 text-white px-2 py-1 font-mono-nu text-[8px] uppercase tracking-widest">
+        <span className="bg-nu-blue/80 text-white px-2 py-1 font-mono-nu text-[10px] uppercase tracking-widest">
           {stats.links} links
         </span>
       </div>
 
       {/* Legend */}
       <div className="absolute bottom-4 left-4 z-10 bg-white/90 backdrop-blur-sm border border-nu-ink/10 p-3 space-y-1.5">
-        <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted font-bold mb-2">Nodes</p>
+        <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted font-bold mb-2">Nodes</p>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-nu-pink" />
-          <span className="font-mono-nu text-[7px] text-nu-muted uppercase">Topic (주제)</span>
+          <span className="font-mono-nu text-[9px] text-nu-muted uppercase">Topic (주제)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-white border border-nu-ink/30" />
-          <span className="font-mono-nu text-[7px] text-nu-muted uppercase">Page (페이지)</span>
+          <span className="font-mono-nu text-[9px] text-nu-muted uppercase">Page (페이지)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-2.5 h-2.5 rotate-45 border border-[#ff6f00]" style={{ backgroundColor: "#ff6f0020" }} />
-          <span className="font-mono-nu text-[7px] text-nu-muted uppercase">Resource (자료)</span>
+          <span className="font-mono-nu text-[9px] text-nu-muted uppercase">Resource (자료)</span>
         </div>
-        <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted font-bold mt-2 mb-1">Links</p>
+        <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted font-bold mt-2 mb-1">Links</p>
         {Object.entries(LINK_COLORS).map(([type, color]) => (
           <div key={type} className="flex items-center gap-2">
             <div className="w-8 h-0.5" style={{ backgroundColor: color }} />
-            <span className="font-mono-nu text-[7px] text-nu-muted uppercase">
+            <span className="font-mono-nu text-[9px] text-nu-muted uppercase">
               {type === "resource_link" ? "resource → page" : type}
             </span>
           </div>
@@ -621,11 +621,11 @@ export function KnowledgeGraph({ groupId }: { groupId: string }) {
       {hoveredNode && (
         <div className="absolute top-14 left-4 z-10 bg-nu-ink text-white p-3 max-w-[220px] shadow-lg">
           <p className="font-head text-xs font-bold">{hoveredNode.label}</p>
-          <p className="font-mono-nu text-[8px] text-white/50 uppercase mt-1 flex items-center gap-1">
+          <p className="font-mono-nu text-[10px] text-white/50 uppercase mt-1 flex items-center gap-1">
             {hoveredNode.type === "resource" ? `📦 ${hoveredNode.resourceType || "resource"}` : hoveredNode.type}
             {hoveredNode.pageCount !== undefined && ` · ${hoveredNode.pageCount} pages`}
           </p>
-          <p className="font-mono-nu text-[7px] text-nu-pink mt-1.5 flex items-center gap-1">
+          <p className="font-mono-nu text-[9px] text-nu-pink mt-1.5 flex items-center gap-1">
             <ExternalLink size={8} />
             {hoveredNode.type === "resource" ? "클릭하여 자료 열기" : "클릭하여 이동"}
           </p>

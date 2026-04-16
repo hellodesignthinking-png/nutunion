@@ -255,7 +255,7 @@ export function ChatPanel() {
               {/* Error */}
               {error && (
                 <div className="px-4 py-3 bg-red-50 border-b border-red-200">
-                  <p className="text-[11px] text-red-600">{error}</p>
+                  <p className="text-[13px] text-red-600">{error}</p>
                 </div>
               )}
 
@@ -281,7 +281,7 @@ export function ChatPanel() {
                 ) : visibleSpaces.length === 0 ? (
                   <div className="text-center py-12 px-4">
                     <MessageCircle size={28} className="mx-auto mb-2 text-nu-ink/10" />
-                    <p className="font-mono-nu text-[10px] text-nu-muted">
+                    <p className="font-mono-nu text-[12px] text-nu-muted">
                       {search ? "검색 결과가 없습니다" : error ? "Google 계정을 연결해주세요" : "스페이스가 없습니다"}
                     </p>
                   </div>
@@ -314,7 +314,7 @@ export function ChatPanel() {
                 </button>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-head text-sm font-bold truncate">{activeSpace.displayName}</h3>
-                  <p className="font-mono-nu text-[8px] uppercase tracking-widest text-white/60">
+                  <p className="font-mono-nu text-[10px] uppercase tracking-widest text-white/60">
                     Google Chat · {activeSpace.type === "DM" ? "DM" : "Space"}
                   </p>
                 </div>
@@ -333,7 +333,7 @@ export function ChatPanel() {
                 ) : messages.length === 0 ? (
                   <div className="text-center py-8">
                     <MessageCircle size={24} className="mx-auto mb-2 text-nu-ink/10" />
-                    <p className="font-mono-nu text-[10px] text-nu-muted">메시지가 없습니다</p>
+                    <p className="font-mono-nu text-[12px] text-nu-muted">메시지가 없습니다</p>
                   </div>
                 ) : (
                   messages.map(msg => {
@@ -342,7 +342,7 @@ export function ChatPanel() {
                       <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
                         <div className="max-w-[75%]">
                           {!isMe && (
-                            <p className="font-mono-nu text-[8px] text-nu-muted mb-0.5">{msg.sender_name}</p>
+                            <p className="font-mono-nu text-[10px] text-nu-muted mb-0.5">{msg.sender_name}</p>
                           )}
                           <div className={`px-3 py-2 text-sm whitespace-pre-wrap ${
                             isMe
@@ -351,7 +351,7 @@ export function ChatPanel() {
                           }`}>
                             {msg.content}
                           </div>
-                          <p className={`font-mono-nu text-[7px] text-nu-muted/50 mt-0.5 ${isMe ? "text-right" : ""}`}>
+                          <p className={`font-mono-nu text-[9px] text-nu-muted/50 mt-0.5 ${isMe ? "text-right" : ""}`}>
                             {msg.created_at ? new Date(msg.created_at).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }) : ""}
                           </p>
                         </div>
@@ -398,7 +398,7 @@ function SpaceGroup({ label, spaces, onSelect, onToggle }: {
 }) {
   return (
     <div>
-      <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted px-4 pt-3 pb-1 font-bold">{label}</p>
+      <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted px-4 pt-3 pb-1 font-bold">{label}</p>
       {spaces.map(s => (
         <div
           key={s.id}

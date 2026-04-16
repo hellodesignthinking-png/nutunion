@@ -334,12 +334,12 @@ export function WeeklyDigestEngine({
             이번 주 회의, 노트, 자료, 탭 업데이트를 AI가 압축하여
             <strong className="text-purple-600"> 다음 회의의 시작 컨텍스트</strong>를 생성합니다.
           </p>
-          <p className="text-[11px] text-nu-muted/60 mb-6">
+          <p className="text-[13px] text-nu-muted/60 mb-6">
             매 회의 시작 시 전체 데이터를 다시 읽는 대신, 압축본만 참조하여 AI 토큰과 시간을 절약합니다.
           </p>
 
           {/* Pipeline visualization */}
-          <div className="flex items-center justify-center gap-1.5 mb-6 font-mono-nu text-[8px] text-nu-muted/60 uppercase tracking-widest flex-wrap">
+          <div className="flex items-center justify-center gap-1.5 mb-6 font-mono-nu text-[10px] text-nu-muted/60 uppercase tracking-widest flex-wrap">
             <span className="px-2 py-1 border border-purple-200 bg-purple-50">회의록</span>
             <ArrowRight size={10} />
             <span className="px-2 py-1 border border-purple-200 bg-purple-50">노트</span>
@@ -355,20 +355,20 @@ export function WeeklyDigestEngine({
 
           {previousDigest && (
             <div className="bg-white/60 border border-purple-200 p-3 mb-6 text-left max-w-md mx-auto">
-              <p className="font-mono-nu text-[8px] uppercase tracking-widest text-purple-500 mb-1">이전 다이제스트 컨텍스트</p>
-              <p className="text-[11px] text-nu-ink/70 leading-relaxed">{previousDigest}</p>
+              <p className="font-mono-nu text-[10px] uppercase tracking-widest text-purple-500 mb-1">이전 다이제스트 컨텍스트</p>
+              <p className="text-[13px] text-nu-ink/70 leading-relaxed">{previousDigest}</p>
             </div>
           )}
 
           {/* Date range selector */}
           <div className="flex items-center justify-center gap-2 mb-4">
             <Calendar size={12} className="text-nu-muted" />
-            <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">분석 기간:</span>
+            <span className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">분석 기간:</span>
             {[7, 14, 30].map(days => (
               <button
                 key={days}
                 onClick={() => setDaysRange(days)}
-                className={`px-3 py-1.5 font-mono-nu text-[9px] uppercase tracking-widest transition-all ${
+                className={`px-3 py-1.5 font-mono-nu text-[11px] uppercase tracking-widest transition-all ${
                   daysRange === days
                     ? "bg-purple-600 text-white shadow-sm"
                     : "bg-white/60 text-nu-muted border border-purple-200 hover:border-purple-400"
@@ -381,7 +381,7 @@ export function WeeklyDigestEngine({
 
           <button
             onClick={handleGenerate}
-            className="bg-nu-ink text-white px-8 py-3.5 font-mono-nu text-[11px] font-bold uppercase tracking-widest hover:bg-purple-700 transition-all shadow-[4px_4px_0px_rgba(156,39,176,0.3)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] flex items-center gap-3 mx-auto"
+            className="bg-nu-ink text-white px-8 py-3.5 font-mono-nu text-[13px] font-bold uppercase tracking-widest hover:bg-purple-700 transition-all shadow-[4px_4px_0px_rgba(156,39,176,0.3)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] flex items-center gap-3 mx-auto"
           >
             <Brain size={16} /> 최근 {daysRange}일 다이제스트 생성
           </button>
@@ -391,7 +391,7 @@ export function WeeklyDigestEngine({
             <div className="mt-8 max-w-md mx-auto w-full">
               <div className="flex items-center gap-2 mb-3">
                 <Clock size={12} className="text-nu-muted" />
-                <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">다이제스트 히스토리 ({digestHistory.length})</span>
+                <span className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">다이제스트 히스토리 ({digestHistory.length})</span>
               </div>
               <div className="space-y-2">
                 {digestHistory.map((item, i) => (
@@ -406,10 +406,10 @@ export function WeeklyDigestEngine({
                     className="w-full text-left p-3 bg-white/60 border border-purple-100 hover:border-purple-300 hover:bg-purple-50/50 transition-all group"
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="font-mono-nu text-[8px] text-purple-500 uppercase tracking-widest">{item.date}</span>
+                      <span className="font-mono-nu text-[10px] text-purple-500 uppercase tracking-widest">{item.date}</span>
                       {i === 0 && <span className="px-1.5 py-0.5 bg-purple-100 text-purple-600 font-mono-nu text-[6px] uppercase tracking-widest">latest</span>}
                     </div>
-                    <p className="text-[10px] text-nu-ink/60 leading-relaxed line-clamp-2 group-hover:text-nu-ink/80">
+                    <p className="text-[12px] text-nu-ink/60 leading-relaxed line-clamp-2 group-hover:text-nu-ink/80">
                       {item.context || item.title}
                     </p>
                   </button>
@@ -463,16 +463,16 @@ export function WeeklyDigestEngine({
         </p>
         {result && (
           <div className="bg-white/60 border border-green-300 p-3 max-w-md mx-auto mb-6 text-left">
-            <p className="font-mono-nu text-[8px] uppercase tracking-widest text-green-600 mb-1">다음 회의 AI 컨텍스트</p>
-            <p className="text-[11px] text-nu-ink leading-relaxed">{result.nextMeetingContext}</p>
+            <p className="font-mono-nu text-[10px] uppercase tracking-widest text-green-600 mb-1">다음 회의 AI 컨텍스트</p>
+            <p className="text-[13px] text-nu-ink leading-relaxed">{result.nextMeetingContext}</p>
           </div>
         )}
         <div className="flex gap-3 justify-center">
-          <a href={`/groups/${groupId}/wiki`} className="px-5 py-2.5 bg-green-600 text-white font-mono-nu text-[10px] font-bold uppercase tracking-widest hover:bg-green-700 transition-all no-underline flex items-center gap-2">
+          <a href={`/groups/${groupId}/wiki`} className="px-5 py-2.5 bg-green-600 text-white font-mono-nu text-[12px] font-bold uppercase tracking-widest hover:bg-green-700 transition-all no-underline flex items-center gap-2">
             <BookOpen size={13} /> 탭 보기
           </a>
           <button onClick={() => { setPhase("idle"); setResult(null); }}
-            className="px-5 py-2.5 border-[2px] border-green-600 text-green-700 font-mono-nu text-[10px] font-bold uppercase tracking-widest hover:bg-green-100 transition-colors">
+            className="px-5 py-2.5 border-[2px] border-green-600 text-green-700 font-mono-nu text-[12px] font-bold uppercase tracking-widest hover:bg-green-100 transition-colors">
             <RefreshCw size={13} />
           </button>
         </div>
@@ -489,11 +489,11 @@ export function WeeklyDigestEngine({
       <div className="bg-gradient-to-r from-purple-600 to-nu-ink text-white p-5">
         <div className="flex items-center gap-2 mb-2">
           <Sparkles size={16} className="text-purple-300" />
-          <span className="font-mono-nu text-[10px] font-black uppercase tracking-[0.2em] text-purple-300">
+          <span className="font-mono-nu text-[12px] font-black uppercase tracking-[0.2em] text-purple-300">
             Weekly_Knowledge_Digest
           </span>
         </div>
-        <p className="text-[11px] text-white/60">
+        <p className="text-[13px] text-white/60">
           {new Date(result.periodStart).toLocaleDateString("ko")} ~ {new Date(result.periodEnd).toLocaleDateString("ko")}
           {" · "}{result.meetingCount}개 회의 · {result.noteCount}개 노트 · {result.resourceCount}개 자료 · {result.wikiUpdateCount}개 탭
         </p>
@@ -510,7 +510,7 @@ export function WeeklyDigestEngine({
           <div key={i} className="bg-nu-white border border-nu-ink/[0.08] p-3 text-center">
             <div className="flex items-center justify-center gap-1 text-nu-muted mb-1">{stat.icon}</div>
             <p className="font-head text-lg font-black text-nu-ink">{stat.value}</p>
-            <p className="font-mono-nu text-[7px] text-nu-muted uppercase">{stat.label}</p>
+            <p className="font-mono-nu text-[9px] text-nu-muted uppercase">{stat.label}</p>
           </div>
         ))}
       </div>
@@ -600,12 +600,12 @@ export function WeeklyDigestEngine({
       <div className="bg-purple-50 border-[2px] border-purple-400 p-5">
         <div className="flex items-center gap-2 mb-3">
           <Zap size={14} className="text-purple-600" />
-          <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-purple-700">다음 회의 AI 시작 컨텍스트</span>
+          <span className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-purple-700">다음 회의 AI 시작 컨텍스트</span>
         </div>
         <p className="text-sm text-purple-900 leading-relaxed bg-white/50 p-3 border border-purple-200">
           {result.nextMeetingContext}
         </p>
-        <p className="font-mono-nu text-[8px] text-purple-400 mt-2 uppercase tracking-widest">
+        <p className="font-mono-nu text-[10px] text-purple-400 mt-2 uppercase tracking-widest">
           {result.tokenSavings}
         </p>
       </div>
@@ -648,24 +648,24 @@ export function WeeklyDigestEngine({
         <div className="bg-white border border-blue-200 overflow-hidden">
           <div className="px-4 py-3 bg-blue-50 flex items-center gap-2">
             <BookOpen size={14} className="text-blue-500" />
-            <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-blue-700">학습 여정</span>
+            <span className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-blue-700">학습 여정</span>
           </div>
           <div className="p-4 space-y-3">
             {result.learningJourney.topicsExplored?.length > 0 && (
               <div>
-                <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted mb-1.5">📖 탐구한 주제</p>
+                <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-1.5">📖 탐구한 주제</p>
                 <div className="flex flex-wrap gap-1.5">
                   {result.learningJourney.topicsExplored.map((t, i) => (
-                    <span key={i} className="px-2 py-1 bg-blue-50 text-blue-700 text-[10px] border border-blue-100">{t}</span>
+                    <span key={i} className="px-2 py-1 bg-blue-50 text-blue-700 text-[12px] border border-blue-100">{t}</span>
                   ))}
                 </div>
               </div>
             )}
             {result.learningJourney.recommendedReading?.length > 0 && (
               <div>
-                <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted mb-1.5">📚 추천 학습</p>
+                <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-1.5">📚 추천 학습</p>
                 {result.learningJourney.recommendedReading.map((r, i) => (
-                  <div key={i} className="flex items-start gap-2 text-[11px] text-nu-ink mb-1">
+                  <div key={i} className="flex items-start gap-2 text-[13px] text-nu-ink mb-1">
                     <ArrowRight size={11} className="text-blue-400 mt-0.5 shrink-0" /> {r}
                   </div>
                 ))}
@@ -673,10 +673,10 @@ export function WeeklyDigestEngine({
             )}
             {result.learningJourney.skillsSharpened?.length > 0 && (
               <div>
-                <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted mb-1.5">💪 연마된 역량</p>
+                <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-1.5">💪 연마된 역량</p>
                 <div className="flex flex-wrap gap-1.5">
                   {result.learningJourney.skillsSharpened.map((s, i) => (
-                    <span key={i} className="px-2 py-1 bg-green-50 text-green-700 text-[10px] border border-green-100">{s}</span>
+                    <span key={i} className="px-2 py-1 bg-green-50 text-green-700 text-[12px] border border-green-100">{s}</span>
                   ))}
                 </div>
               </div>
@@ -690,23 +690,23 @@ export function WeeklyDigestEngine({
         <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-4">
           <div className="flex items-center gap-2 mb-3">
             <Sparkles size={14} className="text-amber-500" />
-            <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-amber-700">주간 회고</span>
+            <span className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-amber-700">주간 회고</span>
           </div>
           <div className="space-y-2">
             {result.weeklyReflection.whatWentWell && (
-              <div className="flex items-start gap-2 text-[11px]">
+              <div className="flex items-start gap-2 text-[13px]">
                 <span className="text-green-500 shrink-0">✅</span>
                 <div><strong className="text-green-700">잘한 점:</strong> <span className="text-nu-ink/70">{result.weeklyReflection.whatWentWell}</span></div>
               </div>
             )}
             {result.weeklyReflection.whatToImprove && (
-              <div className="flex items-start gap-2 text-[11px]">
+              <div className="flex items-start gap-2 text-[13px]">
                 <span className="text-amber-500 shrink-0">🔧</span>
                 <div><strong className="text-amber-700">개선할 점:</strong> <span className="text-nu-ink/70">{result.weeklyReflection.whatToImprove}</span></div>
               </div>
             )}
             {result.weeklyReflection.discussionEvolution && (
-              <div className="flex items-start gap-2 text-[11px]">
+              <div className="flex items-start gap-2 text-[13px]">
                 <span className="text-blue-500 shrink-0">📈</span>
                 <div><strong className="text-blue-700">토론 변화:</strong> <span className="text-nu-ink/70">{result.weeklyReflection.discussionEvolution}</span></div>
               </div>
@@ -720,7 +720,7 @@ export function WeeklyDigestEngine({
         <div className="bg-gradient-to-r from-pink-50 to-purple-50 border-[2px] border-pink-200 p-5 text-center">
           <p className="text-lg mb-2">💜</p>
           <p className="text-sm text-nu-ink leading-relaxed italic">{result.encouragement}</p>
-          <p className="font-mono-nu text-[7px] text-nu-muted uppercase tracking-widest mt-2">AI 성장 촉진자</p>
+          <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest mt-2">AI 성장 촉진자</p>
         </div>
       )}
 
@@ -729,7 +729,7 @@ export function WeeklyDigestEngine({
         <div className="flex items-center justify-between">
           <button
             onClick={() => { setPhase("idle"); setResult(null); }}
-            className="flex items-center gap-1.5 font-mono-nu text-[9px] uppercase tracking-widest text-nu-paper/60 hover:text-nu-paper transition-colors"
+            className="flex items-center gap-1.5 font-mono-nu text-[11px] uppercase tracking-widest text-nu-paper/60 hover:text-nu-paper transition-colors"
           >
             <RefreshCw size={12} /> 다시 생성
           </button>
@@ -764,7 +764,7 @@ export function WeeklyDigestEngine({
                 toast.success("마크다운 형식으로 복사되었습니다");
               } catch { toast.error("복사 실패"); }
             }}
-            className="flex items-center gap-1.5 font-mono-nu text-[9px] uppercase tracking-widest text-nu-paper/60 hover:text-nu-paper transition-colors"
+            className="flex items-center gap-1.5 font-mono-nu text-[11px] uppercase tracking-widest text-nu-paper/60 hover:text-nu-paper transition-colors"
           >
             <Copy size={12} /> MD 복사
           </button>
@@ -790,7 +790,7 @@ export function WeeklyDigestEngine({
               toast.success("팀 브리핑 요약이 복사되었습니다 — 채팅에 바로 붙여넣기 하세요!");
             } catch { toast.error("복사 실패"); }
           }}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 font-mono-nu text-[10px] uppercase tracking-widest border border-nu-paper/20 text-nu-paper/70 hover:text-nu-paper hover:border-nu-paper/40 transition-all"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 font-mono-nu text-[12px] uppercase tracking-widest border border-nu-paper/20 text-nu-paper/70 hover:text-nu-paper hover:border-nu-paper/40 transition-all"
         >
           <Copy size={12} /> 팀 브리핑 요약 복사 (채팅용)
         </button>
@@ -798,7 +798,7 @@ export function WeeklyDigestEngine({
         <button
           onClick={handleSave}
           disabled={saving || phase === "saved"}
-          className={`w-full flex items-center justify-center gap-2 px-5 py-3 font-mono-nu text-[11px] font-bold uppercase tracking-widest transition-all shadow-lg ${
+          className={`w-full flex items-center justify-center gap-2 px-5 py-3 font-mono-nu text-[13px] font-bold uppercase tracking-widest transition-all shadow-lg ${
             phase === "saved"
               ? "bg-green-600 text-white cursor-default"
               : "bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-40"
@@ -812,7 +812,7 @@ export function WeeklyDigestEngine({
             <><Save size={14} /> 다이제스트 저장 + 탭 자동 등록</>
           )}
         </button>
-        <p className="font-mono-nu text-[8px] text-nu-paper/40 uppercase tracking-widest text-center">
+        <p className="font-mono-nu text-[10px] text-nu-paper/40 uppercase tracking-widest text-center">
           {phase === "saved" 
             ? "✅ 다이제스트가 탭에 등록되었습니다. 다음 회의 AI가 자동 참조합니다."
             : "다이제스트가 탭에 저장되면 다음 회의 AI가 자동으로 참조합니다"}
@@ -831,7 +831,7 @@ function SectionCard({ title, icon, expanded, onToggle, children }: {
       <button onClick={onToggle} className="w-full flex items-center justify-between px-4 py-3 hover:bg-nu-cream/20 transition-colors">
         <div className="flex items-center gap-2">
           {icon}
-          <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest text-nu-ink">{title}</span>
+          <span className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-ink">{title}</span>
         </div>
         {expanded ? <ChevronUp size={14} className="text-nu-muted" /> : <ChevronDown size={14} className="text-nu-muted" />}
       </button>

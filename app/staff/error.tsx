@@ -27,13 +27,13 @@ export default function StaffError({
       <div className="flex items-center justify-center gap-3">
         <button
           onClick={reset}
-          className="inline-flex items-center gap-2 font-mono-nu text-[11px] uppercase tracking-widest px-5 py-2.5 bg-indigo-600 text-white hover:bg-indigo-700 transition-colors border-none cursor-pointer"
+          className="inline-flex items-center gap-2 font-mono-nu text-[13px] uppercase tracking-widest px-5 py-2.5 bg-indigo-600 text-white hover:bg-indigo-700 transition-colors border-none cursor-pointer"
         >
           <RefreshCw size={14} /> 다시 시도
         </button>
         <Link
           href="/staff"
-          className="inline-flex items-center gap-2 font-mono-nu text-[11px] uppercase tracking-widest px-5 py-2.5 border border-nu-ink/15 text-nu-graphite no-underline hover:border-nu-ink/30 transition-colors"
+          className="inline-flex items-center gap-2 font-mono-nu text-[13px] uppercase tracking-widest px-5 py-2.5 border border-nu-ink/15 text-nu-graphite no-underline hover:border-nu-ink/30 transition-colors"
         >
           <ArrowLeft size={14} /> 대시보드로
         </Link>

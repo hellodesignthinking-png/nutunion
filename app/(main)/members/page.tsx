@@ -100,7 +100,7 @@ export default function MembersPage() {
         </div>
       </div>
 
-      <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-4">
+      <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-4">
         {filtered.length}명 표시 / 전체 {members.length}명
       </p>
 
@@ -133,13 +133,13 @@ export default function MembersPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <p className="font-head text-sm font-bold text-nu-ink truncate">{m.nickname}</p>
-                      <span className={`inline-flex items-center gap-0.5 font-mono-nu text-[7px] uppercase tracking-widest px-1.5 py-0.5 shrink-0 ${g.cls}`}>
+                      <span className={`inline-flex items-center gap-0.5 font-mono-nu text-[9px] uppercase tracking-widest px-1.5 py-0.5 shrink-0 ${g.cls}`}>
                         <GIcon size={7} /> {g.label}
                       </span>
                     </div>
                     {m.name && <p className="text-xs text-nu-muted truncate">{m.name}</p>}
                     {m.specialty && (
-                      <span className={`inline-block font-mono-nu text-[8px] uppercase tracking-widest px-2 py-0.5 text-white mt-2 ${getCategory(m.specialty).color}`}>
+                      <span className={`inline-block font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 text-white mt-2 ${getCategory(m.specialty).color}`}>
                         {getCategory(m.specialty).label}
                       </span>
                     )}

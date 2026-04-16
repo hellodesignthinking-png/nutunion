@@ -81,7 +81,7 @@ export function ReactionsBar({ targetType, targetId, userId }: ReactionsBarProps
           }`}
         >
           <span>{emoji}</span>
-          <span className="font-mono-nu text-[9px]">{data.count}</span>
+          <span className="font-mono-nu text-[11px]">{data.count}</span>
         </button>
       ))}
 

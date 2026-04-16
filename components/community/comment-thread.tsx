@@ -74,7 +74,7 @@ export function CommentThread({ targetType, targetId, userId }: CommentThreadPro
       {/* Toggle button */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-1.5 text-nu-muted hover:text-nu-pink transition-colors font-mono-nu text-[10px]"
+        className="flex items-center gap-1.5 text-nu-muted hover:text-nu-pink transition-colors font-mono-nu text-[12px]"
       >
         <MessageSquare size={12} />
         {count > 0 ? `댓글 ${count}개` : "댓글"}
@@ -85,15 +85,15 @@ export function CommentThread({ targetType, targetId, userId }: CommentThreadPro
           {/* Comments list */}
           {comments.map((c) => (
             <div key={c.id} className="flex gap-2 mb-3 group">
-              <div className="w-6 h-6 rounded-full bg-nu-cream flex items-center justify-center font-head text-[9px] font-bold text-nu-ink shrink-0">
+              <div className="w-6 h-6 rounded-full bg-nu-cream flex items-center justify-center font-head text-[11px] font-bold text-nu-ink shrink-0">
                 {((c.author as any)?.nickname || "U").charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono-nu text-[10px] font-bold text-nu-graphite">
+                  <span className="font-mono-nu text-[12px] font-bold text-nu-graphite">
                     {(c.author as any)?.nickname || "익명"}
                   </span>
-                  <span className="font-mono-nu text-[8px] text-nu-muted">
+                  <span className="font-mono-nu text-[10px] text-nu-muted">
                     {timeAgo(c.created_at)}
                   </span>
                   {c.author_id === userId && (

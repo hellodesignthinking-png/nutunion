@@ -106,13 +106,13 @@ export function CrewProjects({ groupId }: { groupId: string }) {
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 {p.category && (
                   <span
-                    className={`font-mono-nu text-[8px] font-bold uppercase tracking-[0.15em] px-2 py-0.5 text-white ${catBg[p.category] || "bg-nu-gray"}`}
+                    className={`font-mono-nu text-[10px] font-bold uppercase tracking-[0.15em] px-2 py-0.5 text-white ${catBg[p.category] || "bg-nu-gray"}`}
                   >
                     {p.category}
                   </span>
                 )}
                 <span
-                  className={`font-mono-nu text-[8px] font-bold uppercase tracking-[0.15em] px-2 py-0.5 ${statusColors[p.status] || "bg-nu-gray text-white"}`}
+                  className={`font-mono-nu text-[10px] font-bold uppercase tracking-[0.15em] px-2 py-0.5 ${statusColors[p.status] || "bg-nu-gray text-white"}`}
                 >
                   {p.status}
                 </span>
@@ -122,7 +122,7 @@ export function CrewProjects({ groupId }: { groupId: string }) {
               </h4>
               <div className="flex items-center gap-3 mt-1 text-xs text-nu-muted">
                 {(p.start_date || p.end_date) && (
-                  <span className="flex items-center gap-1 font-mono-nu text-[10px]">
+                  <span className="flex items-center gap-1 font-mono-nu text-[12px]">
                     <Calendar size={10} />
                     {formatDateRange(p.start_date, p.end_date)}
                   </span>

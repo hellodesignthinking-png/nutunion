@@ -119,7 +119,7 @@ export function ChatRoom({ roomType, roomId, userId, userNickname }: ChatRoomPro
       {/* Header */}
       <div className="px-5 py-3 border-b border-nu-ink/[0.06] flex items-center justify-between">
         <span className="font-head text-sm font-bold">팀 채팅</span>
-        <span className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">
+        <span className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest">
           {messages.length}개 메시지
         </span>
       </div>
@@ -147,13 +147,13 @@ export function ChatRoom({ roomType, roomId, userId, userNickname }: ChatRoomPro
                 className={`flex gap-2.5 ${isMe ? "flex-row-reverse" : ""}`}
               >
                 {!isMe && (
-                  <div className="w-7 h-7 rounded-full bg-nu-cream flex items-center justify-center font-head text-[10px] font-bold text-nu-ink shrink-0 mt-0.5">
+                  <div className="w-7 h-7 rounded-full bg-nu-cream flex items-center justify-center font-head text-[12px] font-bold text-nu-ink shrink-0 mt-0.5">
                     {nickname.charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div className={`max-w-[70%] ${isMe ? "text-right" : ""}`}>
                   {!isMe && (
-                    <span className="font-mono-nu text-[9px] text-nu-muted block mb-0.5">
+                    <span className="font-mono-nu text-[11px] text-nu-muted block mb-0.5">
                       {nickname}
                     </span>
                   )}
@@ -166,7 +166,7 @@ export function ChatRoom({ roomType, roomId, userId, userNickname }: ChatRoomPro
                   >
                     {msg.content}
                   </div>
-                  <span className="font-mono-nu text-[8px] text-nu-muted/60 block mt-0.5">
+                  <span className="font-mono-nu text-[10px] text-nu-muted/60 block mt-0.5">
                     {timeAgo(msg.created_at)}
                   </span>
                 </div>

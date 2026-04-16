@@ -145,7 +145,7 @@ export function WikiSearchBar({ groupId }: { groupId: string }) {
         )}
         {/* Keyboard shortcut hint */}
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-nu-muted pointer-events-none">
-          <kbd className="font-mono-nu text-[9px] bg-nu-ink/5 border border-nu-ink/10 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+          <kbd className="font-mono-nu text-[11px] bg-nu-ink/5 border border-nu-ink/10 px-1.5 py-0.5 rounded flex items-center gap-0.5">
             <Command size={9} /> K
           </kbd>
         </div>
@@ -171,20 +171,20 @@ export function WikiSearchBar({ groupId }: { groupId: string }) {
                   {r.title}
                 </p>
                 {r.type === "page" && (
-                  <p className="text-[11px] text-nu-muted line-clamp-1 mt-0.5">
+                  <p className="text-[13px] text-nu-muted line-clamp-1 mt-0.5">
                     {r.topic?.name && <span className="text-nu-pink">{r.topic.name} · </span>}
                     {r.snippet}
                   </p>
                 )}
                 {r.type === "topic" && (
-                  <p className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest mt-0.5">Topic{r.snippet ? ` · ${r.snippet.slice(0, 50)}` : ""}</p>
+                  <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest mt-0.5">Topic{r.snippet ? ` · ${r.snippet.slice(0, 50)}` : ""}</p>
                 )}
               </div>
               <ArrowRight size={14} className="text-nu-ink/20 group-hover:text-nu-pink shrink-0 mt-1 group-hover:translate-x-0.5 transition-all" />
             </Link>
           ))}
           <div className="px-4 py-2 bg-nu-cream/30 border-t border-nu-ink/5">
-            <p className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest flex items-center gap-2">
+            <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest flex items-center gap-2">
               <span>↑↓ 이동</span> · <span>Enter 선택</span> · <span>Esc 닫기</span>
             </p>
           </div>

@@ -96,7 +96,7 @@ export default function CreateEventPage() {
       <div className="bg-nu-white border border-nu-ink/[0.08] p-8">
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div>
-            <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
+            <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
               제목
             </Label>
             <Input
@@ -108,7 +108,7 @@ export default function CreateEventPage() {
           </div>
 
           <div>
-            <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
+            <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
               설명
             </Label>
             <Textarea
@@ -120,7 +120,7 @@ export default function CreateEventPage() {
           </div>
 
           <div>
-            <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
+            <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
               장소
             </Label>
             <Input
@@ -132,7 +132,7 @@ export default function CreateEventPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
+              <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
                 날짜
               </Label>
               <Input
@@ -143,7 +143,7 @@ export default function CreateEventPage() {
               />
             </div>
             <div>
-              <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
+              <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
                 시작 시간
               </Label>
               <Input
@@ -154,7 +154,7 @@ export default function CreateEventPage() {
               />
             </div>
             <div>
-              <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
+              <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
                 종료 시간
               </Label>
               <Input
@@ -167,7 +167,7 @@ export default function CreateEventPage() {
           </div>
 
           <div>
-            <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
+            <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
               최대 참석 인원 (선택)
             </Label>
             <Input
@@ -182,14 +182,14 @@ export default function CreateEventPage() {
           {/* Recurring toggle */}
           <div className="flex items-center gap-3 py-2">
             <Switch checked={isRecurring} onCheckedChange={setIsRecurring} />
-            <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
+            <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
               반복 일정
             </Label>
           </div>
 
           {isRecurring && (
             <div>
-              <Label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-gray">
+              <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
                 반복 주기
               </Label>
               <Select value={recurrenceType} onValueChange={(v) => v && setRecurrenceType(v)}>
@@ -210,7 +210,7 @@ export default function CreateEventPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[11px] uppercase tracking-widest px-8"
+              className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[13px] uppercase tracking-widest px-8"
             >
               {loading ? "생성 중..." : "일정 만들기"}
             </Button>
@@ -218,7 +218,7 @@ export default function CreateEventPage() {
               type="button"
               variant="outline"
               onClick={() => router.back()}
-              className="font-mono-nu text-[11px] uppercase tracking-widest"
+              className="font-mono-nu text-[13px] uppercase tracking-widest"
             >
               취소
             </Button>

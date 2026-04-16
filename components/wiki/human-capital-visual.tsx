@@ -141,10 +141,10 @@ export function HumanCapitalVisual({ groupId }: { groupId: string }) {
       {/* Summary header */}
       {members.length > 0 && (
         <div className="flex items-center justify-between px-1 mb-1">
-          <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest">
+          <span className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
             {members.length}명 · {members.filter(m => m.contributionCount > 0).length}명 활동 중
           </span>
-          <span className="font-mono-nu text-[7px] text-nu-muted/50">
+          <span className="font-mono-nu text-[9px] text-nu-muted/50">
             레벨 기준 정렬
           </span>
         </div>
@@ -169,14 +169,14 @@ export function HumanCapitalVisual({ groupId }: { groupId: string }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-head text-sm font-bold text-nu-ink">{m.nickname}</span>
-                    <span className={`font-mono-nu text-[7px] font-bold uppercase tracking-widest ${m.level.color}`}>
+                    <span className={`font-mono-nu text-[9px] font-bold uppercase tracking-widest ${m.level.color}`}>
                       {m.level.icon} {m.level.name}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="font-mono-nu text-[8px] text-nu-muted">{m.contributionCount} contributions</span>
+                    <span className="font-mono-nu text-[10px] text-nu-muted">{m.contributionCount} contributions</span>
                     {m.knowledgeAreas.length > 0 && (
-                      <span className="font-mono-nu text-[7px] text-nu-pink/60">
+                      <span className="font-mono-nu text-[9px] text-nu-pink/60">
                         · {m.knowledgeAreas.slice(0, 2).join(", ")}
                       </span>
                     )}
@@ -203,12 +203,12 @@ export function HumanCapitalVisual({ groupId }: { groupId: string }) {
                 {/* Knowledge Areas */}
                 {m.knowledgeAreas.length > 0 && (
                   <div>
-                    <p className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                    <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest mb-1.5 flex items-center gap-1">
                       <Brain size={10} /> 기여 영역
                     </p>
                     <div className="flex flex-wrap gap-1">
                       {m.knowledgeAreas.map((area, i) => (
-                        <span key={i} className="font-mono-nu text-[8px] px-2 py-0.5 bg-nu-pink/10 text-nu-pink border border-nu-pink/15">
+                        <span key={i} className="font-mono-nu text-[10px] px-2 py-0.5 bg-nu-pink/10 text-nu-pink border border-nu-pink/15">
                           {area}
                         </span>
                       ))}
@@ -219,17 +219,17 @@ export function HumanCapitalVisual({ groupId }: { groupId: string }) {
                 {/* Interests & Strengths */}
                 {(m.interests.length > 0 || m.strengths.length > 0) && (
                   <div>
-                    <p className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                    <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest mb-1.5 flex items-center gap-1">
                       <Star size={10} /> 관심사 & 역량
                     </p>
                     <div className="flex flex-wrap gap-1">
                       {m.interests.map((interest, i) => (
-                        <span key={`i-${i}`} className="font-mono-nu text-[7px] px-1.5 py-0.5 bg-nu-ink/5 text-nu-muted border border-nu-ink/5">
+                        <span key={`i-${i}`} className="font-mono-nu text-[9px] px-1.5 py-0.5 bg-nu-ink/5 text-nu-muted border border-nu-ink/5">
                           {interest}
                         </span>
                       ))}
                       {m.strengths.map((strength, i) => (
-                        <span key={`s-${i}`} className="font-mono-nu text-[7px] px-1.5 py-0.5 bg-nu-blue/10 text-nu-blue border border-nu-blue/10">
+                        <span key={`s-${i}`} className="font-mono-nu text-[9px] px-1.5 py-0.5 bg-nu-blue/10 text-nu-blue border border-nu-blue/10">
                           {strength}
                         </span>
                       ))}
@@ -240,10 +240,10 @@ export function HumanCapitalVisual({ groupId }: { groupId: string }) {
                 {/* Progress visualization */}
                 <div className="pt-2 border-t border-nu-ink/5">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-wider flex items-center gap-1">
+                    <span className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-wider flex items-center gap-1">
                       <TrendingUp size={10} /> Level Progress
                     </span>
-                    <span className={`font-mono-nu text-[8px] font-bold ${m.level.color}`}>
+                    <span className={`font-mono-nu text-[10px] font-bold ${m.level.color}`}>
                       {m.level.icon} {m.level.name}
                     </span>
                   </div>

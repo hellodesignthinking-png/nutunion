@@ -33,7 +33,7 @@ export function ProjectsPreview({ projects }: { projects?: ProjectItem[] }) {
         {/* Header — magazine column layout feel */}
         <div className="flex items-end justify-between mb-12 border-b-[3px] border-nu-paper/20 pb-6">
           <div>
-            <span className="font-mono-nu text-[10px] uppercase tracking-[0.3em] text-nu-pink block mb-3">
+            <span className="font-mono-nu text-[12px] uppercase tracking-[0.3em] text-nu-pink block mb-3">
               Collaboration
             </span>
             <h2 className="font-head text-[clamp(36px,5vw,56px)] font-extrabold tracking-tighter text-nu-paper leading-[0.9]">
@@ -46,7 +46,7 @@ export function ProjectsPreview({ projects }: { projects?: ProjectItem[] }) {
             <p className="text-nu-paper/30 text-sm max-w-xs mb-3">
               너트들이 함께 만들어가는 볼트에 참여해보세요
             </p>
-            <span className="font-mono-nu text-[9px] text-nu-paper/15 tracking-widest uppercase">
+            <span className="font-mono-nu text-[11px] text-nu-paper/15 tracking-widest uppercase">
               ISSUE {String(new Date().getMonth() + 1).padStart(2, '0')}.{new Date().getFullYear()}
             </span>
           </div>
@@ -74,11 +74,11 @@ export function ProjectsPreview({ projects }: { projects?: ProjectItem[] }) {
 
               <div className="flex items-center gap-2 mb-3">
                 {p.category && (
-                  <span className={`font-mono-nu text-[8px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 text-white ${catColors[p.category] || "bg-nu-gray"} -rotate-1`}>
+                  <span className={`font-mono-nu text-[10px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 text-white ${catColors[p.category] || "bg-nu-gray"} -rotate-1`}>
                     {p.category}
                   </span>
                 )}
-                <span className="font-mono-nu text-[8px] uppercase tracking-widest border-[2px] border-green-500/50 text-green-400 px-2 py-0.5">
+                <span className="font-mono-nu text-[10px] uppercase tracking-widest border-[2px] border-green-500/50 text-green-400 px-2 py-0.5">
                   {p.status}
                 </span>
               </div>
@@ -91,10 +91,10 @@ export function ProjectsPreview({ projects }: { projects?: ProjectItem[] }) {
               </p>
 
               <div className="flex items-center justify-between border-t-[2px] border-nu-paper/[0.06] pt-3">
-                <span className="font-mono-nu text-[10px] text-nu-paper/30 flex items-center gap-1">
+                <span className="font-mono-nu text-[12px] text-nu-paper/30 flex items-center gap-1">
                   <Users size={11} /> {p.memberCount}명 참여
                 </span>
-                <span className="font-mono-nu text-[10px] text-nu-pink flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="font-mono-nu text-[12px] text-nu-pink flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   자세히 <ArrowRight size={11} />
                 </span>
               </div>
@@ -105,7 +105,7 @@ export function ProjectsPreview({ projects }: { projects?: ProjectItem[] }) {
         <div className="text-center">
           <Link
             href="/projects"
-            className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-paper/50 hover:text-nu-pink no-underline transition-colors border-[2px] border-nu-paper/20 px-6 py-3 hover:border-nu-pink inline-block"
+            className="font-mono-nu text-[13px] font-bold uppercase tracking-widest text-nu-paper/50 hover:text-nu-pink no-underline transition-colors border-[2px] border-nu-paper/20 px-6 py-3 hover:border-nu-pink inline-block"
           >
             모든 볼트 보기 &rarr;
           </Link>

@@ -107,7 +107,7 @@ function PhaseLikes({ phaseId, userId }: { phaseId: string; userId?: string }) {
   return (
     <button
       onClick={(e) => { e.stopPropagation(); toggle(); }}
-      className={`inline-flex items-center gap-1 text-[10px] font-mono-nu transition-colors ${
+      className={`inline-flex items-center gap-1 text-[12px] font-mono-nu transition-colors ${
         liked ? "text-nu-pink" : "text-nu-muted hover:text-nu-pink"
       }`}
     >
@@ -199,7 +199,7 @@ function PhaseComments({ phaseId, userId }: { phaseId: string; userId?: string }
     <div className="mt-1">
       <button
         onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
-        className="inline-flex items-center gap-1 text-[10px] font-mono-nu text-nu-muted hover:text-nu-blue transition-colors"
+        className="inline-flex items-center gap-1 text-[12px] font-mono-nu text-nu-muted hover:text-nu-blue transition-colors"
       >
         <MessageCircle size={11} />
         {count > 0 && <span>{count}</span>}
@@ -212,19 +212,19 @@ function PhaseComments({ phaseId, userId }: { phaseId: string; userId?: string }
           {comments.map((c) => (
             <div key={c.id}>
               <div className="flex items-start gap-2">
-                <div className="w-5 h-5 rounded-full bg-nu-cream flex items-center justify-center text-[8px] font-head font-bold text-nu-ink shrink-0 mt-0.5">
+                <div className="w-5 h-5 rounded-full bg-nu-cream flex items-center justify-center text-[10px] font-head font-bold text-nu-ink shrink-0 mt-0.5">
                   {(c.author?.nickname || "U")[0].toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-medium text-nu-ink">{c.author?.nickname || "Unknown"}</span>
-                    <span className="text-[9px] font-mono-nu text-nu-muted">{timeAgo(c.created_at)}</span>
+                    <span className="text-[13px] font-medium text-nu-ink">{c.author?.nickname || "Unknown"}</span>
+                    <span className="text-[11px] font-mono-nu text-nu-muted">{timeAgo(c.created_at)}</span>
                   </div>
-                  <p className="text-[11px] text-nu-graphite leading-relaxed">{c.content}</p>
+                  <p className="text-[13px] text-nu-graphite leading-relaxed">{c.content}</p>
                   {userId && (
                     <button
                       onClick={() => setReplyTo(replyTo === c.id ? null : c.id)}
-                      className="text-[9px] font-mono-nu text-nu-muted hover:text-nu-blue mt-0.5"
+                      className="text-[11px] font-mono-nu text-nu-muted hover:text-nu-blue mt-0.5"
                     >
                       답글
                     </button>
@@ -237,15 +237,15 @@ function PhaseComments({ phaseId, userId }: { phaseId: string; userId?: string }
                 <div className="ml-7 mt-1 space-y-1.5">
                   {c.replies.map((r) => (
                     <div key={r.id} className="flex items-start gap-2">
-                      <div className="w-4 h-4 rounded-full bg-nu-cream/70 flex items-center justify-center text-[7px] font-head font-bold text-nu-ink shrink-0 mt-0.5">
+                      <div className="w-4 h-4 rounded-full bg-nu-cream/70 flex items-center justify-center text-[9px] font-head font-bold text-nu-ink shrink-0 mt-0.5">
                         {(r.author?.nickname || "U")[0].toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] font-medium text-nu-ink">{r.author?.nickname || "Unknown"}</span>
-                          <span className="text-[8px] font-mono-nu text-nu-muted">{timeAgo(r.created_at)}</span>
+                          <span className="text-[12px] font-medium text-nu-ink">{r.author?.nickname || "Unknown"}</span>
+                          <span className="text-[10px] font-mono-nu text-nu-muted">{timeAgo(r.created_at)}</span>
                         </div>
-                        <p className="text-[10px] text-nu-graphite">{r.content}</p>
+                        <p className="text-[12px] text-nu-graphite">{r.content}</p>
                       </div>
                     </div>
                   ))}
@@ -259,7 +259,7 @@ function PhaseComments({ phaseId, userId }: { phaseId: string; userId?: string }
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
                     placeholder="답글 작성..."
-                    className="flex-1 px-2 py-1 text-[10px] border border-nu-ink/10 bg-transparent focus:outline-none focus:border-nu-pink"
+                    className="flex-1 px-2 py-1 text-[12px] border border-nu-ink/10 bg-transparent focus:outline-none focus:border-nu-pink"
                     autoFocus
                     onKeyDown={(e) => { if (e.key === "Enter") submitComment(c.id, replyText); }}
                   />
@@ -281,7 +281,7 @@ function PhaseComments({ phaseId, userId }: { phaseId: string; userId?: string }
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 placeholder="댓글 작성..."
-                className="flex-1 px-2 py-1 text-[10px] border border-nu-ink/10 bg-transparent focus:outline-none focus:border-nu-pink"
+                className="flex-1 px-2 py-1 text-[12px] border border-nu-ink/10 bg-transparent focus:outline-none focus:border-nu-pink"
                 onKeyDown={(e) => { if (e.key === "Enter") submitComment(null, newComment); }}
               />
               <button
@@ -438,7 +438,7 @@ export function GroupRoadmap({ groupId, groupTopic: initialTopic, canEdit, userI
           <Target size={16} className="text-nu-pink" />
           <h3 className="font-head text-base font-extrabold text-nu-ink">너트 로드맵</h3>
           {phases.length > 0 && (
-            <span className="font-mono-nu text-[10px] text-nu-muted">{doneCount}/{phases.length} 완료</span>
+            <span className="font-mono-nu text-[12px] text-nu-muted">{doneCount}/{phases.length} 완료</span>
           )}
         </div>
         <button onClick={() => setCollapsed(!collapsed)} className="text-nu-muted hover:text-nu-ink">
@@ -450,7 +450,7 @@ export function GroupRoadmap({ groupId, groupTopic: initialTopic, canEdit, userI
         <div className="p-5">
           {/* Topic */}
           <div className="mb-5">
-            <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-1.5">주제 / 목표</p>
+            <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-1.5">주제 / 목표</p>
             {editingTopic ? (
               <div className="flex gap-2">
                 <input value={topic} onChange={(e) => setTopic(e.target.value)}
@@ -484,7 +484,7 @@ export function GroupRoadmap({ groupId, groupTopic: initialTopic, canEdit, userI
           {/* Progress bar */}
           {phases.length > 0 && (
             <div className="mb-4">
-              <div className="flex justify-between text-[10px] font-mono-nu text-nu-muted mb-1.5">
+              <div className="flex justify-between text-[12px] font-mono-nu text-nu-muted mb-1.5">
                 <span>진행률</span>
                 <span>{progress}%</span>
               </div>
@@ -492,7 +492,7 @@ export function GroupRoadmap({ groupId, groupTopic: initialTopic, canEdit, userI
                 <div className="h-full bg-nu-pink rounded-full transition-all duration-700" style={{ width: `${progress}%` }} />
               </div>
               {activePhase && (
-                <p className="text-[10px] text-nu-blue mt-1.5 flex items-center gap-1">
+                <p className="text-[12px] text-nu-blue mt-1.5 flex items-center gap-1">
                   <ArrowRight size={10} /> 현재: {activePhase.title}
                 </p>
               )}
@@ -516,12 +516,12 @@ export function GroupRoadmap({ groupId, groupTopic: initialTopic, canEdit, userI
                     </button>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-mono-nu text-[9px] text-nu-muted">{String(i + 1).padStart(2, "0")}.</span>
+                        <span className="font-mono-nu text-[11px] text-nu-muted">{String(i + 1).padStart(2, "0")}.</span>
                         <p className={`text-sm font-medium ${phase.status === "done" ? "line-through text-nu-muted" : "text-nu-ink"}`}>
                           {phase.title}
                         </p>
                         {phase.status === "active" && (
-                          <span className="font-mono-nu text-[8px] uppercase tracking-widest px-1.5 py-0.5 bg-nu-blue/15 text-nu-blue">진행중</span>
+                          <span className="font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 bg-nu-blue/15 text-nu-blue">진행중</span>
                         )}
                       </div>
                       {phase.description && (
@@ -560,13 +560,13 @@ export function GroupRoadmap({ groupId, groupTopic: initialTopic, canEdit, userI
                   className="px-2 py-1.5 border border-nu-ink/15 bg-transparent text-xs focus:outline-none focus:border-nu-pink w-full"
                 />
                 <div className="flex gap-2">
-                  <button onClick={addPhase} className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors">추가</button>
-                  <button onClick={() => setAddingPhase(false)} className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 border border-nu-ink/15 hover:bg-nu-cream transition-colors">취소</button>
+                  <button onClick={addPhase} className="font-mono-nu text-[12px] uppercase tracking-widest px-3 py-1.5 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors">추가</button>
+                  <button onClick={() => setAddingPhase(false)} className="font-mono-nu text-[12px] uppercase tracking-widest px-3 py-1.5 border border-nu-ink/15 hover:bg-nu-cream transition-colors">취소</button>
                 </div>
               </div>
             ) : (
               <button onClick={() => setAddingPhase(true)}
-                className="w-full flex items-center gap-1.5 py-2 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted hover:text-nu-pink transition-colors">
+                className="w-full flex items-center gap-1.5 py-2 font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted hover:text-nu-pink transition-colors">
                 <Plus size={12} /> 단계 추가
               </button>
             )}

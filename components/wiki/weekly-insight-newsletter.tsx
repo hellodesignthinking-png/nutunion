@@ -267,7 +267,7 @@ export function WeeklyInsightNewsletter({ groupId, isHost = false }: { groupId: 
   };
 
   const DeltaIndicator = ({ value }: { value: number }) => (
-    <span className={`inline-flex items-center gap-0.5 font-mono-nu text-[10px] font-bold ${value >= 0 ? "text-green-500" : "text-red-400"}`}>
+    <span className={`inline-flex items-center gap-0.5 font-mono-nu text-[12px] font-bold ${value >= 0 ? "text-green-500" : "text-red-400"}`}>
       {value >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
       {value >= 0 ? "+" : ""}{value}%
     </span>
@@ -284,7 +284,7 @@ export function WeeklyInsightNewsletter({ groupId, isHost = false }: { groupId: 
         <p className="text-sm text-nu-muted max-w-md mx-auto mb-2 leading-relaxed">
           실 DB 데이터를 분석하여 핫 토픽, 성장 지표, 그리고 다음 주 주목할 주제를 정리합니다.
         </p>
-        <p className="font-mono-nu text-[9px] text-nu-pink uppercase tracking-widest mb-8">
+        <p className="font-mono-nu text-[11px] text-nu-pink uppercase tracking-widest mb-8">
           Real Data Analysis · No Mock
         </p>
         {isHost ? (
@@ -297,7 +297,7 @@ export function WeeklyInsightNewsletter({ groupId, isHost = false }: { groupId: 
             이번 주 다이제스트 생성
           </button>
         ) : (
-          <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
+          <p className="font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest">
             호스트만 다이제스트를 생성할 수 있습니다
           </p>
         )}
@@ -313,7 +313,7 @@ export function WeeklyInsightNewsletter({ groupId, isHost = false }: { groupId: 
       <div className="bg-nu-ink text-white p-6 border-[2px] border-nu-ink">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="font-mono-nu text-[9px] uppercase tracking-widest text-white/40 mb-1">Weekly Insight Digest · Real Data</p>
+            <p className="font-mono-nu text-[11px] uppercase tracking-widest text-white/40 mb-1">Weekly Insight Digest · Real Data</p>
             <h3 className="font-head text-xl font-extrabold">
               {digest.weekStart} → {digest.weekEnd}
             </h3>
@@ -332,13 +332,13 @@ export function WeeklyInsightNewsletter({ groupId, isHost = false }: { groupId: 
             <button
               onClick={handlePublish}
               disabled={publishing}
-              className="px-4 py-2 bg-nu-pink border border-nu-pink/50 font-mono-nu text-[9px] font-bold uppercase tracking-widest hover:bg-nu-pink/80 transition-all disabled:opacity-50 flex items-center gap-1.5"
+              className="px-4 py-2 bg-nu-pink border border-nu-pink/50 font-mono-nu text-[11px] font-bold uppercase tracking-widest hover:bg-nu-pink/80 transition-all disabled:opacity-50 flex items-center gap-1.5"
             >
               {publishing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
               Publish
             </button>
           ) : (
-            <span className="px-4 py-2 bg-green-500/20 border border-green-400/30 font-mono-nu text-[9px] font-bold uppercase tracking-widest text-green-300 flex items-center gap-1.5">
+            <span className="px-4 py-2 bg-green-500/20 border border-green-400/30 font-mono-nu text-[11px] font-bold uppercase tracking-widest text-green-300 flex items-center gap-1.5">
               ✓ Published
             </span>
           ))}
@@ -347,21 +347,21 @@ export function WeeklyInsightNewsletter({ groupId, isHost = false }: { groupId: 
         {/* KPI Cards */}
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-white/5 border border-white/10 p-4">
-            <p className="font-mono-nu text-[8px] text-white/40 uppercase tracking-widest mb-1">Total Edits</p>
+            <p className="font-mono-nu text-[10px] text-white/40 uppercase tracking-widest mb-1">Total Edits</p>
             <div className="flex items-end gap-2">
               <span className="font-head text-2xl font-extrabold">{digest.trendAnalysis.totalEdits}</span>
               <DeltaIndicator value={digest.trendAnalysis.editsDelta} />
             </div>
           </div>
           <div className="bg-white/5 border border-white/10 p-4">
-            <p className="font-mono-nu text-[8px] text-white/40 uppercase tracking-widest mb-1">Total Views</p>
+            <p className="font-mono-nu text-[10px] text-white/40 uppercase tracking-widest mb-1">Total Views</p>
             <div className="flex items-end gap-2">
               <span className="font-head text-2xl font-extrabold">{digest.trendAnalysis.totalViews}</span>
               <DeltaIndicator value={digest.trendAnalysis.viewsDelta} />
             </div>
           </div>
           <div className="bg-white/5 border border-white/10 p-4">
-            <p className="font-mono-nu text-[8px] text-white/40 uppercase tracking-widest mb-1">Contributors</p>
+            <p className="font-mono-nu text-[10px] text-white/40 uppercase tracking-widest mb-1">Contributors</p>
             <div className="flex items-end gap-2">
               <span className="font-head text-2xl font-extrabold">{digest.trendAnalysis.activeContributors}</span>
               <DeltaIndicator value={digest.trendAnalysis.contributorsDelta} />
@@ -376,7 +376,7 @@ export function WeeklyInsightNewsletter({ groupId, isHost = false }: { groupId: 
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-6 py-3 font-mono-nu text-[10px] font-bold uppercase tracking-widest transition-all border-b-[2px] -mb-[2px] ${
+            className={`px-6 py-3 font-mono-nu text-[12px] font-bold uppercase tracking-widest transition-all border-b-[2px] -mb-[2px] ${
               activeTab === tab
                 ? "border-nu-pink text-nu-pink"
                 : "border-transparent text-nu-muted hover:text-nu-ink"
@@ -391,7 +391,7 @@ export function WeeklyInsightNewsletter({ groupId, isHost = false }: { groupId: 
       {activeTab === "overview" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-white border-[2px] border-nu-ink/[0.08] p-6">
-            <h4 className="font-mono-nu text-[10px] font-bold text-nu-ink uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+            <h4 className="font-mono-nu text-[12px] font-bold text-nu-ink uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
               <BookOpen size={14} className="text-nu-blue" /> Top Pages This Week
             </h4>
             <div className="space-y-3">
@@ -400,7 +400,7 @@ export function WeeklyInsightNewsletter({ groupId, isHost = false }: { groupId: 
                   <span className="font-head text-lg font-extrabold text-nu-ink/20 w-6">{i + 1}</span>
                   <div className="flex-1 min-w-0">
                     <p className="font-head text-sm font-bold text-nu-ink truncate group-hover:text-nu-pink transition-colors">{p.title}</p>
-                    <p className="font-mono-nu text-[9px] text-nu-muted">
+                    <p className="font-mono-nu text-[11px] text-nu-muted">
                       {p.views} views · {p.edits} edits
                     </p>
                   </div>
@@ -412,7 +412,7 @@ export function WeeklyInsightNewsletter({ groupId, isHost = false }: { groupId: 
           </div>
 
           <div className="bg-white border-[2px] border-nu-ink/[0.08] p-6">
-            <h4 className="font-mono-nu text-[10px] font-bold text-nu-ink uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+            <h4 className="font-mono-nu text-[12px] font-bold text-nu-ink uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
               <Target size={14} className="text-nu-pink" /> Top Contributors
             </h4>
             <div className="space-y-3">
@@ -427,7 +427,7 @@ export function WeeklyInsightNewsletter({ groupId, isHost = false }: { groupId: 
                   </div>
                   <div className="flex-1">
                     <p className="font-head text-sm font-bold text-nu-ink">{c.nickname}</p>
-                    <p className="font-mono-nu text-[9px] text-nu-muted">{c.contributions} contributions</p>
+                    <p className="font-mono-nu text-[11px] text-nu-muted">{c.contributions} contributions</p>
                   </div>
                   <div className="w-16">
                     <div className="h-1.5 bg-nu-ink/5 rounded-full overflow-hidden">
@@ -446,7 +446,7 @@ export function WeeklyInsightNewsletter({ groupId, isHost = false }: { groupId: 
       {activeTab === "trends" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-nu-pink text-white p-6 border-[2px] border-nu-ink">
-            <h4 className="font-mono-nu text-[10px] font-bold uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+            <h4 className="font-mono-nu text-[12px] font-bold uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
               🔥 Hot Topics
             </h4>
             <div className="space-y-3">
@@ -462,7 +462,7 @@ export function WeeklyInsightNewsletter({ groupId, isHost = false }: { groupId: 
           </div>
 
           <div className="bg-white border-[2px] border-nu-ink p-6">
-            <h4 className="font-mono-nu text-[10px] font-bold text-nu-ink uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+            <h4 className="font-mono-nu text-[12px] font-bold text-nu-ink uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
               <Lightbulb size={14} className="text-nu-amber" /> 이번 주 신규 문서
             </h4>
             <div className="space-y-3">
@@ -473,7 +473,7 @@ export function WeeklyInsightNewsletter({ groupId, isHost = false }: { groupId: 
                   </div>
                   <div>
                     <p className="font-head text-sm font-bold text-nu-ink group-hover:text-nu-pink transition-colors">{concept}</p>
-                    <p className="font-mono-nu text-[8px] text-nu-muted uppercase">NEW THIS WEEK</p>
+                    <p className="font-mono-nu text-[10px] text-nu-muted uppercase">NEW THIS WEEK</p>
                   </div>
                 </div>
               )) : (
@@ -484,7 +484,7 @@ export function WeeklyInsightNewsletter({ groupId, isHost = false }: { groupId: 
 
           {/* Real Activity Chart */}
           <div className="md:col-span-2 bg-white border-[2px] border-nu-ink/[0.08] p-6">
-            <h4 className="font-mono-nu text-[10px] font-bold text-nu-ink uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+            <h4 className="font-mono-nu text-[12px] font-bold text-nu-ink uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
               <Calendar size={14} /> Weekly Activity Distribution
             </h4>
             <div className="flex items-end gap-2 h-32">
@@ -494,18 +494,18 @@ export function WeeklyInsightNewsletter({ groupId, isHost = false }: { groupId: 
                     <div className="flex-1 bg-nu-blue/20 rounded-t-sm transition-all hover:bg-nu-blue/40" style={{ height: `${maxDailyVal > 0 ? (views / maxDailyVal) * 100 : 0}%` }} />
                     <div className="flex-1 bg-nu-pink/30 rounded-t-sm transition-all hover:bg-nu-pink/50" style={{ height: `${maxDailyVal > 0 ? (edits / maxDailyVal) * 100 : 0}%` }} />
                   </div>
-                  <span className="font-mono-nu text-[9px] text-nu-muted">{day}</span>
+                  <span className="font-mono-nu text-[11px] text-nu-muted">{day}</span>
                 </div>
               ))}
             </div>
             <div className="flex items-center gap-4 mt-3 justify-end">
               <div className="flex items-center gap-1">
                 <div className="w-3 h-3 bg-nu-blue/20 rounded-sm" />
-                <span className="font-mono-nu text-[8px] text-nu-muted">Views</span>
+                <span className="font-mono-nu text-[10px] text-nu-muted">Views</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-3 h-3 bg-nu-pink/30 rounded-sm" />
-                <span className="font-mono-nu text-[8px] text-nu-muted">Edits</span>
+                <span className="font-mono-nu text-[10px] text-nu-muted">Edits</span>
               </div>
             </div>
           </div>

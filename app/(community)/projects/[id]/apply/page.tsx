@@ -118,7 +118,7 @@ export default function ProjectApplyPage() {
           </p>
           {existingApplication.message && (
             <div className="text-left mt-6 border-t border-nu-ink/[0.08] pt-4">
-              <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">
+              <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
                 지원 메시지
               </p>
               <p className="text-sm text-nu-ink whitespace-pre-wrap">
@@ -128,7 +128,7 @@ export default function ProjectApplyPage() {
           )}
           <button
             onClick={() => router.push(`/projects/${projectId}`)}
-            className="mt-4 font-mono-nu text-[11px] font-bold uppercase tracking-[0.1em] py-3 px-8 border border-nu-ink/[0.12] text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-colors"
+            className="mt-4 font-mono-nu text-[13px] font-bold uppercase tracking-[0.1em] py-3 px-8 border border-nu-ink/[0.12] text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-colors"
           >
             볼트로 돌아가기
           </button>

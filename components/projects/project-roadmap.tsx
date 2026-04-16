@@ -35,7 +35,7 @@ const taskStatusOptions: {
 }[] = [
   {
     value: "todo",
-    label: "할 일",
+    label: "할일",
     color: "text-nu-gray",
     bg: "bg-nu-gray/10",
     icon: Circle,
@@ -60,7 +60,7 @@ const taskStatusMap: Record<
   string,
   { icon: typeof Circle; color: string; label: string }
 > = {
-  todo: { icon: Circle, color: "text-nu-gray", label: "할 일" },
+  todo: { icon: Circle, color: "text-nu-gray", label: "할일" },
   in_progress: { icon: Clock, color: "text-nu-amber", label: "진행 중" },
   done: { icon: CheckCircle2, color: "text-green-600", label: "완료" },
 };
@@ -265,7 +265,7 @@ export function ProjectRoadmap({
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Target size={16} className="text-nu-pink" />
-              <span className="font-mono-nu text-[9px] font-black uppercase tracking-[0.25em] text-nu-pink">
+              <span className="font-mono-nu text-[11px] font-black uppercase tracking-[0.25em] text-nu-pink">
                 Project_Roadmap
               </span>
             </div>
@@ -277,7 +277,7 @@ export function ProjectRoadmap({
           {/* Main Progress Bar */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-paper/70">
+              <span className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-paper/70">
                 전체 진행률
               </span>
               <span className="font-head font-bold text-lg text-nu-pink">
@@ -346,14 +346,14 @@ export function ProjectRoadmap({
                         {ms.title}
                       </p>
                       {overdue && (
-                        <span className="inline-flex items-center gap-0.5 font-mono-nu text-[7px] font-bold uppercase tracking-widest px-1.5 py-0.5 bg-red-100 text-red-600 border border-red-200 mt-1">
+                        <span className="inline-flex items-center gap-0.5 font-mono-nu text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 bg-red-100 text-red-600 border border-red-200 mt-1">
                           <AlertTriangle size={8} />
                           지연
                         </span>
                       )}
                       {ms.due_date && (
                         <p
-                          className={`font-mono-nu text-[7px] mt-1 flex items-center justify-center gap-0.5 ${overdue ? "text-red-500 font-bold" : "text-nu-muted"}`}
+                          className={`font-mono-nu text-[9px] mt-1 flex items-center justify-center gap-0.5 ${overdue ? "text-red-500 font-bold" : "text-nu-muted"}`}
                         >
                           <Calendar size={8} />
                           {new Date(ms.due_date).toLocaleDateString("ko", {
@@ -363,7 +363,7 @@ export function ProjectRoadmap({
                         </p>
                       )}
                       {ms.tasks && ms.tasks.length > 0 && (
-                        <p className="font-mono-nu text-[7px] text-nu-muted mt-0.5">
+                        <p className="font-mono-nu text-[9px] text-nu-muted mt-0.5">
                           {ms.tasks.filter((t) => t.status === "done").length}/
                           {ms.tasks.length} tasks
                         </p>
@@ -409,11 +409,11 @@ export function ProjectRoadmap({
                     {expandedMs.title}
                   </span>
                   {isOverdue(expandedMs.due_date, expandedMs.status) && (
-                    <span className="font-mono-nu text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 bg-red-100 text-red-600 border border-red-200 mr-2">
+                    <span className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 bg-red-100 text-red-600 border border-red-200 mr-2">
                       지연
                     </span>
                   )}
-                  <span className="font-mono-nu text-[9px] font-bold uppercase tracking-widest px-2 py-1 bg-nu-ink text-nu-paper">
+                  <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-2 py-1 bg-nu-ink text-nu-paper">
                     {msProgress}%
                   </span>
                 </button>
@@ -433,7 +433,7 @@ export function ProjectRoadmap({
                   <div className="px-5 pt-3">
                     <button
                       onClick={() => toggleDescription(expandedMs.id)}
-                      className="flex items-center gap-1.5 font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted hover:text-nu-ink transition-colors"
+                      className="flex items-center gap-1.5 font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted hover:text-nu-ink transition-colors"
                     >
                       {descExpanded ? (
                         <ChevronUp size={12} />
@@ -512,7 +512,7 @@ export function ProjectRoadmap({
                                         onClick={() =>
                                           setTaskStatus(task, opt.value)
                                         }
-                                        className={`w-full flex items-center gap-2 px-3 py-2 text-left font-mono-nu text-[10px] uppercase tracking-widest hover:bg-nu-cream/30 transition-colors ${
+                                        className={`w-full flex items-center gap-2 px-3 py-2 text-left font-mono-nu text-[12px] uppercase tracking-widest hover:bg-nu-cream/30 transition-colors ${
                                           task.status === opt.value
                                             ? "bg-nu-cream/20 font-bold"
                                             : ""
@@ -549,7 +549,7 @@ export function ProjectRoadmap({
                           {/* Priority badge */}
                           {(task as any).priority && (
                             <span
-                              className={`font-mono-nu text-[7px] font-bold uppercase tracking-widest px-1.5 py-0.5 border shrink-0 ${
+                              className={`font-mono-nu text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 border shrink-0 ${
                                 (task as any).priority === "high"
                                   ? "bg-red-50 text-red-600 border-red-200"
                                   : (task as any).priority === "medium"
@@ -567,7 +567,7 @@ export function ProjectRoadmap({
 
                           {/* Status Badge */}
                           <span
-                            className={`font-mono-nu text-[8px] font-bold uppercase px-1.5 py-0.5 shrink-0 ${
+                            className={`font-mono-nu text-[10px] font-bold uppercase px-1.5 py-0.5 shrink-0 ${
                               task.status === "done"
                                 ? "bg-green-50 text-green-600"
                                 : task.status === "in_progress"
@@ -575,7 +575,7 @@ export function ProjectRoadmap({
                                   : "bg-nu-gray/10 text-nu-gray"
                             }`}
                           >
-                            {statusInfo?.label ?? "할 일"}
+                            {statusInfo?.label ?? "할일"}
                           </span>
 
                           {/* Assignee - more prominent */}
@@ -588,13 +588,13 @@ export function ProjectRoadmap({
                                   className="w-6 h-6 rounded-full object-cover"
                                 />
                               ) : (
-                                <div className="w-6 h-6 rounded-full bg-nu-pink/20 flex items-center justify-center font-head text-[9px] font-bold text-nu-pink">
+                                <div className="w-6 h-6 rounded-full bg-nu-pink/20 flex items-center justify-center font-head text-[11px] font-bold text-nu-pink">
                                   {(task.assignee.nickname || "U")
                                     .charAt(0)
                                     .toUpperCase()}
                                 </div>
                               )}
-                              <span className="font-mono-nu text-[9px] text-nu-ink font-medium">
+                              <span className="font-mono-nu text-[11px] text-nu-ink font-medium">
                                 {task.assignee.nickname}
                               </span>
                             </div>
@@ -603,7 +603,7 @@ export function ProjectRoadmap({
                           {/* Due Date */}
                           {task.due_date && (
                             <span
-                              className={`font-mono-nu text-[8px] shrink-0 flex items-center gap-1 ${taskOverdue ? "text-red-600 font-bold" : "text-nu-muted"}`}
+                              className={`font-mono-nu text-[10px] shrink-0 flex items-center gap-1 ${taskOverdue ? "text-red-600 font-bold" : "text-nu-muted"}`}
                             >
                               <Calendar size={10} />
                               {new Date(task.due_date).toLocaleDateString(
@@ -646,7 +646,7 @@ export function ProjectRoadmap({
             >
               <CheckCircle2 size={16} className="text-nu-pink shrink-0" />
               <div className="flex-1">
-                <p className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-pink mb-0.5">
+                <p className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-pink mb-0.5">
                   {ms.title} - 정산 활성화
                 </p>
                 <p className="text-xs text-nu-muted">
@@ -654,11 +654,11 @@ export function ProjectRoadmap({
                 </p>
               </div>
               {(ms as any).is_settled ? (
-                <span className="font-mono-nu text-[9px] font-bold uppercase px-2 py-1 bg-nu-ink text-nu-paper">
+                <span className="font-mono-nu text-[11px] font-bold uppercase px-2 py-1 bg-nu-ink text-nu-paper">
                   SETTLED
                 </span>
               ) : isLead ? (
-                <span className="font-mono-nu text-[9px] font-bold uppercase px-2 py-1 bg-nu-pink text-white">
+                <span className="font-mono-nu text-[11px] font-bold uppercase px-2 py-1 bg-nu-pink text-white">
                   PENDING
                 </span>
               ) : null}

@@ -204,7 +204,7 @@ export function AgendaList({ meetingId, groupId, projectId, canEdit, members }: 
       <div className="border border-nu-ink/[0.06] bg-nu-cream/10 p-3 flex flex-col gap-3">
         <div className="flex items-center gap-2">
           <Paperclip size={12} className="text-nu-pink" />
-          <span className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-ink">
+          <span className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-ink">
             사전 자료 첨부
           </span>
         </div>
@@ -215,7 +215,7 @@ export function AgendaList({ meetingId, groupId, projectId, canEdit, members }: 
             {resources.map((r, i) => (
               <span
                 key={i}
-                className="inline-flex items-center gap-1 text-[11px] bg-nu-blue/10 text-nu-blue px-2 py-1"
+                className="inline-flex items-center gap-1 text-[13px] bg-nu-blue/10 text-nu-blue px-2 py-1"
               >
                 <FileText size={10} />
                 <a href={r.url} target="_blank" rel="noopener noreferrer" className="hover:underline max-w-[140px] truncate">
@@ -255,7 +255,7 @@ export function AgendaList({ meetingId, groupId, projectId, canEdit, members }: 
               setShowLibrary(true);
               loadLibraryFiles();
             }}
-            className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors inline-flex items-center gap-1.5"
+            className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-3 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors inline-flex items-center gap-1.5"
           >
             <FolderOpen size={12} /> 자료실
           </button>
@@ -349,7 +349,7 @@ export function AgendaList({ meetingId, groupId, projectId, canEdit, members }: 
           <div className="px-5 py-3 border-t border-nu-ink/10">
             <button
               onClick={() => setShowLibrary(false)}
-              className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-1.5 border border-nu-ink/15 hover:bg-nu-cream transition-colors"
+              className="font-mono-nu text-[12px] uppercase tracking-widest px-4 py-1.5 border border-nu-ink/15 hover:bg-nu-cream transition-colors"
             >
               닫기
             </button>
@@ -379,7 +379,7 @@ export function AgendaList({ meetingId, groupId, projectId, canEdit, members }: 
             <Button
               variant="outline"
               onClick={() => setShowForm(true)}
-              className="font-mono-nu text-[10px] uppercase tracking-widest"
+              className="font-mono-nu text-[12px] uppercase tracking-widest"
             >
               <Plus size={14} /> 안건 추가
             </Button>
@@ -395,7 +395,7 @@ export function AgendaList({ meetingId, groupId, projectId, canEdit, members }: 
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-mono-nu text-[10px] text-nu-muted">
+                    <span className="font-mono-nu text-[12px] text-nu-muted">
                       #{index + 1}
                     </span>
                     <h4 className="font-head text-sm font-bold text-nu-ink">
@@ -409,12 +409,12 @@ export function AgendaList({ meetingId, groupId, projectId, canEdit, members }: 
                   )}
                   <div className="flex items-center gap-4 mt-3 flex-wrap">
                     {agenda.duration_min && (
-                      <span className="flex items-center gap-1 font-mono-nu text-[10px] text-nu-muted">
+                      <span className="flex items-center gap-1 font-mono-nu text-[12px] text-nu-muted">
                         <Clock size={12} /> {agenda.duration_min}분
                       </span>
                     )}
                     {agenda.presenter && (
-                      <span className="flex items-center gap-1 font-mono-nu text-[10px] text-nu-muted">
+                      <span className="flex items-center gap-1 font-mono-nu text-[12px] text-nu-muted">
                         <User size={12} /> {(agenda.presenter as any).nickname}
                       </span>
                     )}
@@ -423,7 +423,7 @@ export function AgendaList({ meetingId, groupId, projectId, canEdit, members }: 
                   {/* Resources display */}
                   {agenda.resources && agenda.resources.length > 0 && (
                     <div className="mt-3">
-                      <span className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted block mb-1.5">
+                      <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-1.5">
                         사전 자료
                       </span>
                       <div className="flex flex-wrap gap-1.5">
@@ -433,7 +433,7 @@ export function AgendaList({ meetingId, groupId, projectId, canEdit, members }: 
                             href={resource.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[11px] text-nu-blue hover:text-nu-pink transition-colors bg-nu-blue/5 px-2.5 py-1 no-underline"
+                            className="inline-flex items-center gap-1 text-[13px] text-nu-blue hover:text-nu-pink transition-colors bg-nu-blue/5 px-2.5 py-1 no-underline"
                           >
                             <ExternalLink size={10} />
                             {resource.name}
@@ -450,13 +450,13 @@ export function AgendaList({ meetingId, groupId, projectId, canEdit, members }: 
                       <div className="flex gap-2 mt-2">
                         <button
                           onClick={() => handleSaveResources(agenda.id, editResources)}
-                          className="px-3 py-1.5 text-[10px] font-mono-nu uppercase tracking-widest bg-nu-pink text-white hover:bg-nu-pink/90 transition-colors"
+                          className="px-3 py-1.5 text-[12px] font-mono-nu uppercase tracking-widest bg-nu-pink text-white hover:bg-nu-pink/90 transition-colors"
                         >
                           자료 저장
                         </button>
                         <button
                           onClick={() => { setEditingAgendaId(null); setEditResources([]); }}
-                          className="px-3 py-1.5 text-[10px] font-mono-nu uppercase tracking-widest border border-nu-ink/15 hover:bg-nu-cream transition-colors"
+                          className="px-3 py-1.5 text-[12px] font-mono-nu uppercase tracking-widest border border-nu-ink/15 hover:bg-nu-cream transition-colors"
                         >
                           취소
                         </button>
@@ -501,7 +501,7 @@ export function AgendaList({ meetingId, groupId, projectId, canEdit, members }: 
             <Button
               variant="outline"
               onClick={() => setShowForm(true)}
-              className="font-mono-nu text-[10px] uppercase tracking-widest"
+              className="font-mono-nu text-[12px] uppercase tracking-widest"
             >
               <Plus size={14} /> 안건 추가
             </Button>
@@ -522,7 +522,7 @@ export function AgendaList({ meetingId, groupId, projectId, canEdit, members }: 
                 className="border-nu-ink/15 bg-transparent resize-none"
               />
               <div className="flex items-center gap-2">
-                <span className="font-mono-nu text-[10px] text-nu-muted">
+                <span className="font-mono-nu text-[12px] text-nu-muted">
                   소요 시간:
                 </span>
                 <Input
@@ -532,13 +532,13 @@ export function AgendaList({ meetingId, groupId, projectId, canEdit, members }: 
                   onChange={(e) => setDurationMin(parseInt(e.target.value) || 10)}
                   className="w-20 border-nu-ink/15 bg-transparent"
                 />
-                <span className="font-mono-nu text-[10px] text-nu-muted">분</span>
+                <span className="font-mono-nu text-[12px] text-nu-muted">분</span>
               </div>
 
               {/* Resource attachment toggle */}
               <button
                 onClick={() => setShowResourcePanel(!showResourcePanel)}
-                className="self-start flex items-center gap-1.5 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted hover:text-nu-pink transition-colors"
+                className="self-start flex items-center gap-1.5 font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted hover:text-nu-pink transition-colors"
               >
                 <Paperclip size={12} />
                 사전 자료 첨부 ({newResources.length}개)
@@ -552,7 +552,7 @@ export function AgendaList({ meetingId, groupId, projectId, canEdit, members }: 
                 <Button
                   onClick={handleAdd}
                   disabled={saving}
-                  className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[10px] uppercase tracking-widest"
+                  className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[12px] uppercase tracking-widest"
                 >
                   {saving ? "추가 중..." : "추가"}
                 </Button>
@@ -563,7 +563,7 @@ export function AgendaList({ meetingId, groupId, projectId, canEdit, members }: 
                     setNewResources([]);
                     setShowResourcePanel(false);
                   }}
-                  className="font-mono-nu text-[10px] uppercase tracking-widest"
+                  className="font-mono-nu text-[12px] uppercase tracking-widest"
                 >
                   취소
                 </Button>

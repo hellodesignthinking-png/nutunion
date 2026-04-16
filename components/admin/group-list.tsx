@@ -140,7 +140,7 @@ export function AdminGroupList({ groups }: { groups: GroupItem[] }) {
           <option value="active">활성</option>
           <option value="inactive">비활성</option>
         </select>
-        <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted self-center whitespace-nowrap">
+        <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted self-center whitespace-nowrap">
           {filtered.length}/{localGroups.length}개
         </p>
       </div>
@@ -151,7 +151,7 @@ export function AdminGroupList({ groups }: { groups: GroupItem[] }) {
           <thead>
             <tr className="border-b border-nu-ink/[0.08]">
               {["너트","카테고리","호스트","와셔","상태","관리"].map(h => (
-                <th key={h} className="text-left px-4 py-3 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted font-normal">{h}</th>
+                <th key={h} className="text-left px-4 py-3 font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted font-normal">{h}</th>
               ))}
             </tr>
           </thead>
@@ -160,16 +160,16 @@ export function AdminGroupList({ groups }: { groups: GroupItem[] }) {
               <tr key={g.id} className={`border-b border-nu-ink/[0.04] last:border-0 text-sm ${!g.is_active ? "opacity-50" : ""}`}>
                 <td className="px-4 py-3">
                   <p className="font-medium truncate max-w-[200px]">{g.name}</p>
-                  <p className="text-[10px] text-nu-muted">{formatDate(g.created_at)}</p>
+                  <p className="text-[12px] text-nu-muted">{formatDate(g.created_at)}</p>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`inline-block font-mono-nu text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 ${catColors[g.category] || "bg-nu-gray text-white"}`}>
+                  <span className={`inline-block font-mono-nu text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 ${catColors[g.category] || "bg-nu-gray text-white"}`}>
                     {catLabels[g.category] || g.category}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-nu-muted text-sm truncate max-w-[120px]">
                   {g.host_nickname}
-                  <p className="text-[10px]">{g.host_email}</p>
+                  <p className="text-[12px]">{g.host_email}</p>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1 text-sm">
@@ -179,8 +179,8 @@ export function AdminGroupList({ groups }: { groups: GroupItem[] }) {
                 </td>
                 <td className="px-4 py-3">
                   {g.is_active
-                    ? <span className="font-mono-nu text-[9px] uppercase tracking-widest text-green-600 bg-green-50 px-2 py-0.5">활성</span>
-                    : <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-red bg-red-50 px-2 py-0.5">비활성</span>}
+                    ? <span className="font-mono-nu text-[11px] uppercase tracking-widest text-green-600 bg-green-50 px-2 py-0.5">활성</span>
+                    : <span className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-red bg-red-50 px-2 py-0.5">비활성</span>}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1.5">
@@ -213,27 +213,27 @@ export function AdminGroupList({ groups }: { groups: GroupItem[] }) {
             <div key={g.id} className={`p-4 ${!g.is_active ? "opacity-50" : ""}`}>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className={`font-mono-nu text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 shrink-0 ${catColors[g.category] || "bg-nu-gray text-white"}`}>
+                  <span className={`font-mono-nu text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 shrink-0 ${catColors[g.category] || "bg-nu-gray text-white"}`}>
                     {catLabels[g.category] || g.category}
                   </span>
                   <p className="font-medium text-sm truncate">{g.name}</p>
                 </div>
                 {g.is_active
-                  ? <span className="font-mono-nu text-[9px] text-green-600 shrink-0">활성</span>
-                  : <span className="font-mono-nu text-[9px] text-nu-red shrink-0">비활성</span>}
+                  ? <span className="font-mono-nu text-[11px] text-green-600 shrink-0">활성</span>
+                  : <span className="font-mono-nu text-[11px] text-nu-red shrink-0">비활성</span>}
               </div>
               <p className="text-xs text-nu-muted mb-2">
                 호스트: {g.host_nickname} | {g.member_count}/{g.max_members}명 | {formatDate(g.created_at)}
               </p>
               <div className="flex items-center gap-3">
-                <Link href={`/groups/${g.id}`} className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted hover:text-nu-ink">상세</Link>
-                <Link href={`/groups/${g.id}/settings`} className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted hover:text-nu-ink">설정</Link>
+                <Link href={`/groups/${g.id}`} className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted hover:text-nu-ink">상세</Link>
+                <Link href={`/groups/${g.id}/settings`} className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted hover:text-nu-ink">설정</Link>
                 <button onClick={() => toggleActive(g.id, g.is_active)} disabled={actionId === g.id}
-                  className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-blue hover:underline">
+                  className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-blue hover:underline">
                   {g.is_active ? "비활성화" : "활성화"}
                 </button>
                 <button onClick={() => forceDelete(g.id, g.name)} disabled={actionId === g.id}
-                  className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-red hover:underline">
+                  className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-red hover:underline">
                   삭제
                 </button>
               </div>

@@ -184,19 +184,19 @@ export function MonitorWidget() {
       <div className="grid grid-cols-4 gap-2 mb-4">
         <div className="bg-green-50 border border-green-200 p-3 text-center">
           <p className="font-head text-xl font-extrabold text-green-600">{summary.healthy}</p>
-          <p className="font-mono-nu text-[8px] uppercase tracking-widest text-green-600">활발</p>
+          <p className="font-mono-nu text-[10px] uppercase tracking-widest text-green-600">활발</p>
         </div>
         <div className={`border p-3 text-center ${summary.warning > 0 ? "bg-yellow-50 border-yellow-200" : "bg-white border-nu-ink/[0.06]"}`}>
           <p className={`font-head text-xl font-extrabold ${summary.warning > 0 ? "text-yellow-600" : "text-nu-muted"}`}>{summary.warning}</p>
-          <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted">주의</p>
+          <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">주의</p>
         </div>
         <div className={`border p-3 text-center ${summary.danger > 0 ? "bg-red-50 border-red-200" : "bg-white border-nu-ink/[0.06]"}`}>
           <p className={`font-head text-xl font-extrabold ${summary.danger > 0 ? "text-red-600" : "text-nu-muted"}`}>{summary.danger}</p>
-          <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted">위험</p>
+          <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">위험</p>
         </div>
         <div className="bg-white border border-nu-ink/[0.06] p-3 text-center">
           <p className="font-head text-xl font-extrabold text-nu-muted">{summary.inactive}</p>
-          <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted">비활성</p>
+          <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">비활성</p>
         </div>
       </div>
 
@@ -211,7 +211,7 @@ export function MonitorWidget() {
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
-            className={`font-mono-nu text-[9px] uppercase tracking-widest px-3 py-1 border cursor-pointer transition-colors ${
+            className={`font-mono-nu text-[11px] uppercase tracking-widest px-3 py-1 border cursor-pointer transition-colors ${
               filter === f.key
                 ? "bg-indigo-600 text-white border-indigo-600"
                 : "bg-transparent text-nu-muted border-nu-ink/15 hover:border-indigo-300"
@@ -248,7 +248,7 @@ export function MonitorWidget() {
                 }`} />
 
                 {/* Type badge */}
-                <span className={`font-mono-nu text-[8px] uppercase tracking-widest px-1.5 py-0.5 shrink-0 ${
+                <span className={`font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 shrink-0 ${
                   p.type === "staff" ? "bg-indigo-100 text-indigo-600" :
                   p.type === "bolt" ? "bg-purple-100 text-purple-600" :
                   "bg-amber-100 text-amber-600"
@@ -260,21 +260,21 @@ export function MonitorWidget() {
                 <div className="flex-1 min-w-0">
                   <p className="font-head text-sm font-bold text-nu-ink truncate">{p.title}</p>
                   <div className="flex items-center gap-3 mt-0.5">
-                    <span className="font-mono-nu text-[8px] text-nu-muted flex items-center gap-0.5">
+                    <span className="font-mono-nu text-[10px] text-nu-muted flex items-center gap-0.5">
                       <Users size={9} /> {p.memberCount}
                     </span>
                     {p.taskTotal > 0 && (
-                      <span className="font-mono-nu text-[8px] text-nu-muted">
+                      <span className="font-mono-nu text-[10px] text-nu-muted">
                         {p.taskDone}/{p.taskTotal} 완료
                       </span>
                     )}
                     {p.taskOverdue > 0 && (
-                      <span className="font-mono-nu text-[8px] text-red-600 font-bold flex items-center gap-0.5">
+                      <span className="font-mono-nu text-[10px] text-red-600 font-bold flex items-center gap-0.5">
                         <AlertTriangle size={8} /> {p.taskOverdue} 지연
                       </span>
                     )}
                     {daysSinceActivity !== null && daysSinceActivity > 3 && (
-                      <span className="font-mono-nu text-[8px] text-nu-muted/60 flex items-center gap-0.5">
+                      <span className="font-mono-nu text-[10px] text-nu-muted/60 flex items-center gap-0.5">
                         <Clock size={8} /> {daysSinceActivity}일 전
                       </span>
                     )}
@@ -291,12 +291,12 @@ export function MonitorWidget() {
                         "bg-green-500"
                       }`} style={{ width: `${progress}%` }} />
                     </div>
-                    <p className="font-mono-nu text-[7px] text-nu-muted text-right mt-0.5">{progress}%</p>
+                    <p className="font-mono-nu text-[9px] text-nu-muted text-right mt-0.5">{progress}%</p>
                   </div>
                 )}
 
                 {/* Health badge */}
-                <span className={`font-mono-nu text-[8px] uppercase tracking-widest px-2 py-0.5 shrink-0 ${config.color} ${config.bg}`}>
+                <span className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 shrink-0 ${config.color} ${config.bg}`}>
                   {config.label}
                 </span>
 
@@ -307,7 +307,7 @@ export function MonitorWidget() {
         })}
         {filtered.length === 0 && (
           <div className="border-2 border-dashed border-nu-ink/10 p-8 text-center bg-white/50">
-            <p className="font-mono-nu text-[10px] text-nu-muted">해당하는 프로젝트가 없습니다</p>
+            <p className="font-mono-nu text-[12px] text-nu-muted">해당하는 프로젝트가 없습니다</p>
           </div>
         )}
       </div>

@@ -41,7 +41,7 @@ export function WikiTopicCreator({ groupId }: { groupId: string }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="bg-nu-ink text-white px-6 py-3 font-mono-nu text-[11px] font-bold uppercase tracking-widest hover:bg-nu-pink transition-all flex items-center gap-2 shrink-0"
+        className="bg-nu-ink text-white px-6 py-3 font-mono-nu text-[13px] font-bold uppercase tracking-widest hover:bg-nu-pink transition-all flex items-center gap-2 shrink-0"
       >
         <Plus size={14} /> 새 주제
       </button>
@@ -63,7 +63,7 @@ export function WikiTopicCreator({ groupId }: { groupId: string }) {
             {/* Body */}
             <div className="p-6 space-y-4">
               <div>
-                <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-2">
+                <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted block mb-2">
                   주제 이름 *
                 </label>
                 <input
@@ -74,7 +74,7 @@ export function WikiTopicCreator({ groupId }: { groupId: string }) {
                 />
               </div>
               <div>
-                <label className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted block mb-2">
+                <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted block mb-2">
                   설명 (선택)
                 </label>
                 <textarea
@@ -87,7 +87,7 @@ export function WikiTopicCreator({ groupId }: { groupId: string }) {
               </div>
 
               <div className="bg-nu-cream/50 border border-nu-ink/10 p-4">
-                <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest mb-2 flex items-center gap-1">
+                <p className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest mb-2 flex items-center gap-1">
                   <FileText size={10} /> 좋은 주제 예시
                 </p>
                 <ul className="space-y-1 text-xs text-nu-muted">
@@ -102,14 +102,14 @@ export function WikiTopicCreator({ groupId }: { groupId: string }) {
             <div className="flex items-center justify-end gap-3 p-6 border-t-[2px] border-nu-ink/10 bg-nu-cream/20">
               <button
                 onClick={() => setOpen(false)}
-                className="px-5 py-2.5 border-[2px] border-nu-ink font-mono-nu text-[10px] font-bold uppercase tracking-widest hover:bg-nu-cream transition-colors"
+                className="px-5 py-2.5 border-[2px] border-nu-ink font-mono-nu text-[12px] font-bold uppercase tracking-widest hover:bg-nu-cream transition-colors"
               >
                 취소
               </button>
               <button
                 onClick={handleCreate}
                 disabled={saving}
-                className="px-6 py-2.5 bg-nu-pink text-white font-mono-nu text-[10px] font-bold uppercase tracking-widest hover:bg-nu-pink/80 transition-all flex items-center gap-2 disabled:opacity-50 shadow-[3px_3px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
+                className="px-6 py-2.5 bg-nu-pink text-white font-mono-nu text-[12px] font-bold uppercase tracking-widest hover:bg-nu-pink/80 transition-all flex items-center gap-2 disabled:opacity-50 shadow-[3px_3px_0px_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
               >
                 {saving ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
                 생성하기

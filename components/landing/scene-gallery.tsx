@@ -74,7 +74,7 @@ export function SceneGallery() {
     <section ref={ref} className="bg-nu-ink border-t-[3px] border-nu-paper/20" id="scenes">
       {/* Header */}
       <div className="text-center pt-24 pb-12 px-8 reveal-item relative">
-        <span className="font-mono-nu text-[10px] uppercase tracking-[0.3em] text-nu-pink mb-4 block">
+        <span className="font-mono-nu text-[12px] uppercase tracking-[0.3em] text-nu-pink mb-4 block">
           Scene Gallery
         </span>
         <h2 className="font-head text-[clamp(36px,5vw,56px)] font-extrabold text-nu-paper tracking-tighter leading-[0.9]">
@@ -116,8 +116,8 @@ export function SceneGallery() {
             </div>
 
             {/* Registration marks */}
-            <div className="absolute top-4 left-4 font-mono-nu text-[10px] text-nu-paper/15" aria-hidden="true">⊕</div>
-            <div className="absolute top-4 right-4 font-mono-nu text-[10px] text-nu-paper/15" aria-hidden="true">⊕</div>
+            <div className="absolute top-4 left-4 font-mono-nu text-[12px] text-nu-paper/15" aria-hidden="true">⊕</div>
+            <div className="absolute top-4 right-4 font-mono-nu text-[12px] text-nu-paper/15" aria-hidden="true">⊕</div>
 
             {/* Scene number — large faded */}
             <div className="absolute top-6 left-6 font-head text-[100px] font-extrabold leading-none text-nu-paper/[0.03]">
@@ -126,7 +126,7 @@ export function SceneGallery() {
 
             {/* Label stamp */}
             <div className="absolute bottom-6 left-6">
-              <span className={`inline-block font-mono-nu text-[9px] font-bold uppercase tracking-[0.2em] px-3 py-1.5 text-white ${s.color} -rotate-2 transition-colors duration-700 border-[2px] border-white/10`}>
+              <span className={`inline-block font-mono-nu text-[11px] font-bold uppercase tracking-[0.2em] px-3 py-1.5 text-white ${s.color} -rotate-2 transition-colors duration-700 border-[2px] border-white/10`}>
                 {s.label}
               </span>
             </div>
@@ -153,7 +153,7 @@ export function SceneGallery() {
               ].map((stat, i) => (
                 <div key={stat.label} className={`flex-1 text-center ${i < 2 ? 'border-r-[2px] border-nu-paper/10' : ''}`}>
                   <span className="font-head text-xl font-extrabold text-nu-paper block">{stat.val}</span>
-                  <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-paper/30">{stat.label}</span>
+                  <span className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-paper/30">{stat.label}</span>
                 </div>
               ))}
             </div>
@@ -164,7 +164,7 @@ export function SceneGallery() {
                 <button
                   key={sc.label}
                   onClick={() => setActive(i)}
-                  className={`font-mono-nu text-[9px] font-bold uppercase tracking-[0.15em] px-4 py-2.5 border-[2px] transition-all duration-300 ${
+                  className={`font-mono-nu text-[11px] font-bold uppercase tracking-[0.15em] px-4 py-2.5 border-[2px] transition-all duration-300 ${
                     active === i
                       ? `${sc.color} text-white border-transparent`
                       : "bg-transparent text-nu-paper/30 border-nu-paper/10 hover:text-nu-paper/60 hover:border-nu-paper/20"
@@ -205,7 +205,7 @@ export function SceneGallery() {
               {/* Halftone texture per panel */}
               <div className={`absolute inset-0 ${sc.halftone} opacity-[0.06]`} />
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="font-mono-nu text-[9px] font-bold uppercase tracking-[0.2em] text-nu-paper/70">
+                <span className="font-mono-nu text-[11px] font-bold uppercase tracking-[0.2em] text-nu-paper/70">
                   {sc.label}
                 </span>
               </div>

@@ -152,28 +152,28 @@ export default async function DashboardPage() {
       <div className="mb-6 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className={`inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-2 py-1 border ${gradeInfo.cls}`}>
+            <span className={`inline-flex items-center gap-1 font-mono-nu text-[11px] uppercase tracking-widest px-2 py-1 border ${gradeInfo.cls}`}>
               <GradeIcon size={10} /> {gradeInfo.label}
             </span>
-            <span className="inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-2 py-1 bg-nu-ink text-white">
+            <span className="inline-flex items-center gap-1 font-mono-nu text-[11px] uppercase tracking-widest px-2 py-1 bg-nu-ink text-white">
               <Zap size={10} className="text-nu-yellow" /> {nutPoints} NUT
             </span>
           </div>
           <h1 className="font-head text-3xl md:text-4xl font-extrabold text-nu-ink tracking-tight">
             오늘의 대시보드
           </h1>
-          <p className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest mt-1">
+          <p className="font-mono-nu text-[13px] text-nu-muted uppercase tracking-widest mt-1">
             {new Date().toLocaleDateString("ko", { year: "numeric", month: "long", day: "numeric", weekday: "long" })}
             {" · "}안녕하세요, {nickname}님
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Link href="/groups/create"
-            className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2.5 border-[2px] border-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-all no-underline flex items-center gap-1.5">
+            className="font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2.5 border-[2px] border-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-all no-underline flex items-center gap-1.5">
             <Plus size={12} /> 너트
           </Link>
           <Link href="/projects/create"
-            className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2.5 bg-nu-pink text-nu-paper hover:bg-nu-pink/90 transition-all no-underline flex items-center gap-1.5">
+            className="font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2.5 bg-nu-pink text-nu-paper hover:bg-nu-pink/90 transition-all no-underline flex items-center gap-1.5">
             <Plus size={12} /> 볼트
           </Link>
         </div>
@@ -185,23 +185,23 @@ export default async function DashboardPage() {
       {/* ── Stats Cards ───────────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
         <Link href="/groups" className="bg-white border border-nu-ink/[0.06] p-4 no-underline hover:border-indigo-300 transition-colors">
-          <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-1">내 너트</p>
+          <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-1">내 너트</p>
           <p className="font-head text-2xl font-extrabold text-indigo-600">{groupCount}</p>
         </Link>
         <Link href="/projects" className="bg-white border border-nu-ink/[0.06] p-4 no-underline hover:border-purple-300 transition-colors">
-          <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-1">내 볼트</p>
+          <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-1">내 볼트</p>
           <p className="font-head text-2xl font-extrabold text-purple-600">{projectCount}</p>
         </Link>
         <div className="bg-white border border-nu-ink/[0.06] p-4">
-          <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-1">내 할일</p>
+          <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-1">내 할일</p>
           <p className="font-head text-2xl font-extrabold text-nu-ink">{allTasks.length}</p>
         </div>
         <div className={`p-4 border ${overdueTasks.length > 0 ? "bg-red-50 border-red-200" : "bg-white border-nu-ink/[0.06]"}`}>
-          <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-1">지연</p>
+          <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-1">지연</p>
           <p className={`font-head text-2xl font-extrabold ${overdueTasks.length > 0 ? "text-red-600" : "text-nu-ink"}`}>{overdueTasks.length}</p>
         </div>
         <div className={`p-4 border ${todayTasks.length > 0 ? "bg-orange-50 border-orange-200" : "bg-white border-nu-ink/[0.06]"}`}>
-          <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-1">오늘 마감</p>
+          <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-1">오늘 마감</p>
           <p className={`font-head text-2xl font-extrabold ${todayTasks.length > 0 ? "text-orange-600" : "text-nu-ink"}`}>{todayTasks.length}</p>
         </div>
       </div>
@@ -223,10 +223,10 @@ export default async function DashboardPage() {
                   <div key={r.id} className="flex items-center justify-between bg-white px-4 py-2.5 border border-nu-ink/[0.06]">
                     <div>
                       <span className="text-sm font-medium">{r.profile?.nickname}</span>
-                      <span className="font-mono-nu text-[10px] text-nu-muted ml-2">→ {r.groups?.name}</span>
+                      <span className="font-mono-nu text-[12px] text-nu-muted ml-2">→ {r.groups?.name}</span>
                     </div>
                     <Link href={`/groups/${r.group_id}/settings`}
-                      className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink hover:underline no-underline">
+                      className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-pink hover:underline no-underline">
                       승인하기
                     </Link>
                   </div>
@@ -249,18 +249,18 @@ export default async function DashboardPage() {
                       <StatusDot status={t.status} />
                       <span className="text-sm font-medium text-nu-ink flex-1 truncate">{t.title}</span>
                       {t.project?.title && (
-                        <span className="font-mono-nu text-[8px] text-indigo-600 uppercase tracking-widest hidden sm:block">{t.project.title}</span>
+                        <span className="font-mono-nu text-[10px] text-indigo-600 uppercase tracking-widest hidden sm:block">{t.project.title}</span>
                       )}
                       {(t as any)._bolt && (
-                        <span className="font-mono-nu text-[7px] bg-purple-100 text-purple-700 px-1.5 py-0.5 border border-purple-200 uppercase tracking-widest">볼트</span>
+                        <span className="font-mono-nu text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 border border-purple-200 uppercase tracking-widest">볼트</span>
                       )}
                       {t.priority && (
-                        <span className={`font-mono-nu text-[8px] px-1.5 py-0.5 border uppercase tracking-widest ${priorityColors[t.priority] || priorityColors.medium}`}>
+                        <span className={`font-mono-nu text-[10px] px-1.5 py-0.5 border uppercase tracking-widest ${priorityColors[t.priority] || priorityColors.medium}`}>
                           {t.priority === "urgent" ? "긴급" : t.priority === "high" ? "높음" : ""}
                         </span>
                       )}
                       {t.due_date && (
-                        <span className={`font-mono-nu text-[9px] flex items-center gap-0.5 ${isOverdue ? "text-red-600 font-bold" : "text-orange-600"}`}>
+                        <span className={`font-mono-nu text-[11px] flex items-center gap-0.5 ${isOverdue ? "text-red-600 font-bold" : "text-orange-600"}`}>
                           <Clock size={9} /> {isOverdue ? "지연" : "오늘"}
                         </span>
                       )}
@@ -277,7 +277,7 @@ export default async function DashboardPage() {
               <h2 className="font-head text-sm font-extrabold text-nu-ink flex items-center gap-2">
                 <CheckSquare size={14} className="text-indigo-500" /> 할일
               </h2>
-              <Link href="/staff/tasks" className="font-mono-nu text-[9px] uppercase tracking-widest text-indigo-500 no-underline hover:underline flex items-center gap-1">
+              <Link href="/staff/tasks" className="font-mono-nu text-[11px] uppercase tracking-widest text-indigo-500 no-underline hover:underline flex items-center gap-1">
                 전체 보기 <ChevronRight size={10} />
               </Link>
             </div>
@@ -293,18 +293,18 @@ export default async function DashboardPage() {
                     <StatusDot status={t.status} />
                     <span className="text-sm text-nu-ink flex-1 truncate">{t.title}</span>
                     {t.project?.title && (
-                      <span className="font-mono-nu text-[8px] text-nu-muted uppercase tracking-widest hidden sm:block">{t.project.title}</span>
+                      <span className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest hidden sm:block">{t.project.title}</span>
                     )}
                     {(t as any)._bolt && (
-                      <span className="font-mono-nu text-[7px] bg-purple-100 text-purple-700 px-1.5 py-0.5 border border-purple-200 uppercase tracking-widest">볼트</span>
+                      <span className="font-mono-nu text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 border border-purple-200 uppercase tracking-widest">볼트</span>
                     )}
                     {t.priority && t.priority !== "medium" && (
-                      <span className={`font-mono-nu text-[8px] px-1.5 py-0.5 border uppercase tracking-widest ${priorityColors[t.priority] || ""}`}>
+                      <span className={`font-mono-nu text-[10px] px-1.5 py-0.5 border uppercase tracking-widest ${priorityColors[t.priority] || ""}`}>
                         {t.priority === "urgent" ? "긴급" : t.priority === "high" ? "높음" : t.priority === "low" ? "낮음" : ""}
                       </span>
                     )}
                     {t.due_date && (
-                      <span className="font-mono-nu text-[9px] text-nu-muted flex items-center gap-0.5">
+                      <span className="font-mono-nu text-[11px] text-nu-muted flex items-center gap-0.5">
                         <Clock size={9} /> {new Date(t.due_date + "T00:00:00").toLocaleDateString("ko", { month: "short", day: "numeric" })}
                       </span>
                     )}
@@ -320,7 +320,7 @@ export default async function DashboardPage() {
               <h2 className="font-head text-lg font-extrabold text-nu-ink flex items-center gap-2">
                 <Layers size={16} /> 내 너트
               </h2>
-              <Link href="/groups" className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink no-underline hover:underline flex items-center gap-1">
+              <Link href="/groups" className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-pink no-underline hover:underline flex items-center gap-1">
                 전체보기 <ChevronRight size={12} />
               </Link>
             </div>
@@ -329,7 +329,7 @@ export default async function DashboardPage() {
                 <Layers size={28} className="text-nu-muted/30 mx-auto mb-3" />
                 <p className="text-nu-muted text-sm mb-3">아직 너트가 없습니다</p>
                 <Link href="/groups"
-                  className="font-mono-nu text-[11px] uppercase tracking-widest bg-nu-ink text-nu-paper px-5 py-2.5 no-underline hover:bg-nu-pink transition-colors inline-block">
+                  className="font-mono-nu text-[13px] uppercase tracking-widest bg-nu-ink text-nu-paper px-5 py-2.5 no-underline hover:bg-nu-pink transition-colors inline-block">
                   너트 탐색하기
                 </Link>
               </div>
@@ -343,15 +343,15 @@ export default async function DashboardPage() {
                     <Link key={g.id} href={`/groups/${g.id}`}
                       className="bg-white border border-nu-ink/[0.08] p-4 no-underline hover:border-indigo-300 hover:shadow-sm transition-all group">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className={`font-mono-nu text-[8px] uppercase tracking-widest px-2 py-0.5 text-white font-bold ${cat?.color || "bg-nu-ink/30"}`}>
+                        <span className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 text-white font-bold ${cat?.color || "bg-nu-ink/30"}`}>
                           {cat?.label || g.category}
                         </span>
                         {m.role === "host" && (
-                          <span className="font-mono-nu text-[8px] uppercase tracking-widest bg-nu-pink/10 text-nu-pink px-1.5 py-0.5">Host</span>
+                          <span className="font-mono-nu text-[10px] uppercase tracking-widest bg-nu-pink/10 text-nu-pink px-1.5 py-0.5">Host</span>
                         )}
                       </div>
                       <h3 className="font-head text-sm font-bold text-nu-ink group-hover:text-indigo-600 transition-colors truncate">{g.name}</h3>
-                      <p className="text-[11px] text-nu-muted mt-1 line-clamp-1">{g.description || "-"}</p>
+                      <p className="text-[13px] text-nu-muted mt-1 line-clamp-1">{g.description || "-"}</p>
                     </Link>
                   );
                 })}
@@ -365,7 +365,7 @@ export default async function DashboardPage() {
               <h2 className="font-head text-lg font-extrabold text-nu-ink flex items-center gap-2">
                 <Briefcase size={16} /> 내 볼트
               </h2>
-              <Link href="/projects" className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink no-underline hover:underline flex items-center gap-1">
+              <Link href="/projects" className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-pink no-underline hover:underline flex items-center gap-1">
                 전체보기 <ChevronRight size={12} />
               </Link>
             </div>
@@ -374,7 +374,7 @@ export default async function DashboardPage() {
                 <Briefcase size={28} className="text-nu-muted/30 mx-auto mb-3" />
                 <p className="text-nu-muted text-sm mb-3">참여 중인 볼트가 없습니다</p>
                 <Link href="/projects"
-                  className="font-mono-nu text-[11px] uppercase tracking-widest bg-nu-ink text-nu-paper px-5 py-2.5 no-underline hover:bg-nu-pink transition-colors inline-block">
+                  className="font-mono-nu text-[13px] uppercase tracking-widest bg-nu-ink text-nu-paper px-5 py-2.5 no-underline hover:bg-nu-pink transition-colors inline-block">
                   볼트 탐색하기
                 </Link>
               </div>
@@ -388,21 +388,21 @@ export default async function DashboardPage() {
                     <Link key={p.id} href={`/projects/${p.id}`}
                       className="bg-white border border-nu-ink/[0.08] p-4 no-underline hover:border-purple-300 hover:shadow-sm transition-all group">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className={`font-mono-nu text-[8px] uppercase tracking-widest px-2 py-0.5 ${p.status === "active" ? "bg-green-500 text-white" : "bg-nu-muted/20 text-nu-muted"}`}>
+                        <span className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 ${p.status === "active" ? "bg-green-500 text-white" : "bg-nu-muted/20 text-nu-muted"}`}>
                           {p.status === "active" ? "진행중" : p.status}
                         </span>
                         {pm.role === "lead" && (
-                          <span className="font-mono-nu text-[8px] uppercase tracking-widest bg-purple-50 text-purple-600 px-1.5 py-0.5">PM</span>
+                          <span className="font-mono-nu text-[10px] uppercase tracking-widest bg-purple-50 text-purple-600 px-1.5 py-0.5">PM</span>
                         )}
                         {cat && (
-                          <span className={`font-mono-nu text-[8px] uppercase tracking-widest px-1.5 py-0.5 text-white ${cat.color}`}>{cat.label}</span>
+                          <span className={`font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 text-white ${cat.color}`}>{cat.label}</span>
                         )}
                       </div>
                       <h3 className="font-head text-sm font-bold text-nu-ink group-hover:text-purple-600 transition-colors truncate">{p.title}</h3>
-                      <p className="text-[11px] text-nu-muted mt-1 line-clamp-1">{p.description || "-"}</p>
+                      <p className="text-[13px] text-nu-muted mt-1 line-clamp-1">{p.description || "-"}</p>
                       <div className="flex items-center justify-between mt-2">
                         {pm.reward_ratio ? (
-                          <span className="font-mono-nu text-[10px] font-bold text-green-600">{pm.reward_ratio}% 배분</span>
+                          <span className="font-mono-nu text-[12px] font-bold text-green-600">{pm.reward_ratio}% 배분</span>
                         ) : <span />}
                         <ArrowUpRight size={13} className="text-nu-muted/40 group-hover:text-purple-600 transition-colors" />
                       </div>
@@ -423,7 +423,7 @@ export default async function DashboardPage() {
                 <Activity size={28} className="text-nu-muted/30 mx-auto mb-3" />
                 <p className="text-nu-muted text-sm mb-3">아직 커뮤니티 활동이 없습니다</p>
                 <Link href="/groups"
-                  className="font-mono-nu text-[11px] uppercase tracking-widest bg-nu-ink text-nu-paper px-5 py-2.5 no-underline hover:bg-nu-pink transition-colors inline-block">
+                  className="font-mono-nu text-[13px] uppercase tracking-widest bg-nu-ink text-nu-paper px-5 py-2.5 no-underline hover:bg-nu-pink transition-colors inline-block">
                   너트에서 대화 시작하기
                 </Link>
               </div>
@@ -434,17 +434,17 @@ export default async function DashboardPage() {
                   if (!group || group.is_active === false) return null;
                   return (
                     <div key={a.id} className="bg-white border border-nu-ink/[0.06] px-4 py-3 flex items-start gap-3">
-                      <div className="w-7 h-7 rounded-full bg-nu-ink/5 flex items-center justify-center font-head text-[10px] font-bold text-nu-ink shrink-0">
+                      <div className="w-7 h-7 rounded-full bg-nu-ink/5 flex items-center justify-center font-head text-[12px] font-bold text-nu-ink shrink-0">
                         {(a.author?.nickname || "U").charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-xs font-medium text-nu-ink">{a.author?.nickname}</span>
                           <Link href={`/groups/${group.id}`}
-                            className="font-mono-nu text-[9px] uppercase tracking-widest text-indigo-500 hover:underline no-underline">
+                            className="font-mono-nu text-[11px] uppercase tracking-widest text-indigo-500 hover:underline no-underline">
                             #{group.name}
                           </Link>
-                          <span className="font-mono-nu text-[9px] text-nu-muted/60 ml-auto">{timeAgo(a.created_at)}</span>
+                          <span className="font-mono-nu text-[11px] text-nu-muted/60 ml-auto">{timeAgo(a.created_at)}</span>
                         </div>
                         <p className="text-xs text-nu-muted mt-0.5 line-clamp-2">{a.content}</p>
                       </div>
@@ -470,7 +470,7 @@ export default async function DashboardPage() {
               <Link key={item.href} href={item.href}
                 className="flex items-center gap-2 bg-white border border-nu-ink/[0.06] px-3 py-3 no-underline hover:border-indigo-200 transition-colors group">
                 <item.icon size={14} className={item.color} />
-                <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-graphite group-hover:text-nu-ink">{item.label}</span>
+                <span className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-graphite group-hover:text-nu-ink">{item.label}</span>
               </Link>
             ))}
           </div>
@@ -478,10 +478,10 @@ export default async function DashboardPage() {
           {/* 스킬 태그 */}
           {skills.length > 0 && (
             <div className="bg-white border border-nu-ink/[0.08] p-4">
-              <h3 className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-2">내 스킬</h3>
+              <h3 className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-2">내 스킬</h3>
               <div className="flex flex-wrap gap-1.5">
                 {skills.map((s: string) => (
-                  <span key={s} className="font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-600">
+                  <span key={s} className="font-mono-nu text-[11px] uppercase tracking-widest px-2 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-600">
                     #{s}
                   </span>
                 ))}
@@ -509,19 +509,19 @@ export default async function DashboardPage() {
                       <span className="font-head text-sm font-extrabold text-indigo-600 leading-none">
                         {new Date(evt.start_at).getDate()}
                       </span>
-                      <span className="font-mono-nu text-[8px] uppercase text-indigo-400">
+                      <span className="font-mono-nu text-[10px] uppercase text-indigo-400">
                         {new Date(evt.start_at).toLocaleDateString("ko", { month: "short" })}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-nu-ink truncate group-hover:text-indigo-600 transition-colors">{evt.title}</p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="flex items-center gap-1 text-[10px] text-nu-muted">
+                        <span className="flex items-center gap-1 text-[12px] text-nu-muted">
                           <Clock size={10} />
                           {new Date(evt.start_at).toLocaleTimeString("ko", { hour: "2-digit", minute: "2-digit" })}
                         </span>
                         {evt.location && (
-                          <span className="flex items-center gap-1 text-[10px] text-nu-muted truncate">
+                          <span className="flex items-center gap-1 text-[12px] text-nu-muted truncate">
                             <MapPin size={10} /> {evt.location}
                           </span>
                         )}
@@ -541,7 +541,7 @@ export default async function DashboardPage() {
             <div className="space-y-3">
               <div>
                 <div className="flex justify-between items-center mb-1">
-                  <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">너트 활동</span>
+                  <span className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted">너트 활동</span>
                   <span className="font-head text-sm font-bold text-nu-ink">{groupCount}/5</span>
                 </div>
                 <div className="h-1.5 bg-nu-ink/5 overflow-hidden">
@@ -550,7 +550,7 @@ export default async function DashboardPage() {
               </div>
               <div>
                 <div className="flex justify-between items-center mb-1">
-                  <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">볼트 참여</span>
+                  <span className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted">볼트 참여</span>
                   <span className="font-head text-sm font-bold text-nu-ink">{projectCount}/3</span>
                 </div>
                 <div className="h-1.5 bg-nu-ink/5 overflow-hidden">
@@ -559,7 +559,7 @@ export default async function DashboardPage() {
               </div>
               <div>
                 <div className="flex justify-between items-center mb-1">
-                  <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">강성 점수</span>
+                  <span className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted">강성 점수</span>
                   <span className="font-head text-sm font-bold text-nu-ink">{activityScore}</span>
                 </div>
                 <div className="h-1.5 bg-nu-ink/5 overflow-hidden">
@@ -568,19 +568,19 @@ export default async function DashboardPage() {
               </div>
               <div className="pt-2 border-t border-nu-ink/[0.06]">
                 <div className="flex items-center justify-between">
-                  <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">현재 등급</span>
-                  <span className={`inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 border ${gradeInfo.cls}`}>
+                  <span className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted">현재 등급</span>
+                  <span className={`inline-flex items-center gap-1 font-mono-nu text-[11px] uppercase tracking-widest px-2 py-0.5 border ${gradeInfo.cls}`}>
                     <GradeIcon size={9} /> {gradeInfo.label}
                   </span>
                 </div>
                 {grade === "bronze" && (
-                  <p className="text-[10px] text-nu-muted mt-1.5">너트에 더 참여하면 실버로 승급됩니다</p>
+                  <p className="text-[12px] text-nu-muted mt-1.5">너트에 더 참여하면 실버로 승급됩니다</p>
                 )}
                 {grade === "silver" && (
-                  <p className="text-[10px] text-nu-muted mt-1.5">볼트에 참여하면 골드로 승급 가능합니다</p>
+                  <p className="text-[12px] text-nu-muted mt-1.5">볼트에 참여하면 골드로 승급 가능합니다</p>
                 )}
                 {(grade === "gold" || grade === "vip") && (
-                  <p className="text-[10px] text-green-600 mt-1.5">✓ 너트와 볼트를 개설할 수 있습니다</p>
+                  <p className="text-[12px] text-green-600 mt-1.5">✓ 너트와 볼트를 개설할 수 있습니다</p>
                 )}
               </div>
             </div>
@@ -588,7 +588,7 @@ export default async function DashboardPage() {
 
           {/* 빠른 이동 */}
           <div className="bg-white border border-nu-ink/[0.08] p-5">
-            <h3 className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-3">빠른 이동</h3>
+            <h3 className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-3">빠른 이동</h3>
             <div className="space-y-1">
               {[
                 { href: "/groups",       label: "너트 탐색",     icon: Layers,    color: "text-indigo-500" },

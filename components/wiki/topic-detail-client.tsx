@@ -201,14 +201,14 @@ export function TopicDetailClient({
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setEditingTopic(!editingTopic)}
-            className="font-mono-nu text-[10px] text-nu-muted hover:text-nu-ink flex items-center gap-1 uppercase tracking-widest transition-colors"
+            className="font-mono-nu text-[12px] text-nu-muted hover:text-nu-ink flex items-center gap-1 uppercase tracking-widest transition-colors"
           >
             <Settings size={12} /> 주제 관리
           </button>
           <button
             onClick={handleTogglePublish}
             disabled={publishing}
-            className={`font-mono-nu text-[10px] flex items-center gap-1 uppercase tracking-widest transition-colors ${
+            className={`font-mono-nu text-[12px] flex items-center gap-1 uppercase tracking-widest transition-colors ${
               isPublished ? "text-green-600 hover:text-nu-ink" : "text-nu-muted hover:text-nu-blue"
             }`}
           >
@@ -219,7 +219,7 @@ export function TopicDetailClient({
             <>
               <button
                 onClick={copyPublicUrl}
-                className="font-mono-nu text-[10px] text-nu-blue hover:text-nu-pink flex items-center gap-1 uppercase tracking-widest transition-colors"
+                className="font-mono-nu text-[12px] text-nu-blue hover:text-nu-pink flex items-center gap-1 uppercase tracking-widest transition-colors"
               >
                 <Copy size={12} /> URL 복사
               </button>
@@ -227,7 +227,7 @@ export function TopicDetailClient({
                 href={`/wiki/${publishSlug}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-mono-nu text-[10px] text-nu-blue hover:text-nu-pink flex items-center gap-1 uppercase tracking-widest transition-colors no-underline"
+                className="font-mono-nu text-[12px] text-nu-blue hover:text-nu-pink flex items-center gap-1 uppercase tracking-widest transition-colors no-underline"
               >
                 <ExternalLink size={12} /> 공개 페이지
               </a>
@@ -235,7 +235,7 @@ export function TopicDetailClient({
           )}
           <button
             onClick={() => setDeletingTopicConfirm(true)}
-            className="font-mono-nu text-[10px] text-red-400 hover:text-red-600 flex items-center gap-1 uppercase tracking-widest transition-colors"
+            className="font-mono-nu text-[12px] text-red-400 hover:text-red-600 flex items-center gap-1 uppercase tracking-widest transition-colors"
           >
             <Trash2 size={12} /> 주제 삭제
           </button>
@@ -263,13 +263,13 @@ export function TopicDetailClient({
               rows={2}
             />
             <div className="flex gap-2 justify-end">
-              <button onClick={() => setEditingTopic(false)} className="px-4 py-2 border border-nu-ink/20 font-mono-nu text-[10px] uppercase tracking-widest hover:bg-nu-cream transition-colors">
+              <button onClick={() => setEditingTopic(false)} className="px-4 py-2 border border-nu-ink/20 font-mono-nu text-[12px] uppercase tracking-widest hover:bg-nu-cream transition-colors">
                 취소
               </button>
               <button
                 onClick={handleUpdateTopic}
                 disabled={savingTopic}
-                className="px-5 py-2 bg-nu-ink text-white font-mono-nu text-[10px] font-bold uppercase tracking-widest hover:bg-nu-pink transition-all flex items-center gap-1 disabled:opacity-50"
+                className="px-5 py-2 bg-nu-ink text-white font-mono-nu text-[12px] font-bold uppercase tracking-widest hover:bg-nu-pink transition-all flex items-center gap-1 disabled:opacity-50"
               >
                 {savingTopic ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} 저장
               </button>
@@ -289,12 +289,12 @@ export function TopicDetailClient({
                 이 주제와 하위 모든 문서({pages.length}개)가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
               </p>
               <div className="flex gap-2">
-                <button onClick={() => setDeletingTopicConfirm(false)} className="px-4 py-2 border border-red-300 text-red-500 font-mono-nu text-[10px] uppercase tracking-widest hover:bg-red-100 transition-colors">
+                <button onClick={() => setDeletingTopicConfirm(false)} className="px-4 py-2 border border-red-300 text-red-500 font-mono-nu text-[12px] uppercase tracking-widest hover:bg-red-100 transition-colors">
                   취소
                 </button>
                 <button
                   onClick={handleDeleteTopic}
-                  className="px-5 py-2 bg-red-500 text-white font-mono-nu text-[10px] font-bold uppercase tracking-widest hover:bg-red-600 transition-all flex items-center gap-1"
+                  className="px-5 py-2 bg-red-500 text-white font-mono-nu text-[12px] font-bold uppercase tracking-widest hover:bg-red-600 transition-all flex items-center gap-1"
                 >
                   <Trash2 size={12} /> 영구 삭제
                 </button>
@@ -320,7 +320,7 @@ export function TopicDetailClient({
             <button
               key={s}
               onClick={() => setSortBy(s)}
-              className={`px-3 py-1.5 font-mono-nu text-[9px] font-bold uppercase tracking-widest transition-all ${
+              className={`px-3 py-1.5 font-mono-nu text-[11px] font-bold uppercase tracking-widest transition-all ${
                 sortBy === s ? "bg-nu-ink text-white" : "text-nu-muted hover:text-nu-ink"
               }`}
             >
@@ -330,7 +330,7 @@ export function TopicDetailClient({
         </div>
         <button
           onClick={() => setShowEditor(!showEditor)}
-          className="bg-nu-ink text-white px-5 py-2.5 font-mono-nu text-[10px] font-bold uppercase tracking-widest hover:bg-nu-pink transition-all flex items-center gap-2 shrink-0"
+          className="bg-nu-ink text-white px-5 py-2.5 font-mono-nu text-[12px] font-bold uppercase tracking-widest hover:bg-nu-pink transition-all flex items-center gap-2 shrink-0"
         >
           {showEditor ? <X size={14} /> : <Plus size={14} />}
           {showEditor ? "닫기" : "새 문서"}
@@ -360,7 +360,7 @@ export function TopicDetailClient({
             {!searchQuery && (
               <button
                 onClick={() => setShowEditor(true)}
-                className="font-mono-nu text-[10px] text-nu-pink font-bold uppercase hover:underline mt-2"
+                className="font-mono-nu text-[12px] text-nu-pink font-bold uppercase hover:underline mt-2"
               >
                 첫 번째 문서 작성하기
               </button>
@@ -384,7 +384,7 @@ export function TopicDetailClient({
                     <p className="text-xs text-nu-muted line-clamp-2 leading-relaxed mb-2">
                       {(page.content || "").replace(/[#*`\-\[\]]/g, "").slice(0, 160)}
                     </p>
-                    <div className="flex items-center gap-4 font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">
+                    <div className="flex items-center gap-4 font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest">
                       <span className="flex items-center gap-1">
                         <GitBranch size={10} /> v{page.version}
                       </span>
@@ -403,13 +403,13 @@ export function TopicDetailClient({
                     <div className="flex items-center gap-1 bg-white border border-red-300 p-1">
                       <button
                         onClick={(e) => { e.preventDefault(); handleDeletePage(page.id); }}
-                        className="px-2 py-1 bg-red-500 text-white font-mono-nu text-[8px] font-bold uppercase hover:bg-red-600 transition-colors"
+                        className="px-2 py-1 bg-red-500 text-white font-mono-nu text-[10px] font-bold uppercase hover:bg-red-600 transition-colors"
                       >
                         삭제
                       </button>
                       <button
                         onClick={(e) => { e.preventDefault(); setDeletingPageId(null); }}
-                        className="px-2 py-1 text-nu-muted font-mono-nu text-[8px] uppercase hover:text-nu-ink"
+                        className="px-2 py-1 text-nu-muted font-mono-nu text-[10px] uppercase hover:text-nu-ink"
                       >
                         취소
                       </button>

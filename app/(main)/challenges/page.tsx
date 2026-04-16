@@ -167,7 +167,7 @@ export default function ChallengesPage() {
             <div key={m.label} className="bg-nu-white border-[2px] border-nu-ink/[0.08] p-5 text-center">
               <m.icon size={20} className={`mx-auto mb-2 ${m.color}`} />
               <p className="font-head text-2xl font-extrabold text-nu-ink">{m.value}</p>
-              <p className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-muted mt-1">{m.label}</p>
+              <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mt-1">{m.label}</p>
             </div>
           ))}
         </div>
@@ -181,7 +181,7 @@ export default function ChallengesPage() {
             >
               <FileText size={16} className="text-nu-pink" />
               <span className="font-head text-sm font-bold text-nu-ink">내 의뢰 현황</span>
-              <span className="font-mono-nu text-[10px] bg-nu-pink/10 text-nu-pink px-2 py-0.5 font-bold">
+              <span className="font-mono-nu text-[12px] bg-nu-pink/10 text-nu-pink px-2 py-0.5 font-bold">
                 {myProposals.length}
               </span>
               <ChevronDown size={14} className={`ml-auto text-nu-muted transition-transform ${showMyProposals ? "rotate-180" : ""}`} />
@@ -195,9 +195,9 @@ export default function ChallengesPage() {
                     <div key={p.id} className="px-5 py-3 flex items-center gap-3">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-nu-ink truncate">{p.project_title}</p>
-                        <p className="text-[10px] text-nu-muted">{p.company_name} · {new Date(p.created_at).toLocaleDateString("ko")}</p>
+                        <p className="text-[12px] text-nu-muted">{p.company_name} · {new Date(p.created_at).toLocaleDateString("ko")}</p>
                       </div>
-                      <span className={`font-mono-nu text-[9px] uppercase tracking-widest px-2 py-1 font-bold ${st.color} ${st.bg}`}>
+                      <span className={`font-mono-nu text-[11px] uppercase tracking-widest px-2 py-1 font-bold ${st.color} ${st.bg}`}>
                         {st.label}
                       </span>
                     </div>
@@ -216,22 +216,22 @@ export default function ChallengesPage() {
                 <div className="bg-nu-ink text-nu-paper px-6 py-4">
                   <div className="flex items-center gap-2 mb-1">
                     <Send size={14} className="text-nu-pink" />
-                    <span className="font-mono-nu text-[9px] font-black uppercase tracking-[0.25em] text-nu-pink">
+                    <span className="font-mono-nu text-[11px] font-black uppercase tracking-[0.25em] text-nu-pink">
                       New_Challenge
                     </span>
                   </div>
-                  <p className="text-[11px] text-nu-paper/60">볼트 정보를 입력하시면 관리자가 검토 후 최적의 PM을 배정합니다</p>
+                  <p className="text-[13px] text-nu-paper/60">볼트 정보를 입력하시면 관리자가 검토 후 최적의 PM을 배정합니다</p>
                 </div>
 
                 <div className="p-6 space-y-5">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-1.5">회사/단체명 *</label>
+                      <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted block mb-1.5">회사/단체명 *</label>
                       <input value={form.companyName} onChange={e => setForm(p => ({...p, companyName: e.target.value}))}
                         className="w-full h-10 border border-nu-ink/10 bg-nu-cream/10 px-3 text-sm focus:outline-none focus:border-nu-pink" placeholder="(주)넛유니온" />
                     </div>
                     <div>
-                      <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-1.5">연락처 이메일 *</label>
+                      <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted block mb-1.5">연락처 이메일 *</label>
                       <input type="email" value={form.contactEmail} onChange={e => setForm(p => ({...p, contactEmail: e.target.value}))}
                         className="w-full h-10 border border-nu-ink/10 bg-nu-cream/10 px-3 text-sm focus:outline-none focus:border-nu-pink" placeholder="hello@company.com" />
                     </div>
@@ -239,25 +239,25 @@ export default function ChallengesPage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-1.5">담당자명</label>
+                      <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted block mb-1.5">담당자명</label>
                       <input value={form.contactName} onChange={e => setForm(p => ({...p, contactName: e.target.value}))}
                         className="w-full h-10 border border-nu-ink/10 bg-nu-cream/10 px-3 text-sm focus:outline-none focus:border-nu-pink" placeholder="홍길동" />
                     </div>
                     <div>
-                      <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-1.5">연락처</label>
+                      <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted block mb-1.5">연락처</label>
                       <input value={form.contactPhone} onChange={e => setForm(p => ({...p, contactPhone: e.target.value}))}
                         className="w-full h-10 border border-nu-ink/10 bg-nu-cream/10 px-3 text-sm focus:outline-none focus:border-nu-pink" placeholder="010-1234-5678" />
                     </div>
                   </div>
 
                   <div>
-                    <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-1.5">볼트 제목 *</label>
+                    <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted block mb-1.5">볼트 제목 *</label>
                     <input value={form.projectTitle} onChange={e => setForm(p => ({...p, projectTitle: e.target.value}))}
                       className="w-full h-10 border border-nu-ink/10 bg-nu-cream/10 px-3 text-sm focus:outline-none focus:border-nu-pink" placeholder="신림동 로컬 카페 브랜딩" />
                   </div>
 
                   <div>
-                    <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-1.5">상세 설명</label>
+                    <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted block mb-1.5">상세 설명</label>
                     <textarea value={form.description} onChange={e => setForm(p => ({...p, description: e.target.value}))} rows={4}
                       className="w-full border border-nu-ink/10 bg-nu-cream/10 px-3 py-2 text-sm focus:outline-none focus:border-nu-pink resize-none"
                       placeholder="볼트의 목표, 기대 결과물, 특별한 요구사항 등을 설명해주세요..." />
@@ -265,7 +265,7 @@ export default function ChallengesPage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-1.5">예산 범위</label>
+                      <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted block mb-1.5">예산 범위</label>
                       <select value={form.budget} onChange={e => setForm(p => ({...p, budget: e.target.value}))}
                         className="w-full h-10 border border-nu-ink/10 bg-nu-cream/10 px-3 text-sm focus:outline-none">
                         <option value="">선택해주세요</option>
@@ -276,7 +276,7 @@ export default function ChallengesPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-1.5">일정</label>
+                      <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted block mb-1.5">일정</label>
                       <select value={form.timeline} onChange={e => setForm(p => ({...p, timeline: e.target.value}))}
                         className="w-full h-10 border border-nu-ink/10 bg-nu-cream/10 px-3 text-sm focus:outline-none">
                         <option value="">선택해주세요</option>
@@ -288,11 +288,11 @@ export default function ChallengesPage() {
                   </div>
 
                   <div>
-                    <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted block mb-2">필요 역량 (복수 선택)</label>
+                    <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted block mb-2">필요 역량 (복수 선택)</label>
                     <div className="flex flex-wrap gap-2">
                       {SKILL_OPTIONS.map(skill => (
                         <button key={skill} type="button" onClick={() => toggleSkill(skill)}
-                          className={`font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 transition-all border cursor-pointer ${
+                          className={`font-mono-nu text-[12px] font-bold uppercase tracking-widest px-3 py-1.5 transition-all border cursor-pointer ${
                             form.requiredSkills.includes(skill)
                               ? "bg-nu-pink text-white border-nu-pink"
                               : "bg-nu-cream/20 text-nu-muted border-nu-ink/10 hover:border-nu-pink/30"
@@ -304,7 +304,7 @@ export default function ChallengesPage() {
                   </div>
 
                   <button type="submit" disabled={submitting}
-                    className="w-full font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-4 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 cursor-pointer border-none">
+                    className="w-full font-mono-nu text-[13px] font-bold uppercase tracking-widest px-6 py-4 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 cursor-pointer border-none">
                     {submitting ? (
                       <><Loader2 size={16} className="animate-spin" /> 제출 중...</>
                     ) : (
@@ -338,25 +338,25 @@ export default function ChallengesPage() {
                       { step: "4", label: "볼트 시작", desc: "예정", active: false, done: false },
                     ].map(s => (
                       <div key={s.step} className={`text-center p-3 border ${s.done ? "border-green-300 bg-green-50" : s.active ? "border-orange-300 bg-orange-50" : "border-nu-ink/[0.06] bg-nu-ink/[0.02]"}`}>
-                        <div className={`w-6 h-6 mx-auto mb-1 flex items-center justify-center text-[10px] font-bold ${
+                        <div className={`w-6 h-6 mx-auto mb-1 flex items-center justify-center text-[12px] font-bold ${
                           s.done ? "bg-green-500 text-white" : s.active ? "bg-orange-400 text-white" : "bg-nu-ink/10 text-nu-muted"
                         }`}>
                           {s.done ? <CheckCircle2 size={12} /> : s.step}
                         </div>
-                        <p className="font-mono-nu text-[9px] font-bold uppercase tracking-widest text-nu-ink">{s.label}</p>
-                        <p className="font-mono-nu text-[8px] text-nu-muted mt-0.5">{s.desc}</p>
+                        <p className="font-mono-nu text-[11px] font-bold uppercase tracking-widest text-nu-ink">{s.label}</p>
+                        <p className="font-mono-nu text-[10px] text-nu-muted mt-0.5">{s.desc}</p>
                       </div>
                     ))}
                   </div>
 
                   <div className="p-4 bg-nu-ink/[0.02] border border-nu-ink/5">
-                    <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-2">제출 정보 요약</p>
+                    <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-2">제출 정보 요약</p>
                     <p className="text-sm font-bold text-nu-ink">{form.projectTitle}</p>
-                    <p className="text-[11px] text-nu-muted mt-1">{form.companyName} · {form.contactEmail}</p>
+                    <p className="text-[13px] text-nu-muted mt-1">{form.companyName} · {form.contactEmail}</p>
                     {form.requiredSkills.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {form.requiredSkills.map(s => (
-                          <span key={s} className="font-mono-nu text-[8px] bg-nu-pink/10 text-nu-pink px-2 py-0.5 font-bold uppercase">{s}</span>
+                          <span key={s} className="font-mono-nu text-[10px] bg-nu-pink/10 text-nu-pink px-2 py-0.5 font-bold uppercase">{s}</span>
                         ))}
                       </div>
                     )}
@@ -364,7 +364,7 @@ export default function ChallengesPage() {
 
                   <button
                     onClick={resetForm}
-                    className="w-full font-mono-nu text-[11px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-ink/5 text-nu-ink hover:bg-nu-ink/10 transition-all flex items-center justify-center gap-2 cursor-pointer border border-nu-ink/10"
+                    className="w-full font-mono-nu text-[13px] font-bold uppercase tracking-widest px-6 py-3 bg-nu-ink/5 text-nu-ink hover:bg-nu-ink/10 transition-all flex items-center justify-center gap-2 cursor-pointer border border-nu-ink/10"
                   >
                     <Send size={14} /> 새 의뢰 작성하기
                   </button>
@@ -389,10 +389,10 @@ export default function ChallengesPage() {
                   { step: "05", title: "팀 구성 & 킥오프", desc: "PM이 팀을 구성하고 볼트를 시작합니다" },
                 ].map(s => (
                   <div key={s.step} className="flex gap-3">
-                    <span className="font-mono-nu text-[10px] font-bold text-nu-pink shrink-0 mt-0.5">{s.step}</span>
+                    <span className="font-mono-nu text-[12px] font-bold text-nu-pink shrink-0 mt-0.5">{s.step}</span>
                     <div>
                       <p className="text-sm font-medium text-nu-ink">{s.title}</p>
-                      <p className="text-[11px] text-nu-muted">{s.desc}</p>
+                      <p className="text-[13px] text-nu-muted">{s.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -402,7 +402,7 @@ export default function ChallengesPage() {
             {/* Why NutUnion */}
             <div className="bg-nu-ink text-nu-paper p-5">
               <p className="font-head text-sm font-bold mb-3">왜 넛유니온인가?</p>
-              <div className="space-y-2.5 text-[11px] text-nu-paper/70">
+              <div className="space-y-2.5 text-[13px] text-nu-paper/70">
                 <div className="flex items-start gap-2">
                   <CheckCircle2 size={12} className="text-nu-pink shrink-0 mt-0.5" />
                   <span>모든 와셔의 역량이 <strong className="text-nu-paper">데이터로 검증</strong></span>
@@ -426,7 +426,7 @@ export default function ChallengesPage() {
             <div className="bg-nu-white border-[2px] border-nu-ink/[0.08] p-5 text-center">
               <Clock size={20} className="mx-auto mb-2 text-nu-muted" />
               <p className="font-head text-sm font-bold text-nu-ink mb-1">빠른 응답</p>
-              <p className="text-[11px] text-nu-muted">의뢰 접수 후 영업일 기준 1-2일 내 검토 결과를 안내드립니다.</p>
+              <p className="text-[13px] text-nu-muted">의뢰 접수 후 영업일 기준 1-2일 내 검토 결과를 안내드립니다.</p>
             </div>
           </div>
         </div>

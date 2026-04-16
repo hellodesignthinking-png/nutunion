@@ -265,7 +265,7 @@ export function MonthlyEvolutionAnalysis({ groupId, isHost = false }: { groupId:
           지난 한 달간 축적된 모든 회의록과 탭 데이터를 교차 분석하여,
           각 주제의 관점 변화와 지식 성장 패턴을 시각화합니다.
         </p>
-        <p className="font-mono-nu text-[9px] text-white/25 uppercase tracking-widest mb-8">
+        <p className="font-mono-nu text-[11px] text-white/25 uppercase tracking-widest mb-8">
           최소 1개 이상의 토픽과 문서가 필요합니다
         </p>
         {isHost ? (
@@ -278,7 +278,7 @@ export function MonthlyEvolutionAnalysis({ groupId, isHost = false }: { groupId:
             교차 분석 실행
           </button>
         ) : (
-          <p className="font-mono-nu text-[10px] text-white/40 uppercase tracking-widest">
+          <p className="font-mono-nu text-[12px] text-white/40 uppercase tracking-widest">
             호스트만 월간 분석을 실행할 수 있습니다
           </p>
         )}
@@ -304,7 +304,7 @@ export function MonthlyEvolutionAnalysis({ groupId, isHost = false }: { groupId:
           </h3>
           <div className="flex items-center gap-2">
             <span className="font-head text-4xl font-extrabold text-nu-ink">{analysis.overallHealth.score}</span>
-            <span className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">/100</span>
+            <span className="font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest">/100</span>
           </div>
         </div>
 
@@ -333,8 +333,8 @@ export function MonthlyEvolutionAnalysis({ groupId, isHost = false }: { groupId:
                   {metric.value}
                 </span>
               </div>
-              <p className="font-mono-nu text-[9px] text-nu-muted uppercase tracking-widest">{metric.label}</p>
-              <p className="text-[10px] text-nu-muted">{metric.desc}</p>
+              <p className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest">{metric.label}</p>
+              <p className="text-[12px] text-nu-muted">{metric.desc}</p>
             </div>
           ))}
         </div>
@@ -356,13 +356,13 @@ export function MonthlyEvolutionAnalysis({ groupId, isHost = false }: { groupId:
                     <h5 className="font-head text-base font-bold text-nu-ink group-hover:text-nu-pink transition-colors">{te.topic}</h5>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`font-mono-nu text-[9px] font-bold uppercase tracking-widest ${cfg.color}`}>
+                    <span className={`font-mono-nu text-[11px] font-bold uppercase tracking-widest ${cfg.color}`}>
                       {cfg.label}
                     </span>
                     <div className="w-16 h-1.5 bg-nu-ink/5 rounded-full overflow-hidden">
                       <div className="h-full bg-nu-pink rounded-full" style={{ width: `${te.confidence}%` }} />
                     </div>
-                    <span className="font-mono-nu text-[8px] text-nu-muted">{te.confidence}%</span>
+                    <span className="font-mono-nu text-[10px] text-nu-muted">{te.confidence}%</span>
                   </div>
                 </div>
                 <p className="text-sm text-nu-graphite leading-relaxed">{te.shift}</p>
@@ -386,11 +386,11 @@ export function MonthlyEvolutionAnalysis({ groupId, isHost = false }: { groupId:
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-head text-sm font-bold">{c.concept}</span>
-                    <span className="font-mono-nu text-[8px] px-1.5 py-0.5 bg-white/10 uppercase tracking-widest">
+                    <span className="font-mono-nu text-[10px] px-1.5 py-0.5 bg-white/10 uppercase tracking-widest">
                       {st.label}
                     </span>
                   </div>
-                  <p className="font-mono-nu text-[9px] text-white/40 mb-1">
+                  <p className="font-mono-nu text-[11px] text-white/40 mb-1">
                     첫 등장: {new Date(c.firstMention).toLocaleDateString("ko")}
                   </p>
                   <p className="text-xs text-white/60 leading-relaxed">
@@ -415,7 +415,7 @@ export function MonthlyEvolutionAnalysis({ groupId, isHost = false }: { groupId:
               <div key={i} className={`border-[2px] ${rc.border} p-5 hover:shadow-md transition-all group`}>
                 <div className="flex items-center gap-2 mb-3">
                   <span className={rc.color}>{rc.icon}</span>
-                  <span className={`font-mono-nu text-[9px] font-bold uppercase tracking-widest ${rc.color}`}>
+                  <span className={`font-mono-nu text-[11px] font-bold uppercase tracking-widest ${rc.color}`}>
                     {r.type}
                   </span>
                 </div>

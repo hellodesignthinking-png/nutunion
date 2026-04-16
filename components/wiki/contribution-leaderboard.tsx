@@ -221,7 +221,7 @@ export function ContributionLeaderboard({ groupId }: { groupId: string }) {
           <h3 className="font-head text-xl font-extrabold flex items-center gap-3">
             <Trophy size={22} className="text-yellow-400" /> Knowledge Champions
           </h3>
-          <span className="font-mono-nu text-[9px] text-white/40 uppercase tracking-widest">
+          <span className="font-mono-nu text-[11px] text-white/40 uppercase tracking-widest">
             Season {new Date().getFullYear()}.Q{Math.ceil((new Date().getMonth() + 1) / 3)}
           </span>
         </div>
@@ -238,7 +238,7 @@ export function ContributionLeaderboard({ groupId }: { groupId: string }) {
               <span className="text-xs font-bold mb-1">{topThree[1].nickname}</span>
               <div className="w-20 bg-white/10 border-t-2 border-white/20 flex flex-col items-center pt-3 pb-2" style={{ height: 80 }}>
                 <Medal size={16} className="text-gray-300" />
-                <span className="font-mono-nu text-[10px] text-white/60 mt-1">{topThree[1].xp} XP</span>
+                <span className="font-mono-nu text-[12px] text-white/60 mt-1">{topThree[1].xp} XP</span>
               </div>
             </div>
           )}
@@ -256,7 +256,7 @@ export function ContributionLeaderboard({ groupId }: { groupId: string }) {
               <div className="w-24 bg-yellow-400/10 border-t-2 border-yellow-400/40 flex flex-col items-center pt-3 pb-2" style={{ height: 110 }}>
                 <Trophy size={18} className="text-yellow-400" />
                 <span className="font-mono-nu text-xs text-yellow-400 font-bold mt-1">{topThree[0].xp} XP</span>
-                <span className="font-mono-nu text-[8px] text-white/40 mt-0.5">
+                <span className="font-mono-nu text-[10px] text-white/40 mt-0.5">
                   {getLevel(topThree[0].xp).icon} {getLevel(topThree[0].xp).name}
                 </span>
               </div>
@@ -274,7 +274,7 @@ export function ContributionLeaderboard({ groupId }: { groupId: string }) {
               <span className="text-xs font-bold mb-1">{topThree[2].nickname}</span>
               <div className="w-20 bg-white/10 border-t-2 border-white/15 flex flex-col items-center pt-3 pb-2" style={{ height: 60 }}>
                 <Award size={14} className="text-amber-600" />
-                <span className="font-mono-nu text-[10px] text-white/60 mt-1">{topThree[2].xp} XP</span>
+                <span className="font-mono-nu text-[12px] text-white/60 mt-1">{topThree[2].xp} XP</span>
               </div>
             </div>
           )}
@@ -296,7 +296,7 @@ export function ContributionLeaderboard({ groupId }: { groupId: string }) {
                 className="w-full text-left bg-white border-[2px] border-nu-ink/[0.08] hover:border-nu-pink/40 transition-all p-4 group"
               >
                 <div className="flex items-center gap-4">
-                  <span className="font-mono-nu text-[10px] text-nu-muted w-6 text-right font-bold">
+                  <span className="font-mono-nu text-[12px] text-nu-muted w-6 text-right font-bold">
                     {i < 3 ? ["🥇", "🥈", "🥉"][i] : `#${i + 1}`}
                   </span>
 
@@ -309,11 +309,11 @@ export function ContributionLeaderboard({ groupId }: { groupId: string }) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-head text-sm font-bold text-nu-ink">{c.nickname}</span>
-                      <span className={`font-mono-nu text-[8px] font-bold uppercase tracking-widest ${level.color}`}>
+                      <span className={`font-mono-nu text-[10px] font-bold uppercase tracking-widest ${level.color}`}>
                         {level.icon} {level.name}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 font-mono-nu text-[9px] text-nu-muted">
+                    <div className="flex items-center gap-3 font-mono-nu text-[11px] text-nu-muted">
                       <span>{c.totalEdits} edits</span>
                       <span>•</span>
                       <span>{c.xp} XP</span>
@@ -337,7 +337,7 @@ export function ContributionLeaderboard({ groupId }: { groupId: string }) {
                       />
                     </div>
                     {nextLvl && (
-                      <p className="font-mono-nu text-[7px] text-nu-muted text-right mt-0.5">
+                      <p className="font-mono-nu text-[9px] text-nu-muted text-right mt-0.5">
                         {nextLvl.min - c.xp} XP to {nextLvl.name}
                       </p>
                     )}
@@ -348,7 +348,7 @@ export function ContributionLeaderboard({ groupId }: { groupId: string }) {
               {/* Expanded badge detail */}
               {isExpanded && (
                 <div className="bg-nu-cream/30 border-x-[2px] border-b-[2px] border-nu-ink/[0.08] p-5 animate-in slide-in-from-top-2">
-                  <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-3 flex items-center gap-1">
+                  <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-3 flex items-center gap-1">
                     <Award size={12} /> Earned Badges
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -359,8 +359,8 @@ export function ContributionLeaderboard({ groupId }: { groupId: string }) {
                         <div key={b} className="flex items-center gap-2 bg-white border border-nu-ink/10 px-3 py-2 group/badge">
                           <span className="text-lg">{def.icon}</span>
                           <div>
-                            <p className="font-head text-[10px] font-bold text-nu-ink">{def.label}</p>
-                            <p className="font-mono-nu text-[7px] text-nu-muted">{def.description}</p>
+                            <p className="font-head text-[12px] font-bold text-nu-ink">{def.label}</p>
+                            <p className="font-mono-nu text-[9px] text-nu-muted">{def.description}</p>
                           </div>
                         </div>
                       );
@@ -371,7 +371,7 @@ export function ContributionLeaderboard({ groupId }: { groupId: string }) {
 
                   {/* Contribution sparkline */}
                   <div className="mt-4 pt-4 border-t border-nu-ink/5">
-                    <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-2 flex items-center gap-1">
+                    <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-2 flex items-center gap-1">
                       <TrendingUp size={12} /> 최근 4주 기여 추세
                     </p>
                     <div className="flex items-end gap-1 h-12">

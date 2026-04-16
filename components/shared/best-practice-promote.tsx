@@ -175,7 +175,7 @@ export function BestPracticePromote({
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           {/* Title Input */}
           <div>
-            <label className="block font-mono-nu text-[9px] font-black uppercase tracking-widest text-nu-ink mb-2">
+            <label className="block font-mono-nu text-[11px] font-black uppercase tracking-widest text-nu-ink mb-2">
               제목
             </label>
             <input
@@ -191,7 +191,7 @@ export function BestPracticePromote({
 
           {/* Description Textarea */}
           <div>
-            <label className="block font-mono-nu text-[9px] font-black uppercase tracking-widest text-nu-ink mb-2">
+            <label className="block font-mono-nu text-[11px] font-black uppercase tracking-widest text-nu-ink mb-2">
               설명
             </label>
             <textarea
@@ -207,7 +207,7 @@ export function BestPracticePromote({
 
           {/* Target Type Selector */}
           <div>
-            <label className="block font-mono-nu text-[9px] font-black uppercase tracking-widest text-nu-ink mb-2">
+            <label className="block font-mono-nu text-[11px] font-black uppercase tracking-widest text-nu-ink mb-2">
               분류
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -235,7 +235,7 @@ export function BestPracticePromote({
 
           {/* Tags Input */}
           <div>
-            <label className="block font-mono-nu text-[9px] font-black uppercase tracking-widest text-nu-ink mb-2">
+            <label className="block font-mono-nu text-[11px] font-black uppercase tracking-widest text-nu-ink mb-2">
               태그 (쉼표로 구분)
             </label>
             <input
@@ -256,7 +256,7 @@ export function BestPracticePromote({
                   .map((tag, idx) => (
                     <span
                       key={idx}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-nu-blue/10 text-nu-blue text-[10px] font-mono-nu font-bold"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-nu-blue/10 text-nu-blue text-[12px] font-mono-nu font-bold"
                     >
                       {tag}
                     </span>
@@ -268,7 +268,7 @@ export function BestPracticePromote({
           {/* Source Preview */}
           {sourceContent && (
             <div>
-              <label className="block font-mono-nu text-[9px] font-black uppercase tracking-widest text-nu-ink mb-2">
+              <label className="block font-mono-nu text-[11px] font-black uppercase tracking-widest text-nu-ink mb-2">
                 소스 콘텐츠 미리보기
               </label>
               <div className="px-3 py-2.5 bg-nu-cream/20 border border-nu-ink/5 text-[12px] text-nu-ink max-h-24 overflow-y-auto">
@@ -282,14 +282,14 @@ export function BestPracticePromote({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 bg-nu-ink/5 border-2 border-nu-ink/10 font-mono-nu text-[10px] font-bold text-nu-ink uppercase tracking-widest hover:opacity-70 transition-opacity"
+              className="flex-1 px-4 py-2.5 bg-nu-ink/5 border-2 border-nu-ink/10 font-mono-nu text-[12px] font-bold text-nu-ink uppercase tracking-widest hover:opacity-70 transition-opacity"
             >
               취소
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 px-4 py-2.5 bg-nu-pink text-white font-mono-nu text-[10px] font-bold uppercase tracking-widest hover:opacity-90 disabled:opacity-40 transition-opacity flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2.5 bg-nu-pink text-white font-mono-nu text-[12px] font-bold uppercase tracking-widest hover:opacity-90 disabled:opacity-40 transition-opacity flex items-center justify-center gap-2"
             >
               {isSubmitting ? (
                 <>

@@ -57,8 +57,8 @@ export function ShowcaseSection() {
             <div className="absolute top-1/2 left-0 w-full h-[2px] bg-nu-paper/[0.03]" />
 
             {/* Registration marks */}
-            <div className="absolute top-4 left-4 font-mono-nu text-[10px] text-nu-paper/15" aria-hidden="true">⊕</div>
-            <div className="absolute bottom-4 right-4 font-mono-nu text-[10px] text-nu-paper/15" aria-hidden="true">⊕</div>
+            <div className="absolute top-4 left-4 font-mono-nu text-[12px] text-nu-paper/15" aria-hidden="true">⊕</div>
+            <div className="absolute bottom-4 right-4 font-mono-nu text-[12px] text-nu-paper/15" aria-hidden="true">⊕</div>
 
             {/* Decorative elements per showcase */}
             {idx === 0 ? (
@@ -96,7 +96,7 @@ export function ShowcaseSection() {
                     {Array.from({ length: 35 }).map((_, i) => (
                       <div
                         key={i}
-                        className={`aspect-square border-[2px] border-nu-paper/10 flex items-center justify-center text-[10px] font-mono-nu text-nu-paper/40 ${
+                        className={`aspect-square border-[2px] border-nu-paper/10 flex items-center justify-center text-[12px] font-mono-nu text-nu-paper/40 ${
                           [3, 8, 12, 17, 22, 28].includes(i) ? "bg-nu-blue/25 border-nu-blue/30" : ""
                         } ${[5, 15, 25].includes(i) ? "bg-nu-pink/20 border-nu-pink/25" : ""}`}
                       >
@@ -120,7 +120,7 @@ export function ShowcaseSection() {
             <div className={`absolute top-0 right-0 w-32 h-32 ${s.halftone} opacity-[0.04]`} aria-hidden="true" />
 
             <div className="reveal-item">
-              <span className="font-mono-nu text-[10px] uppercase tracking-[0.3em] text-nu-pink mb-4 block">
+              <span className="font-mono-nu text-[12px] uppercase tracking-[0.3em] text-nu-pink mb-4 block">
                 {s.label}
               </span>
               <h2 className="font-head text-[clamp(30px,3.5vw,46px)] font-extrabold text-nu-ink leading-[0.9] tracking-tighter mb-4">
@@ -136,7 +136,7 @@ export function ShowcaseSection() {
                     <span className="font-head text-2xl lg:text-3xl font-extrabold text-nu-ink block tracking-tight">
                       {stat.num}
                     </span>
-                    <span className="font-mono-nu text-[9px] uppercase tracking-[0.2em] text-nu-muted">
+                    <span className="font-mono-nu text-[11px] uppercase tracking-[0.2em] text-nu-muted">
                       {stat.label}
                     </span>
                   </div>

@@ -436,7 +436,7 @@ export default function StaffProjectDetailPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-8 py-10">
       {/* Breadcrumb */}
-      <Link href="/staff/workspace" className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest no-underline hover:text-nu-ink flex items-center gap-1 mb-4">
+      <Link href="/staff/workspace" className="font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest no-underline hover:text-nu-ink flex items-center gap-1 mb-4">
         <ArrowLeft size={12} /> 프로젝트 목록
       </Link>
 
@@ -444,10 +444,10 @@ export default function StaffProjectDetailPage() {
       <div className="flex items-start justify-between mb-8">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 bg-indigo-50 text-indigo-600">
+            <span className="font-mono-nu text-[11px] uppercase tracking-widest px-2 py-0.5 bg-indigo-50 text-indigo-600">
               {project.category || "general"}
             </span>
-            <span className={`font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 ${
+            <span className={`font-mono-nu text-[11px] uppercase tracking-widest px-2 py-0.5 ${
               project.status === "active" ? "bg-green-100 text-green-700" :
               project.status === "completed" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
             }`}>
@@ -465,7 +465,7 @@ export default function StaffProjectDetailPage() {
                 <div className="h-1.5 bg-nu-ink/5 w-full">
                   <div className="h-1.5 bg-indigo-600 transition-all" style={{ width: `${progress}%` }} />
                 </div>
-                <p className="font-mono-nu text-[8px] text-nu-muted mt-1">{progress}% 완료 · {doneCount}/{tasks.length} 태스크</p>
+                <p className="font-mono-nu text-[10px] text-nu-muted mt-1">{progress}% 완료 · {doneCount}/{tasks.length} 태스크</p>
               </div>
             );
           })()}
@@ -473,7 +473,7 @@ export default function StaffProjectDetailPage() {
         <div className="flex items-center gap-2">
           {project.drive_folder_url && (
             <a href={project.drive_folder_url} target="_blank" rel="noopener noreferrer"
-              className="font-mono-nu text-[10px] uppercase tracking-widest text-indigo-600 no-underline hover:underline flex items-center gap-1">
+              className="font-mono-nu text-[12px] uppercase tracking-widest text-indigo-600 no-underline hover:underline flex items-center gap-1">
               <FolderOpen size={14} /> Drive <ExternalLink size={10} />
             </a>
           )}
@@ -486,7 +486,7 @@ export default function StaffProjectDetailPage() {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`flex items-center gap-1.5 px-4 py-3 font-mono-nu text-[11px] uppercase tracking-widest border-b-2 transition-all bg-transparent cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-4 py-3 font-mono-nu text-[13px] uppercase tracking-widest border-b-2 transition-all bg-transparent cursor-pointer whitespace-nowrap ${
               activeTab === tab.key
                 ? "border-indigo-600 text-indigo-600 font-bold"
                 : "border-transparent text-nu-muted hover:text-nu-ink"
@@ -494,7 +494,7 @@ export default function StaffProjectDetailPage() {
           >
             <tab.icon size={14} />
             {tab.label}
-            {tab.count > 0 && <span className="text-[9px] ml-1 opacity-60">{tab.count}</span>}
+            {tab.count > 0 && <span className="text-[11px] ml-1 opacity-60">{tab.count}</span>}
           </button>
         ))}
       </div>
@@ -503,10 +503,10 @@ export default function StaffProjectDetailPage() {
       {activeTab === "files" && (
         <div>
           <div className="flex gap-2 mb-4">
-            <Button onClick={() => { setShowNewDocForm(!showNewDocForm); setShowLinkForm(false); }} variant="outline" className="font-mono-nu text-[10px] uppercase tracking-widest gap-1.5">
+            <Button onClick={() => { setShowNewDocForm(!showNewDocForm); setShowLinkForm(false); }} variant="outline" className="font-mono-nu text-[12px] uppercase tracking-widest gap-1.5">
               {showNewDocForm ? <X size={12} /> : <Plus size={12} />} 새 문서
             </Button>
-            <Button onClick={() => { setShowLinkForm(!showLinkForm); setShowNewDocForm(false); }} variant="outline" className="font-mono-nu text-[10px] uppercase tracking-widest gap-1.5">
+            <Button onClick={() => { setShowLinkForm(!showLinkForm); setShowNewDocForm(false); }} variant="outline" className="font-mono-nu text-[12px] uppercase tracking-widest gap-1.5">
               {showLinkForm ? <X size={12} /> : <Upload size={12} />} 파일 연결
             </Button>
           </div>
@@ -515,7 +515,7 @@ export default function StaffProjectDetailPage() {
           {showNewDocForm && (
             <form onSubmit={handleCreateDoc} className="bg-white border border-indigo-200 p-4 mb-4 flex gap-2">
               <Input value={newDocTitle} onChange={e => setNewDocTitle(e.target.value)} placeholder="새 문서 제목..." className="flex-1 border-nu-ink/15 bg-transparent" />
-              <Button type="submit" disabled={creatingDoc || !newDocTitle.trim()} className="bg-indigo-600 text-white hover:bg-indigo-700 font-mono-nu text-[10px] uppercase tracking-widest">
+              <Button type="submit" disabled={creatingDoc || !newDocTitle.trim()} className="bg-indigo-600 text-white hover:bg-indigo-700 font-mono-nu text-[12px] uppercase tracking-widest">
                 {creatingDoc ? "생성 중..." : "생성"}
               </Button>
             </form>
@@ -525,7 +525,7 @@ export default function StaffProjectDetailPage() {
           {showLinkForm && (
             <form onSubmit={handleLinkDriveFile} className="bg-white border border-indigo-200 p-4 mb-4 flex gap-2">
               <Input value={linkUrl} onChange={e => setLinkUrl(e.target.value)} placeholder="Google Drive URL을 붙여넣으세요..." className="flex-1 border-nu-ink/15 bg-transparent" />
-              <Button type="submit" disabled={linkingFile || !linkUrl.trim()} className="bg-indigo-600 text-white hover:bg-indigo-700 font-mono-nu text-[10px] uppercase tracking-widest">
+              <Button type="submit" disabled={linkingFile || !linkUrl.trim()} className="bg-indigo-600 text-white hover:bg-indigo-700 font-mono-nu text-[12px] uppercase tracking-widest">
                 {linkingFile ? "연결 중..." : "연결"}
               </Button>
             </form>
@@ -543,7 +543,7 @@ export default function StaffProjectDetailPage() {
                     <a href={f.drive_url || "#"} target="_blank" rel="noopener noreferrer" className="font-head text-sm font-bold text-nu-ink no-underline hover:text-indigo-600 truncate block">
                       {f.title}
                     </a>
-                    <p className="font-mono-nu text-[8px] text-nu-muted">
+                    <p className="font-mono-nu text-[10px] text-nu-muted">
                       {(f.creator as any)?.nickname || "Unknown"} · {new Date(f.created_at).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}
                       {f.ai_summary && ` · ${f.ai_summary.slice(0, 40)}...`}
                     </p>
@@ -551,7 +551,7 @@ export default function StaffProjectDetailPage() {
                   {f.ai_tags && f.ai_tags.length > 0 && (
                     <div className="hidden sm:flex gap-1">
                       {f.ai_tags.slice(0, 3).map(tag => (
-                        <span key={tag} className="font-mono-nu text-[8px] px-1.5 py-0.5 bg-indigo-50 text-indigo-600">{tag}</span>
+                        <span key={tag} className="font-mono-nu text-[10px] px-1.5 py-0.5 bg-indigo-50 text-indigo-600">{tag}</span>
                       ))}
                     </div>
                   )}
@@ -585,7 +585,7 @@ export default function StaffProjectDetailPage() {
               placeholder="새 할일 입력..."
               className="flex-1 border-nu-ink/15 bg-transparent"
             />
-            <Button type="submit" disabled={addingTask} className="bg-indigo-600 text-white hover:bg-indigo-700 font-mono-nu text-[10px] uppercase tracking-widest">
+            <Button type="submit" disabled={addingTask} className="bg-indigo-600 text-white hover:bg-indigo-700 font-mono-nu text-[12px] uppercase tracking-widest">
               {addingTask ? "..." : "추가"}
             </Button>
           </form>
@@ -611,23 +611,23 @@ export default function StaffProjectDetailPage() {
                       <p className={`font-head text-sm font-bold truncate ${t.status === "done" ? "line-through text-nu-muted" : "text-nu-ink"}`}>{t.title}</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         {t.assignee && (
-                          <span className="font-mono-nu text-[8px] text-nu-muted">{(t.assignee as any).nickname}</span>
+                          <span className="font-mono-nu text-[10px] text-nu-muted">{(t.assignee as any).nickname}</span>
                         )}
                         {t.source_type && t.source_type !== "manual" && (
-                          <span className="font-mono-nu text-[7px] uppercase px-1 py-px bg-indigo-50 text-indigo-500">
+                          <span className="font-mono-nu text-[9px] uppercase px-1 py-px bg-indigo-50 text-indigo-500">
                             {t.source_type === "meeting" ? "미팅" : t.source_type === "ai" ? "AI" : t.source_type === "comment" ? "코멘트" : t.source_type}
                           </span>
                         )}
                         {t.description && (
-                          <span className="font-mono-nu text-[8px] text-nu-muted/50">| {t.description.slice(0, 30)}{t.description.length > 30 ? "..." : ""}</span>
+                          <span className="font-mono-nu text-[10px] text-nu-muted/50">| {t.description.slice(0, 30)}{t.description.length > 30 ? "..." : ""}</span>
                         )}
                       </div>
                     </div>
-                    <span className={`font-mono-nu text-[9px] uppercase px-2 py-0.5 ${priorityColor[t.priority] || ""}`}>
+                    <span className={`font-mono-nu text-[11px] uppercase px-2 py-0.5 ${priorityColor[t.priority] || ""}`}>
                       {t.priority}
                     </span>
                     {t.due_date && (
-                      <span className={`font-mono-nu text-[9px] flex items-center gap-1 ${dueStatus ? dueDateCls[dueStatus] : "text-nu-muted"}`}>
+                      <span className={`font-mono-nu text-[11px] flex items-center gap-1 ${dueStatus ? dueDateCls[dueStatus] : "text-nu-muted"}`}>
                         <Clock size={10} />
                         {dueStatus === "overdue" && "지연 "}
                         {new Date(t.due_date).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}
@@ -653,11 +653,11 @@ export default function StaffProjectDetailPage() {
                     <div className="border border-indigo-200 border-t-0 bg-indigo-50/30 p-4 space-y-3">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-gray block mb-1">제목</label>
+                          <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-gray block mb-1">제목</label>
                           <Input value={editTaskForm.title} onChange={e => setEditTaskForm(f => ({ ...f, title: e.target.value }))} className="border-nu-ink/15 bg-white text-sm" />
                         </div>
                         <div>
-                          <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-gray block mb-1">우선순위</label>
+                          <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-gray block mb-1">우선순위</label>
                           <select value={editTaskForm.priority} onChange={e => setEditTaskForm(f => ({ ...f, priority: e.target.value }))} className="w-full px-3 py-2 border border-nu-ink/15 bg-white text-sm">
                             <option value="low">낮음</option>
                             <option value="medium">보통</option>
@@ -666,11 +666,11 @@ export default function StaffProjectDetailPage() {
                           </select>
                         </div>
                         <div>
-                          <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-gray block mb-1">마감일</label>
+                          <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-gray block mb-1">마감일</label>
                           <Input type="date" value={editTaskForm.due_date} onChange={e => setEditTaskForm(f => ({ ...f, due_date: e.target.value }))} className="border-nu-ink/15 bg-white text-sm" />
                         </div>
                         <div>
-                          <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-gray block mb-1">담당자</label>
+                          <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-gray block mb-1">담당자</label>
                           <select value={editTaskForm.assigned_to} onChange={e => setEditTaskForm(f => ({ ...f, assigned_to: e.target.value }))} className="w-full px-3 py-2 border border-nu-ink/15 bg-white text-sm">
                             <option value="">미지정</option>
                             {members.map(m => (
@@ -680,12 +680,12 @@ export default function StaffProjectDetailPage() {
                         </div>
                       </div>
                       <div>
-                        <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-gray block mb-1">설명</label>
+                        <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-gray block mb-1">설명</label>
                         <Textarea value={editTaskForm.description} onChange={e => setEditTaskForm(f => ({ ...f, description: e.target.value }))} rows={2} className="border-nu-ink/15 bg-white text-sm resize-none" placeholder="상세 설명 (선택)" />
                       </div>
                       <div className="flex gap-2">
-                        <Button onClick={handleSaveTask} className="bg-indigo-600 text-white hover:bg-indigo-700 font-mono-nu text-[10px] uppercase tracking-widest px-4 py-1.5">저장</Button>
-                        <Button variant="outline" onClick={() => setEditingTaskId(null)} className="font-mono-nu text-[10px] uppercase tracking-widest px-4 py-1.5">취소</Button>
+                        <Button onClick={handleSaveTask} className="bg-indigo-600 text-white hover:bg-indigo-700 font-mono-nu text-[12px] uppercase tracking-widest px-4 py-1.5">저장</Button>
+                        <Button variant="outline" onClick={() => setEditingTaskId(null)} className="font-mono-nu text-[12px] uppercase tracking-widest px-4 py-1.5">취소</Button>
                       </div>
                     </div>
                   )}
@@ -710,7 +710,7 @@ export default function StaffProjectDetailPage() {
               {showAddMember ? (
                 <div className="bg-white border border-indigo-200 p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-mono-nu text-[10px] uppercase tracking-widest font-bold text-indigo-600">스태프 멤버 추가</h3>
+                    <h3 className="font-mono-nu text-[12px] uppercase tracking-widest font-bold text-indigo-600">스태프 멤버 추가</h3>
                     <button onClick={() => setShowAddMember(false)} className="p-1 text-nu-muted hover:text-nu-ink bg-transparent border-none cursor-pointer" aria-label="닫기"><X size={14} /></button>
                   </div>
                   <div className="space-y-1 max-h-48 overflow-y-auto">
@@ -722,7 +722,7 @@ export default function StaffProjectDetailPage() {
                           onClick={() => handleAddMember(s.id)}
                           className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-indigo-50 transition-colors bg-transparent border-none cursor-pointer"
                         >
-                          <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center font-head text-[10px] font-bold text-indigo-600">
+                          <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center font-head text-[12px] font-bold text-indigo-600">
                             {(s.nickname || "U").charAt(0)}
                           </div>
                           <span className="font-head text-sm text-nu-ink">{s.nickname || "Unknown"}</span>
@@ -734,7 +734,7 @@ export default function StaffProjectDetailPage() {
                   </div>
                 </div>
               ) : (
-                <Button onClick={loadAllStaff} variant="outline" className="font-mono-nu text-[10px] uppercase tracking-widest gap-1.5">
+                <Button onClick={loadAllStaff} variant="outline" className="font-mono-nu text-[12px] uppercase tracking-widest gap-1.5">
                   <UserPlus size={12} /> 멤버 추가
                 </Button>
               )}
@@ -752,14 +752,14 @@ export default function StaffProjectDetailPage() {
                 {isLead && (
                   <button
                     onClick={() => handleToggleRole(m.id, m.role)}
-                    className="font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 cursor-pointer bg-transparent border border-nu-ink/15 hover:border-indigo-300 transition-colors"
+                    className="font-mono-nu text-[11px] uppercase tracking-widest px-2 py-0.5 cursor-pointer bg-transparent border border-nu-ink/15 hover:border-indigo-300 transition-colors"
                     title="역할 변경"
                   >
                     {m.role === "lead" ? "리드" : "멤버"} <ChevronDown size={8} className="inline" />
                   </button>
                 )}
                 {!isLead && (
-                  <span className={`font-mono-nu text-[9px] uppercase tracking-widest px-2 py-0.5 ${m.role === "lead" ? "bg-indigo-100 text-indigo-700" : "bg-nu-ink/5 text-nu-muted"}`}>
+                  <span className={`font-mono-nu text-[11px] uppercase tracking-widest px-2 py-0.5 ${m.role === "lead" ? "bg-indigo-100 text-indigo-700" : "bg-nu-ink/5 text-nu-muted"}`}>
                     {m.role === "lead" ? "리드" : "멤버"}
                   </span>
                 )}
@@ -803,20 +803,20 @@ export default function StaffProjectDetailPage() {
         <div className="max-w-xl space-y-8">
           {/* Edit project */}
           <section className="bg-white border border-nu-ink/[0.06] p-6">
-            <h3 className="font-mono-nu text-[10px] uppercase tracking-widest font-bold text-nu-ink mb-4">프로젝트 정보</h3>
+            <h3 className="font-mono-nu text-[12px] uppercase tracking-widest font-bold text-nu-ink mb-4">프로젝트 정보</h3>
             {editingProject ? (
               <div className="space-y-4">
                 <div>
-                  <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-gray block mb-1">프로젝트명</label>
+                  <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-gray block mb-1">프로젝트명</label>
                   <Input value={editForm.title} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))} className="border-nu-ink/15 bg-transparent" />
                 </div>
                 <div>
-                  <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-gray block mb-1">설명</label>
+                  <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-gray block mb-1">설명</label>
                   <Textarea value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} rows={3} className="border-nu-ink/15 bg-transparent resize-none" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-gray block mb-1">카테고리</label>
+                    <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-gray block mb-1">카테고리</label>
                     <select value={editForm.category} onChange={e => setEditForm(f => ({ ...f, category: e.target.value }))} className="w-full px-3 py-2 border border-nu-ink/15 bg-transparent text-sm">
                       {["general","development","design","marketing","operations","research","lh"].map(c => (
                         <option key={c} value={c}>{c}</option>
@@ -824,7 +824,7 @@ export default function StaffProjectDetailPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-gray block mb-1">상태</label>
+                    <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-gray block mb-1">상태</label>
                     <select value={editForm.status} onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))} className="w-full px-3 py-2 border border-nu-ink/15 bg-transparent text-sm">
                       <option value="active">진행중</option>
                       <option value="completed">완료</option>
@@ -833,8 +833,8 @@ export default function StaffProjectDetailPage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button onClick={handleSaveProject} className="bg-indigo-600 text-white hover:bg-indigo-700 font-mono-nu text-[10px] uppercase tracking-widest">저장</Button>
-                  <Button variant="outline" onClick={() => setEditingProject(false)} className="font-mono-nu text-[10px] uppercase tracking-widest">취소</Button>
+                  <Button onClick={handleSaveProject} className="bg-indigo-600 text-white hover:bg-indigo-700 font-mono-nu text-[12px] uppercase tracking-widest">저장</Button>
+                  <Button variant="outline" onClick={() => setEditingProject(false)} className="font-mono-nu text-[12px] uppercase tracking-widest">취소</Button>
                 </div>
               </div>
             ) : (
@@ -845,7 +845,7 @@ export default function StaffProjectDetailPage() {
                   <div className="flex"><dt className="w-20 text-nu-muted">카테고리</dt><dd>{project.category || "general"}</dd></div>
                   <div className="flex"><dt className="w-20 text-nu-muted">상태</dt><dd>{project.status}</dd></div>
                 </dl>
-                <Button onClick={startEditProject} variant="outline" className="mt-4 font-mono-nu text-[10px] uppercase tracking-widest gap-1.5">
+                <Button onClick={startEditProject} variant="outline" className="mt-4 font-mono-nu text-[12px] uppercase tracking-widest gap-1.5">
                   <Edit3 size={12} /> 수정
                 </Button>
               </div>
@@ -854,9 +854,9 @@ export default function StaffProjectDetailPage() {
 
           {/* Danger zone */}
           <section className="border border-red-200 bg-red-50/30 p-6">
-            <h3 className="font-mono-nu text-[10px] uppercase tracking-widest font-bold text-red-600 mb-2">위험 구역</h3>
+            <h3 className="font-mono-nu text-[12px] uppercase tracking-widest font-bold text-red-600 mb-2">위험 구역</h3>
             <p className="text-xs text-nu-muted mb-4">프로젝트를 삭제하면 모든 파일, 할일, 멤버 데이터가 영구 삭제됩니다.</p>
-            <Button onClick={handleDeleteProject} variant="outline" className="border-red-300 text-red-600 hover:bg-red-100 font-mono-nu text-[10px] uppercase tracking-widest gap-1.5">
+            <Button onClick={handleDeleteProject} variant="outline" className="border-red-300 text-red-600 hover:bg-red-100 font-mono-nu text-[12px] uppercase tracking-widest gap-1.5">
               <Trash2 size={12} /> 프로젝트 삭제
             </Button>
           </section>
@@ -967,7 +967,7 @@ function DiscussionTab({
       <div className="flex gap-1 mb-4">
         <button
           onClick={() => setShowChatPanel(false)}
-          className={`font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 border cursor-pointer transition-colors ${
+          className={`font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2 border cursor-pointer transition-colors ${
             !showChatPanel ? "bg-indigo-600 text-white border-indigo-600" : "bg-transparent text-nu-muted border-nu-ink/15 hover:border-indigo-300"
           }`}
         >
@@ -975,7 +975,7 @@ function DiscussionTab({
         </button>
         <button
           onClick={() => { setShowChatPanel(true); if (!chatConnected && !chatError) loadSpaces(); }}
-          className={`font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 border cursor-pointer transition-colors ${
+          className={`font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2 border cursor-pointer transition-colors ${
             showChatPanel ? "bg-indigo-600 text-white border-indigo-600" : "bg-transparent text-nu-muted border-nu-ink/15 hover:border-indigo-300"
           }`}
         >
@@ -1006,11 +1006,11 @@ function DiscussionTab({
               {comments.map((c: any) => (
                 <div key={c.id} className="px-4 py-3 bg-white border border-nu-ink/[0.06]">
                   <div className="flex items-center gap-2 mb-1">
-                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center font-head text-[10px] font-bold text-indigo-600">
+                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center font-head text-[12px] font-bold text-indigo-600">
                       {((c.author as any)?.nickname || "U").charAt(0)}
                     </div>
                     <span className="font-head text-xs font-bold text-nu-ink">{(c.author as any)?.nickname || "Unknown"}</span>
-                    <span className="font-mono-nu text-[8px] text-nu-muted">
+                    <span className="font-mono-nu text-[10px] text-nu-muted">
                       {new Date(c.created_at).toLocaleDateString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </div>
@@ -1047,7 +1047,7 @@ function DiscussionTab({
               <p className="text-xs text-nu-muted">Google 계정을 연결한 후 Chat 권한을 허용해주세요</p>
               <a
                 href="/profile"
-                className="inline-block mt-3 font-mono-nu text-[10px] uppercase tracking-widest px-4 py-2 bg-indigo-600 text-white no-underline hover:bg-indigo-700"
+                className="inline-block mt-3 font-mono-nu text-[12px] uppercase tracking-widest px-4 py-2 bg-indigo-600 text-white no-underline hover:bg-indigo-700"
               >
                 Google 계정 연결
               </a>
@@ -1055,13 +1055,13 @@ function DiscussionTab({
           ) : chatLoading && chatSpaces.length === 0 ? (
             <div className="p-8 text-center">
               <div className="h-8 w-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-              <p className="font-mono-nu text-[10px] text-nu-muted">Google Chat 로딩 중...</p>
+              <p className="font-mono-nu text-[12px] text-nu-muted">Google Chat 로딩 중...</p>
             </div>
           ) : (
             <div>
               {/* Space selector */}
               <div className="mb-4">
-                <label className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-gray block mb-1">채팅 스페이스 선택</label>
+                <label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-gray block mb-1">채팅 스페이스 선택</label>
                 <select
                   value={selectedSpace}
                   onChange={e => {
@@ -1086,14 +1086,14 @@ function DiscussionTab({
                         {[...chatMessages].reverse().map(msg => (
                           <div key={msg.id} className="px-4 py-3">
                             <div className="flex items-center gap-2 mb-1">
-                              <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center font-head text-[8px] font-bold text-green-600">
+                              <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center font-head text-[10px] font-bold text-green-600">
                                 {msg.sender.charAt(0)}
                               </div>
                               <span className="font-head text-xs font-bold text-nu-ink">{msg.sender}</span>
-                              <span className="font-mono-nu text-[8px] text-nu-muted">
+                              <span className="font-mono-nu text-[10px] text-nu-muted">
                                 {new Date(msg.createTime).toLocaleDateString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                               </span>
-                              <span className="font-mono-nu text-[7px] px-1 py-px bg-green-50 text-green-600 uppercase">Chat</span>
+                              <span className="font-mono-nu text-[9px] px-1 py-px bg-green-50 text-green-600 uppercase">Chat</span>
                             </div>
                             <p className="text-sm text-nu-ink whitespace-pre-wrap pl-7">{msg.text}</p>
                           </div>
@@ -1101,7 +1101,7 @@ function DiscussionTab({
                       </div>
                     ) : (
                       <div className="p-8 text-center">
-                        <p className="font-mono-nu text-[10px] text-nu-muted">메시지가 없습니다</p>
+                        <p className="font-mono-nu text-[12px] text-nu-muted">메시지가 없습니다</p>
                       </div>
                     )}
                   </div>
@@ -1124,8 +1124,8 @@ function DiscussionTab({
 
               {!selectedSpace && chatSpaces.length === 0 && !chatLoading && (
                 <div className="border-2 border-dashed border-nu-ink/10 p-8 text-center bg-white/50">
-                  <p className="font-mono-nu text-[10px] text-nu-muted">Google Chat 스페이스가 없습니다</p>
-                  <p className="font-mono-nu text-[9px] text-nu-muted/60 mt-1">Google Chat에서 먼저 스페이스를 만들어주세요</p>
+                  <p className="font-mono-nu text-[12px] text-nu-muted">Google Chat 스페이스가 없습니다</p>
+                  <p className="font-mono-nu text-[11px] text-nu-muted/60 mt-1">Google Chat에서 먼저 스페이스를 만들어주세요</p>
                 </div>
               )}
             </div>
