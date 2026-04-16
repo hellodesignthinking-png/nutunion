@@ -12,7 +12,7 @@ import { LiquidNutSvg } from "@/components/brand/liquid-nut-svg";
 import { useGenreTheme } from "@/components/brand/genre-theme-context";
 import {
   LogoGenre, GENRES, ALL_GENRES,
-  ArchiveEntry, getTodayKey, buildInsight,
+  ArchiveEntry, getTodayKey, buildInsight, getDailySeedGenre,
 } from "@/lib/brand/genre-engine";
 import { toast } from "sonner";
 import { OpenLogoArtwork, LogoVariant } from "@/components/brand/brand-page-client";
