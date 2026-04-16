@@ -16,16 +16,20 @@ export function createOAuth2Client() {
  * All Google Workspace scopes we request
  */
 export const GOOGLE_SCOPES = [
+  // Drive: file-level access (앱이 생성한 파일만) — non-sensitive
   "https://www.googleapis.com/auth/drive.file",
+  // Drive read: 사용자 파일 목록 조회 — sensitive but needed
   "https://www.googleapis.com/auth/drive.readonly",
+  // Docs / Sheets / Slides read-only
   "https://www.googleapis.com/auth/documents.readonly",
   "https://www.googleapis.com/auth/spreadsheets.readonly",
   "https://www.googleapis.com/auth/presentations.readonly",
+  // Calendar
   "https://www.googleapis.com/auth/calendar.events",
-  "https://www.googleapis.com/auth/chat.spaces",
-  "https://www.googleapis.com/auth/chat.messages",
+  // Tasks
   "https://www.googleapis.com/auth/tasks",
-  "https://www.googleapis.com/auth/drive",
+  // ❌ drive (full) 제거 — drive.file + drive.readonly로 충분, 검수 필요성 감소
+  // ❌ chat.spaces / chat.messages 제거 — 사용률 낮고 workspace 전용 스코프
 ];
 
 /**
