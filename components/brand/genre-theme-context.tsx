@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { LogoGenre, GENRES, GenreConfig } from "@/lib/brand/genre-engine";
+import { LogoGenre, GENRES, GenreConfig, getDailySeedGenre } from "@/lib/brand/genre-engine";
 
 interface ThemeContextValue {
   activeGenre: LogoGenre;
@@ -9,14 +9,16 @@ interface ThemeContextValue {
   setGenre: (g: LogoGenre) => void;
 }
 
+const defaultGenre = getDailySeedGenre();
+
 const ThemeCtx = createContext<ThemeContextValue>({
-  activeGenre: "blueprint",
-  cfg: GENRES.blueprint,
+  activeGenre: defaultGenre,
+  cfg: GENRES[defaultGenre],
   setGenre: () => {},
 });
 
 export function GenreThemeProvider({ children }: { children: React.ReactNode }) {
-  const [activeGenre, setActiveGenre] = useState<LogoGenre>("blueprint");
+  const [activeGenre, setActiveGenre] = useState<LogoGenre>(getDailySeedGenre());
 
   useEffect(() => {
     const cfg = GENRES[activeGenre];

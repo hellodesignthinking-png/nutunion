@@ -82,7 +82,7 @@ function canvasToDownload(canvas: HTMLCanvasElement, filename: string) {
   }, "image/png");
 }
 
-function buildVariantForGenre(genre: LogoGenre, dateSeed: number = 0, dateCode: string = "2026"): LogoVariant {
+function buildVariantForGenre(genre: LogoGenre, dateSeed: number = Math.floor(Date.now() / 86400000), dateCode: string = "2026"): LogoVariant {
   const cfg = GENRES[genre];
   let seedNum = dateSeed;
   for(let i=0; i<genre.length; i++) seedNum += genre.charCodeAt(i);
@@ -124,10 +124,16 @@ export function LiquidIdentitySection() {
     try {
       const res  = await fetch("/api/todays-vibe", { cache: "no-store" });
       const data: VibeApiResponse = await res.json();
-      setVibe(data);
+      const globalDailyGenre = getDailySeedGenre();
+      const processedVibe = {
+        ...data,
+        genre: globalDailyGenre,
+        isHybrid: false,
+      };
+      setVibe(processedVibe);
       if (!manualMode) {
-        triggerTransition(data.genre);
-        saveToArchive(data.genre, data.insight, data.activityLevel);
+        triggerTransition(globalDailyGenre);
+        saveToArchive(globalDailyGenre, processedVibe.insight, processedVibe.activityLevel);
       }
     } catch { setVibe(null); }
     finally { setLoading(false); }
@@ -537,7 +543,7 @@ export function LiquidIdentitySection() {
                 className={`transition-all duration-300 ${transitioning ? "opacity-0 scale-90" : "opacity-100 scale-100"}`}
                 style={{ filter: `drop-shadow(0 16px 48px ${cfg.colors.primary}70)` }}>
                 <OpenLogoArtwork
-                  variant={buildVariantForGenre(activeGenre, vibe?.dateSeed ?? 0)}
+                  variant={buildVariantForGenre(activeGenre, vibe?.dateSeed)}
                   size={220}
                 />
               </div>
