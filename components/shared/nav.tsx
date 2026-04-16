@@ -8,6 +8,8 @@ import { getGrade, GRADE_CONFIG } from "@/lib/constants";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { createClient } from "@/lib/supabase/client";
 import { NotificationCenter } from "@/components/shared/notification-center";
+import { getDailyVariant } from "@/lib/brand/genre-engine";
+import { OpenLogoArtwork } from "@/components/brand/brand-page-client";
 
 // ── 랜딩 전용 링크 (비로그인) ──────────────────────────────────────
 const landingLinks = [
@@ -109,19 +111,14 @@ export function Nav() {
     return href;
   }
 
+  const dailyVariant = getDailyVariant();
+
   return (
     <nav className={`fixed top-0 left-0 right-0 z-[500] h-[60px] flex items-center justify-between px-8 bg-nu-paper/95 backdrop-blur-sm border-b-[3px] border-nu-ink transition-shadow`}>
       {/* Brand */}
-      <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2 no-underline relative group">
-        <span className="font-head text-[17px] font-extrabold text-nu-ink tracking-tight uppercase">
-          nutunion
-        </span>
-        <span className="absolute inset-0 font-head text-[17px] font-extrabold text-nu-pink tracking-tight uppercase opacity-0 group-hover:opacity-30 translate-x-[2px] -translate-y-[1px] transition-opacity pointer-events-none select-none mix-blend-multiply" aria-hidden>
-          nutunion
-        </span>
+      <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2 no-underline relative group transition-transform hover:scale-105">
+        <OpenLogoArtwork variant={dailyVariant} size={40} />
       </Link>
-
-      {/* Desktop links */}
       <div className="hidden md:flex gap-6 items-center">
         {links.map((l) => (
           <Link

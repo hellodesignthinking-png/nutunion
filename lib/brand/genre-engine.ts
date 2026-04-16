@@ -363,6 +363,32 @@ export function getDailySeedGenre(): LogoGenre {
   return ALL_GENRES[day % ALL_GENRES.length];
 }
 
+export function getDailyVariant() {
+  const genre = getDailySeedGenre();
+  const cfg = GENRES[genre];
+  const dateSeed = Math.floor(Date.now() / 86400000);
+  let seedNum = dateSeed;
+  for (let i = 0; i < genre.length; i++) seedNum += genre.charCodeAt(i);
+  return {
+    id: seedNum,
+    seed: seedNum,
+    family: "monolith" as any,
+    label: cfg.label,
+    subtitle: cfg.vibe,
+    energy: cfg.labelKo,
+    dateCode: new Date().toISOString().split("T")[0].replace(/-/g, "").slice(2),
+    fontStack: `'${cfg.font}', sans-serif`,
+    palette: {
+      bg: cfg.colors.bg,
+      panel: cfg.colors.surface,
+      ink: cfg.colors.text,
+      accent: cfg.colors.primary,
+      accentTwo: cfg.colors.secondary,
+      soft: cfg.colors.shell,
+    }
+  };
+}
+
 // ─── Local archive helpers ─────────────────────────────────────────────────
 export interface ArchiveEntry {
   date: string; // YYYY-MM-DD

@@ -3,6 +3,7 @@ import { Nav } from "@/components/shared/nav";
 import { Hero } from "@/components/landing/hero";
 import { Ticker } from "@/components/landing/ticker";
 import { createClient } from "@/lib/supabase/server";
+import { getDailyVariant } from "@/lib/brand/genre-engine";
 // Footer는 개인정보처리방침 링크 포함 — Google 크롤러를 위해 static import
 import { Footer } from "@/components/landing/footer";
 
@@ -79,8 +80,26 @@ export default async function LandingPage() {
     // Supabase not configured
   }
 
+  const dailyVariant = getDailyVariant();
+  const themeStyles = `
+    :root {
+      --background: ${dailyVariant.palette.bg};
+      --foreground: ${dailyVariant.palette.ink};
+      --color-nu-paper: ${dailyVariant.palette.bg};
+      --color-nu-ink: ${dailyVariant.palette.ink};
+      --color-nu-pink: ${dailyVariant.palette.accent};
+      --color-nu-graphite: ${dailyVariant.palette.soft};
+      --color-nu-cream: ${dailyVariant.palette.panel};
+    }
+    body {
+      background-color: ${dailyVariant.palette.bg} !important;
+      color: ${dailyVariant.palette.ink} !important;
+    }
+  `;
+
   return (
     <>
+      <style dangerouslySetInnerHTML={{ __html: themeStyles }} />
       <Nav />
       <CustomCursor />
       <main>
