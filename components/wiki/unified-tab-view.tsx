@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import DOMPurify from "isomorphic-dompurify";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 // ── Types ─────────────────────────────────────────────────────
 interface Section {
@@ -160,6 +161,13 @@ export function UnifiedTabView({
   const [aiGapLoading, setAiGapLoading] = useState(false);
   const [aiGapSuggestions, setAiGapSuggestions] = useState<string[]>([]);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  // Research inline form state
+  const [researchingGap, setResearchingGap] = useState<string | null>(null); // sectionName
+  const [researchUrl, setResearchUrl] = useState("");
+  const [researchTitle, setResearchTitle] = useState("");
+  const [researchType, setResearchType] = useState<"article" | "pdf" | "youtube" | "notion" | "link">("article");
+  const [submittingResource, setSubmittingResource] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -344,6 +352,74 @@ export function UnifiedTabView({
     sectionRefs.current[topicId]?.scrollIntoView({ behavior: "smooth", block: "start" });
     setActiveSection(topicId);
   };
+
+  // Auto-detect resource type from URL
+  const detectResearchType = (url: string): "article" | "pdf" | "youtube" | "notion" | "link" => {
+    if (url.includes("youtube.com") || url.includes("youtu.be")) return "youtube";
+    if (url.endsWith(".pdf") || url.includes("/pdf/")) return "pdf";
+    if (url.includes("notion.so") || url.includes("notion.site")) return "notion";
+    if (url.includes("scholar.google") || url.includes("arxiv") || url.includes("ncbi.nlm") || url.includes("dbpia") || url.includes("riss")) return "article";
+    return "link";
+  };
+
+  async function submitResource(gap: Gap) {
+    if (!researchUrl.trim()) return;
+    setSubmittingResource(true);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("로그인이 필요합니다");
+
+      // Find the first page of this topic to link to
+      const linkedPage = gap.topicId
+        ? sections.find(s => s.topicId === gap.topicId)?.pages[0]
+        : null;
+
+      // Get Monday of current week
+      const now = new Date();
+      const day = now.getDay();
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+      const weekStart = monday.toISOString().split("T")[0];
+
+      const title = researchTitle.trim() || researchUrl;
+      const { error } = await supabase.from("wiki_weekly_resources").insert({
+        group_id: groupId,
+        week_start: weekStart,
+        shared_by: user.id,
+        title,
+        url: researchUrl.trim(),
+        resource_type: researchType,
+        description: `'${gap.sectionName}' 섹션 자료 조사`,
+        linked_wiki_page_id: linkedPage?.id || null,
+      });
+
+      if (error) throw error;
+
+      // Refresh allResources so the references section updates
+      const { data: fresh } = await supabase
+        .from("wiki_weekly_resources")
+        .select("id, title, url, resource_type, auto_summary, contributor:profiles!wiki_weekly_resources_shared_by_fkey(nickname), created_at")
+        .eq("group_id", groupId)
+        .order("created_at", { ascending: false });
+      if (fresh) {
+        setAllResources(fresh.map((r: any) => ({
+          id: r.id, title: r.title, url: r.url,
+          type: r.resource_type, summary: r.auto_summary || null,
+          contributor: r.contributor?.nickname || null, createdAt: r.created_at,
+        })));
+      }
+
+      toast.success(`'${gap.sectionName}' 섹션에 자료가 등록되었습니다`);
+      setResearchingGap(null);
+      setResearchUrl("");
+      setResearchTitle("");
+    } catch (err: any) {
+      toast.error(err.message || "자료 등록 실패");
+    } finally {
+      setSubmittingResource(false);
+    }
+  }
 
   // AI gap analysis call
   async function requestAiGapAnalysis() {
@@ -985,7 +1061,23 @@ export function UnifiedTabView({
                               </Link>
                             )}
                             {gap.suggestedAction === "research" && (
-                              <button className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-nu-blue/20 text-nu-blue border border-nu-blue/30 font-mono-nu text-[10px] uppercase tracking-widest font-bold hover:bg-nu-blue hover:text-white transition-colors">
+                              <button
+                                onClick={() => {
+                                  if (researchingGap === gap.sectionName) {
+                                    setResearchingGap(null);
+                                  } else {
+                                    setResearchingGap(gap.sectionName);
+                                    setResearchUrl("");
+                                    setResearchTitle("");
+                                    setResearchType("article");
+                                  }
+                                }}
+                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 border font-mono-nu text-[10px] uppercase tracking-widest font-bold transition-colors ${
+                                  researchingGap === gap.sectionName
+                                    ? "bg-nu-blue text-white border-nu-blue"
+                                    : "bg-nu-blue/20 text-nu-blue border-nu-blue/30 hover:bg-nu-blue hover:text-white"
+                                }`}
+                              >
                                 <Search size={10} /> 자료 조사 시작
                               </button>
                             )}
@@ -998,6 +1090,66 @@ export function UnifiedTabView({
                               </Link>
                             )}
                           </div>
+
+                          {/* Inline research form — shown when this gap is being researched */}
+                          {researchingGap === gap.sectionName && (
+                            <div className="mt-4 bg-white/5 border border-nu-blue/30 p-4 space-y-3 animate-in slide-in-from-top-2 duration-200">
+                              <p className="font-mono-nu text-[10px] text-nu-blue uppercase tracking-widest font-bold flex items-center gap-1.5">
+                                <Search size={10} /> '{gap.sectionName}' 섹션에 자료 등록
+                              </p>
+                              <div className="space-y-2">
+                                <input
+                                  type="url"
+                                  placeholder="URL을 입력하세요 (논문, 기사, 유튜브 등)"
+                                  value={researchUrl}
+                                  onChange={(e) => {
+                                    setResearchUrl(e.target.value);
+                                    const detected = detectResearchType(e.target.value);
+                                    setResearchType(detected);
+                                  }}
+                                  className="w-full h-9 bg-white/10 border border-white/20 px-3 text-sm text-white placeholder-white/30 focus:outline-none focus:border-nu-blue"
+                                />
+                                <input
+                                  type="text"
+                                  placeholder="자료 제목 (선택사항)"
+                                  value={researchTitle}
+                                  onChange={(e) => setResearchTitle(e.target.value)}
+                                  className="w-full h-9 bg-white/10 border border-white/20 px-3 text-sm text-white placeholder-white/30 focus:outline-none focus:border-nu-blue"
+                                />
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {(["article", "pdf", "youtube", "notion", "link"] as const).map((t) => (
+                                    <button
+                                      key={t}
+                                      onClick={() => setResearchType(t)}
+                                      className={`font-mono-nu text-[10px] uppercase tracking-widest px-2.5 py-1 border transition-colors ${
+                                        researchType === t
+                                          ? "bg-nu-blue text-white border-nu-blue"
+                                          : "border-white/20 text-white/50 hover:border-white/50 hover:text-white"
+                                      }`}
+                                    >
+                                      {t === "article" ? "논문/기사" : t === "pdf" ? "PDF" : t === "youtube" ? "유튜브" : t === "notion" ? "노션" : "링크"}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => submitResource(gap)}
+                                  disabled={!researchUrl.trim() || submittingResource}
+                                  className="flex items-center gap-1.5 font-mono-nu text-[11px] uppercase tracking-widest font-bold px-4 py-2 bg-nu-blue text-white hover:bg-nu-blue/80 transition-colors disabled:opacity-40 cursor-pointer"
+                                >
+                                  {submittingResource ? <Loader2 size={11} className="animate-spin" /> : <Plus size={11} />}
+                                  {submittingResource ? "등록 중..." : "자료 등록"}
+                                </button>
+                                <button
+                                  onClick={() => setResearchingGap(null)}
+                                  className="font-mono-nu text-[11px] uppercase tracking-widest px-4 py-2 border border-white/20 text-white/50 hover:text-white hover:border-white/40 transition-colors cursor-pointer"
+                                >
+                                  취소
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
