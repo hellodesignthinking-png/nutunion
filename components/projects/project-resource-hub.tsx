@@ -651,7 +651,7 @@ export function ProjectResourceHub({
                 {([
                   { key: "preview" as const, icon: Eye, label: "미리보기" },
                   { key: "feedback" as const, icon: MessageSquare, label: "피드백" },
-                  { key: "actions" as const, icon: CheckSquare, label: "액션" },
+                  { key: "actions" as const, icon: CheckSquare, label: "할 일(Action)" },
                 ] as const).map((tab) => (
                   <button
                     key={tab.key}
@@ -804,7 +804,7 @@ export function ProjectResourceHub({
                     {actionItems.length === 0 ? (
                       <div className="text-center py-8 text-nu-muted">
                         <CheckSquare size={24} className="mx-auto mb-2 opacity-20" />
-                        <p className="text-xs">아직 액션 아이템이 없습니다</p>
+                        <p className="text-xs">아직 할 일(Action Item)이 없습니다</p>
                       </div>
                     ) : (
                       actionItems.map((item) => {
@@ -843,7 +843,7 @@ export function ProjectResourceHub({
                     <div className="border-t-2 border-nu-ink p-3 bg-nu-cream/20 shrink-0 space-y-2">
                       <input
                         type="text" value={newActionTitle} onChange={(e) => setNewActionTitle(e.target.value)}
-                        placeholder="액션 아이템 제목"
+                        placeholder="할 일(Action Item) 제목"
                         className="w-full px-3 py-2 bg-nu-white border border-nu-ink/[0.12] text-xs focus:outline-none focus:border-nu-pink"
                       />
                       <div className="grid grid-cols-2 gap-2">
@@ -866,7 +866,7 @@ export function ProjectResourceHub({
                         className="w-full font-mono-nu text-[11px] uppercase tracking-widest py-2 bg-nu-ink text-white hover:bg-nu-ink/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
                       >
                         {savingAction ? <Loader2 size={11} className="animate-spin" /> : <Plus size={11} />}
-                        액션 아이템 추가
+                        할 일 추가
                       </button>
                     </div>
                   )}

@@ -136,35 +136,20 @@ export function ResourceInteractions({
     return `${Math.floor(hrs / 24)}일`;
   }
 
-  if (compact) {
-    return (
-      <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
-        <button onClick={toggleLike}
-          className={`flex items-center gap-1 text-[13px] transition-colors ${liked ? "text-red-500" : "text-nu-muted hover:text-red-400"}`}>
-          <Heart size={13} fill={liked ? "currentColor" : "none"} /> {likeCount > 0 && likeCount}
-        </button>
-        <button onClick={() => { setShowComments(!showComments); if (!showComments) loadComments(); }}
-          className="flex items-center gap-1 text-[13px] text-nu-muted hover:text-nu-ink transition-colors">
-          <MessageCircle size={13} /> {commentCount > 0 && commentCount}
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+    <div className={compact ? "" : "mt-2"} onClick={(e) => e.stopPropagation()}>
       {/* Action buttons */}
-      <div className="flex items-center gap-4 py-2">
+      <div className={`flex items-center gap-4 ${compact ? "py-1" : "py-2"}`}>
         <button onClick={toggleLike}
-          className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${liked ? "text-red-500" : "text-nu-muted hover:text-red-400"}`}>
-          <Heart size={14} fill={liked ? "currentColor" : "none"} />
-          {likeCount > 0 ? `좋아요 ${likeCount}` : "좋아요"}
+          className={`flex items-center ${compact ? "gap-1 text-[13px]" : "gap-1.5 text-xs"} font-medium transition-colors ${liked ? "text-red-500" : "text-nu-muted hover:text-red-400"}`}>
+          <Heart size={compact ? 13 : 14} fill={liked ? "currentColor" : "none"} />
+          {(likeCount > 0 || !compact) ? (compact ? likeCount : `좋아요 ${likeCount}`) : (compact ? "" : "좋아요")}
         </button>
         <button onClick={() => { setShowComments(!showComments); if (!showComments) loadComments(); }}
-          className="flex items-center gap-1.5 text-xs font-medium text-nu-muted hover:text-nu-ink transition-colors">
-          <MessageCircle size={14} />
-          {commentCount > 0 ? `댓글 ${commentCount}` : "댓글"}
-          {showComments ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+          className={`flex items-center ${compact ? "gap-1 text-[13px]" : "gap-1.5 text-xs"} font-medium text-nu-muted hover:text-nu-ink transition-colors`}>
+          <MessageCircle size={compact ? 13 : 14} />
+          {(commentCount > 0 || !compact) ? (compact ? commentCount : `댓글 ${commentCount}`) : (compact ? "" : "댓글")}
+          {!compact && (showComments ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
         </button>
       </div>
 
