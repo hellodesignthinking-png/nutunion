@@ -546,6 +546,30 @@ a:not(.no-underline):not([class*="uppercase"]):hover::after {
   a {
     text-decoration: underline !important;
   }
+  /* Finance 섹션 인쇄 최적화 */
+  [class*="border-nu-ink"] {
+    border-color: #333 !important;
+    box-shadow: none !important;
+  }
+  [class*="bg-nu-paper"], [class*="bg-nu-ink"], [class*="bg-nu-pink"] {
+    background: white !important;
+    color: black !important;
+  }
+  /* sticky 요소는 인쇄 시 문서에 고정되면 안 됨 */
+  .sticky {
+    position: static !important;
+  }
+  /* 인쇄에서 숨길 요소 (CSS 유틸 제공) */
+  .print\:hidden {
+    display: none !important;
+  }
+  /* 페이지 나눔 제어 */
+  .print\:break-before {
+    break-before: page;
+  }
+  .print\:no-break {
+    break-inside: avoid;
+  }
 }
 
 /* ---- Scrollbar hide utility ---- */

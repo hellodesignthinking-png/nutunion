@@ -40,13 +40,24 @@ export default async function FinanceTransactionsPage({ searchParams }: PageProp
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-      <div className="mb-6">
-        <div className="font-mono-nu text-[11px] uppercase tracking-[0.3em] text-nu-graphite mb-2">
-          TRANSACTIONS · 거래 내역
+      <div className="mb-6 flex justify-between items-start flex-wrap gap-3">
+        <div>
+          <div className="font-mono-nu text-[11px] uppercase tracking-[0.3em] text-nu-graphite mb-2">
+            TRANSACTIONS · 거래 내역
+          </div>
+          <h1 className="text-[24px] sm:text-[32px] font-bold text-nu-ink leading-tight">
+            전체 거래
+          </h1>
         </div>
-        <h1 className="text-[24px] sm:text-[32px] font-bold text-nu-ink leading-tight">
-          전체 거래
-        </h1>
+        {transactions.length > 0 && (
+          <a
+            href={`/api/finance/transactions/export?company=${selectedCompany}&month=${currentMonth}`}
+            className="border-[2.5px] border-nu-ink bg-nu-paper px-4 py-2 font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper transition-colors inline-flex items-center gap-2"
+            download
+          >
+            📥 CSV 다운로드
+          </a>
+        )}
       </div>
 
       {/* 필터 */}

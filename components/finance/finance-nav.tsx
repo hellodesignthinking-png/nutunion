@@ -24,7 +24,7 @@ export function FinanceNav() {
   };
 
   return (
-    <div className="sticky top-[60px] z-30 bg-nu-paper/90 backdrop-blur-sm border-b-[2px] border-nu-ink">
+    <div className="sticky top-[60px] z-30 bg-nu-paper/90 backdrop-blur-sm border-b-[2px] border-nu-ink print:hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <nav className="flex items-center gap-1 overflow-x-auto py-2 -mx-1">
           {NAV_ITEMS.map((item) => {
