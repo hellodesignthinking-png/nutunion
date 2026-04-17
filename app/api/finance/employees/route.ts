@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 
 export async function POST(req: NextRequest) {
   try {
@@ -60,6 +61,16 @@ export async function POST(req: NextRequest) {
       console.error("[Employees POST]", error);
       return NextResponse.json({ error: "저장에 실패했습니다" }, { status: 500 });
     }
+
+    await writeAuditLog(supabase, user, {
+      entity_type: "employee",
+      entity_id: record.id,
+      action: "create",
+      company: record.company,
+      summary: `직원 등록: ${record.name} (${record.employment_type})`,
+      diff: { after: record },
+      actor_role: profile.role,
+    }, extractRequestMeta(req));
 
     return NextResponse.json({ success: true, employee: record });
   } catch (err) {

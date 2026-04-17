@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 
 async function checkPermission() {
   const supabase = await createClient();
@@ -7,7 +8,7 @@ async function checkPermission() {
   if (!user) return { ok: false as const, status: 401, message: "Unauthorized", userId: "" };
   const { data: profile } = await supabase.from("profiles").select("role,email").eq("id", user.id).single();
   if (!profile) return { ok: false as const, status: 403, message: "Forbidden", userId: "" };
-  return { ok: true as const, supabase, userId: user.id, role: profile.role, email: profile.email };
+  return { ok: true as const, supabase, user, userId: user.id, role: profile.role, email: profile.email };
 }
 
 /**
@@ -30,6 +31,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ employ
   const isOwner = check.email && employee.email && check.email.toLowerCase() === employee.email.toLowerCase();
 
   const today = new Date().toISOString().slice(0, 10);
+  const meta = extractRequestMeta(req);
 
   if (action === "send") {
     if (!isAdminStaff) return NextResponse.json({ error: "발송 권한이 없습니다" }, { status: 403 });
@@ -44,6 +46,17 @@ export async function POST(req: NextRequest, context: { params: Promise<{ employ
       .update({ contract_status: "sent", contract_sent_date: today })
       .eq("id", employeeId);
     if (error) return NextResponse.json({ error: "발송 실패" }, { status: 500 });
+
+    await writeAuditLog(check.supabase, check.user, {
+      entity_type: "contract",
+      entity_id: employeeId,
+      action: "send",
+      company: employee.company,
+      summary: `근로계약서 발송: ${employee.name} (${employee.email})`,
+      diff: { after: { contract_status: "sent", contract_sent_date: today } },
+      actor_role: check.role,
+    }, meta);
+
     return NextResponse.json({ success: true, contract_status: "sent", contract_sent_date: today });
   }
 
@@ -67,6 +80,17 @@ export async function POST(req: NextRequest, context: { params: Promise<{ employ
       console.error("[Contracts sign]", error);
       return NextResponse.json({ error: "서명 저장 실패" }, { status: 500 });
     }
+
+    await writeAuditLog(check.supabase, check.user, {
+      entity_type: "contract",
+      entity_id: employeeId,
+      action: "sign",
+      company: employee.company,
+      summary: `근로계약서 서명 완료: ${employee.name}${isOwner ? " (본인)" : " (관리자 대신 서명)"}`,
+      diff: { after: { contract_status: "completed", contract_date: today, signed_by_owner: !!isOwner } },
+      actor_role: check.role,
+    }, meta);
+
     return NextResponse.json({ success: true, contract_status: "completed", contract_date: today });
   }
 
@@ -77,6 +101,17 @@ export async function POST(req: NextRequest, context: { params: Promise<{ employ
       .update({ contract_status: null, contract_sent_date: null })
       .eq("id", employeeId);
     if (error) return NextResponse.json({ error: "취소 실패" }, { status: 500 });
+
+    await writeAuditLog(check.supabase, check.user, {
+      entity_type: "contract",
+      entity_id: employeeId,
+      action: "cancel",
+      company: employee.company,
+      summary: `근로계약서 발송 취소: ${employee.name}`,
+      diff: { before: { contract_status: employee.contract_status, contract_sent_date: employee.contract_sent_date } },
+      actor_role: check.role,
+    }, meta);
+
     return NextResponse.json({ success: true });
   }
 

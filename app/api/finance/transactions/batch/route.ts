@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 
 export async function DELETE(req: NextRequest) {
   const supabase = await createClient();
@@ -19,6 +20,12 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "한 번에 최대 100건까지 삭제 가능합니다" }, { status: 400 });
   }
 
+  // 삭제 전 스냅샷 (감사 로그용)
+  const { data: before } = await supabase
+    .from("transactions")
+    .select("id,date,company,amount,description")
+    .in("id", ids);
+
   const { error, count } = await supabase
     .from("transactions")
     .delete({ count: "exact" })
@@ -28,5 +35,14 @@ export async function DELETE(req: NextRequest) {
     console.error("[Transactions Batch DELETE]", error);
     return NextResponse.json({ error: "삭제 실패" }, { status: 500 });
   }
+
+  await writeAuditLog(supabase, user, {
+    entity_type: "transaction",
+    action: "batch_delete",
+    summary: `거래 일괄 삭제: ${count ?? 0}건`,
+    diff: { ids, before: before ?? [] },
+    actor_role: profile.role,
+  }, extractRequestMeta(req));
+
   return NextResponse.json({ success: true, deleted: count ?? 0 });
 }

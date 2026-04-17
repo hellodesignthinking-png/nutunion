@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 
 async function checkPermission() {
   const supabase = await createClient();
@@ -9,7 +10,7 @@ async function checkPermission() {
   if (!profile || (profile.role !== "admin" && profile.role !== "staff")) {
     return { ok: false as const, status: 403, message: "Forbidden" };
   }
-  return { ok: true as const, supabase };
+  return { ok: true as const, supabase, user, role: profile.role };
 }
 
 const NUMERIC_FIELDS = ["annual_salary", "annual_leave_total", "annual_leave_used", "hourly_wage", "weekly_days", "daily_hours"];
@@ -68,15 +69,29 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     }
   }
 
+  // 변경 전 스냅샷
+  const { data: before } = await check.supabase.from("employees").select("*").eq("id", id).maybeSingle();
+
   const { error } = await check.supabase.from("employees").update(updates).eq("id", id);
   if (error) {
     console.error("[Employees PATCH]", error);
     return NextResponse.json({ error: "수정 실패" }, { status: 500 });
   }
+
+  await writeAuditLog(check.supabase, check.user, {
+    entity_type: "employee",
+    entity_id: id,
+    action: "update",
+    company: (before?.company as string) ?? null,
+    summary: `직원 수정: ${before?.name ?? ""}`,
+    diff: { before, after: updates },
+    actor_role: check.role,
+  }, extractRequestMeta(req));
+
   return NextResponse.json({ success: true });
 }
 
-export async function DELETE(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
   const check = await checkPermission();
   if (!check.ok) return NextResponse.json({ error: check.message }, { status: check.status });
@@ -84,7 +99,7 @@ export async function DELETE(_req: NextRequest, context: { params: Promise<{ id:
   // 현재 상태 확인
   const { data: existing } = await check.supabase
     .from("employees")
-    .select("contract_status,contract_signed")
+    .select("*")
     .eq("id", id)
     .single();
 
@@ -103,8 +118,21 @@ export async function DELETE(_req: NextRequest, context: { params: Promise<{ id:
     console.error("[Employees DELETE]", error);
     return NextResponse.json({ error: "삭제 실패" }, { status: 500 });
   }
+
+  const cancelledContract = existing?.contract_status === "sent" && !existing.contract_signed;
+
+  await writeAuditLog(check.supabase, check.user, {
+    entity_type: "employee",
+    entity_id: id,
+    action: "delete",
+    company: (existing?.company as string) ?? null,
+    summary: `직원 퇴직 처리: ${existing?.name ?? ""}${cancelledContract ? " (대기 계약서 자동 취소)" : ""}`,
+    diff: { before: existing, after: updates },
+    actor_role: check.role,
+  }, extractRequestMeta(req));
+
   return NextResponse.json({
     success: true,
-    cancelled_pending_contract: existing?.contract_status === "sent" && !existing.contract_signed,
+    cancelled_pending_contract: cancelledContract,
   });
 }

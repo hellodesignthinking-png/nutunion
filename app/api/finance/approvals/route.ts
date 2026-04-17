@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 
 /**
  * POST /api/finance/approvals — 결재 요청 작성
@@ -47,6 +48,17 @@ export async function POST(req: NextRequest) {
       console.error("[Approvals POST]", error);
       return NextResponse.json({ error: "저장 실패" }, { status: 500 });
     }
+
+    await writeAuditLog(supabase, user, {
+      entity_type: "approval",
+      entity_id: record.id,
+      action: "create",
+      company: record.company,
+      summary: `결재 상신: [${record.doc_type}] ${record.title}${record.amount ? ` (₩${record.amount.toLocaleString()})` : ""}`,
+      diff: { after: record },
+      actor_role: profile.role,
+    }, extractRequestMeta(req));
+
     return NextResponse.json({ success: true, approval: record });
   } catch (err) {
     console.error("[Approvals POST]", err);

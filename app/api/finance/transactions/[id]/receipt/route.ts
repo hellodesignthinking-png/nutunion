@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 
 const MAX_RECEIPT_SIZE = 1_000_000; // 1MB base64 (~750KB raw)
 
@@ -43,6 +44,15 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
       console.error("[Receipt PUT]", error);
       return NextResponse.json({ error: "저장 실패" }, { status: 500 });
     }
+
+    await writeAuditLog(supabase, user, {
+      entity_type: "receipt",
+      entity_id: id,
+      action: receiptUrl === null ? "delete" : "update",
+      summary: receiptUrl === null ? `영수증 삭제 (거래 ${id})` : `영수증 첨부 (거래 ${id})`,
+      actor_role: profile.role,
+    }, extractRequestMeta(req));
+
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("[Receipt PUT]", err);

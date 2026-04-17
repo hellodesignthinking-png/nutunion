@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { calculatePayroll } from "@/lib/finance/payroll-calc";
+import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 
 /**
  * POST /api/finance/payroll
@@ -79,6 +80,16 @@ export async function POST(req: NextRequest) {
       console.error("[Payroll POST]", error);
       return NextResponse.json({ error: "저장 실패" }, { status: 500 });
     }
+
+    await writeAuditLog(supabase, user, {
+      entity_type: "payroll",
+      entity_id: record.id,
+      action: existing ? "update" : "create",
+      company: record.company,
+      summary: `급여명세서 ${existing ? "수정" : "작성"}: ${employee.name} ${year_month} (지급 ${record.net_pay.toLocaleString()}원)`,
+      diff: { after: record },
+      actor_role: profile.role,
+    }, extractRequestMeta(req));
 
     return NextResponse.json({ success: true, payroll: record });
   } catch (err) {

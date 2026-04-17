@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 
 /**
  * POST /api/finance/approvals/[id]
@@ -23,6 +24,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     if (!approval) return NextResponse.json({ error: "결재 없음" }, { status: 404 });
 
     const today = new Date().toISOString().slice(0, 10);
+    const meta = extractRequestMeta(req);
 
     if (action === "approve") {
       if (!isAdminStaff) return NextResponse.json({ error: "승인 권한 없음" }, { status: 403 });
@@ -34,6 +36,17 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
         approver_name: profile.nickname,
       }).eq("id", id);
       if (error) return NextResponse.json({ error: "승인 실패" }, { status: 500 });
+
+      await writeAuditLog(supabase, user, {
+        entity_type: "approval",
+        entity_id: id,
+        action: "approve",
+        company: approval.company ?? null,
+        summary: `결재 승인: ${approval.title ?? ""}`,
+        diff: { before: { status: approval.status }, after: { status: "승인" } },
+        actor_role: profile.role,
+      }, meta);
+
       return NextResponse.json({ success: true, status: "승인" });
     }
 
@@ -48,6 +61,17 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
         reject_reason: rejectReason || null,
       }).eq("id", id);
       if (error) return NextResponse.json({ error: "반려 실패" }, { status: 500 });
+
+      await writeAuditLog(supabase, user, {
+        entity_type: "approval",
+        entity_id: id,
+        action: "reject",
+        company: approval.company ?? null,
+        summary: `결재 반려: ${approval.title ?? ""}${rejectReason ? ` (사유: ${rejectReason})` : ""}`,
+        diff: { before: { status: approval.status }, after: { status: "반려", reject_reason: rejectReason } },
+        actor_role: profile.role,
+      }, meta);
+
       return NextResponse.json({ success: true, status: "반려" });
     }
 
@@ -59,6 +83,17 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       if (approval.status !== "대기") return NextResponse.json({ error: "이미 처리된 결재입니다" }, { status: 400 });
       const { error } = await supabase.from("approvals").delete().eq("id", id);
       if (error) return NextResponse.json({ error: "취소 실패" }, { status: 500 });
+
+      await writeAuditLog(supabase, user, {
+        entity_type: "approval",
+        entity_id: id,
+        action: "cancel",
+        company: approval.company ?? null,
+        summary: `결재 취소: ${approval.title ?? ""}`,
+        diff: { before: approval },
+        actor_role: profile.role,
+      }, meta);
+
       return NextResponse.json({ success: true });
     }
 
