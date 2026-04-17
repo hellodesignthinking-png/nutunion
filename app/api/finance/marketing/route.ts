@@ -125,8 +125,15 @@ ${template.instructionFormat}`;
       generatedAt: new Date().toISOString(),
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Generation failed";
+    // 서버 로그에는 상세 기록, 클라이언트에는 일반 메시지
     console.error("[Marketing API]", err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    const isRateLimit = err instanceof Error && /rate.*limit|too many|429/i.test(err.message);
+    const isAuth = err instanceof Error && /unauthorized|401|403|key/i.test(err.message);
+    const userMessage = isRateLimit
+      ? "AI 사용량 한도에 도달했습니다. 잠시 후 다시 시도해주세요."
+      : isAuth
+      ? "AI 서비스 인증에 실패했습니다. 관리자에게 문의하세요."
+      : "AI 콘텐츠 생성에 실패했습니다. 잠시 후 다시 시도해주세요.";
+    return NextResponse.json({ error: userMessage }, { status: 500 });
   }
 }

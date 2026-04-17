@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getCompanyTransactions } from "@/lib/finance/company-queries";
 import { TransactionList } from "@/components/finance/transaction-list";
+import { parseYearMonth, firstDayOfMonth, lastDayOfMonth, prevMonth, nextMonth } from "@/lib/finance/date-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -18,11 +19,9 @@ export default async function CompanyDetailPage({ params, searchParams }: PagePr
   const { companyId } = await params;
   const { month } = await searchParams;
 
-  const now = new Date();
-  const currentMonth = month || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const fromDate = `${currentMonth}-01`;
-  const [y, m] = currentMonth.split("-").map(Number);
-  const toDate = new Date(y, m, 0).toISOString().slice(0, 10);
+  const { ym: currentMonth, y, m } = parseYearMonth(month);
+  const fromDate = firstDayOfMonth(currentMonth);
+  const toDate = lastDayOfMonth(y, m);
 
   const data = await getCompanyTransactions(companyId, { fromDate, toDate });
   if (!data.company) notFound();
@@ -39,9 +38,8 @@ export default async function CompanyDetailPage({ params, searchParams }: PagePr
   const topCategories = Object.entries(categoryMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const maxCat = topCategories[0]?.[1] || 1;
 
-  // 월 이동
-  const prevM = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
-  const nextM = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
+  const prevM = prevMonth(y, m);
+  const nextM = nextMonth(y, m);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">

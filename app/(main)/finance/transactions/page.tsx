@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCompanyTransactions, getCompanies } from "@/lib/finance/company-queries";
 import { TransactionList } from "@/components/finance/transaction-list";
+import { parseYearMonth, firstDayOfMonth, lastDayOfMonth, prevMonth, nextMonth } from "@/lib/finance/date-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -14,11 +15,9 @@ function fmt(n: number): string {
 
 export default async function FinanceTransactionsPage({ searchParams }: PageProps) {
   const { company: selectedCompany = "all", month } = await searchParams;
-  const now = new Date();
-  const currentMonth = month || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const fromDate = `${currentMonth}-01`;
-  const [y, m] = currentMonth.split("-").map(Number);
-  const toDate = new Date(y, m, 0).toISOString().slice(0, 10);
+  const { ym: currentMonth, y, m } = parseYearMonth(month);
+  const fromDate = firstDayOfMonth(currentMonth);
+  const toDate = lastDayOfMonth(y, m);
 
   const [companies, data] = await Promise.all([
     getCompanies(),
@@ -29,8 +28,8 @@ export default async function FinanceTransactionsPage({ searchParams }: PageProp
   const income = transactions.filter((t) => t.amount >= 0).reduce((s, t) => s + t.amount, 0);
   const expense = transactions.filter((t) => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
 
-  const prevM = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
-  const nextM = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
+  const prevM = prevMonth(y, m);
+  const nextM = nextMonth(y, m);
   const qs = (opts: { company?: string; month?: string }) => {
     const p = new URLSearchParams();
     if (opts.company) p.set("company", opts.company);

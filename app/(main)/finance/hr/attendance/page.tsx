@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getMonthlyAttendance } from "@/lib/finance/hr-queries";
 import { getCompanies } from "@/lib/finance/company-queries";
+import { parseYearMonth, prevMonth, nextMonth } from "@/lib/finance/date-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +13,7 @@ const TYPES = ["출근", "연차", "반차(오전)", "반차(오후)", "병가",
 
 export default async function AttendancePage({ searchParams }: PageProps) {
   const { company = "all", month } = await searchParams;
-  const now = new Date();
-  const currentMonth = month || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const { ym: currentMonth, y, m } = parseYearMonth(month);
 
   const [rows, companies] = await Promise.all([
     getMonthlyAttendance(currentMonth, company),
@@ -21,9 +21,8 @@ export default async function AttendancePage({ searchParams }: PageProps) {
   ]);
   const companyMap = new Map(companies.map((c) => [c.id, c]));
 
-  const [y, m] = currentMonth.split("-").map(Number);
-  const prevM = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
-  const nextM = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
+  const prevM = prevMonth(y, m);
+  const nextM = nextMonth(y, m);
   const qs = (opts: { company?: string; month?: string }) => {
     const p = new URLSearchParams();
     if (opts.company) p.set("company", opts.company);

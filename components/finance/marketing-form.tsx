@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { safeLocalStorage } from "@/lib/finance/safe-storage";
+
+const HISTORY_KEY = "nutunion_marketing_history";
 
 interface BoltMin {
   id: string;
@@ -70,10 +73,7 @@ export function MarketingForm({ bolts, companies }: { bolts: BoltMin[]; companie
 
   // 이력 로드
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("nutunion_marketing_history");
-      if (saved) setHistory(JSON.parse(saved));
-    } catch {}
+    setHistory(safeLocalStorage.get<MarketingResult[]>(HISTORY_KEY, []));
   }, []);
 
   const handleGenerate = async () => {
@@ -100,7 +100,7 @@ export function MarketingForm({ bolts, companies }: { bolts: BoltMin[]; companie
       };
       const next = [entry, ...history].slice(0, 50);
       setHistory(next);
-      localStorage.setItem("nutunion_marketing_history", JSON.stringify(next));
+      safeLocalStorage.set(HISTORY_KEY, next);
       setSelected(entry);
     } catch (err) {
       setError(err instanceof Error ? err.message : "생성 중 오류가 발생했습니다");
@@ -116,7 +116,7 @@ export function MarketingForm({ bolts, companies }: { bolts: BoltMin[]; companie
   const deleteHistory = (id: number) => {
     const next = history.filter((h) => h.id !== id);
     setHistory(next);
-    localStorage.setItem("nutunion_marketing_history", JSON.stringify(next));
+    safeLocalStorage.set(HISTORY_KEY, next);
     if (selected?.id === id) setSelected(null);
   };
 
@@ -287,7 +287,7 @@ export function MarketingForm({ bolts, companies }: { bolts: BoltMin[]; companie
                 onClick={() => {
                   if (confirm("전체 이력을 삭제하시겠습니까?")) {
                     setHistory([]);
-                    localStorage.removeItem("nutunion_marketing_history");
+                    safeLocalStorage.remove(HISTORY_KEY);
                     setSelected(null);
                   }
                 }}

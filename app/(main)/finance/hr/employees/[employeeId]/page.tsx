@@ -54,11 +54,16 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
         .from("project_members")
         .select("project:projects(id,title,status)")
         .eq("user_id", profile.id);
-      participatingBolts = (memberships || [])
-        .map((m: { project: { id: string; title: string; status: string } | { id: string; title: string; status: string }[] | null }) =>
-          Array.isArray(m.project) ? m.project[0] : m.project
-        )
-        .filter((p): p is { id: string; title: string; status: string } => Boolean(p));
+      type Bolt = { id: string; title: string; status: string };
+      const rawBolts: unknown[] = (memberships || []).map((m: { project: unknown }) => m.project);
+      participatingBolts = rawBolts.flatMap((p): Bolt[] => {
+        if (!p) return [];
+        if (Array.isArray(p)) {
+          return p.filter((x): x is Bolt => Boolean(x && typeof x === "object" && "id" in x));
+        }
+        if (typeof p === "object" && "id" in p) return [p as Bolt];
+        return [];
+      });
     }
   }
 
@@ -111,11 +116,16 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
                 {employee.work_days && <div className="text-[11px] text-nu-graphite mt-1">{employee.work_days}</div>}
                 {employee.daily_hours && <div className="text-[11px] text-nu-graphite">{employee.daily_hours}시간/일</div>}
               </>
+            ) : employee.annual_salary && employee.annual_salary > 0 ? (
+              <>
+                <div className="text-[22px] font-bold text-nu-ink">₩{fmt(employee.annual_salary)}</div>
+                <div className="text-[11px] text-nu-graphite mt-1">연봉</div>
+                <div className="text-[11px] text-nu-graphite">월 ₩{fmt(Math.round(employee.annual_salary / 12))}</div>
+              </>
             ) : (
               <>
-                <div className="text-[22px] font-bold text-nu-ink">₩{fmt(employee.annual_salary || 0)}</div>
-                <div className="text-[11px] text-nu-graphite mt-1">연봉</div>
-                <div className="text-[11px] text-nu-graphite">월 ₩{fmt(Math.round((employee.annual_salary || 0) / 12))}</div>
+                <div className="text-[13px] text-nu-graphite italic">급여 정보 없음</div>
+                <div className="text-[10px] text-nu-graphite mt-1">구 시스템에서 입력해주세요</div>
               </>
             )}
           </div>
