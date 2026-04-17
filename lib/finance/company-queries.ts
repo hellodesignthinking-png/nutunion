@@ -18,21 +18,69 @@ export async function getCompanies(): Promise<FinCompany[]> {
   return [NU_COMPANY, ...(data || [])];
 }
 
+export interface GlobalFinanceTrend {
+  thisMonth: { income: number; expense: number };
+  lastMonth: { income: number; expense: number };
+  incomeChangePct: number;
+  expenseChangePct: number;
+}
+
+export async function getGlobalFinanceTrend(): Promise<GlobalFinanceTrend> {
+  const supabase = await createClient();
+  const now = new Date();
+  const thisY = now.getFullYear(), thisM = now.getMonth();
+  const thisYm = `${thisY}-${String(thisM + 1).padStart(2, "0")}`;
+  const lastY = thisM === 0 ? thisY - 1 : thisY;
+  const lastM = thisM === 0 ? 12 : thisM;
+  const lastYm = `${lastY}-${String(lastM).padStart(2, "0")}`;
+
+  const { data: txs } = await supabase
+    .from("transactions")
+    .select("date,amount")
+    .gte("date", `${lastYm}-01`);
+
+  const acc = { thisM: { i: 0, e: 0 }, lastM: { i: 0, e: 0 } };
+  (txs || []).forEach((t) => {
+    const m = t.date?.slice(0, 7);
+    const bucket = m === thisYm ? acc.thisM : m === lastYm ? acc.lastM : null;
+    if (!bucket) return;
+    if (t.amount >= 0) bucket.i += t.amount;
+    else bucket.e += Math.abs(t.amount);
+  });
+
+  const calcPct = (cur: number, prev: number): number => {
+    if (prev === 0) return cur > 0 ? 100 : 0;
+    return ((cur - prev) / prev) * 100;
+  };
+
+  return {
+    thisMonth: { income: acc.thisM.i, expense: acc.thisM.e },
+    lastMonth: { income: acc.lastM.i, expense: acc.lastM.e },
+    incomeChangePct: calcPct(acc.thisM.i, acc.lastM.i),
+    expenseChangePct: calcPct(acc.thisM.e, acc.lastM.e),
+  };
+}
+
 /**
  * 법인별 재무 요약 (기본은 "최근 N개월")
  */
 export async function getCompaniesWithFinance(
   months: number = 6
-): Promise<CompanyFinanceSummary[]> {
+): Promise<(CompanyFinanceSummary & { employeeCount: number })[]> {
   const supabase = await createClient();
 
-  const [companiesRes, txRes] = await Promise.all([
+  const [companiesRes, txRes, empRes] = await Promise.all([
     supabase.from("companies").select("*").order("created_at", { ascending: true }),
     supabase.from("transactions").select("*"),
+    supabase.from("employees").select("company,status"),
   ]);
 
   const companies: FinCompany[] = companiesRes.data || [];
   const txs: FinTransaction[] = txRes.data || [];
+  const empsByCompany = new Map<string, number>();
+  (empRes.data || []).filter((e) => e.status === "재직").forEach((e) => {
+    empsByCompany.set(e.company, (empsByCompany.get(e.company) || 0) + 1);
+  });
 
   // 최근 N개월 경계
   const now = new Date();
@@ -80,6 +128,7 @@ export async function getCompaniesWithFinance(
       transactionCount: companyTxs.length,
       monthlyBreakdown,
       categoryBreakdown,
+      employeeCount: empsByCompany.get(company.id) || 0,
     };
   });
 }

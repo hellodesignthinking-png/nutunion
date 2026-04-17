@@ -1,14 +1,16 @@
 import Link from "next/link";
 import type { CompanyFinanceSummary } from "@/lib/finance/types";
 
+type SummaryWithEmployees = CompanyFinanceSummary & { employeeCount?: number };
+
 function fmt(n: number): string {
   if (n >= 100000000) return `${(n / 100000000).toFixed(1)}억`;
   if (n >= 10000) return `${(n / 10000).toFixed(0)}만`;
   return n.toLocaleString("ko-KR");
 }
 
-export function CompanySummaryCard({ summary }: { summary: CompanyFinanceSummary }) {
-  const { company, totalIncome, totalExpense, netProfit, transactionCount, monthlyBreakdown } = summary;
+export function CompanySummaryCard({ summary }: { summary: SummaryWithEmployees }) {
+  const { company, totalIncome, totalExpense, netProfit, transactionCount, monthlyBreakdown, employeeCount } = summary;
   const isAll = company.id === "all";
   const accent = company.color || "#0D0D0D";
 
@@ -92,7 +94,10 @@ export function CompanySummaryCard({ summary }: { summary: CompanyFinanceSummary
 
       {/* 푸터 */}
       <div className="flex justify-between items-center text-[11px] font-mono-nu text-nu-graphite pt-2">
-        <span>{transactionCount}건</span>
+        <span>
+          {transactionCount}건
+          {typeof employeeCount === "number" && employeeCount > 0 && ` · 직원 ${employeeCount}명`}
+        </span>
         <span>자세히 →</span>
       </div>
     </Link>

@@ -156,7 +156,9 @@
       "Bash(grep -rn \"best_practices\" /Users/TaiNa0/Desktop/nutunion/supabase/migrations/*.sql)",
       "Bash(grep -rn \"tool_slack\\\\|tool_notion\\\\|total_budget\\\\|milestone_dashboard_url\\\\|kakao_chat_url\" /Users/TaiNa0/Desktop/nutunion/supabase/migrations/*.sql)",
       "Bash(grep -rn \"google_drive_folder_id\\\\|drive_folder_id\" /Users/TaiNa0/Desktop/nutunion/supabase/migrations/*.sql)",
-      "Bash(grep -l \"meetings\" /Users/TaiNa0/Desktop/nutunion/supabase/migrations/*.sql)"
+      "Bash(grep -l \"meetings\" /Users/TaiNa0/Desktop/nutunion/supabase/migrations/*.sql)",
+      "Bash(npm list:*)",
+      "Bash(sudo npm:*)"
     ]
   }
 }

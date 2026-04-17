@@ -8,7 +8,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ connected: false, reason: "not_logged_in" });
+    return NextResponse.json({ connected: false, reason: "not_logged_in" }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   }
 
   const { data: profile } = await supabase
@@ -18,7 +18,7 @@ export async function GET() {
     .single();
 
   if (!profile?.google_access_token) {
-    return NextResponse.json({ connected: false, reason: "not_connected" });
+    return NextResponse.json({ connected: false, reason: "not_connected" }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   }
 
   const isExpired = profile.google_token_expiry
@@ -29,7 +29,7 @@ export async function GET() {
     connected: true,
     tokenExpired: isExpired,
     connectUrl: "/api/auth/google",
-  });
+  }, { headers: { "Cache-Control": "no-store, max-age=0" } });
 }
 
 // DELETE: Google 연결 해제

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { FinanceNav } from "@/components/finance/finance-nav";
 
 export default async function FinanceLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -12,10 +13,14 @@ export default async function FinanceLayout({ children }: { children: React.Reac
     .eq("id", user.id)
     .single();
 
-  // 관리자/스태프만 접근
   if (!profile || (profile.role !== "admin" && profile.role !== "staff")) {
     redirect("/dashboard");
   }
 
-  return <>{children}</>;
+  return (
+    <div>
+      <FinanceNav />
+      {children}
+    </div>
+  );
 }

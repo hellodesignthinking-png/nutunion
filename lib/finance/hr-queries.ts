@@ -66,14 +66,25 @@ export async function getHRDashboard(): Promise<HRDashboardData> {
 }
 
 export async function getEmployees(
-  opts: { company?: string; status?: string } = {}
+  opts: { company?: string; status?: string; search?: string } = {}
 ): Promise<FinEmployee[]> {
   const supabase = await createClient();
   let query = supabase.from("employees").select("*").order("created_at", { ascending: false });
   if (opts.company && opts.company !== "all") query = query.eq("company", opts.company);
   if (opts.status) query = query.eq("status", opts.status);
   const { data } = await query;
-  return data || [];
+  let results = data || [];
+  // 클라이언트측 검색 필터 (이름/부서/직급/이메일)
+  if (opts.search) {
+    const q = opts.search.toLowerCase();
+    results = results.filter((e) =>
+      e.name?.toLowerCase().includes(q) ||
+      e.department?.toLowerCase().includes(q) ||
+      e.position?.toLowerCase().includes(q) ||
+      e.email?.toLowerCase().includes(q)
+    );
+  }
+  return results;
 }
 
 export async function getEmployeeDetail(id: string): Promise<EmployeeSummary | null> {

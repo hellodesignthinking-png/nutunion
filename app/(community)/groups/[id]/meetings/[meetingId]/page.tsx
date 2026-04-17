@@ -28,6 +28,7 @@ import { WikiSyncPanel } from "@/components/wiki/wiki-sync-panel";
 import { WeeklyDigestEngine } from "@/components/wiki/weekly-digest-engine";
 import { AiErrorBoundary } from "@/components/shared/ai-error-boundary";
 import { MeetingRecorder } from "@/components/meetings/meeting-recorder";
+import { QuickRetro } from "./components/quick-retro";
 
 function getEmbedUrl(url: string) {
   if (!url) return "";
@@ -793,6 +794,9 @@ export default function MeetingDetailPage() {
           <TabsTrigger value="resources" className="font-mono-nu text-[13px] uppercase tracking-widest">자료 공유 ({resources.length})</TabsTrigger>
           <TabsTrigger value="notes" className="font-mono-nu text-[13px] uppercase tracking-widest">노트</TabsTrigger>
           <TabsTrigger value="next" className="font-mono-nu text-[13px] uppercase tracking-widest">다음 주제</TabsTrigger>
+          <TabsTrigger value="retro" className="font-mono-nu text-[13px] uppercase tracking-widest flex items-center gap-1 text-nu-amber font-bold">
+            <Zap size={11} /> 빠른 회고
+          </TabsTrigger>
           <TabsTrigger value="attendance" className="font-mono-nu text-[13px] uppercase tracking-widest">출석</TabsTrigger>
           <TabsTrigger value="wiki-sync" className="font-mono-nu text-[13px] uppercase tracking-widest flex items-center gap-1 text-nu-pink font-bold">
             <Sparkles size={11} /> 탭 동기화
@@ -1069,6 +1073,11 @@ export default function MeetingDetailPage() {
               </div>
             </div>
           </div>
+        </TabsContent>
+
+        {/* ── 빠른 회고 */}
+        <TabsContent value="retro">
+          <QuickRetro meetingId={meetingId} userId={userId} canEdit={canEdit} />
         </TabsContent>
 
         {/* ── 탭 동기화 */}

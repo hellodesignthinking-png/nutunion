@@ -59,9 +59,18 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { notes, agendas, meetingTitle, audioBase64, audioMimeType, previousDigest } = body;
+    const { notes, agendas, meetingTitle, audioBase64, audioUrl, audioMimeType, previousDigest } = body;
 
-    if (!notes && !audioBase64) {
+    let finalAudioBase64 = audioBase64;
+
+    if (!finalAudioBase64 && audioUrl) {
+      const resp = await fetch(audioUrl);
+      if (!resp.ok) throw new Error("Supabase 오디오 다운로드 실패");
+      const arrayBuffer = await resp.arrayBuffer();
+      finalAudioBase64 = Buffer.from(arrayBuffer).toString("base64");
+    }
+
+    if (!notes && !finalAudioBase64 && !audioUrl) {
       return NextResponse.json(
         { error: "회의 내용 또는 녹음 파일이 필요합니다" },
         { status: 400 }
@@ -84,7 +93,7 @@ export async function POST(request: NextRequest) {
       userPrompt += `\n## 회의 내용 (텍스트 기록)\n${notes}\n`;
     }
 
-    if (audioBase64) {
+    if (finalAudioBase64) {
       userPrompt += `\n## 녹음 파일이 첨부되었습니다. 녹음 내용을 분석하여 회의록을 작성해주세요.\n`;
     }
 
@@ -100,11 +109,11 @@ export async function POST(request: NextRequest) {
     parts.push({ text: SYSTEM_PROMPT });
 
     // Audio file (if provided)
-    if (audioBase64 && audioMimeType) {
+    if (finalAudioBase64 && audioMimeType) {
       parts.push({
         inlineData: {
           mimeType: audioMimeType,
-          data: audioBase64,
+          data: finalAudioBase64,
         },
       });
     }
@@ -187,8 +196,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate and normalize the result structure
+    let finalSummary = result.summary;
+    if (typeof finalSummary === "object" && finalSummary !== null) {
+      finalSummary = Array.isArray(finalSummary) ? finalSummary.join("\\n") : JSON.stringify(finalSummary);
+    }
+    if (!finalSummary || typeof finalSummary !== "string") {
+      finalSummary = "회의 요약을 생성할 수 없습니다.";
+    }
+
     const normalized = {
-      summary: result.summary || "회의 요약을 생성할 수 없습니다.",
+      summary: finalSummary,
       discussions: Array.isArray(result.discussions) ? result.discussions : [],
       decisions: Array.isArray(result.decisions) ? result.decisions : [],
       actionItems: Array.isArray(result.actionItems)

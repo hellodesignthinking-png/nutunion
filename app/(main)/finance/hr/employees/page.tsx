@@ -5,7 +5,7 @@ import { getCompanies } from "@/lib/finance/company-queries";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  searchParams: Promise<{ company?: string; status?: string }>;
+  searchParams: Promise<{ company?: string; status?: string; q?: string }>;
 }
 
 function fmt(n: number): string {
@@ -26,9 +26,9 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 export default async function EmployeesPage({ searchParams }: PageProps) {
-  const { company = "all", status } = await searchParams;
+  const { company = "all", status, q } = await searchParams;
   const [employees, companies] = await Promise.all([
-    getEmployees({ company, status }),
+    getEmployees({ company, status, search: q }),
     getCompanies(),
   ]);
   const companyMap = new Map(companies.map((c) => [c.id, c]));
@@ -57,34 +57,75 @@ export default async function EmployeesPage({ searchParams }: PageProps) {
         </h1>
       </div>
 
+      {/* 검색 */}
+      <form action="/finance/hr/employees" method="get" className="mb-4">
+        {company && <input type="hidden" name="company" value={company} />}
+        {status && <input type="hidden" name="status" value={status} />}
+        <div className="flex gap-2">
+          <input
+            type="search"
+            name="q"
+            defaultValue={q || ""}
+            placeholder="이름, 부서, 직급, 이메일 검색..."
+            className="flex-1 border-[2.5px] border-nu-ink bg-nu-paper px-4 py-2.5 text-[14px] text-nu-ink outline-none focus:bg-white"
+          />
+          <button
+            type="submit"
+            className="border-[2.5px] border-nu-ink bg-nu-ink text-nu-paper px-5 py-2.5 font-mono-nu text-[11px] uppercase tracking-widest hover:bg-nu-pink hover:border-nu-pink"
+          >
+            검색
+          </button>
+          {q && (
+            <Link
+              href={`/finance/hr/employees?company=${company}${status ? `&status=${status}` : ""}`}
+              className="border-[2.5px] border-nu-ink bg-nu-paper text-nu-graphite px-4 py-2.5 font-mono-nu text-[11px] uppercase tracking-widest no-underline"
+            >
+              ✕
+            </Link>
+          )}
+        </div>
+      </form>
+
       {/* 필터 */}
       <div className="flex flex-wrap gap-3 items-center mb-6">
         <div className="flex gap-1 border-[2.5px] border-nu-ink bg-nu-paper overflow-x-auto">
-          {companies.map((c) => (
-            <Link
-              key={c.id}
-              href={`/finance/hr/employees?company=${c.id}${status ? `&status=${status}` : ""}`}
-              className={`px-3 py-2 font-mono-nu text-[11px] uppercase tracking-wider whitespace-nowrap no-underline ${
-                company === c.id ? "bg-nu-ink text-nu-paper" : "text-nu-graphite hover:text-nu-ink"
-              }`}
-            >
-              {c.name}
-            </Link>
-          ))}
+          {companies.map((c) => {
+            const p = new URLSearchParams();
+            p.set("company", c.id);
+            if (status) p.set("status", status);
+            if (q) p.set("q", q);
+            return (
+              <Link
+                key={c.id}
+                href={`/finance/hr/employees?${p.toString()}`}
+                className={`px-3 py-2 font-mono-nu text-[11px] uppercase tracking-wider whitespace-nowrap no-underline ${
+                  company === c.id ? "bg-nu-ink text-nu-paper" : "text-nu-graphite hover:text-nu-ink"
+                }`}
+              >
+                {c.name}
+              </Link>
+            );
+          })}
         </div>
 
         <div className="flex gap-1 border-[2.5px] border-nu-ink bg-nu-paper">
-          {["all", "재직", "휴직", "퇴직"].map((s) => (
-            <Link
-              key={s}
-              href={`/finance/hr/employees?company=${company}${s !== "all" ? `&status=${s}` : ""}`}
-              className={`px-3 py-2 font-mono-nu text-[11px] uppercase tracking-wider no-underline ${
-                (status || "all") === s ? "bg-nu-ink text-nu-paper" : "text-nu-graphite hover:text-nu-ink"
-              }`}
-            >
-              {s === "all" ? "전체" : s}
-            </Link>
-          ))}
+          {["all", "재직", "휴직", "퇴직"].map((s) => {
+            const p = new URLSearchParams();
+            p.set("company", company);
+            if (s !== "all") p.set("status", s);
+            if (q) p.set("q", q);
+            return (
+              <Link
+                key={s}
+                href={`/finance/hr/employees?${p.toString()}`}
+                className={`px-3 py-2 font-mono-nu text-[11px] uppercase tracking-wider no-underline ${
+                  (status || "all") === s ? "bg-nu-ink text-nu-paper" : "text-nu-graphite hover:text-nu-ink"
+                }`}
+              >
+                {s === "all" ? "전체" : s}
+              </Link>
+            );
+          })}
         </div>
       </div>
 

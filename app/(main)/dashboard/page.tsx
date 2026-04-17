@@ -281,14 +281,14 @@ export default async function DashboardPage() {
                 전체 보기 <ChevronRight size={10} />
               </Link>
             </div>
-            {upcomingTasks.length === 0 && overdueTasks.length === 0 && todayTasks.length === 0 ? (
+            {allTasks.length === 0 ? (
               <div className="py-8 text-center border-2 border-dashed border-nu-ink/10">
                 <CheckSquare size={24} className="text-nu-muted/30 mx-auto mb-2" />
                 <p className="text-sm text-nu-muted">할당된 할일이 없습니다</p>
               </div>
             ) : (
               <div className="space-y-1.5">
-                {upcomingTasks.slice(0, 6).map((t: any) => (
+                {allTasks.slice(0, 6).map((t: any) => (
                   <div key={t.id} className="flex items-center gap-3 px-3 py-2 hover:bg-nu-cream/20 transition-colors border border-transparent hover:border-nu-ink/5">
                     <StatusDot status={t.status} />
                     <span className="text-sm text-nu-ink flex-1 truncate">{t.title}</span>
@@ -339,9 +339,32 @@ export default async function DashboardPage() {
                   const g = m.groups;
                   if (!g || g.is_active === false) return null;
                   const cat = getCategory(g.category);
+                  
+                  // Calculate badges for group
+                  const groupEvents = events?.filter((evt: any) => evt.group_id === g.id) || [];
+                  const groupTodayEvents = groupEvents.filter((evt: any) => evt.start_at.startsWith(todayStr));
+                  const groupNewPosts = recentActivity?.filter((a: any) => {
+                    const grp = Array.isArray(a.group) ? a.group[0] : a.group;
+                    return grp && grp.id === g.id;
+                  }) || [];
+
                   return (
                     <Link key={g.id} href={`/groups/${g.id}`}
-                      className="bg-white border border-nu-ink/[0.08] p-4 no-underline hover:border-indigo-300 hover:shadow-sm transition-all group">
+                      className="bg-white border border-nu-ink/[0.08] p-4 no-underline hover:border-indigo-300 hover:shadow-sm transition-all group flex flex-col relative overflow-hidden">
+                      {/* Badges container */}
+                      <div className="absolute top-3 right-3 flex gap-1">
+                        {groupTodayEvents.length > 0 && (
+                          <span className="flex items-center justify-center w-5 h-5 bg-indigo-100 text-indigo-600 rounded-full text-[10px]" title="오늘 회의/일정">
+                            <Calendar size={10} />
+                          </span>
+                        )}
+                        {groupNewPosts.length > 0 && (
+                          <span className="flex items-center justify-center w-5 h-5 bg-nu-pink/10 text-nu-pink rounded-full text-[10px]" title="새로운 소식">
+                            <Bell size={10} />
+                          </span>
+                        )}
+                      </div>
+                      
                       <div className="flex items-center gap-2 mb-2">
                         <span className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 text-white font-bold ${cat?.color || "bg-nu-ink/30"}`}>
                           {cat?.label || g.category}
@@ -350,8 +373,8 @@ export default async function DashboardPage() {
                           <span className="font-mono-nu text-[10px] uppercase tracking-widest bg-nu-pink/10 text-nu-pink px-1.5 py-0.5">Host</span>
                         )}
                       </div>
-                      <h3 className="font-head text-sm font-bold text-nu-ink group-hover:text-indigo-600 transition-colors truncate">{g.name}</h3>
-                      <p className="text-[13px] text-nu-muted mt-1 line-clamp-1">{g.description || "-"}</p>
+                      <h3 className="font-head text-sm font-bold text-nu-ink group-hover:text-indigo-600 transition-colors pr-10 line-clamp-1">{g.name}</h3>
+                      <p className="text-[13px] text-nu-muted mt-1 line-clamp-1 flex-1">{g.description || "-"}</p>
                     </Link>
                   );
                 })}
@@ -384,23 +407,43 @@ export default async function DashboardPage() {
                   const p = pm.projects;
                   if (!p || !["active", "draft"].includes(p.status)) return null;
                   const cat = getCategory(p.category);
+                  
+                  // Calculate badges for project
+                  const myProjTasks = boltTasks.filter((t: any) => t.milestone?.project?.id === p.id);
+                  const overdueCount = myProjTasks.filter((t: any) => t.due_date && t.due_date < todayStr).length;
+
                   return (
                     <Link key={p.id} href={`/projects/${p.id}`}
-                      className="bg-white border border-nu-ink/[0.08] p-4 no-underline hover:border-purple-300 hover:shadow-sm transition-all group">
+                      className="bg-white border border-nu-ink/[0.08] p-4 no-underline hover:border-purple-300 hover:shadow-sm transition-all group relative overflow-hidden flex flex-col">
+                      
+                      {/* Badges container */}
+                      <div className="absolute top-3 right-3 flex gap-1">
+                        {overdueCount > 0 && (
+                          <span className="flex items-center gap-1 px-1.5 py-0.5 bg-red-100 text-red-600 border border-red-200 text-[9px] font-bold" title="지연된 할 일">
+                            <AlertTriangle size={9} /> {overdueCount}
+                          </span>
+                        )}
+                        {myProjTasks.length > 0 && overdueCount === 0 && (
+                          <span className="flex items-center gap-1 px-1.5 py-0.5 bg-indigo-50 text-indigo-600 border border-indigo-200 text-[9px] font-bold" title="진행할 할 일">
+                            <CheckSquare size={9} /> {myProjTasks.length}
+                          </span>
+                        )}
+                      </div>
+
                       <div className="flex items-center gap-2 mb-2">
-                        <span className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 ${p.status === "active" ? "bg-green-500 text-white" : "bg-nu-muted/20 text-nu-muted"}`}>
+                        <span className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 flex-shrink-0 ${p.status === "active" ? "bg-green-500 text-white" : "bg-nu-muted/20 text-nu-muted"}`}>
                           {p.status === "active" ? "진행중" : p.status}
                         </span>
                         {pm.role === "lead" && (
-                          <span className="font-mono-nu text-[10px] uppercase tracking-widest bg-purple-50 text-purple-600 px-1.5 py-0.5">PM</span>
+                          <span className="font-mono-nu text-[10px] uppercase tracking-widest bg-purple-50 text-purple-600 px-1.5 py-0.5 flex-shrink-0 border border-purple-100">PM</span>
                         )}
                         {cat && (
-                          <span className={`font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 text-white ${cat.color}`}>{cat.label}</span>
+                          <span className={`font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 text-white flex-shrink-0 ${cat.color}`}>{cat.label}</span>
                         )}
                       </div>
-                      <h3 className="font-head text-sm font-bold text-nu-ink group-hover:text-purple-600 transition-colors truncate">{p.title}</h3>
-                      <p className="text-[13px] text-nu-muted mt-1 line-clamp-1">{p.description || "-"}</p>
-                      <div className="flex items-center justify-between mt-2">
+                      <h3 className="font-head text-sm font-bold text-nu-ink group-hover:text-purple-600 transition-colors pr-10 line-clamp-1">{p.title}</h3>
+                      <p className="text-[13px] text-nu-muted mt-1 line-clamp-1 flex-1">{p.description || "-"}</p>
+                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-nu-ink/5">
                         {pm.reward_ratio ? (
                           <span className="font-mono-nu text-[12px] font-bold text-green-600">{pm.reward_ratio}% 배분</span>
                         ) : <span />}

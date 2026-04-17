@@ -93,7 +93,7 @@ export function DrivePicker({ onFilePicked }: DrivePickerProps) {
 
   function handleOpen() {
     if (!connected) {
-      window.location.href = "/api/auth/google";
+      window.location.href = "/api/auth/google?returnTo=" + encodeURIComponent(window.location.pathname + window.location.search);
       return;
     }
     setOpen(true);

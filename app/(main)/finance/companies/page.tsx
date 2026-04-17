@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getCompaniesWithFinance } from "@/lib/finance/company-queries";
+import { getCompaniesWithFinance, getGlobalFinanceTrend } from "@/lib/finance/company-queries";
 import { CompanySummaryCard } from "@/components/finance/company-summary-card";
 
 export const dynamic = "force-dynamic";
@@ -8,8 +8,33 @@ function fmt(n: number): string {
   return n.toLocaleString("ko-KR");
 }
 
+function TrendCard({ label, current, prev, pct, positive }: { label: string; current: number; prev: number; pct: number; positive: boolean }) {
+  const isUp = pct > 0;
+  const goodDirection = positive ? isUp : !isUp; // 수입 증가=좋음, 지출 증가=나쁨
+  const arrow = isUp ? "▲" : pct < 0 ? "▼" : "—";
+  const pctText = isFinite(pct) ? `${Math.abs(pct).toFixed(1)}%` : "—";
+  const color = pct === 0 ? "text-nu-graphite" : goodDirection ? "text-green-700" : "text-red-600";
+  return (
+    <div className="border-[2.5px] border-nu-ink bg-nu-paper p-4">
+      <div className="flex justify-between items-baseline mb-2">
+        <div className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-graphite">{label}</div>
+        <div className={`font-mono-nu text-[11px] font-bold ${color}`}>
+          {arrow} {pctText}
+        </div>
+      </div>
+      <div className="text-[22px] font-bold text-nu-ink break-all">₩{fmt(current)}</div>
+      <div className="font-mono-nu text-[10px] text-nu-graphite mt-1">
+        지난달 ₩{fmt(prev)}
+      </div>
+    </div>
+  );
+}
+
 export default async function FinanceCompaniesPage() {
-  const companies = await getCompaniesWithFinance(6);
+  const [companies, trend] = await Promise.all([
+    getCompaniesWithFinance(6),
+    getGlobalFinanceTrend(),
+  ]);
 
   // 전체 집계 (nutunion(all) 제외)
   const totals = companies
@@ -28,18 +53,6 @@ export default async function FinanceCompaniesPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-      {/* 네비 */}
-      <div className="mb-3 flex gap-4 items-center">
-        <Link href="/finance" className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-graphite hover:text-nu-ink no-underline">
-          ← 재무 홈
-        </Link>
-        <div className="flex gap-1">
-          <Link href="/finance/companies" className="font-mono-nu text-[11px] uppercase tracking-widest px-3 py-1 bg-nu-ink text-nu-paper no-underline">법인</Link>
-          <Link href="/finance/transactions" className="font-mono-nu text-[11px] uppercase tracking-widest px-3 py-1 text-nu-graphite hover:text-nu-ink no-underline">거래</Link>
-          <Link href="/finance/hr" className="font-mono-nu text-[11px] uppercase tracking-widest px-3 py-1 text-nu-graphite hover:text-nu-ink no-underline">HR</Link>
-        </div>
-      </div>
-
       {/* 헤더 */}
       <div className="mb-8">
         <div className="font-mono-nu text-[11px] uppercase tracking-[0.3em] text-nu-graphite mb-2">
@@ -53,14 +66,14 @@ export default async function FinanceCompaniesPage() {
         </p>
       </div>
 
-      {/* 전체 KPI */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10">
+      {/* 전체 KPI (6개월) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <div className="border-[2.5px] border-nu-ink bg-nu-paper p-4">
-          <div className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-graphite mb-2">총 수입</div>
+          <div className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-graphite mb-2">6개월 수입</div>
           <div className="text-[18px] font-bold text-green-700 break-all">₩{fmt(totals.income)}</div>
         </div>
         <div className="border-[2.5px] border-nu-ink bg-nu-paper p-4">
-          <div className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-graphite mb-2">총 지출</div>
+          <div className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-graphite mb-2">6개월 지출</div>
           <div className="text-[18px] font-bold text-red-600 break-all">₩{fmt(totals.expense)}</div>
         </div>
         <div className="border-[2.5px] border-nu-ink bg-nu-paper p-4">
@@ -73,6 +86,12 @@ export default async function FinanceCompaniesPage() {
           <div className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-graphite mb-2">거래 건수</div>
           <div className="text-[18px] font-bold text-nu-ink">{fmt(totals.count)}건</div>
         </div>
+      </div>
+
+      {/* 이달 vs 지난달 트렌드 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-10">
+        <TrendCard label="이달 수입" current={trend.thisMonth.income} prev={trend.lastMonth.income} pct={trend.incomeChangePct} positive />
+        <TrendCard label="이달 지출" current={trend.thisMonth.expense} prev={trend.lastMonth.expense} pct={trend.expenseChangePct} positive={false} />
       </div>
 
       {/* 전체 통합 카드 */}

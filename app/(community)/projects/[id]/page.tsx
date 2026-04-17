@@ -246,22 +246,26 @@ async function ProjectTabsWrapper({ id, userId, isAdmin, project }: any) {
   };
   const totalTasks = taskStats.todo + taskStats.in_progress + taskStats.done;
   const progressPct = totalTasks > 0 ? Math.round((taskStats.done / totalTasks) * 100) : 0;
+  
+  const myTasks = allTasks.filter((t: any) => t.assigned_to === userId && t.status !== "done");
 
   return (
     <TabsInner
       projectId={id}
-      milestonesData={JSON.stringify(milestones || [])}
-      updatesData={JSON.stringify(updates || [])}
+      milestonesData={JSON.stringify(milestones)}
+      updatesData={JSON.stringify(updates)}
+      eventsData={JSON.stringify(events)}
       userMembersData={JSON.stringify(userMembers)}
       crewMembersData={JSON.stringify(crewMembers)}
-      eventsData={JSON.stringify(events || [])}
-      canEdit={canEdit}
+      projectData={JSON.stringify(project)}
+      myTasksData={JSON.stringify(myTasks)}
       userId={userId}
+      canEdit={canEdit}
       isMember={isMember}
       taskStats={taskStats}
-      progressPct={progressPct}
       totalTasks={totalTasks}
-      projectData={JSON.stringify(project)}
+      progressPct={progressPct}
     />
   );
 }
+

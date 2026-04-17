@@ -41,17 +41,6 @@ export default async function FinanceTransactionsPage({ searchParams }: PageProp
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-      <div className="mb-3 flex gap-4 items-center">
-        <Link href="/finance" className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-graphite hover:text-nu-ink no-underline">
-          ← 재무 홈
-        </Link>
-        <div className="flex gap-1">
-          <Link href="/finance/companies" className="font-mono-nu text-[11px] uppercase tracking-widest px-3 py-1 text-nu-graphite hover:text-nu-ink no-underline">법인</Link>
-          <Link href="/finance/transactions" className="font-mono-nu text-[11px] uppercase tracking-widest px-3 py-1 bg-nu-ink text-nu-paper no-underline">거래</Link>
-          <Link href="/finance/hr" className="font-mono-nu text-[11px] uppercase tracking-widest px-3 py-1 text-nu-graphite hover:text-nu-ink no-underline">HR</Link>
-        </div>
-      </div>
-
       <div className="mb-6">
         <div className="font-mono-nu text-[11px] uppercase tracking-[0.3em] text-nu-graphite mb-2">
           TRANSACTIONS · 거래 내역

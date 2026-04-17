@@ -20,6 +20,7 @@ import {
   DollarSign,
   Wallet,
   ChevronRight,
+  CheckSquare,
   Save,
   Zap,
   FolderOpen,
@@ -86,6 +87,7 @@ export function TabsInner({
   progressPct,
   totalTasks,
   projectData,
+  myTasksData,
 }: {
   projectId: string;
   milestonesData: string;
@@ -100,6 +102,7 @@ export function TabsInner({
   progressPct: number;
   totalTasks: number;
   projectData?: string;
+  myTasksData?: string;
 }) {
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -109,6 +112,7 @@ export function TabsInner({
   const crewMembers = JSON.parse(crewMembersData);
   const events      = JSON.parse(eventsData);
   const project     = projectData ? JSON.parse(projectData) : null;
+  const myTasks     = myTasksData ? JSON.parse(myTasksData) : [];
 
   // ── Live task stats (refreshable on client) ──
   const [liveTaskStats, setLiveTaskStats] = useState(taskStats);
@@ -421,6 +425,42 @@ export function TabsInner({
 
           {/* Sidebar */}
           <div className="space-y-6">
+
+            {/* ── My Tasks Widget (Logged-in User's Tasks) ── */}
+            <div className="bg-nu-pink/5 border-[2px] border-nu-pink/20 p-5">
+              <h3 className="font-head text-base font-extrabold flex items-center gap-2 mb-3 text-nu-pink">
+                <CheckSquare size={16} /> 내 할 일 ({myTasks.length})
+              </h3>
+              {myTasks.length === 0 ? (
+                <p className="text-xs text-nu-muted">할당받은 할 일이 없습니다.</p>
+              ) : (
+                <div className="space-y-2">
+                  {myTasks.map((t: any) => (
+                    <div key={t.id} className="flex items-start gap-2 bg-white border border-nu-ink/5 p-2 px-3 shadow-sm">
+                      <div className="w-1.5 h-1.5 rounded-full bg-nu-pink mt-1.5 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-nu-ink">{t.title}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`font-mono-nu text-[10px] uppercase px-1 py-0.5 border ${
+                            t.status === "in_progress" ? "bg-nu-amber/10 text-nu-amber border-nu-amber/20" : "bg-nu-gray/10 text-nu-gray border-nu-gray/20"
+                          }`}>
+                            {t.status === "in_progress" ? "진행 중" : "대기"}
+                          </span>
+                          {t.due_date && (
+                            <span className="font-mono-nu text-[10px] text-nu-muted flex items-center gap-0.5">
+                              <Clock size={9} /> {new Date(t.due_date).toLocaleDateString("ko", { month: "short", day: "numeric" })}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <p className="font-mono-nu text-[10px] text-nu-muted mt-2 text-right uppercase">
+                    자세한 관리는 칸반 보드 탭에서 가능합니다.
+                  </p>
+                </div>
+              )}
+            </div>
 
             {/* ── Tool Hub (compact) ─── */}
             {project && (project.tool_slack || project.tool_notion || project.tool_drive || project.tool_kakao) && (

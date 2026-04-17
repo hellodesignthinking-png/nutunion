@@ -47,7 +47,7 @@ export function DriveUploader({ onUploaded, targetType, targetId, stage, sharedF
     // If no shared folder and user not connected, redirect to auth
     if (!sharedFolder && !connected) {
       toast.error("Google 계정을 먼저 연결해주세요");
-      window.location.href = "/api/auth/google";
+      window.location.href = "/api/auth/google?returnTo=" + encodeURIComponent(window.location.pathname + window.location.search);
       return;
     }
 
@@ -129,7 +129,7 @@ export function DriveUploader({ onUploaded, targetType, targetId, stage, sharedF
 
   function handleReauth() {
     setShowReauthDialog(false);
-    window.location.href = "/api/auth/google?prompt=consent";
+    window.location.href = "/api/auth/google?prompt=consent&returnTo=" + encodeURIComponent(window.location.pathname + window.location.search);
   }
 
   const hasSharedFolder = !!sharedFolder;
@@ -146,7 +146,7 @@ export function DriveUploader({ onUploaded, targetType, targetId, stage, sharedF
       <button
         onClick={() => {
           if (!hasSharedFolder && !connected) {
-            window.location.href = "/api/auth/google";
+            window.location.href = "/api/auth/google?returnTo=" + encodeURIComponent(window.location.pathname + window.location.search);
             return;
           }
           fileInputRef.current?.click();

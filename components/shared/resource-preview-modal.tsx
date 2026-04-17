@@ -30,9 +30,15 @@ export function ResourcePreviewModal({ isOpen, onClose, url, name }: ResourcePre
       const base = url.replace(/\/edit.*$/, "/preview");
       targetUrl = `${base}?widget=true&headers=false&rm=minimal`;
     }
-    // Google Drive Files (PDF, Image, Video)
+    // Google Drive Files (PDF, Image, Video, HTML)
     else if (url.includes("drive.google.com/file/d/")) {
-      targetUrl = url.replace(/\/view.*$/, "/preview");
+      const isHtmlText = name.toLowerCase().endsWith(".html") || name.toLowerCase().endsWith(".htm");
+      const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (isHtmlText && match) {
+        targetUrl = `/api/google/drive/render?fileId=${match[1]}`;
+      } else {
+        targetUrl = url.replace(/\/view.*$/, "/preview");
+      }
     }
 
     setEmbedUrl(targetUrl);

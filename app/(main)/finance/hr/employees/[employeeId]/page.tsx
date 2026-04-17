@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getEmployeeDetail, getEmployeePayrollHistory } from "@/lib/finance/hr-queries";
 import { getCompanies } from "@/lib/finance/company-queries";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,28 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
   const { employee, monthlyAttendance, thisMonthPayroll } = detail;
   const company = companies.find((c) => c.id === employee.company);
   const isAlba = employee.employment_type === "알바";
+
+  // 이 직원이 참여하는 볼트(프로젝트) — user_id 매칭 시도
+  const supabase = await createClient();
+  let participatingBolts: { id: string; title: string; status: string }[] = [];
+  if (employee.email) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("email", employee.email)
+      .maybeSingle();
+    if (profile) {
+      const { data: memberships } = await supabase
+        .from("project_members")
+        .select("project:projects(id,title,status)")
+        .eq("user_id", profile.id);
+      participatingBolts = (memberships || [])
+        .map((m: { project: { id: string; title: string; status: string } | { id: string; title: string; status: string }[] | null }) =>
+          Array.isArray(m.project) ? m.project[0] : m.project
+        )
+        .filter((p): p is { id: string; title: string; status: string } => Boolean(p));
+    }
+  }
 
   const leaveRemaining = Math.max(0, (employee.annual_leave_total || 15) - (employee.annual_leave_used || 0));
 
@@ -149,6 +172,29 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
           </div>
         </div>
       </div>
+
+      {/* 소속 볼트 */}
+      {participatingBolts.length > 0 && (
+        <div className="border-[2.5px] border-nu-ink bg-nu-paper p-5 mb-6">
+          <div className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-ink mb-4">
+            🔩 소속 볼트 ({participatingBolts.length})
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {participatingBolts.map((b) => (
+              <Link
+                key={b.id}
+                href={`/finance/${b.id}`}
+                className="border-[2px] border-nu-ink/30 p-3 no-underline hover:border-nu-ink hover:bg-nu-ink/5"
+              >
+                <div className="font-mono-nu text-[9px] uppercase tracking-wider text-nu-graphite mb-1">
+                  {b.status}
+                </div>
+                <div className="text-[13px] font-bold text-nu-ink leading-tight">{b.title}</div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 이번 달 근태 */}
       <div className="border-[2.5px] border-nu-ink bg-nu-paper p-5 mb-6">

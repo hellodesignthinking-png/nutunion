@@ -90,13 +90,50 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
       pre.appendChild(btn);
       addedButtons.push({ btn, handler, pre: pre as HTMLElement });
     });
+    // Add interactive checklist handlers
+    const checklistHandler = async (e: MouseEvent) => {
+      const target = (e.target as HTMLElement).closest('[data-checkbox]');
+      if (!target) return;
+      
+      const indexStr = target.getAttribute('data-checkbox');
+      const isCurrentlyChecked = target.getAttribute('data-checked') === 'true';
+      if (!indexStr) return;
+      const index = parseInt(indexStr, 10);
+
+      // Disable pointer events temporarily for optimistic feedback
+      (target as HTMLElement).style.opacity = "0.5";
+      (target as HTMLElement).style.pointerEvents = "none";
+
+      const supabase = createClient();
+      let currentCheck = 0;
+      const newContent = (page.content || "").replace(/^- \[(x|X| )\] (.+)/gm, (match, state, text) => {
+        if (currentCheck === index) {
+          currentCheck++;
+          return isCurrentlyChecked ? `- [ ] ${text}` : `- [x] ${text}`;
+        }
+        currentCheck++;
+        return match;
+      });
+
+      const { error } = await supabase.from('wiki_pages').update({ content: newContent }).eq('id', page.id);
+      if (error) {
+        toast.error('체크리스트 업데이트 실패: ' + error.message);
+        (target as HTMLElement).style.opacity = "1";
+        (target as HTMLElement).style.pointerEvents = "auto";
+      } else {
+        router.refresh();
+      }
+    };
+    el.addEventListener("click", checklistHandler);
+
     return () => {
       addedButtons.forEach(({ btn, handler, pre }) => {
         btn.removeEventListener("click", handler);
         if (pre.contains(btn)) pre.removeChild(btn);
       });
+      el.removeEventListener("click", checklistHandler);
     };
-  }, [page.content, isEditing]);
+  }, [page.content, isEditing, page.id, router]);
 
   // Reading time (Korean ~500 chars/min, English ~200 words/min)
   const readingStats = useMemo(() => {
@@ -321,9 +358,16 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
       .replace(/`(.+?)`/g, '<code class="bg-nu-cream/50 px-1.5 py-0.5 text-nu-pink font-mono-nu text-xs border border-nu-ink/10 rounded">$1</code>');
 
     // Checkbox lists (before regular lists)
-    html = html
-      .replace(/^- \[x\] (.+)/gm, '<li class="ml-4 flex items-start gap-2 text-sm text-nu-graphite leading-relaxed py-0.5"><span class="text-green-500 shrink-0 mt-0.5">☑</span><span class="line-through opacity-60">$1</span></li>')
-      .replace(/^- \[ \] (.+)/gm, '<li class="ml-4 flex items-start gap-2 text-sm text-nu-graphite leading-relaxed py-0.5"><span class="text-nu-muted/40 shrink-0 mt-0.5">☐</span><span>$1</span></li>');
+    let checkIndex = 0;
+    html = html.replace(/^- \[(x|X| )\] (.+)/gm, (_match, state, text) => {
+      const isChecked = state.toLowerCase() === 'x';
+      const idx = checkIndex++;
+      if (isChecked) {
+        return `<li class="ml-4 flex items-start gap-2 text-sm text-nu-graphite leading-relaxed py-0.5" data-checkbox="${idx}" data-checked="true" style="cursor:pointer" title="클릭하여 해제"><span class="text-green-500 shrink-0 mt-0.5" style="pointer-events:none">☑</span><span class="line-through opacity-60" style="pointer-events:none">${text}</span></li>`;
+      } else {
+        return `<li class="ml-4 flex items-start gap-2 text-sm text-nu-graphite leading-relaxed py-0.5" data-checkbox="${idx}" data-checked="false" style="cursor:pointer" title="클릭하여 완료"><span class="text-nu-muted/40 shrink-0 mt-0.5" style="pointer-events:none">☐</span><span style="pointer-events:none">${text}</span></li>`;
+      }
+    });
 
     // Regular lists
     html = html

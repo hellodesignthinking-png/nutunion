@@ -127,6 +127,11 @@ export default function SchedulePage() {
     URL.revokeObjectURL(url);
   }
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editStartStr, setEditStartStr] = useState("");
+  const [editLocation, setEditLocation] = useState("");
+
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto px-8 py-12">
@@ -141,11 +146,6 @@ export default function SchedulePage() {
       </div>
     );
   }
-
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState("");
-  const [editStartStr, setEditStartStr] = useState("");
-  const [editLocation, setEditLocation] = useState("");
 
   async function handleDelete(e: React.MouseEvent, evt: EventItem) {
     e.preventDefault();

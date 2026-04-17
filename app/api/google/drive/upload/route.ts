@@ -29,6 +29,9 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
+    const fileUrl = formData.get("fileUrl") as string | null;
+    const fileName = formData.get("fileName") as string | null;
+    const mimeType = formData.get("mimeType") as string | null;
     const targetType = formData.get("targetType") as string | null; // "group" | "project"
     const targetId   = formData.get("targetId")   as string | null;
     const stage      = formData.get("stage")       as string | null;
@@ -36,12 +39,32 @@ export async function POST(req: NextRequest) {
     // Manual folderId override (advanced use)
     const folderId = formData.get("folderId") as string | null;
 
-    if (!file) return NextResponse.json({ error: "파일이 없습니다" }, { status: 400 });
-    const normalizedFileType = (file.type || "").split(";")[0];
-    if (file.size > 50 * 1024 * 1024)
-      return NextResponse.json({ error: "파일 크기는 50MB 이하여야 합니다" }, { status: 400 });
+    let buffer: Buffer;
+    let fileSizeBytes: number;
+    let finalFileName = fileName || "upload_file";
+    let finalFileType = mimeType || "application/octet-stream";
+
+    if (file) {
+      if (file.size > 50 * 1024 * 1024)
+        return NextResponse.json({ error: "파일 크기는 50MB 이하여야 합니다" }, { status: 400 });
+      finalFileType = file.type || finalFileType;
+      finalFileName = file.name || finalFileName;
+      const arrayBuffer = await file.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+      fileSizeBytes = file.size;
+    } else if (fileUrl) {
+      const resp = await fetch(fileUrl);
+      if (!resp.ok) return NextResponse.json({ error: "URL 파일 다운로드 실패" }, { status: 400 });
+      const arrayBuffer = await resp.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+      fileSizeBytes = buffer.length;
+    } else {
+      return NextResponse.json({ error: "파일 또는 fileUrl이 필요합니다" }, { status: 400 });
+    }
+
+    const normalizedFileType = finalFileType.split(";")[0];
     if (normalizedFileType && !ALLOWED_TYPES.includes(normalizedFileType))
-      return NextResponse.json({ error: "허용되지 않는 파일 형식입니다" }, { status: 400 });
+      return NextResponse.json({ error: "허용되지 않는 파일 형식입니다: " + normalizedFileType }, { status: 400 });
 
     const supabase = await createClient();
 
@@ -60,18 +83,18 @@ export async function POST(req: NextRequest) {
         .eq("status", "active")
         .maybeSingle();
 
-      // Fetch group — try with google_drive_folder_id, fallback to just host_id
-      // (column may not exist in production until migration is applied)
+      // Fetch group — try with google_drive_folder_id and google_drive_url
       let group: {
         host_id: string;
         google_drive_folder_id?: string | null;
         google_drive_meetings_folder_id?: string | null;
         google_drive_resources_folder_id?: string | null;
+        google_drive_url?: string | null;
       } | null = null;
       {
         const { data, error } = await supabase
           .from("groups")
-          .select("host_id, google_drive_folder_id, google_drive_meetings_folder_id, google_drive_resources_folder_id")
+          .select("host_id, google_drive_folder_id, google_drive_meetings_folder_id, google_drive_resources_folder_id, google_drive_url")
           .eq("id", targetId)
           .single();
         if (!error && data) {
@@ -79,7 +102,7 @@ export async function POST(req: NextRequest) {
         } else {
           const { data: fallback } = await supabase
             .from("groups")
-            .select("host_id, google_drive_folder_id")
+            .select("host_id, google_drive_folder_id, google_drive_url")
             .eq("id", targetId)
             .single();
           if (fallback) {
@@ -100,12 +123,20 @@ export async function POST(req: NextRequest) {
       }
 
       if (group) {
+        let extractedFromUrl = null;
+        if (group.google_drive_url) {
+          const parts = group.google_drive_url.split("/folders/");
+          if (parts.length > 1) {
+            extractedFromUrl = parts[1].split("?")[0].split("/")[0];
+          }
+        }
+
         const resolvedFolder =
           stage === "meeting"
-            ? group.google_drive_meetings_folder_id || group.google_drive_folder_id
+            ? group.google_drive_meetings_folder_id || group.google_drive_folder_id || extractedFromUrl
             : stage === "resource"
-              ? group.google_drive_resources_folder_id || group.google_drive_folder_id
-              : group.google_drive_folder_id;
+              ? group.google_drive_resources_folder_id || group.google_drive_folder_id || extractedFromUrl
+              : group.google_drive_folder_id || extractedFromUrl;
 
         if (resolvedFolder) {
           sharedFolderId = resolvedFolder;
@@ -121,11 +152,11 @@ export async function POST(req: NextRequest) {
         .maybeSingle();
 
       // Fetch project — try with drive columns, fallback to just created_by
-      let project: { created_by: string; google_drive_folder_id?: string | null; google_drive_planning_folder_id?: string | null; google_drive_interim_folder_id?: string | null; google_drive_evidence_folder_id?: string | null; google_drive_final_folder_id?: string | null } | null = null;
+      let project: { created_by: string; google_drive_folder_id?: string | null; google_drive_planning_folder_id?: string | null; google_drive_interim_folder_id?: string | null; google_drive_evidence_folder_id?: string | null; google_drive_final_folder_id?: string | null; google_drive_url?: string | null; } | null = null;
       {
         const { data, error } = await supabase
           .from("projects")
-          .select("created_by, google_drive_folder_id, google_drive_planning_folder_id, google_drive_interim_folder_id, google_drive_evidence_folder_id, google_drive_final_folder_id")
+          .select("created_by, google_drive_folder_id, google_drive_planning_folder_id, google_drive_interim_folder_id, google_drive_evidence_folder_id, google_drive_final_folder_id, google_drive_url")
           .eq("id", targetId)
           .single();
         if (!error && data) {
@@ -133,7 +164,7 @@ export async function POST(req: NextRequest) {
         } else {
           const { data: fallback } = await supabase
             .from("projects")
-            .select("created_by, google_drive_folder_id")
+            .select("created_by, google_drive_folder_id, google_drive_url")
             .eq("id", targetId)
             .single();
           if (fallback) {
@@ -152,8 +183,15 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "프로젝트 멤버만 파일을 업로드할 수 있습니다" }, { status: 403 });
       }
 
-      if (project?.created_by) {
-        // Pick stage-specific subfolder or root folder
+      if (project) {
+        let extractedFromUrl = null;
+        if (project.google_drive_url) {
+          const parts = project.google_drive_url.split("/folders/");
+          if (parts.length > 1) {
+            extractedFromUrl = parts[1].split("?")[0].split("/")[0];
+          }
+        }
+
         const stageFolder =
           stage === "planning"  ? project.google_drive_planning_folder_id :
           stage === "interim"   ? project.google_drive_interim_folder_id :
@@ -161,7 +199,7 @@ export async function POST(req: NextRequest) {
           stage === "final"     ? project.google_drive_final_folder_id :
           null;
 
-        const resolvedFolder = stageFolder || project.google_drive_folder_id || null;
+        const resolvedFolder = stageFolder || project.google_drive_folder_id || extractedFromUrl || null;
         if (resolvedFolder) {
           sharedFolderId = resolvedFolder;
           uploaderUserId = project.created_by;
@@ -181,18 +219,16 @@ export async function POST(req: NextRequest) {
     const drive = google.drive({ version: "v3", auth });
 
     // ── 3. Upload to Drive ─────────────────────────────────────
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
     const stream = new Readable();
     stream.push(buffer);
     stream.push(null);
 
-    const fileMetadata: { name: string; parents?: string[] } = { name: file.name };
+    const fileMetadata: { name: string; parents?: string[] } = { name: finalFileName };
     if (sharedFolderId) fileMetadata.parents = [sharedFolderId];
 
     const driveRes = await drive.files.create({
       requestBody: fileMetadata,
-      media: { mimeType: normalizedFileType || file.type || "application/octet-stream", body: stream },
+      media: { mimeType: normalizedFileType || finalFileType, body: stream },
       fields: "id, name, mimeType, webViewLink, size",
     });
 
@@ -219,13 +255,13 @@ export async function POST(req: NextRequest) {
           target_type: "group",
           target_id: targetId,
           uploaded_by: userId, // always the actual uploader
-          file_name: driveRes.data.name || file.name,
+          file_name: driveRes.data.name || finalFileName,
           file_url: webViewLink,
-          file_size: driveRes.data.size ? parseInt(driveRes.data.size) : file.size,
+          file_size: driveRes.data.size ? parseInt(driveRes.data.size) : fileSizeBytes,
           file_type: "drive-link",
         });
       } else if (targetType === "project") {
-        const mime = driveRes.data.mimeType || file.type || "";
+        const mime = driveRes.data.mimeType || finalFileType;
         let resourceType = "drive";
         if (mime.includes("document") || mime.includes("word")) resourceType = "google_doc";
         else if (mime.includes("spreadsheet") || mime.includes("excel")) resourceType = "google_sheet";
@@ -233,7 +269,7 @@ export async function POST(req: NextRequest) {
 
         await supabase.from("project_resources").insert({
           project_id: targetId,
-          name: driveRes.data.name || file.name,
+          name: driveRes.data.name || finalFileName,
           url: webViewLink,
           type: resourceType,
           stage: stage || "evidence",

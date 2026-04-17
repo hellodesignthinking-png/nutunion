@@ -61,21 +61,35 @@ export function ProjectBurndownChart({
           return;
         }
 
-        // Fetch milestones with tasks
-        const { data: milestones, error: milestonesError } = await supabase
+        // Fetch milestones
+        let milestones: any[] = [];
+        const { data: fullMilestones, error: fErr } = await supabase
           .from("project_milestones")
-          .select(
-            `
-            id,
-            title,
-            due_date,
-            tasks:project_tasks(id, status, created_at, updated_at)
-          `
-          )
+          .select(`id, title, due_date, tasks:project_tasks(id, status, created_at)`)
           .eq("project_id", projectId)
           .order("due_date", { ascending: true });
-
-        if (milestonesError) throw milestonesError;
+        
+        if (fErr) {
+          // Fallback if join fails
+          const { data: basicMs, error: msErr } = await supabase
+            .from("project_milestones")
+            .select("id, title, due_date")
+            .eq("project_id", projectId)
+            .order("due_date", { ascending: true });
+          if (msErr) throw msErr;
+          
+          const { data: basicTasks } = await supabase
+            .from("project_tasks")
+            .select("id, milestone_id, status, created_at")
+            .eq("project_id", projectId);
+            
+          milestones = (basicMs || []).map((m: any) => ({
+            ...m,
+            tasks: (basicTasks || []).filter((t: any) => t.milestone_id === m.id)
+          }));
+        } else {
+          milestones = fullMilestones || [];
+        }
 
         if (!milestones || milestones.length === 0) {
           setError("마일스톤이 없습니다");
@@ -85,9 +99,7 @@ export function ProjectBurndownChart({
         // Flatten all tasks
         const allTasks: BurndownTask[] = [];
         milestones.forEach((milestone) => {
-          const tasks = (milestone as ProjectMilestone & {
-            tasks?: BurndownTask[];
-          }).tasks;
+          const tasks = milestone.tasks;
           if (tasks?.length) {
             allTasks.push(...tasks);
           }

@@ -5,17 +5,28 @@ import { createClient } from "@/lib/supabase/server";
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
   const error = req.nextUrl.searchParams.get("error");
+  const state = req.nextUrl.searchParams.get("state");
+
+  let returnTo = "/dashboard";
+  if (state) {
+    try {
+      const decoded = Buffer.from(state, "base64").toString("utf-8");
+      if (decoded.startsWith("/")) returnTo = decoded;
+    } catch (e) {}
+  }
+
+  const separator = returnTo.includes("?") ? "&" : "?";
 
   // User denied access
   if (error) {
     return NextResponse.redirect(
-      new URL("/dashboard?google=denied", req.nextUrl.origin)
+      new URL(`${returnTo}${separator}google=denied`, req.nextUrl.origin)
     );
   }
 
   if (!code) {
     return NextResponse.redirect(
-      new URL("/dashboard?google=error&reason=no_code", req.nextUrl.origin)
+      new URL(`${returnTo}${separator}google=error&reason=no_code`, req.nextUrl.origin)
     );
   }
 
@@ -31,7 +42,7 @@ export async function GET(req: NextRequest) {
 
     if (!user) {
       return NextResponse.redirect(
-        new URL("/login?redirect=/api/auth/google", req.nextUrl.origin)
+        new URL(`/login?redirect=/api/auth/google?returnTo=${encodeURIComponent(returnTo)}`, req.nextUrl.origin)
       );
     }
 
@@ -50,17 +61,17 @@ export async function GET(req: NextRequest) {
     if (updateError) {
       console.error("Failed to save Google tokens:", updateError);
       return NextResponse.redirect(
-        new URL("/dashboard?google=error&reason=save_failed", req.nextUrl.origin)
+        new URL(`${returnTo}${separator}google=error&reason=save_failed`, req.nextUrl.origin)
       );
     }
 
     return NextResponse.redirect(
-      new URL("/dashboard?google=connected", req.nextUrl.origin)
+      new URL(`${returnTo}${separator}google=connected`, req.nextUrl.origin)
     );
   } catch (err) {
     console.error("Google OAuth callback error:", err);
     return NextResponse.redirect(
-      new URL("/dashboard?google=error&reason=token_exchange", req.nextUrl.origin)
+      new URL(`${returnTo}${separator}google=error&reason=token_exchange`, req.nextUrl.origin)
     );
   }
 }

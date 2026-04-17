@@ -14,12 +14,6 @@ export default async function FinanceHRPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-      <div className="mb-3 flex gap-4 items-center">
-        <Link href="/finance" className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-graphite hover:text-nu-ink no-underline">
-          ← 재무 홈
-        </Link>
-      </div>
-
       <div className="mb-8">
         <div className="font-mono-nu text-[11px] uppercase tracking-[0.3em] text-nu-graphite mb-2">
           HR · 인사관리
