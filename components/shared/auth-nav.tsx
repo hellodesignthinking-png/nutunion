@@ -9,7 +9,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, LogOut, User, Shield, Menu, Settings, Briefcase } from "lucide-react";
+import { Bell, LogOut, User, Shield, Menu, Settings, Briefcase, DollarSign } from "lucide-react";
 import { getGrade } from "@/lib/constants";
 import { GlobalSearch } from "@/components/shared/global-search";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -96,6 +96,20 @@ export function AuthNav({ profile }: { profile: Profile }) {
             )}
           </Link>
         ))}
+        {/* 재무 — 관리자/스태프 전용 */}
+        {isStaff && (
+          <Link
+            href="/finance"
+            prefetch={true}
+            className={`font-mono-nu text-[13px] no-underline tracking-[0.08em] uppercase transition-colors inline-flex items-center gap-1.5 px-3 py-1.5 ${
+              pathname.startsWith("/finance")
+                ? "bg-green-700 text-white"
+                : "text-green-700 hover:bg-green-50"
+            }`}
+          >
+            <DollarSign size={12} /> 재무
+          </Link>
+        )}
         {/* Admin link - always visible for admin users */}
         {isStaff && (
           <Link
