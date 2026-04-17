@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ModalShell } from "./modal-shell";
+import { ReceiptUploader } from "./receipt-uploader";
 
 interface CompanyOpt {
   id: string;
@@ -21,6 +22,7 @@ interface TransactionData {
   receipt_type?: string;
   vendor_name?: string;
   memo?: string;
+  receipt_url?: string | null;
 }
 
 const TYPES = ["수입", "지출", "이체", "기타"];
@@ -298,6 +300,17 @@ export function TransactionCreateModal({ companies, defaultCompany, editing, con
                   className="w-full border-[2px] border-nu-ink bg-nu-paper px-3 py-2 text-[13px] outline-none resize-y"
                 />
               </Field>
+
+              {/* 영수증 (수정 모드에서만) */}
+              {isEdit && editing && (
+                <Field label="영수증">
+                  <ReceiptUploader
+                    transactionId={editing.id}
+                    currentUrl={editing.receipt_url}
+                  />
+                  <p className="text-[10px] text-nu-graphite mt-1">이미지는 자동 압축됩니다. 최대 750KB까지.</p>
+                </Field>
+              )}
 
               {error && (
                 <div className={`border-[2px] p-2 text-[12px] ${duplicateWarning ? "border-orange-500 bg-orange-50 text-orange-700" : "border-red-500 bg-red-50 text-red-600"}`}>

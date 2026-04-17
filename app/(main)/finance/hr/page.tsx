@@ -86,6 +86,9 @@ export default async function FinanceHRPage() {
         <Link href="/finance/hr/attendance" className="border-[2.5px] border-nu-ink bg-nu-paper px-5 py-3 font-mono-nu text-[12px] uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper transition-colors">
           📅 근태 현황
         </Link>
+        <Link href="/finance/hr/payroll" className="border-[2.5px] border-nu-ink bg-nu-paper px-5 py-3 font-mono-nu text-[12px] uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper transition-colors">
+          💰 급여 관리
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

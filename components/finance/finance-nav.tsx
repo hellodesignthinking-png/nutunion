@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { label: "법인", href: "/finance/companies", icon: "🏛" },
   { label: "거래", href: "/finance/transactions", icon: "💳" },
   { label: "HR", href: "/finance/hr", icon: "👥" },
+  { label: "결재", href: "/finance/approvals", icon: "📝" },
   { label: "AI 마케팅", href: "/finance/marketing", icon: "✨", accent: true },
   { label: "규정", href: "/finance/docs", icon: "📋" },
 ];
@@ -18,7 +19,7 @@ export function FinanceNav() {
 
   const isActive = (href: string, exact?: boolean) => {
     if (exact) {
-      return pathname === href || /^\/finance\/[^/]+$/.test(pathname) && !pathname.match(/\/(companies|transactions|hr|marketing|docs)/);
+      return pathname === href || /^\/finance\/[^/]+$/.test(pathname) && !pathname.match(/\/(companies|transactions|hr|marketing|docs|approvals)/);
     }
     return pathname.startsWith(href);
   };

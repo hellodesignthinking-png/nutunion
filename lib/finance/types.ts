@@ -24,6 +24,7 @@ export interface FinTransaction {
   category: string;
   memo?: string;
   receipt_type?: string;
+  receipt_url?: string | null;
   vendor_name?: string;
   vendor_biz_no?: string;
   payment_method?: string;

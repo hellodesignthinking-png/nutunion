@@ -175,6 +175,9 @@ export function TransactionListInteractive({
                         {t.receipt_type}
                       </span>
                     )}
+                    {t.receipt_url && (
+                      <span className="text-[10px]" title="영수증 첨부됨">📎</span>
+                    )}
                   </div>
                 </div>
                 <div className={`text-[14px] font-bold font-mono-nu ${isIncome ? "text-green-700" : "text-red-600"} whitespace-nowrap`}>
@@ -200,6 +203,7 @@ export function TransactionListInteractive({
             receipt_type: editing.receipt_type,
             vendor_name: editing.vendor_name,
             memo: editing.memo,
+            receipt_url: (editing as FinTransaction & { receipt_url?: string }).receipt_url,
           }}
           controlledOpen={true}
           onClose={() => setEditing(null)}
