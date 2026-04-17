@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { ModalShell } from "./modal-shell";
 
 interface CompanyOpt {
   id: string;
@@ -81,6 +82,20 @@ export function TransactionCreateModal({ companies, defaultCompany, editing, con
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing]);
 
+  // Ctrl+Enter / Cmd+Enter 저장
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        e.preventDefault();
+        handleSubmit();
+      }
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, form, isEdit]);
+
   const handleSubmit = async () => {
     if (!form.description.trim()) { setError("내용을 입력하세요"); return; }
     if (!form.amount || isNaN(Number(form.amount))) { setError("금액을 입력하세요"); return; }
@@ -149,26 +164,8 @@ export function TransactionCreateModal({ companies, defaultCompany, editing, con
       )}
 
       {open && (
-        <div
-          className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4"
-          onClick={() => !submitting && setOpen(false)}
-        >
-          <div
-            className="bg-nu-paper border-[2.5px] border-nu-ink w-full max-w-lg max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center px-5 py-4 border-b-[2px] border-nu-ink">
-              <div className="font-mono-nu text-[13px] uppercase tracking-widest text-nu-ink">
-                {isEdit ? "거래 수정" : "거래 추가"}
-              </div>
-              <button
-                onClick={() => !submitting && setOpen(false)}
-                aria-label="닫기"
-                className="text-nu-graphite hover:text-nu-ink text-[20px] leading-none p-1"
-              >×</button>
-            </div>
-
-            <div className="p-5 flex flex-col gap-4">
+        <ModalShell title={isEdit ? "거래 수정" : "거래 추가"} onClose={() => setOpen(false)} locked={submitting} maxWidth="lg">
+          <div className="p-5 flex flex-col gap-4">
               {/* 수입/지출 토글 */}
               <div className="flex gap-2">
                 {[
@@ -312,14 +309,14 @@ export function TransactionCreateModal({ companies, defaultCompany, editing, con
                 <button
                   onClick={handleSubmit}
                   disabled={submitting}
+                  title="Ctrl+Enter (또는 ⌘+Enter)로 저장"
                   className="flex-1 border-[2.5px] border-nu-ink bg-nu-pink text-nu-paper px-4 py-2.5 font-mono-nu text-[11px] uppercase tracking-widest hover:bg-nu-ink disabled:opacity-50"
                 >
                   {submitting ? "저장 중..." : isEdit ? "수정" : "저장"}
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
     </>
   );

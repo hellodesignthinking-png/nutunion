@@ -60,7 +60,12 @@ export default async function FinanceHRPage() {
           <div className="text-[18px] font-bold text-green-700 break-all">
             ₩{fmt(data.thisMonthPayrollTotal)}
           </div>
-          <div className="text-[10px] text-nu-graphite mt-1">{data.thisMonthPayrollCount}명 지급</div>
+          <div className="text-[10px] text-nu-graphite mt-1">
+            {data.thisMonthPayrollCount} / {data.activeEmployees}명 지급
+            {data.activeEmployees > data.thisMonthPayrollCount && data.activeEmployees > 0 && (
+              <span className="text-orange-600 font-bold"> · 미지급 {data.activeEmployees - data.thisMonthPayrollCount}</span>
+            )}
+          </div>
         </div>
         <div className="border-[2.5px] border-nu-ink bg-nu-paper p-4">
           <div className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-graphite mb-2">오늘 휴가</div>

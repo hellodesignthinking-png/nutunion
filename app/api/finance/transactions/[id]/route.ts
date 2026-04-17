@@ -30,10 +30,16 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
   if (updates.date && !/^\d{4}-\d{2}-\d{2}$/.test(String(updates.date))) {
     return NextResponse.json({ error: "날짜 형식 오류" }, { status: 400 });
   }
-  if ("amount" in updates && isNaN(Number(updates.amount))) {
-    return NextResponse.json({ error: "금액 오류" }, { status: 400 });
+  if ("amount" in updates) {
+    const amt = Number(updates.amount);
+    if (isNaN(amt)) {
+      return NextResponse.json({ error: "금액 오류" }, { status: 400 });
+    }
+    if (amt === 0) {
+      return NextResponse.json({ error: "금액은 0이 될 수 없습니다" }, { status: 400 });
+    }
+    updates.amount = amt;
   }
-  if ("amount" in updates) updates.amount = Number(updates.amount);
 
   const { error } = await check.supabase.from("transactions").update(updates).eq("id", id);
   if (error) {

@@ -37,3 +37,21 @@ export function fmtYearMonth(ym: string | undefined | null): string {
 export function fmtPct(n: number): string {
   return `${n.toFixed(1)}%`;
 }
+
+/** 상대 시간 포맷 (예: "방금", "3분 전", "2일 전", "2026-04-01") */
+export function fmtRelativeTime(date: string | Date | undefined | null): string {
+  if (!date) return "-";
+  const target = typeof date === "string" ? new Date(date) : date;
+  if (isNaN(target.getTime())) return "-";
+  const diff = Date.now() - target.getTime();
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return "방금";
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}분 전`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}시간 전`;
+  const day = Math.floor(hr / 24);
+  if (day < 7) return `${day}일 전`;
+  if (day < 30) return `${Math.floor(day / 7)}주 전`;
+  return target.toISOString().slice(0, 10);
+}

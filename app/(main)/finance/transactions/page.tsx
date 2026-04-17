@@ -119,6 +119,7 @@ export default async function FinanceTransactionsPage({ searchParams }: PageProp
         transactions={transactions}
         companies={companies.map((c) => ({ id: c.id, name: c.name }))}
         editable
+        hasActiveFilter={selectedCompany !== "all"}
       />
 
       {/* 페이지네이션 */}

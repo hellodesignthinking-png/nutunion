@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { ModalShell } from "./modal-shell";
 
 interface CompanyOpt {
   id: string;
@@ -123,8 +124,9 @@ export function EmployeeCreateModal({ companies, defaultCompany, editing, contro
     }
   };
 
+  const parsedWorkDays = form.work_days.split(",").map((d) => d.trim()).filter(Boolean);
   const toggleDay = (day: string) => {
-    const cur = form.work_days.split(",").filter(Boolean);
+    const cur = parsedWorkDays;
     const next = cur.includes(day) ? cur.filter((d) => d !== day) : [...cur, day];
     const sorted = DAYS_OF_WEEK.filter((d) => next.includes(d));
     setForm((f) => ({ ...f, work_days: sorted.join(","), weekly_days: String(sorted.length) }));
@@ -142,26 +144,8 @@ export function EmployeeCreateModal({ companies, defaultCompany, editing, contro
       )}
 
       {open && (
-        <div
-          className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4"
-          onClick={() => !submitting && setOpen(false)}
-        >
-          <div
-            className="bg-nu-paper border-[2.5px] border-nu-ink w-full max-w-lg max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center px-5 py-4 border-b-[2px] border-nu-ink">
-              <div className="font-mono-nu text-[13px] uppercase tracking-widest text-nu-ink">
-                {isEdit ? "직원 수정" : "직원 등록"}
-              </div>
-              <button
-                onClick={() => !submitting && setOpen(false)}
-                aria-label="닫기"
-                className="text-nu-graphite hover:text-nu-ink text-[20px] leading-none p-1"
-              >×</button>
-            </div>
-
-            <div className="p-5 flex flex-col gap-4">
+        <ModalShell title={isEdit ? "직원 수정" : "직원 등록"} onClose={() => setOpen(false)} locked={submitting} maxWidth="lg">
+          <div className="p-5 flex flex-col gap-4">
               <Field label="이름 *">
                 <input
                   value={form.name}
@@ -254,10 +238,10 @@ export function EmployeeCreateModal({ companies, defaultCompany, editing, contro
                       className="w-full border-[2px] border-nu-ink bg-nu-paper px-3 py-2 text-[14px] outline-none"
                     />
                   </Field>
-                  <Field label={`근무요일 (주 ${form.work_days.split(",").filter(Boolean).length}일)`}>
+                  <Field label={`근무요일 (주 ${parsedWorkDays.length}일)`}>
                     <div className="flex gap-1">
                       {DAYS_OF_WEEK.map((day) => {
-                        const selected = form.work_days.split(",").includes(day);
+                        const selected = parsedWorkDays.includes(day);
                         return (
                           <button
                             key={day}
@@ -337,8 +321,7 @@ export function EmployeeCreateModal({ companies, defaultCompany, editing, contro
                 ℹ️ 주민번호, 주소, 계약서 서명 등 상세 정보는 저장 후 구 시스템에서 추가 입력하세요.
               </p>
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
     </>
   );

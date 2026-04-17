@@ -155,8 +155,14 @@ export default async function EmployeesPage({ searchParams }: PageProps) {
       {/* 직원 목록 */}
       {employees.length === 0 ? (
         <div className="border-[2.5px] border-nu-ink bg-nu-paper p-12 text-center">
-          <div className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-graphite">NO EMPLOYEES</div>
-          <p className="text-[13px] text-nu-graphite mt-2">해당 조건의 직원이 없습니다</p>
+          <div className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-graphite">
+            {q || status || company !== "all" ? "NO RESULTS" : "NO EMPLOYEES"}
+          </div>
+          <p className="text-[13px] text-nu-graphite mt-2">
+            {q || status || company !== "all"
+              ? "조건에 맞는 직원이 없습니다. 필터를 변경해보세요."
+              : "등록된 직원이 없습니다. '+ 직원 등록'으로 시작하세요."}
+          </p>
         </div>
       ) : (
         <div className="border-[2.5px] border-nu-ink bg-nu-paper overflow-hidden">

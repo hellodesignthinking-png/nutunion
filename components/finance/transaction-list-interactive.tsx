@@ -16,10 +16,12 @@ export function TransactionListInteractive({
   transactions,
   companies,
   editable = false,
+  hasActiveFilter = false,
 }: {
   transactions: FinTransaction[];
   companies: CompanyOpt[];
   editable?: boolean;
+  hasActiveFilter?: boolean;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState<FinTransaction | null>(null);
@@ -69,9 +71,13 @@ export function TransactionListInteractive({
     return (
       <div className="border-[2.5px] border-nu-ink bg-nu-paper p-12 text-center">
         <div className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-graphite">
-          NO TRANSACTIONS
+          {hasActiveFilter ? "NO RESULTS" : "NO TRANSACTIONS"}
         </div>
-        <p className="text-[13px] text-nu-graphite mt-2">이달 거래가 없습니다</p>
+        <p className="text-[13px] text-nu-graphite mt-2">
+          {hasActiveFilter
+            ? "조건에 맞는 거래가 없습니다. 필터를 변경해보세요."
+            : "이달 거래가 없습니다. '+ 거래 추가' 버튼으로 시작하세요."}
+        </p>
       </div>
     );
   }

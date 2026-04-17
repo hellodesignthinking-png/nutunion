@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
+import { ModalShell } from "./modal-shell";
 
 export function SignaturePad({
   title,
@@ -33,12 +34,6 @@ export function SignaturePad({
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
   }, []);
-
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
-  }, [onClose]);
 
   const getPos = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     const canvas = canvasRef.current!;
@@ -89,22 +84,8 @@ export function SignaturePad({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[120] bg-black/70 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-nu-paper border-[2.5px] border-nu-ink w-full max-w-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex justify-between items-center px-5 py-4 border-b-[2px] border-nu-ink">
-          <div className="font-mono-nu text-[13px] uppercase tracking-widest text-nu-ink">
-            {title}
-          </div>
-          <button onClick={onClose} aria-label="닫기" className="text-nu-graphite hover:text-nu-ink text-[20px] leading-none p-1">×</button>
-        </div>
-
-        <div className="p-5">
+    <ModalShell title={title} onClose={onClose} locked={saving} maxWidth="xl">
+      <div className="p-5">
           <div className="relative mb-4 border-[2.5px] border-nu-ink">
             <canvas
               ref={canvasRef}
@@ -146,7 +127,6 @@ export function SignaturePad({
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

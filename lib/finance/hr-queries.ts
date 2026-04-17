@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { FinEmployee, FinAttendance, FinPayroll, EmployeeSummary } from "./types";
+import { parseYearMonth, lastDayOfMonth } from "./date-utils";
 
 export interface HRDashboardData {
   totalEmployees: number;
@@ -145,12 +146,17 @@ export async function getAttendanceTypes(): Promise<string[]> {
 
 export async function getMonthlyAttendance(yearMonth: string, companyId?: string): Promise<MonthlyAttendanceRow[]> {
   const supabase = await createClient();
+  const { ym, y, m } = parseYearMonth(yearMonth);
 
   let empQuery = supabase.from("employees").select("*").eq("status", "재직");
   if (companyId && companyId !== "all") empQuery = empQuery.eq("company", companyId);
   const { data: employees } = await empQuery;
 
-  let attQuery = supabase.from("attendances").select("*").gte("date", `${yearMonth}-01`).lte("date", `${yearMonth}-31`);
+  let attQuery = supabase
+    .from("attendances")
+    .select("*")
+    .gte("date", `${ym}-01`)
+    .lte("date", lastDayOfMonth(y, m));
   if (companyId && companyId !== "all") attQuery = attQuery.eq("company", companyId);
   const { data: attendances } = await attQuery;
 

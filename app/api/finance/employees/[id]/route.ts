@@ -40,6 +40,19 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     }
   }
 
+  // 알바 급여 자동 계산 — annual_salary가 명시적으로 전달되지 않았고, 시급/근무 정보만 변경된 경우에만
+  const isAlbaUpdate = updates.employment_type === "알바" || (!("employment_type" in updates) && body.employment_type === "알바");
+  const touchedWageFields = "hourly_wage" in updates || "daily_hours" in updates || "weekly_days" in updates;
+  if (isAlbaUpdate && touchedWageFields && !("annual_salary" in body)) {
+    const { data: existing } = await check.supabase.from("employees").select("hourly_wage,daily_hours,weekly_days").eq("id", id).single();
+    const hw = Number(updates.hourly_wage ?? existing?.hourly_wage ?? 0);
+    const dh = Number(updates.daily_hours ?? existing?.daily_hours ?? 8);
+    const wd = Number(updates.weekly_days ?? existing?.weekly_days ?? 5);
+    if (hw > 0) {
+      updates.annual_salary = Math.round(hw * dh * wd * 52);
+    }
+  }
+
   const { error } = await check.supabase.from("employees").update(updates).eq("id", id);
   if (error) {
     console.error("[Employees PATCH]", error);

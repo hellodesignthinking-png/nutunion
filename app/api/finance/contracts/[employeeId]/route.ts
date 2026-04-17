@@ -32,8 +32,13 @@ export async function POST(req: NextRequest, context: { params: Promise<{ employ
   const today = new Date().toISOString().slice(0, 10);
 
   if (action === "send") {
-    // admin/staff만 계약서 발송 가능
     if (!isAdminStaff) return NextResponse.json({ error: "발송 권한이 없습니다" }, { status: 403 });
+    if (employee.status === "퇴직") {
+      return NextResponse.json({ error: "퇴직 직원에게는 계약서를 발송할 수 없습니다" }, { status: 400 });
+    }
+    if (!employee.email) {
+      return NextResponse.json({ error: "직원 이메일이 등록되어 있지 않습니다" }, { status: 400 });
+    }
     const { error } = await check.supabase
       .from("employees")
       .update({ contract_status: "sent", contract_sent_date: today })

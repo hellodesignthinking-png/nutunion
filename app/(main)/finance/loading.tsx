@@ -1,6 +1,7 @@
 export default function FinanceLoading() {
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10" aria-busy="true" aria-live="polite">
+      <span className="sr-only">재무 데이터를 불러오는 중입니다</span>
       <div className="animate-pulse">
         <div className="h-4 w-32 bg-nu-ink/10 mb-3" />
         <div className="h-8 w-64 bg-nu-ink/10 mb-8" />

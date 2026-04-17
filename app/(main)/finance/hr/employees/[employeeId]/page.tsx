@@ -194,7 +194,8 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
           <div className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-ink mb-4">연차 현황</div>
           <div className="text-center py-4">
             <div className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-graphite">잔여</div>
-            <div className={`text-[36px] font-bold ${leaveRemaining <= 3 ? "text-red-600" : "text-green-700"}`}>
+            <div className={`text-[36px] font-bold ${leaveRemaining <= 3 ? "text-red-600" : "text-green-700"}`} aria-label={leaveRemaining <= 3 ? `잔여 연차 ${leaveRemaining}일 — 부족` : `잔여 연차 ${leaveRemaining}일`}>
+              {leaveRemaining <= 3 && <span className="mr-1" aria-hidden="true">⚠️</span>}
               {leaveRemaining}<span className="text-[14px] text-nu-graphite ml-1">일</span>
             </div>
             <div className="flex justify-around mt-4 text-[12px]">
