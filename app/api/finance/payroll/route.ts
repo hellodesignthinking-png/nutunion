@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       otherPay: Number(other_pay) || 0,
     });
 
-    // 기존 레코드 확인 (같은 직원/월)
+    // 기존 여부 확인 (감사 로그용)
     const { data: existing } = await supabase
       .from("payroll")
       .select("id")
@@ -57,8 +57,8 @@ export async function POST(req: NextRequest) {
       .eq("year_month", year_month)
       .maybeSingle();
 
+    // id 는 DB 시퀀스가 자동 할당. 중복 방지는 UNIQUE(employee_id, year_month) 가 담당.
     const record = {
-      id: existing?.id || Date.now(),
       employee_id: String(employee_id),
       company: employee.company,
       year_month,
@@ -80,7 +80,12 @@ export async function POST(req: NextRequest) {
       memo: memo || null,
     };
 
-    const { error } = await supabase.from("payroll").upsert(record, { onConflict: "id" });
+    // UNIQUE(employee_id, year_month) 기준 upsert — 050 마이그레이션 필요
+    const { data: upserted, error } = await supabase
+      .from("payroll")
+      .upsert(record, { onConflict: "employee_id,year_month" })
+      .select()
+      .single();
     if (error) {
       console.error("[Payroll POST]", error);
       return NextResponse.json({ error: "저장 실패" }, { status: 500 });
@@ -88,15 +93,15 @@ export async function POST(req: NextRequest) {
 
     await writeAuditLog(supabase, user, {
       entity_type: "payroll",
-      entity_id: record.id,
+      entity_id: upserted.id,
       action: existing ? "update" : "create",
-      company: record.company,
-      summary: `급여명세서 ${existing ? "수정" : "작성"}: ${employee.name} ${year_month} (지급 ${record.net_pay.toLocaleString()}원)`,
-      diff: { after: record },
+      company: upserted.company,
+      summary: `급여명세서 ${existing ? "수정" : "작성"}: ${employee.name} ${year_month} (지급 ${upserted.net_pay.toLocaleString()}원)`,
+      diff: { after: upserted },
       actor_role: profile.role,
     }, extractRequestMeta(req));
 
-    return NextResponse.json({ success: true, payroll: record });
+    return NextResponse.json({ success: true, payroll: upserted });
   } catch (err) {
     console.error("[Payroll POST]", err);
     return NextResponse.json({ error: "서버 오류" }, { status: 500 });

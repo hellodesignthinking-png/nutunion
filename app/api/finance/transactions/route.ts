@@ -53,7 +53,6 @@ export async function POST(req: NextRequest) {
     }
 
     const record = {
-      id: Date.now(),
       date,
       company,
       type: type || "기타",
@@ -67,7 +66,12 @@ export async function POST(req: NextRequest) {
       created_at: new Date().toISOString(),
     };
 
-    const { error } = await supabase.from("transactions").insert(record);
+    // id 는 DB 시퀀스가 자동 할당 (050 마이그레이션)
+    const { data: inserted, error } = await supabase
+      .from("transactions")
+      .insert(record)
+      .select()
+      .single();
     if (error) {
       console.error("[Transactions POST]", error);
       return NextResponse.json({ error: "저장에 실패했습니다" }, { status: 500 });
@@ -75,15 +79,15 @@ export async function POST(req: NextRequest) {
 
     await writeAuditLog(supabase, user, {
       entity_type: "transaction",
-      entity_id: record.id,
+      entity_id: inserted.id,
       action: "create",
-      company: record.company,
-      summary: `거래 등록: ${record.date} ${record.description} ${record.amount}`,
-      diff: { after: record },
+      company: inserted.company,
+      summary: `거래 등록: ${inserted.date} ${inserted.description} ${inserted.amount}`,
+      diff: { after: inserted },
       actor_role: profile.role,
     }, extractRequestMeta(req));
 
-    return NextResponse.json({ success: true, transaction: record });
+    return NextResponse.json({ success: true, transaction: inserted });
   } catch (err) {
     console.error("[Transactions POST]", err);
     return NextResponse.json({ error: "서버 오류" }, { status: 500 });

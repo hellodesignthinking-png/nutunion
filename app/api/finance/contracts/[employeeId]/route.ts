@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
+import { validateDataUrl } from "@/lib/finance/validators";
 
 async function checkPermission() {
   const supabase = await createClient();
@@ -69,10 +70,13 @@ export async function POST(req: NextRequest, context: { params: Promise<{ employ
     if (!isOwner && !isAdminStaff) {
       return NextResponse.json({ error: "서명 권한이 없습니다" }, { status: 403 });
     }
-    // 서명 이미지 검증 (data:image/png;base64,... 형식)
+    // 서명 이미지 화이트리스트 검증 (SVG/HTML 차단)
     const signatureImage = body.signature_image as string | undefined;
-    if (signatureImage && (!signatureImage.startsWith("data:image/") || signatureImage.length > 500_000)) {
-      return NextResponse.json({ error: "잘못된 서명 이미지입니다" }, { status: 400 });
+    if (signatureImage) {
+      const validation = validateDataUrl(signatureImage, { maxBase64Length: 500_000 });
+      if (!validation.ok) {
+        return NextResponse.json({ error: validation.error }, { status: 400 });
+      }
     }
     const updates: Record<string, unknown> = {
       contract_status: "completed",

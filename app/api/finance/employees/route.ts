@@ -37,7 +37,6 @@ export async function POST(req: NextRequest) {
     }
 
     const record = {
-      id: Date.now(),
       name: name.trim(),
       company,
       position: position || "사원",
@@ -61,7 +60,11 @@ export async function POST(req: NextRequest) {
       created_at: new Date().toISOString(),
     };
 
-    const { error } = await supabase.from("employees").insert(record);
+    const { data: inserted, error } = await supabase
+      .from("employees")
+      .insert(record)
+      .select()
+      .single();
     if (error) {
       console.error("[Employees POST]", error);
       return NextResponse.json({ error: "저장에 실패했습니다" }, { status: 500 });
@@ -69,15 +72,15 @@ export async function POST(req: NextRequest) {
 
     await writeAuditLog(supabase, user, {
       entity_type: "employee",
-      entity_id: record.id,
+      entity_id: inserted.id,
       action: "create",
-      company: record.company,
-      summary: `직원 등록: ${record.name} (${record.employment_type})`,
-      diff: { after: record },
+      company: inserted.company,
+      summary: `직원 등록: ${inserted.name} (${inserted.employment_type})`,
+      diff: { after: inserted },
       actor_role: profile.role,
     }, extractRequestMeta(req));
 
-    return NextResponse.json({ success: true, employee: record });
+    return NextResponse.json({ success: true, employee: inserted });
   } catch (err) {
     console.error("[Employees POST]", err);
     return NextResponse.json({ error: "서버 오류" }, { status: 500 });

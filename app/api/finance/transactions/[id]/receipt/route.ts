@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
+import { validateDataUrl } from "@/lib/finance/validators";
 
 const MAX_RECEIPT_SIZE = 1_000_000; // 1MB base64 (~750KB raw)
 
@@ -31,13 +32,13 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
       if (typeof receiptUrl !== "string") {
         return NextResponse.json({ error: "잘못된 요청" }, { status: 400 });
       }
-      if (receiptUrl.startsWith("data:")) {
-        if (receiptUrl.length > MAX_RECEIPT_SIZE) {
-          return NextResponse.json({ error: "영수증 파일이 너무 큽니다 (최대 750KB). 이미지를 압축해주세요." }, { status: 400 });
-        }
-        if (!/^data:(image\/|application\/pdf)/.test(receiptUrl)) {
-          return NextResponse.json({ error: "이미지 또는 PDF만 업로드 가능합니다" }, { status: 400 });
-        }
+      // 화이트리스트 기반 data: URL 검증 (svg/html 등 XSS 벡터 차단)
+      const validation = validateDataUrl(receiptUrl, {
+        allowPdf: true,
+        maxBase64Length: MAX_RECEIPT_SIZE,
+      });
+      if (!validation.ok) {
+        return NextResponse.json({ error: validation.error }, { status: 400 });
       }
     }
 

@@ -31,7 +31,6 @@ export async function POST(req: NextRequest) {
       : { data: null };
 
     const record = {
-      id: Date.now(),
       title: title.trim(),
       doc_type,
       content: content?.trim() || "",
@@ -48,7 +47,11 @@ export async function POST(req: NextRequest) {
       created_at: new Date().toISOString(),
     };
 
-    const { error } = await supabase.from("approvals").insert(record);
+    const { data: inserted, error } = await supabase
+      .from("approvals")
+      .insert(record)
+      .select()
+      .single();
     if (error) {
       console.error("[Approvals POST]", error);
       return NextResponse.json({ error: "저장 실패" }, { status: 500 });
@@ -56,15 +59,15 @@ export async function POST(req: NextRequest) {
 
     await writeAuditLog(supabase, user, {
       entity_type: "approval",
-      entity_id: record.id,
+      entity_id: inserted.id,
       action: "create",
-      company: record.company,
-      summary: `결재 상신: [${record.doc_type}] ${record.title}${record.amount ? ` (₩${record.amount.toLocaleString()})` : ""}`,
-      diff: { after: record },
+      company: inserted.company,
+      summary: `결재 상신: [${inserted.doc_type}] ${inserted.title}${inserted.amount ? ` (₩${inserted.amount.toLocaleString()})` : ""}`,
+      diff: { after: inserted },
       actor_role: profile.role,
     }, extractRequestMeta(req));
 
-    return NextResponse.json({ success: true, approval: record });
+    return NextResponse.json({ success: true, approval: inserted });
   } catch (err) {
     console.error("[Approvals POST]", err);
     return NextResponse.json({ error: "서버 오류" }, { status: 500 });

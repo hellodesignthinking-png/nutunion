@@ -70,11 +70,13 @@ export async function getEmployees(
   opts: { company?: string; status?: string; search?: string } = {}
 ): Promise<FinEmployee[]> {
   const supabase = await createClient();
-  let query = supabase.from("employees").select("*").order("created_at", { ascending: false });
+  // 목록 뷰에서는 PII(서명, 계좌) 제외 — 상세 페이지에서만 로드
+  const LIST_COLUMNS = "id,name,company,position,department,employment_type,status,email,phone,join_date,end_date,annual_salary,annual_leave_total,annual_leave_used,hourly_wage,weekly_days,daily_hours,work_days,contract_signed,contract_status,contract_date,contract_sent_date,created_at";
+  let query = supabase.from("employees").select(LIST_COLUMNS).order("created_at", { ascending: false });
   if (opts.company && opts.company !== "all") query = query.eq("company", opts.company);
   if (opts.status) query = query.eq("status", opts.status);
   const { data } = await query;
-  let results = data || [];
+  let results = (data as unknown as FinEmployee[]) || [];
   // 클라이언트측 검색 필터 (이름/부서/직급/이메일)
   if (opts.search) {
     const q = opts.search.toLowerCase();
