@@ -4,6 +4,7 @@ import { getEmployeeDetail, getEmployeePayrollHistory } from "@/lib/finance/hr-q
 import { getCompanies } from "@/lib/finance/company-queries";
 import { createClient } from "@/lib/supabase/server";
 import { EmployeeEditButton } from "@/components/finance/employee-edit-button";
+import { ContractActions } from "@/components/finance/contract-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -41,8 +42,18 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
   const company = companies.find((c) => c.id === employee.company);
   const isAlba = employee.employment_type === "알바";
 
-  // 이 직원이 참여하는 볼트(프로젝트) — user_id 매칭 시도
   const supabase = await createClient();
+  const { data: { user: currentUser } } = await supabase.auth.getUser();
+  let currentUserEmail = "";
+  let isAdminStaff = false;
+  if (currentUser) {
+    const { data: currentProfile } = await supabase.from("profiles").select("role,email").eq("id", currentUser.id).single();
+    currentUserEmail = currentProfile?.email || "";
+    isAdminStaff = currentProfile?.role === "admin" || currentProfile?.role === "staff";
+  }
+  const canSign = isAdminStaff || (
+    !!employee.email && !!currentUserEmail && employee.email.toLowerCase() === currentUserEmail.toLowerCase()
+  );
   let participatingBolts: { id: string; title: string; status: string }[] = [];
   if (employee.email) {
     const { data: profile } = await supabase
@@ -202,6 +213,29 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* 전자계약 */}
+      <div className="mb-6">
+        <ContractActions
+          employee={{
+            id: employee.id,
+            name: employee.name,
+            email: employee.email,
+            contract_status: employee.contract_status,
+            contract_signed: employee.contract_signed,
+            contract_date: employee.contract_date,
+            contract_sent_date: employee.contract_sent_date,
+          }}
+          company={company ? {
+            id: company.id,
+            name: company.name,
+            representative: company.representative,
+            biz_no: company.biz_no,
+            address: company.address,
+          } : undefined}
+          canSign={canSign}
+        />
       </div>
 
       {/* 소속 볼트 */}
