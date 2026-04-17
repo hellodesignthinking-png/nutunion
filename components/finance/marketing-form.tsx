@@ -78,7 +78,10 @@ export function MarketingForm({ bolts, companies }: { bolts: BoltMin[]; companie
 
   const handleGenerate = async () => {
     if (!entityId) { setError("대상을 선택하세요"); return; }
+    if (!selectedEntity) { setError("선택한 대상을 찾을 수 없습니다. 목록에서 다시 선택하세요."); return; }
     if (!topic.trim()) { setError("콘텐츠 주제를 입력하세요"); return; }
+    if (topic.trim().length < 5) { setError("주제를 5자 이상 입력하세요"); return; }
+    if (topic.length > 500) { setError("주제는 500자 이하로 입력하세요"); return; }
     setError(null);
     setLoading(true);
     setSelected(null);

@@ -138,8 +138,8 @@ export async function getCompaniesWithFinance(
  */
 export async function getCompanyTransactions(
   companyId: string,
-  options: { limit?: number; fromDate?: string; toDate?: string } = {}
-): Promise<{ company: FinCompany | null; transactions: FinTransaction[] }> {
+  options: { limit?: number; offset?: number; fromDate?: string; toDate?: string } = {}
+): Promise<{ company: FinCompany | null; transactions: FinTransaction[]; totalCount: number }> {
   const supabase = await createClient();
 
   let company: FinCompany | null = null;
@@ -150,14 +150,24 @@ export async function getCompanyTransactions(
     company = data;
   }
 
-  if (!company) return { company: null, transactions: [] };
+  if (!company) return { company: null, transactions: [], totalCount: 0 };
 
+  // 총 개수 카운트
+  let countQuery = supabase.from("transactions").select("*", { count: "exact", head: true });
+  if (companyId !== "all") countQuery = countQuery.eq("company", companyId);
+  if (options.fromDate) countQuery = countQuery.gte("date", options.fromDate);
+  if (options.toDate) countQuery = countQuery.lte("date", options.toDate);
+  const { count } = await countQuery;
+
+  // 페이지 데이터
   let query = supabase.from("transactions").select("*").order("date", { ascending: false });
   if (companyId !== "all") query = query.eq("company", companyId);
   if (options.fromDate) query = query.gte("date", options.fromDate);
   if (options.toDate) query = query.lte("date", options.toDate);
-  if (options.limit) query = query.limit(options.limit);
+  const limit = options.limit ?? 50;
+  const offset = options.offset ?? 0;
+  query = query.range(offset, offset + limit - 1);
 
   const { data } = await query;
-  return { company, transactions: data || [] };
+  return { company, transactions: data || [], totalCount: count ?? 0 };
 }

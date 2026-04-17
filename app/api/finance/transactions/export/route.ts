@@ -29,7 +29,8 @@ export async function GET(req: NextRequest) {
   const fromDate = firstDayOfMonth(ym);
   const toDate = lastDayOfMonth(y, m);
 
-  const { company: companyMeta, transactions } = await getCompanyTransactions(company, { fromDate, toDate });
+  // CSV는 전체 레코드 반환 (페이지 제한 우회)
+  const { company: companyMeta, transactions } = await getCompanyTransactions(company, { fromDate, toDate, limit: 10000 });
   if (!companyMeta) {
     return NextResponse.json({ error: "Company not found" }, { status: 404 });
   }

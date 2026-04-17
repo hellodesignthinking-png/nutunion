@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getMonthlyAttendance } from "@/lib/finance/hr-queries";
+import { getMonthlyAttendance, getAttendanceTypes } from "@/lib/finance/hr-queries";
 import { getCompanies } from "@/lib/finance/company-queries";
 import { parseYearMonth, prevMonth, nextMonth } from "@/lib/finance/date-utils";
 
@@ -9,15 +9,14 @@ interface PageProps {
   searchParams: Promise<{ company?: string; month?: string }>;
 }
 
-const TYPES = ["출근", "연차", "반차(오전)", "반차(오후)", "병가", "외근", "출장", "재택근무"];
-
 export default async function AttendancePage({ searchParams }: PageProps) {
   const { company = "all", month } = await searchParams;
   const { ym: currentMonth, y, m } = parseYearMonth(month);
 
-  const [rows, companies] = await Promise.all([
+  const [rows, companies, TYPES] = await Promise.all([
     getMonthlyAttendance(currentMonth, company),
     getCompanies(),
+    getAttendanceTypes(),
   ]);
   const companyMap = new Map(companies.map((c) => [c.id, c]));
 

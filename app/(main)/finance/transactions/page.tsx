@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { getCompanyTransactions, getCompanies } from "@/lib/finance/company-queries";
 import { TransactionList } from "@/components/finance/transaction-list";
+import { TransactionCreateModal } from "@/components/finance/transaction-create-modal";
 import { parseYearMonth, firstDayOfMonth, lastDayOfMonth, prevMonth, nextMonth } from "@/lib/finance/date-utils";
 
 export const dynamic = "force-dynamic";
 
+const PAGE_SIZE = 50;
+
 interface PageProps {
-  searchParams: Promise<{ company?: string; month?: string }>;
+  searchParams: Promise<{ company?: string; month?: string; page?: string }>;
 }
 
 function fmt(n: number): string {
@@ -14,26 +17,29 @@ function fmt(n: number): string {
 }
 
 export default async function FinanceTransactionsPage({ searchParams }: PageProps) {
-  const { company: selectedCompany = "all", month } = await searchParams;
+  const { company: selectedCompany = "all", month, page: pageStr } = await searchParams;
   const { ym: currentMonth, y, m } = parseYearMonth(month);
   const fromDate = firstDayOfMonth(currentMonth);
   const toDate = lastDayOfMonth(y, m);
+  const page = Math.max(1, Number(pageStr) || 1);
 
   const [companies, data] = await Promise.all([
     getCompanies(),
-    getCompanyTransactions(selectedCompany, { fromDate, toDate }),
+    getCompanyTransactions(selectedCompany, { fromDate, toDate, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
   ]);
 
-  const { transactions } = data;
+  const { transactions, totalCount } = data;
   const income = transactions.filter((t) => t.amount >= 0).reduce((s, t) => s + t.amount, 0);
   const expense = transactions.filter((t) => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   const prevM = prevMonth(y, m);
   const nextM = nextMonth(y, m);
-  const qs = (opts: { company?: string; month?: string }) => {
+  const qs = (opts: { company?: string; month?: string; page?: string }) => {
     const p = new URLSearchParams();
     if (opts.company) p.set("company", opts.company);
     if (opts.month) p.set("month", opts.month);
+    if (opts.page) p.set("page", opts.page);
     const s = p.toString();
     return s ? `?${s}` : "";
   };
@@ -49,15 +55,21 @@ export default async function FinanceTransactionsPage({ searchParams }: PageProp
             전체 거래
           </h1>
         </div>
-        {transactions.length > 0 && (
-          <a
-            href={`/api/finance/transactions/export?company=${selectedCompany}&month=${currentMonth}`}
-            className="border-[2.5px] border-nu-ink bg-nu-paper px-4 py-2 font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper transition-colors inline-flex items-center gap-2"
-            download
-          >
-            📥 CSV 다운로드
-          </a>
-        )}
+        <div className="flex gap-2 flex-wrap">
+          <TransactionCreateModal
+            companies={companies.map((c) => ({ id: c.id, name: c.name }))}
+            defaultCompany={selectedCompany}
+          />
+          {transactions.length > 0 && (
+            <a
+              href={`/api/finance/transactions/export?company=${selectedCompany}&month=${currentMonth}`}
+              className="border-[2.5px] border-nu-ink bg-nu-paper px-4 py-2 font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper transition-colors inline-flex items-center gap-2"
+              download
+            >
+              📥 CSV
+            </a>
+          )}
+        </div>
       </div>
 
       {/* 필터 */}
@@ -104,6 +116,40 @@ export default async function FinanceTransactionsPage({ searchParams }: PageProp
       </div>
 
       <TransactionList transactions={transactions} />
+
+      {/* 페이지네이션 */}
+      {totalCount > PAGE_SIZE && (
+        <div className="flex justify-between items-center mt-6 flex-wrap gap-3">
+          <div className="text-[12px] text-nu-graphite font-mono-nu">
+            {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, totalCount)} / 총 {totalCount}건
+          </div>
+          <div className="flex gap-1 border-[2.5px] border-nu-ink bg-nu-paper">
+            {page > 1 ? (
+              <Link
+                href={`/finance/transactions${qs({ company: selectedCompany, month: currentMonth, page: String(page - 1) })}`}
+                className="px-4 py-2 font-mono-nu text-[11px] uppercase tracking-wider text-nu-ink no-underline hover:bg-nu-ink/5"
+              >
+                ◀ 이전
+              </Link>
+            ) : (
+              <span className="px-4 py-2 font-mono-nu text-[11px] uppercase tracking-wider text-nu-graphite/40">◀ 이전</span>
+            )}
+            <span className="px-4 py-2 font-mono-nu text-[11px] uppercase tracking-wider bg-nu-ink text-nu-paper">
+              {page} / {totalPages}
+            </span>
+            {page < totalPages ? (
+              <Link
+                href={`/finance/transactions${qs({ company: selectedCompany, month: currentMonth, page: String(page + 1) })}`}
+                className="px-4 py-2 font-mono-nu text-[11px] uppercase tracking-wider text-nu-ink no-underline hover:bg-nu-ink/5"
+              >
+                다음 ▶
+              </Link>
+            ) : (
+              <span className="px-4 py-2 font-mono-nu text-[11px] uppercase tracking-wider text-nu-graphite/40">다음 ▶</span>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );

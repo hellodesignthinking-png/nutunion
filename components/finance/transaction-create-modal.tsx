@@ -1,0 +1,278 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+interface CompanyOpt {
+  id: string;
+  name: string;
+}
+
+const TYPES = ["수입", "지출", "이체", "기타"];
+const CATEGORIES = [
+  "매출", "서비스수익", "기타수익",
+  "인건비", "급여", "상여금",
+  "임차료", "통신비", "보험료",
+  "광고비", "소모품비", "외주용역비", "수수료",
+  "식대", "교통비", "접대비", "복리후생비",
+  "세금과공과", "기타비용", "미분류",
+];
+const RECEIPT_TYPES = ["세금계산서", "계산서", "현금영수증", "신용카드", "간이영수증", "미등록"];
+
+export function TransactionCreateModal({ companies, defaultCompany }: { companies: CompanyOpt[]; defaultCompany?: string }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    date: new Date().toISOString().slice(0, 10),
+    company: defaultCompany && defaultCompany !== "all" ? defaultCompany : (companies[0]?.id || ""),
+    type: "지출",
+    description: "",
+    amount: "",
+    isExpense: true,
+    category: "미분류",
+    receipt_type: "미등록",
+    vendor_name: "",
+    memo: "",
+  });
+
+  const reset = () => {
+    setForm({
+      date: new Date().toISOString().slice(0, 10),
+      company: defaultCompany && defaultCompany !== "all" ? defaultCompany : (companies[0]?.id || ""),
+      type: "지출",
+      description: "",
+      amount: "",
+      isExpense: true,
+      category: "미분류",
+      receipt_type: "미등록",
+      vendor_name: "",
+      memo: "",
+    });
+    setError(null);
+  };
+
+  const handleSubmit = async () => {
+    if (!form.description.trim()) { setError("내용을 입력하세요"); return; }
+    if (!form.amount || isNaN(Number(form.amount))) { setError("금액을 입력하세요"); return; }
+    const absAmount = Math.abs(Number(form.amount));
+    const signedAmount = form.isExpense ? -absAmount : absAmount;
+
+    setError(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/finance/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: form.date,
+          company: form.company,
+          type: form.type,
+          description: form.description.trim(),
+          amount: signedAmount,
+          category: form.category,
+          receipt_type: form.receipt_type,
+          vendor_name: form.vendor_name.trim() || undefined,
+          memo: form.memo.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || "저장 실패");
+      setOpen(false);
+      reset();
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "저장 중 오류");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="border-[2.5px] border-nu-ink bg-nu-pink text-nu-paper px-4 py-2 font-mono-nu text-[11px] uppercase tracking-widest hover:bg-nu-ink"
+      >
+        + 거래 추가
+      </button>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4"
+          onClick={() => !submitting && setOpen(false)}
+        >
+          <div
+            className="bg-nu-paper border-[2.5px] border-nu-ink w-full max-w-lg max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center px-5 py-4 border-b-[2px] border-nu-ink">
+              <div className="font-mono-nu text-[13px] uppercase tracking-widest text-nu-ink">
+                거래 추가
+              </div>
+              <button
+                onClick={() => !submitting && setOpen(false)}
+                aria-label="닫기"
+                className="text-nu-graphite hover:text-nu-ink text-[20px] leading-none p-1"
+              >×</button>
+            </div>
+
+            <div className="p-5 flex flex-col gap-4">
+              {/* 수입/지출 토글 */}
+              <div className="flex gap-2">
+                {[
+                  { val: true, label: "지출", color: "text-red-600 border-red-600" },
+                  { val: false, label: "수입", color: "text-green-700 border-green-700" },
+                ].map((opt) => (
+                  <button
+                    key={opt.label}
+                    onClick={() => setForm((f) => ({ ...f, isExpense: opt.val, type: opt.val ? "지출" : "수입" }))}
+                    className={`flex-1 border-[2.5px] px-4 py-2 font-mono-nu text-[11px] uppercase tracking-widest ${
+                      form.isExpense === opt.val
+                        ? `${opt.color} bg-nu-ink/5 font-bold`
+                        : "border-nu-ink/30 text-nu-graphite"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+
+              <Field label="날짜 *">
+                <input
+                  type="date"
+                  value={form.date}
+                  onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                  className="w-full border-[2px] border-nu-ink bg-nu-paper px-3 py-2 text-[14px] outline-none"
+                />
+              </Field>
+
+              <Field label="법인 *">
+                <select
+                  value={form.company}
+                  onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
+                  className="w-full border-[2px] border-nu-ink bg-nu-paper px-3 py-2 text-[14px] outline-none"
+                >
+                  {companies.filter((c) => c.id !== "all").map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="금액 *">
+                <input
+                  type="number"
+                  value={form.amount}
+                  onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+                  placeholder="숫자만 입력"
+                  className="w-full border-[2px] border-nu-ink bg-nu-paper px-3 py-2 text-[14px] outline-none"
+                />
+                <p className="text-[10px] text-nu-graphite mt-1">
+                  {form.amount && !isNaN(Number(form.amount)) && `₩${Number(form.amount).toLocaleString("ko-KR")}`}
+                </p>
+              </Field>
+
+              <Field label="내용 *">
+                <input
+                  type="text"
+                  value={form.description}
+                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                  placeholder="예: 서울시 사무실 월세"
+                  className="w-full border-[2px] border-nu-ink bg-nu-paper px-3 py-2 text-[14px] outline-none"
+                />
+              </Field>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="카테고리">
+                  <select
+                    value={form.category}
+                    onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                    className="w-full border-[2px] border-nu-ink bg-nu-paper px-3 py-2 text-[13px] outline-none"
+                  >
+                    {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                  </select>
+                </Field>
+
+                <Field label="유형">
+                  <select
+                    value={form.type}
+                    onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
+                    className="w-full border-[2px] border-nu-ink bg-nu-paper px-3 py-2 text-[13px] outline-none"
+                  >
+                    {TYPES.map((t) => <option key={t}>{t}</option>)}
+                  </select>
+                </Field>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="증빙">
+                  <select
+                    value={form.receipt_type}
+                    onChange={(e) => setForm((f) => ({ ...f, receipt_type: e.target.value }))}
+                    className="w-full border-[2px] border-nu-ink bg-nu-paper px-3 py-2 text-[13px] outline-none"
+                  >
+                    {RECEIPT_TYPES.map((r) => <option key={r}>{r}</option>)}
+                  </select>
+                </Field>
+
+                <Field label="거래처">
+                  <input
+                    type="text"
+                    value={form.vendor_name}
+                    onChange={(e) => setForm((f) => ({ ...f, vendor_name: e.target.value }))}
+                    placeholder="(선택)"
+                    className="w-full border-[2px] border-nu-ink bg-nu-paper px-3 py-2 text-[13px] outline-none"
+                  />
+                </Field>
+              </div>
+
+              <Field label="메모">
+                <textarea
+                  value={form.memo}
+                  onChange={(e) => setForm((f) => ({ ...f, memo: e.target.value }))}
+                  rows={2}
+                  placeholder="(선택)"
+                  className="w-full border-[2px] border-nu-ink bg-nu-paper px-3 py-2 text-[13px] outline-none resize-y"
+                />
+              </Field>
+
+              {error && (
+                <div className="border-[2px] border-red-500 bg-red-50 text-red-600 p-2 text-[12px]">
+                  {error}
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => !submitting && setOpen(false)}
+                  className="flex-1 border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink px-4 py-2.5 font-mono-nu text-[11px] uppercase tracking-widest hover:bg-nu-ink/5"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  className="flex-1 border-[2.5px] border-nu-ink bg-nu-pink text-nu-paper px-4 py-2.5 font-mono-nu text-[11px] uppercase tracking-widest hover:bg-nu-ink disabled:opacity-50"
+                >
+                  {submitting ? "저장 중..." : "저장"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-graphite mb-1.5">
+        {label}
+      </div>
+      {children}
+    </div>
+  );
+}

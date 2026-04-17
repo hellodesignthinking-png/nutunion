@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getEmployees } from "@/lib/finance/hr-queries";
 import { getCompanies } from "@/lib/finance/company-queries";
+import { EmployeeCreateModal } from "@/components/finance/employee-create-modal";
 
 export const dynamic = "force-dynamic";
 
@@ -48,13 +49,19 @@ export default async function EmployeesPage({ searchParams }: PageProps) {
         </Link>
       </div>
 
-      <div className="mb-6">
-        <div className="font-mono-nu text-[11px] uppercase tracking-[0.3em] text-nu-graphite mb-2">
-          EMPLOYEES · 직원 목록
+      <div className="mb-6 flex justify-between items-start flex-wrap gap-3">
+        <div>
+          <div className="font-mono-nu text-[11px] uppercase tracking-[0.3em] text-nu-graphite mb-2">
+            EMPLOYEES · 직원 목록
+          </div>
+          <h1 className="text-[24px] sm:text-[32px] font-bold text-nu-ink leading-tight">
+            직원 관리
+          </h1>
         </div>
-        <h1 className="text-[24px] sm:text-[32px] font-bold text-nu-ink leading-tight">
-          직원 관리
-        </h1>
+        <EmployeeCreateModal
+          companies={companies.map((c) => ({ id: c.id, name: c.name }))}
+          defaultCompany={company}
+        />
       </div>
 
       {/* 검색 */}

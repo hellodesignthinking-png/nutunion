@@ -129,6 +129,20 @@ export interface MonthlyAttendanceRow {
   counts: Record<string, number>;
 }
 
+const DEFAULT_ATTENDANCE_TYPES = ["출근", "연차", "반차(오전)", "반차(오후)", "병가", "외근", "출장", "재택근무"];
+
+export async function getAttendanceTypes(): Promise<string[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("attendances").select("type").limit(1000);
+  if (!data) return DEFAULT_ATTENDANCE_TYPES;
+  const unique = Array.from(new Set(data.map((a) => a.type).filter((t): t is string => Boolean(t))));
+  // 기본 순서 + 추가 유형
+  const ordered = DEFAULT_ATTENDANCE_TYPES.filter((t) => unique.includes(t));
+  const extras = unique.filter((t) => !DEFAULT_ATTENDANCE_TYPES.includes(t));
+  const result = [...ordered, ...extras];
+  return result.length > 0 ? result : DEFAULT_ATTENDANCE_TYPES;
+}
+
 export async function getMonthlyAttendance(yearMonth: string, companyId?: string): Promise<MonthlyAttendanceRow[]> {
   const supabase = await createClient();
 
