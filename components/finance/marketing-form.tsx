@@ -236,14 +236,26 @@ export function MarketingForm({ bolts, companies }: { bolts: BoltMin[]; companie
           <button
             onClick={handleGenerate}
             disabled={loading || !entityId || !topic.trim()}
-            className={`border-[2.5px] border-nu-ink px-4 py-3 font-mono-nu text-[12px] uppercase tracking-widest ${
+            className={`border-[2.5px] border-nu-ink px-4 py-3 font-mono-nu text-[12px] uppercase tracking-widest flex items-center justify-center gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nu-ink ${
               loading || !entityId || !topic.trim()
                 ? "bg-nu-ink/10 text-nu-graphite cursor-not-allowed"
                 : "bg-nu-pink text-nu-paper hover:bg-nu-ink"
             }`}
           >
-            {loading ? "✨ 생성 중..." : "✨ AI 콘텐츠 생성"}
+            {loading ? (
+              <>
+                <span className="inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+                <span>AI가 작성하는 중...</span>
+              </>
+            ) : (
+              <>✨ AI 콘텐츠 생성</>
+            )}
           </button>
+          {loading && (
+            <p className="text-[10px] text-nu-graphite text-center mt-1">
+              3~5초 정도 걸립니다
+            </p>
+          )}
         </div>
       </div>
 

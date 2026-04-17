@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { BoltFinanceSummary } from "@/lib/finance/queries";
+import { fmtKRW } from "@/lib/finance/format";
 
 const statusColors: Record<string, string> = {
   active: "bg-nu-pink text-nu-paper",
@@ -14,10 +15,6 @@ const statusLabels: Record<string, string> = {
   completed: "완료",
   archived: "보관",
 };
-
-function fmt(n: number): string {
-  return n.toLocaleString("ko-KR");
-}
 
 export function BoltSummaryCard({ summary }: { summary: BoltFinanceSummary }) {
   const { project, totalBudget, totalIncome, totalExpense, balance, netProfit, transactionCount } = summary;
@@ -54,7 +51,7 @@ export function BoltSummaryCard({ summary }: { summary: BoltFinanceSummary }) {
             예산
           </div>
           <div className="text-[14px] font-bold text-nu-ink">
-            ₩{fmt(totalBudget)}
+            ₩{fmtKRW(totalBudget)}
           </div>
         </div>
         <div>
@@ -62,7 +59,7 @@ export function BoltSummaryCard({ summary }: { summary: BoltFinanceSummary }) {
             지출
           </div>
           <div className={`text-[14px] font-bold ${burnColor}`}>
-            ₩{fmt(totalExpense)}
+            ₩{fmtKRW(totalExpense)}
           </div>
         </div>
         <div>
@@ -70,7 +67,7 @@ export function BoltSummaryCard({ summary }: { summary: BoltFinanceSummary }) {
             잔액
           </div>
           <div className={`text-[14px] font-bold ${balance < 0 ? "text-red-600" : "text-green-700"}`}>
-            ₩{fmt(balance)}
+            ₩{fmtKRW(balance)}
           </div>
         </div>
         <div>
@@ -78,7 +75,7 @@ export function BoltSummaryCard({ summary }: { summary: BoltFinanceSummary }) {
             순이익
           </div>
           <div className={`text-[14px] font-bold ${netProfit < 0 ? "text-red-600" : "text-green-700"}`}>
-            ₩{fmt(netProfit)}
+            ₩{fmtKRW(netProfit)}
           </div>
         </div>
       </div>

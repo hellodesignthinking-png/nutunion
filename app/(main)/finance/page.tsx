@@ -108,17 +108,6 @@ export default async function FinanceHomePage() {
         </div>
       )}
 
-      {/* 구 재무시스템 링크 */}
-      <div className="mt-12 pt-6 border-t border-nu-ink/10 text-center">
-        <a
-          href="https://nutunion-finance.vercel.app"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-graphite hover:text-nu-ink no-underline"
-        >
-          구 재무시스템 (거래/HR/보고서) ↗
-        </a>
-      </div>
     </div>
   );
 }

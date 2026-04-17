@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LEGACY_SYSTEM_URL } from "@/lib/finance/config";
 
 const NAV_ITEMS = [
   { label: "볼트", href: "/finance", icon: "🔩", exact: true },
@@ -33,17 +34,19 @@ export function FinanceNav() {
                 key={item.href}
                 href={item.href}
                 prefetch
-                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 font-mono-nu text-[11px] uppercase tracking-widest no-underline transition-all border-[2px] ${
+                aria-label={item.label}
+                aria-current={active ? "page" : undefined}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 font-mono-nu text-[11px] uppercase tracking-widest no-underline transition-all border-[2px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nu-ink ${
                   active
                     ? item.accent
                       ? "bg-nu-pink text-nu-paper border-nu-pink"
                       : "bg-nu-ink text-nu-paper border-nu-ink"
                     : item.accent
                     ? "bg-nu-paper text-nu-pink border-nu-pink hover:bg-nu-pink hover:text-nu-paper"
-                    : "bg-nu-paper text-nu-graphite border-nu-ink/30 hover:border-nu-ink hover:text-nu-ink"
+                    : "bg-nu-paper text-nu-graphite border-nu-ink/30 hover:bg-nu-ink/5 hover:border-nu-ink hover:text-nu-ink"
                 }`}
               >
-                <span className="text-[14px]">{item.icon}</span>
+                <span className="text-[14px]" aria-hidden="true">{item.icon}</span>
                 <span>{item.label}</span>
               </Link>
             );
@@ -51,9 +54,10 @@ export function FinanceNav() {
 
           {/* 구 시스템 링크 */}
           <a
-            href="https://nutunion-finance.vercel.app"
+            href={LEGACY_SYSTEM_URL}
             target="_blank"
             rel="noopener noreferrer"
+            aria-label="구 재무시스템 (새 탭에서 열림)"
             className="flex-shrink-0 ml-auto px-3 py-2 font-mono-nu text-[10px] uppercase tracking-widest text-nu-graphite hover:text-nu-ink no-underline whitespace-nowrap"
           >
             구 시스템 ↗

@@ -1,13 +1,8 @@
 import Link from "next/link";
 import type { CompanyFinanceSummary } from "@/lib/finance/types";
+import { fmtShort } from "@/lib/finance/format";
 
 type SummaryWithEmployees = CompanyFinanceSummary & { employeeCount?: number };
-
-function fmt(n: number): string {
-  if (n >= 100000000) return `${(n / 100000000).toFixed(1)}억`;
-  if (n >= 10000) return `${(n / 10000).toFixed(0)}만`;
-  return n.toLocaleString("ko-KR");
-}
 
 export function CompanySummaryCard({ summary }: { summary: SummaryWithEmployees }) {
   const { company, totalIncome, totalExpense, netProfit, transactionCount, monthlyBreakdown, employeeCount } = summary;
@@ -49,16 +44,16 @@ export function CompanySummaryCard({ summary }: { summary: SummaryWithEmployees 
       <div className="grid grid-cols-3 gap-2 mb-4 pb-4 border-b border-nu-ink/10">
         <div>
           <div className="font-mono-nu text-[9px] uppercase tracking-wider text-nu-graphite">수입</div>
-          <div className="text-[14px] font-bold text-green-700">₩{fmt(totalIncome)}</div>
+          <div className="text-[14px] font-bold text-green-700">₩{fmtShort(totalIncome)}</div>
         </div>
         <div>
           <div className="font-mono-nu text-[9px] uppercase tracking-wider text-nu-graphite">지출</div>
-          <div className="text-[14px] font-bold text-red-600">₩{fmt(totalExpense)}</div>
+          <div className="text-[14px] font-bold text-red-600">₩{fmtShort(totalExpense)}</div>
         </div>
         <div>
           <div className="font-mono-nu text-[9px] uppercase tracking-wider text-nu-graphite">순이익</div>
           <div className={`text-[14px] font-bold ${netProfit < 0 ? "text-red-600" : "text-nu-ink"}`}>
-            ₩{fmt(netProfit)}
+            ₩{fmtShort(netProfit)}
           </div>
         </div>
       </div>

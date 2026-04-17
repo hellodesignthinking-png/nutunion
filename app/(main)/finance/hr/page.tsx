@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getHRDashboard } from "@/lib/finance/hr-queries";
 import { getCompanies } from "@/lib/finance/company-queries";
+import { LEGACY_SYSTEM_URL } from "@/lib/finance/config";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,28 @@ export default async function FinanceHRPage() {
           인사 대시보드
         </h1>
       </div>
+
+      {/* 직원 0명 빈 상태 */}
+      {data.totalEmployees === 0 && (
+        <div className="border-[2.5px] border-nu-ink/30 border-dashed p-12 text-center mb-8">
+          <div className="text-[48px] mb-3">👥</div>
+          <div className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-graphite mb-2">
+            NO EMPLOYEES
+          </div>
+          <h2 className="text-[18px] font-bold text-nu-ink mb-2">아직 등록된 직원이 없습니다</h2>
+          <p className="text-[13px] text-nu-graphite mb-6">
+            구 재무시스템에서 직원을 등록하면 여기에 표시됩니다.
+          </p>
+          <a
+            href={LEGACY_SYSTEM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block border-[2.5px] border-nu-ink bg-nu-pink text-nu-paper px-6 py-3 font-mono-nu text-[12px] uppercase tracking-widest no-underline"
+          >
+            구 시스템에서 등록하기 ↗
+          </a>
+        </div>
+      )}
 
       {/* KPI */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
@@ -116,20 +139,6 @@ export default async function FinanceHRPage() {
         </div>
       </div>
 
-      {/* 구 시스템 링크 */}
-      <div className="mt-12 pt-6 border-t border-nu-ink/10 text-center">
-        <p className="text-[12px] text-nu-graphite mb-3">
-          직원 등록·수정, 급여 지급 처리, 연차 신청은 구 재무시스템에서 사용하실 수 있습니다.
-        </p>
-        <a
-          href="https://nutunion-finance.vercel.app"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-block border-[2.5px] border-nu-ink bg-nu-pink text-nu-paper px-6 py-3 font-mono-nu text-[12px] uppercase tracking-widest no-underline"
-        >
-          구 재무시스템 열기 ↗
-        </a>
-      </div>
     </div>
   );
 }

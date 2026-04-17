@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCompaniesWithFinance, getGlobalFinanceTrend } from "@/lib/finance/company-queries";
 import { CompanySummaryCard } from "@/components/finance/company-summary-card";
+import { LEGACY_SYSTEM_URL } from "@/lib/finance/config";
 
 export const dynamic = "force-dynamic";
 
@@ -127,15 +128,15 @@ export default async function FinanceCompaniesPage() {
             NO COMPANIES
           </div>
           <p className="text-[13px] text-nu-graphite mb-4">
-            법인이 등록되어 있지 않습니다. 구 재무시스템에서 법인을 등록하세요.
+            법인이 등록되어 있지 않습니다.
           </p>
           <a
-            href="https://nutunion-finance.vercel.app"
+            href={LEGACY_SYSTEM_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-block border-[2.5px] border-nu-ink bg-nu-pink text-nu-paper px-6 py-3 font-mono-nu text-[12px] uppercase tracking-widest no-underline"
           >
-            구 재무시스템 열기 ↗
+            구 재무시스템에서 등록 ↗
           </a>
         </div>
       )}

@@ -94,18 +94,6 @@ export default async function FinanceTransactionsPage({ searchParams }: PageProp
 
       <TransactionList transactions={transactions} />
 
-      {/* 구 시스템 안내 */}
-      <div className="mt-8 pt-6 border-t border-nu-ink/10 text-center">
-        <p className="text-[12px] text-nu-graphite mb-3">거래 추가·수정, 파일 업로드, HR/급여 관리는 구 재무시스템에서 사용하실 수 있습니다.</p>
-        <a
-          href="https://nutunion-finance.vercel.app"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-block border-[2.5px] border-nu-ink bg-nu-pink text-nu-paper px-6 py-3 font-mono-nu text-[12px] uppercase tracking-widest no-underline"
-        >
-          구 재무시스템 열기 ↗
-        </a>
-      </div>
     </div>
   );
 }

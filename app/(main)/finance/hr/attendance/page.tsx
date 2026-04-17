@@ -113,13 +113,17 @@ export default async function AttendancePage({ searchParams }: PageProps) {
                 {rows.map((r) => {
                   const comp = companyMap.get(r.employee.company);
                   return (
-                    <tr key={r.employee.id} className="hover:bg-nu-ink/5">
-                      <td className="px-4 py-3">
-                        <Link href={`/finance/hr/employees/${r.employee.id}`} className="text-[13px] font-bold text-nu-ink no-underline hover:underline">
-                          {r.employee.name}
+                    <tr key={r.employee.id} className="hover:bg-nu-ink/5 cursor-pointer group">
+                      <td className="px-4 py-3 relative">
+                        <Link
+                          href={`/finance/hr/employees/${r.employee.id}`}
+                          aria-label={`${r.employee.name} 상세 보기`}
+                          className="text-[13px] font-bold text-nu-ink no-underline group-hover:underline after:absolute after:inset-0 after:content-[''] after:z-0"
+                        >
+                          <span className="relative z-10">{r.employee.name}</span>
                         </Link>
                         {r.employee.position && (
-                          <div className="text-[10px] text-nu-graphite">{r.employee.position}</div>
+                          <div className="text-[10px] text-nu-graphite relative z-10">{r.employee.position}</div>
                         )}
                       </td>
                       <td className="px-2 py-3">
