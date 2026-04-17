@@ -25,7 +25,7 @@ export default async function FinanceLayout({ children }: { children: React.Reac
 
   return (
     <div>
-      <FinanceNav />
+      <FinanceNav role={profile.role} />
       {children}
     </div>
   );

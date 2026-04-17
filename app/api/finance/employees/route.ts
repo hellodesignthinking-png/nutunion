@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
+import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,6 +12,10 @@ export async function POST(req: NextRequest) {
     if (!profile || (profile.role !== "admin" && profile.role !== "staff")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    // rate limit: 분당 10건
+    const rl = await checkRateLimit(supabase, `${user.id}:employee-create`, 10, 60);
+    if (!rl.allowed) return rateLimitResponse(rl);
 
     const body = await req.json();
     const {

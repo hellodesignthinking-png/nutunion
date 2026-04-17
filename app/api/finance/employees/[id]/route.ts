@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
+import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
 
 async function checkPermission() {
   const supabase = await createClient();
@@ -19,6 +20,10 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
   const { id } = await context.params;
   const check = await checkPermission();
   if (!check.ok) return NextResponse.json({ error: check.message }, { status: check.status });
+
+  // rate limit: 분당 20건
+  const rl = await checkRateLimit(check.supabase, `${check.user.id}:employee-mutate`, 20, 60);
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   const body = await req.json();
   const allowed = [
@@ -95,6 +100,10 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
   const { id } = await context.params;
   const check = await checkPermission();
   if (!check.ok) return NextResponse.json({ error: check.message }, { status: check.status });
+
+  // rate limit: 분당 10건 (퇴직 처리 연타 방지)
+  const rl = await checkRateLimit(check.supabase, `${check.user.id}:employee-mutate`, 10, 60);
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   // 현재 상태 확인
   const { data: existing } = await check.supabase

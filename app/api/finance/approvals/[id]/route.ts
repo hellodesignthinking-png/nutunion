@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
+import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
 
 /**
  * POST /api/finance/approvals/[id]
@@ -15,6 +16,10 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     const { data: profile } = await supabase.from("profiles").select("id,role,nickname").eq("id", user.id).single();
     if (!profile) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     const isAdminStaff = profile.role === "admin" || profile.role === "staff";
+
+    // rate limit: 분당 20건 (결재 처리 연타 방지)
+    const rl = await checkRateLimit(supabase, `${user.id}:approval-action`, 20, 60);
+    if (!rl.allowed) return rateLimitResponse(rl);
 
     const body = await req.json();
     const action = body.action as string;

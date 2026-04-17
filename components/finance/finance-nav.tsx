@@ -4,31 +4,45 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LEGACY_SYSTEM_URL } from "@/lib/finance/config";
 
-const NAV_ITEMS = [
+interface NavItem {
+  label: string;
+  href: string;
+  icon: string;
+  exact?: boolean;
+  accent?: boolean;
+  adminOnly?: boolean;
+}
+
+const NAV_ITEMS: NavItem[] = [
   { label: "볼트", href: "/finance", icon: "🔩", exact: true },
   { label: "법인", href: "/finance/companies", icon: "🏛" },
   { label: "거래", href: "/finance/transactions", icon: "💳" },
   { label: "HR", href: "/finance/hr", icon: "👥" },
   { label: "결재", href: "/finance/approvals", icon: "📝" },
   { label: "AI 마케팅", href: "/finance/marketing", icon: "✨", accent: true },
+  { label: "비용", href: "/finance/cost", icon: "💰" },
+  { label: "감사", href: "/finance/audit", icon: "🔒", adminOnly: true },
   { label: "규정", href: "/finance/docs", icon: "📋" },
 ];
 
-export function FinanceNav() {
+export function FinanceNav({ role }: { role?: string }) {
   const pathname = usePathname();
+  const isAdmin = role === "admin";
 
   const isActive = (href: string, exact?: boolean) => {
     if (exact) {
-      return pathname === href || /^\/finance\/[^/]+$/.test(pathname) && !pathname.match(/\/(companies|transactions|hr|marketing|docs|approvals)/);
+      return pathname === href || /^\/finance\/[^/]+$/.test(pathname) && !pathname.match(/\/(companies|transactions|hr|marketing|docs|approvals|audit|cost)/);
     }
     return pathname.startsWith(href);
   };
+
+  const items = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
 
   return (
     <div className="sticky top-[60px] z-30 bg-nu-paper/90 backdrop-blur-sm border-b-[2px] border-nu-ink print:hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <nav className="flex items-center gap-1 overflow-x-auto py-2 -mx-1">
-          {NAV_ITEMS.map((item) => {
+          {items.map((item) => {
             const active = isActive(item.href, item.exact);
             return (
               <Link
