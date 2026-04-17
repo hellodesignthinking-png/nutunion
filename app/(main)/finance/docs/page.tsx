@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 export const dynamic = "force-static";
+export const metadata = { title: "사내 규정" };
 
 const DOCS = [
   { id: "rules", title: "취업규칙", description: "근로조건 및 복무규율", icon: "📋", chapters: 7 },

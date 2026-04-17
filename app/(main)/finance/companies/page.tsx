@@ -4,6 +4,7 @@ import { CompanySummaryCard } from "@/components/finance/company-summary-card";
 import { LEGACY_SYSTEM_URL } from "@/lib/finance/config";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "법인" };
 
 function fmt(n: number): string {
   return n.toLocaleString("ko-KR");

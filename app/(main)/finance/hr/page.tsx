@@ -4,6 +4,7 @@ import { getCompanies } from "@/lib/finance/company-queries";
 import { LEGACY_SYSTEM_URL } from "@/lib/finance/config";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "인사" };
 
 function fmt(n: number): string {
   return n.toLocaleString("ko-KR");

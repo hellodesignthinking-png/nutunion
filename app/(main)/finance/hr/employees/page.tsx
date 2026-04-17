@@ -4,6 +4,7 @@ import { getCompanies } from "@/lib/finance/company-queries";
 import { EmployeeCreateModal } from "@/components/finance/employee-create-modal";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "직원 목록" };
 
 interface PageProps {
   searchParams: Promise<{ company?: string; status?: string; q?: string }>;

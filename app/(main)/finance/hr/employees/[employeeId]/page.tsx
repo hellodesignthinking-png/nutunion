@@ -227,6 +227,7 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
             contract_signed: employee.contract_signed,
             contract_date: employee.contract_date,
             contract_sent_date: employee.contract_sent_date,
+            signature_image: employee.signature_image,
           }}
           company={company ? {
             id: company.id,

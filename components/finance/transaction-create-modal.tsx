@@ -61,6 +61,7 @@ export function TransactionCreateModal({ companies, defaultCompany, editing, con
   const isEdit = !!editing;
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState(false);
 
   const initialForm = () => ({
     date: editing?.date || new Date().toISOString().slice(0, 10),
@@ -88,7 +89,7 @@ export function TransactionCreateModal({ companies, defaultCompany, editing, con
     const h = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
         e.preventDefault();
-        handleSubmit();
+        handleSubmit(false);
       }
     };
     window.addEventListener("keydown", h);
@@ -96,13 +97,13 @@ export function TransactionCreateModal({ companies, defaultCompany, editing, con
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, form, isEdit]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (forceDuplicate = false) => {
     if (!form.description.trim()) { setError("내용을 입력하세요"); return; }
-    if (!form.amount || isNaN(Number(form.amount))) { setError("금액을 입력하세요"); return; }
-    const absAmount = Math.abs(Number(form.amount));
-    const signedAmount = form.isExpense ? -absAmount : absAmount;
+    if (amount === 0 || !form.amount || isNaN(Number(form.amount))) { setError("금액을 입력하세요 (0 제외)"); return; }
+    const signedAmount = form.isExpense ? -amount : amount;
 
     setError(null);
+    setDuplicateWarning(false);
     setSubmitting(true);
     try {
       const url = isEdit ? `/api/finance/transactions/${editing!.id}` : "/api/finance/transactions";
@@ -120,9 +121,15 @@ export function TransactionCreateModal({ companies, defaultCompany, editing, con
           receipt_type: form.receipt_type,
           vendor_name: form.vendor_name.trim() || undefined,
           memo: form.memo.trim() || undefined,
+          ...(forceDuplicate ? { force_duplicate: true } : {}),
         }),
       });
       const data = await res.json();
+      if (res.status === 409 && data.duplicate) {
+        setDuplicateWarning(true);
+        setError(data.error || "중복 거래가 감지되었습니다");
+        return;
+      }
       if (!res.ok || !data.success) throw new Error(data.error || "저장 실패");
       toast.success(isEdit ? "거래가 수정되었습니다" : "거래가 등록되었습니다");
       setOpen(false);
@@ -133,6 +140,8 @@ export function TransactionCreateModal({ companies, defaultCompany, editing, con
       setSubmitting(false);
     }
   };
+
+  const amount = Math.abs(Number(form.amount) || 0);
 
   const handleDelete = async () => {
     if (!isEdit || !editing) return;
@@ -164,7 +173,13 @@ export function TransactionCreateModal({ companies, defaultCompany, editing, con
       )}
 
       {open && (
-        <ModalShell title={isEdit ? "거래 수정" : "거래 추가"} onClose={() => setOpen(false)} locked={submitting} maxWidth="lg">
+        <ModalShell
+          title={isEdit ? "거래 수정" : "거래 추가"}
+          onClose={() => setOpen(false)}
+          locked={submitting}
+          maxWidth="lg"
+          dirty={!!(form.description.trim() || form.amount || form.vendor_name.trim() || form.memo.trim()) && !isEdit}
+        >
           <div className="p-5 flex flex-col gap-4">
               {/* 수입/지출 토글 */}
               <div className="flex gap-2">
@@ -285,8 +300,18 @@ export function TransactionCreateModal({ companies, defaultCompany, editing, con
               </Field>
 
               {error && (
-                <div className="border-[2px] border-red-500 bg-red-50 text-red-600 p-2 text-[12px]">
-                  {error}
+                <div className={`border-[2px] p-2 text-[12px] ${duplicateWarning ? "border-orange-500 bg-orange-50 text-orange-700" : "border-red-500 bg-red-50 text-red-600"}`}>
+                  <div>{error}</div>
+                  {duplicateWarning && (
+                    <button
+                      type="button"
+                      onClick={() => handleSubmit(true)}
+                      disabled={submitting}
+                      className="mt-2 border-[2px] border-orange-600 bg-orange-100 text-orange-700 px-3 py-1 font-mono-nu text-[10px] uppercase tracking-wider hover:bg-orange-600 hover:text-white"
+                    >
+                      {submitting ? "처리 중..." : "그래도 저장"}
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -307,7 +332,7 @@ export function TransactionCreateModal({ companies, defaultCompany, editing, con
                   취소
                 </button>
                 <button
-                  onClick={handleSubmit}
+                  onClick={() => handleSubmit(false)}
                   disabled={submitting}
                   title="Ctrl+Enter (또는 ⌘+Enter)로 저장"
                   className="flex-1 border-[2.5px] border-nu-ink bg-nu-pink text-nu-paper px-4 py-2.5 font-mono-nu text-[11px] uppercase tracking-widest hover:bg-nu-ink disabled:opacity-50"

@@ -13,6 +13,7 @@ interface EmployeeInfo {
   contract_signed?: boolean;
   contract_date?: string;
   contract_sent_date?: string;
+  signature_image?: string;
 }
 
 interface CompanyInfo {
@@ -43,7 +44,7 @@ export function ContractActions({
     ? "sent"
     : "none";
 
-  const act = async (action: "send" | "sign" | "cancel") => {
+  const act = async (action: "send" | "sign" | "cancel", extraBody?: Record<string, unknown>) => {
     if (busy) return;
     setBusy(true);
     setError(null);
@@ -51,7 +52,7 @@ export function ContractActions({
       const res = await fetch(`/api/finance/contracts/${employee.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, ...extraBody }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || "실패");
@@ -71,10 +72,8 @@ export function ContractActions({
     }
   };
 
-  const handleSignSave = async () => {
-    // 서명 이미지는 별도 저장 없이 상태만 완료로 변경 (MVP)
-    // 향후: /api/finance/contracts/[id]/sign 에 서명 이미지 업로드 추가 가능
-    await act("sign");
+  const handleSignSave = async (dataUrl: string) => {
+    await act("sign", { signature_image: dataUrl });
     setShowSignature(false);
   };
 
@@ -89,9 +88,21 @@ export function ContractActions({
         </div>
 
         {status === "completed" && (
-          <p className="text-[12px] text-nu-graphite mb-3">
-            ✓ 계약 완료 — 서명일 {employee.contract_date}
-          </p>
+          <div className="mb-3">
+            <p className="text-[12px] text-nu-graphite mb-2">
+              ✓ 계약 완료 — 서명일 {employee.contract_date}
+            </p>
+            {employee.signature_image && (
+              <div className="inline-block border-[2px] border-nu-ink bg-white p-1">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={employee.signature_image}
+                  alt={`${employee.name} 서명`}
+                  className="max-h-[60px] max-w-[200px]"
+                />
+              </div>
+            )}
+          </div>
         )}
         {status === "sent" && (
           <p className="text-[12px] text-nu-graphite mb-3">

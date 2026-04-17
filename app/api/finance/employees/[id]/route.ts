@@ -40,6 +40,21 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     }
   }
 
+  // 고용형태 전환 시 데이터 정리
+  if ("employment_type" in updates) {
+    if (updates.employment_type === "알바") {
+      // 알바로 전환: 시급 정보가 없으면 annual_salary는 그대로 유지(경고 없음)
+      // 알바의 연차는 0
+      if (!("annual_leave_total" in updates)) updates.annual_leave_total = 0;
+    } else {
+      // 정규직/계약직/인턴으로 전환: 알바 전용 필드 클리어
+      updates.hourly_wage = null;
+      updates.weekly_days = null;
+      updates.daily_hours = null;
+      updates.work_days = null;
+    }
+  }
+
   // 알바 급여 자동 계산 — annual_salary가 명시적으로 전달되지 않았고, 시급/근무 정보만 변경된 경우에만
   const isAlbaUpdate = updates.employment_type === "알바" || (!("employment_type" in updates) && body.employment_type === "알바");
   const touchedWageFields = "hourly_wage" in updates || "daily_hours" in updates || "weekly_days" in updates;
@@ -66,14 +81,30 @@ export async function DELETE(_req: NextRequest, context: { params: Promise<{ id:
   const check = await checkPermission();
   if (!check.ok) return NextResponse.json({ error: check.message }, { status: check.status });
 
-  // 완전 삭제 대신 소프트 삭제: status를 '퇴직'으로
-  const { error } = await check.supabase
+  // 현재 상태 확인
+  const { data: existing } = await check.supabase
     .from("employees")
-    .update({ status: "퇴직", end_date: new Date().toISOString().slice(0, 10) })
-    .eq("id", id);
+    .select("contract_status,contract_signed")
+    .eq("id", id)
+    .single();
+
+  // 소프트 삭제: status='퇴직' + 서명 대기 중 계약 자동 취소
+  const updates: Record<string, unknown> = {
+    status: "퇴직",
+    end_date: new Date().toISOString().slice(0, 10),
+  };
+  if (existing?.contract_status === "sent" && !existing.contract_signed) {
+    updates.contract_status = null;
+    updates.contract_sent_date = null;
+  }
+
+  const { error } = await check.supabase.from("employees").update(updates).eq("id", id);
   if (error) {
     console.error("[Employees DELETE]", error);
     return NextResponse.json({ error: "삭제 실패" }, { status: 500 });
   }
-  return NextResponse.json({ success: true });
+  return NextResponse.json({
+    success: true,
+    cancelled_pending_contract: existing?.contract_status === "sent" && !existing.contract_signed,
+  });
 }

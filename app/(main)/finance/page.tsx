@@ -3,6 +3,7 @@ import { getBoltsWithFinance } from "@/lib/finance/queries";
 import { BoltSummaryCard } from "@/components/finance/bolt-summary-card";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "볼트" };
 
 function fmt(n: number): string {
   return n.toLocaleString("ko-KR");

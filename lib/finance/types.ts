@@ -73,6 +73,7 @@ export interface FinEmployee {
   contract_status?: string;
   contract_date?: string;
   contract_sent_date?: string;
+  signature_image?: string;
   created_at?: string;
 }
 

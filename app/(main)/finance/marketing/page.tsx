@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { MarketingForm } from "@/components/finance/marketing-form";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "AI 마케팅" };
 
 export default async function FinanceMarketingPage() {
   const supabase = await createClient();

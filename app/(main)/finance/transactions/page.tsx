@@ -5,6 +5,7 @@ import { TransactionCreateModal } from "@/components/finance/transaction-create-
 import { parseYearMonth, firstDayOfMonth, lastDayOfMonth, prevMonth, nextMonth } from "@/lib/finance/date-utils";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "거래 내역" };
 
 const PAGE_SIZE = 50;
 

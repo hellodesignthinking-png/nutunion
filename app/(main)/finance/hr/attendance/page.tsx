@@ -4,6 +4,7 @@ import { getCompanies } from "@/lib/finance/company-queries";
 import { parseYearMonth, prevMonth, nextMonth } from "@/lib/finance/date-utils";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "근태 현황" };
 
 interface PageProps {
   searchParams: Promise<{ company?: string; month?: string }>;

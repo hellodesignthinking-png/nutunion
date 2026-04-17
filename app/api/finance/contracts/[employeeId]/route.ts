@@ -48,19 +48,25 @@ export async function POST(req: NextRequest, context: { params: Promise<{ employ
   }
 
   if (action === "sign") {
-    // 본인 또는 admin/staff
     if (!isOwner && !isAdminStaff) {
       return NextResponse.json({ error: "서명 권한이 없습니다" }, { status: 403 });
     }
-    const { error } = await check.supabase
-      .from("employees")
-      .update({
-        contract_status: "completed",
-        contract_signed: true,
-        contract_date: today,
-      })
-      .eq("id", employeeId);
-    if (error) return NextResponse.json({ error: "서명 저장 실패" }, { status: 500 });
+    // 서명 이미지 검증 (data:image/png;base64,... 형식)
+    const signatureImage = body.signature_image as string | undefined;
+    if (signatureImage && (!signatureImage.startsWith("data:image/") || signatureImage.length > 500_000)) {
+      return NextResponse.json({ error: "잘못된 서명 이미지입니다" }, { status: 400 });
+    }
+    const updates: Record<string, unknown> = {
+      contract_status: "completed",
+      contract_signed: true,
+      contract_date: today,
+    };
+    if (signatureImage) updates.signature_image = signatureImage;
+    const { error } = await check.supabase.from("employees").update(updates).eq("id", employeeId);
+    if (error) {
+      console.error("[Contracts sign]", error);
+      return NextResponse.json({ error: "서명 저장 실패" }, { status: 500 });
+    }
     return NextResponse.json({ success: true, contract_status: "completed", contract_date: today });
   }
 

@@ -144,7 +144,13 @@ export function EmployeeCreateModal({ companies, defaultCompany, editing, contro
       )}
 
       {open && (
-        <ModalShell title={isEdit ? "직원 수정" : "직원 등록"} onClose={() => setOpen(false)} locked={submitting} maxWidth="lg">
+        <ModalShell
+          title={isEdit ? "직원 수정" : "직원 등록"}
+          onClose={() => setOpen(false)}
+          locked={submitting}
+          maxWidth="lg"
+          dirty={!!(form.name.trim() || form.email.trim() || form.phone.trim() || form.annual_salary || form.hourly_wage) && !isEdit}
+        >
           <div className="p-5 flex flex-col gap-4">
               <Field label="이름 *">
                 <input
