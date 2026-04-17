@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 interface CompanyOpt {
   id: string;
@@ -94,6 +95,7 @@ export function EmployeeCreateModal({ companies, defaultCompany, editing, contro
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || "저장 실패");
+      toast.success(isEdit ? "직원 정보가 수정되었습니다" : "직원이 등록되었습니다");
       setOpen(false);
       router.refresh();
     } catch (err) {
@@ -111,6 +113,7 @@ export function EmployeeCreateModal({ companies, defaultCompany, editing, contro
       const res = await fetch(`/api/finance/employees/${editing.id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || "삭제 실패");
+      toast.success("퇴직 처리되었습니다");
       setOpen(false);
       router.refresh();
     } catch (err) {

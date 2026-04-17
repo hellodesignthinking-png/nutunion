@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 interface CompanyOpt {
   id: string;
@@ -108,6 +109,7 @@ export function TransactionCreateModal({ companies, defaultCompany, editing, con
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || "저장 실패");
+      toast.success(isEdit ? "거래가 수정되었습니다" : "거래가 등록되었습니다");
       setOpen(false);
       router.refresh();
     } catch (err) {
@@ -125,6 +127,7 @@ export function TransactionCreateModal({ companies, defaultCompany, editing, con
       const res = await fetch(`/api/finance/transactions/${editing.id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || "삭제 실패");
+      toast.success("거래가 삭제되었습니다");
       setOpen(false);
       router.refresh();
     } catch (err) {

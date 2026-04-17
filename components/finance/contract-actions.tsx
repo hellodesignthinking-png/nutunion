@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { SignaturePad } from "./signature-pad";
 
 interface EmployeeInfo {
@@ -54,9 +55,17 @@ export function ContractActions({
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || "실패");
+      const messages: Record<string, string> = {
+        send: "계약서가 발송되었습니다",
+        sign: "✓ 전자계약 서명이 완료되었습니다",
+        cancel: "발송이 취소되었습니다",
+      };
+      toast.success(messages[action] || "완료");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "오류");
+      const msg = err instanceof Error ? err.message : "오류";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
