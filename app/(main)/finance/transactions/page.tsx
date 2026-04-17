@@ -48,6 +48,7 @@ export default async function FinanceTransactionsPage({ searchParams }: PageProp
         <div className="flex gap-1">
           <Link href="/finance/companies" className="font-mono-nu text-[11px] uppercase tracking-widest px-3 py-1 text-nu-graphite hover:text-nu-ink no-underline">법인</Link>
           <Link href="/finance/transactions" className="font-mono-nu text-[11px] uppercase tracking-widest px-3 py-1 bg-nu-ink text-nu-paper no-underline">거래</Link>
+          <Link href="/finance/hr" className="font-mono-nu text-[11px] uppercase tracking-widest px-3 py-1 text-nu-graphite hover:text-nu-ink no-underline">HR</Link>
         </div>
       </div>
 

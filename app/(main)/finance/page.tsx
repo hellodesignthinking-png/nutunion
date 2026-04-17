@@ -48,6 +48,9 @@ export default async function FinanceHomePage() {
         <Link href="/finance/transactions" className="border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink px-4 py-2 font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper transition-colors">
           거래
         </Link>
+        <Link href="/finance/hr" className="border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink px-4 py-2 font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper transition-colors">
+          HR
+        </Link>
       </div>
 
       <p className="text-[13px] sm:text-[14px] text-nu-graphite mb-6">
