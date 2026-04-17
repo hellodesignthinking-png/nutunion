@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
+import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
 
 async function checkPermission() {
   const supabase = await createClient();
@@ -19,6 +20,10 @@ export async function POST(req: NextRequest, context: { params: Promise<{ employ
   const { employeeId } = await context.params;
   const check = await checkPermission();
   if (!check.ok) return NextResponse.json({ error: check.message }, { status: check.status });
+
+  // rate limit: 분당 10건 (계약서 발송 스팸 방지)
+  const rl = await checkRateLimit(check.supabase, `${check.userId}:contract-action`, 10, 60);
+  if (!rl.allowed) return rateLimitResponse(rl);
 
   const body = await req.json();
   const action = body.action as string;

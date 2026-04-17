@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
+import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
 
 /**
  * POST /api/finance/approvals — 결재 요청 작성
@@ -12,6 +13,10 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const { data: profile } = await supabase.from("profiles").select("id,nickname,email,role").eq("id", user.id).single();
     if (!profile) return NextResponse.json({ error: "프로필 없음" }, { status: 403 });
+
+    // rate limit: 분당 10건
+    const rl = await checkRateLimit(supabase, `${user.id}:approval-create`, 10, 60);
+    if (!rl.allowed) return rateLimitResponse(rl);
 
     const body = await req.json();
     const { title, doc_type, content, amount, company, attachments } = body || {};

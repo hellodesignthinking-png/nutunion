@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
 
 export const maxDuration = 60;
 
@@ -49,6 +50,12 @@ export async function POST(req: NextRequest) {
     if (!profile || (profile.role !== "admin" && profile.role !== "staff")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    // rate limit: 분당 5건, 시간당 30건 (AI Gateway 비용 보호)
+    const rl1 = await checkRateLimit(supabase, `${user.id}:marketing-gen:min`, 5, 60);
+    if (!rl1.allowed) return rateLimitResponse(rl1);
+    const rl2 = await checkRateLimit(supabase, `${user.id}:marketing-gen:hour`, 30, 3600);
+    if (!rl2.allowed) return rateLimitResponse(rl2);
 
     const body = await req.json();
     const { contentType, topic, tone, target, entityType, entityId } = body || {};
