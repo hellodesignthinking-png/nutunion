@@ -24,11 +24,12 @@ export default async function StaffLayout({
   }
 
   const navItems = [
-    { label: "\uB300\uC2DC\uBCF4\uB4DC", href: "/staff" },
-    { label: "\uD504\uB85C\uC81D\uD2B8", href: "/staff/workspace" },
-    { label: "\uD560\uC77C", href: "/staff/tasks" },
-    { label: "\uD30C\uC77C", href: "/staff/files" },
-    { label: "\uCE98\uB9B0\uB354", href: "/staff/calendar" },
+    { label: "대시보드", href: "/staff" },
+    { label: "프로젝트", href: "/staff/workspace" },
+    { label: "할일", href: "/staff/tasks" },
+    { label: "재무", href: "/finance" },
+    { label: "파일", href: "/staff/files" },
+    { label: "캘린더", href: "/staff/calendar" },
   ];
 
   const staffName = profile.nickname || user.email?.split("@")[0] || "Staff";

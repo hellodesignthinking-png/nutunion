@@ -96,27 +96,13 @@ export function AuthNav({ profile }: { profile: Profile }) {
             )}
           </Link>
         ))}
-        {/* 재무 — 관리자/스태프 전용 */}
-        {isStaff && (
-          <Link
-            href="/finance"
-            prefetch={true}
-            className={`font-mono-nu text-[13px] no-underline tracking-[0.08em] uppercase transition-colors inline-flex items-center gap-1.5 px-3 py-1.5 ${
-              pathname.startsWith("/finance")
-                ? "bg-green-700 text-white"
-                : "text-green-700 hover:bg-green-50"
-            }`}
-          >
-            <DollarSign size={12} /> 재무
-          </Link>
-        )}
-        {/* Admin link - always visible for admin users */}
+        {/* 스태프 링크 (재무/프로젝트/할일 등 스태프 허브) */}
         {isStaff && (
           <Link
             href="/staff"
             prefetch={true}
             className={`font-mono-nu text-[13px] no-underline tracking-[0.08em] uppercase transition-colors inline-flex items-center gap-1.5 px-3 py-1.5 ${
-              pathname.startsWith("/staff")
+              pathname.startsWith("/staff") || pathname.startsWith("/finance")
                 ? "bg-indigo-600 text-white"
                 : "text-indigo-600 hover:bg-indigo-50"
             }`}
@@ -258,6 +244,9 @@ export function AuthNav({ profile }: { profile: Profile }) {
                   </Link>
                   <Link href="/staff/tasks" onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[13px] text-nu-graphite no-underline">
                     할일
+                  </Link>
+                  <Link href="/finance" onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[13px] text-green-700 no-underline">
+                    재무
                   </Link>
                   <Link href="/staff/files" onClick={() => setOpen(false)} prefetch={true} className="font-mono-nu text-[13px] text-nu-graphite no-underline">
                     파일
