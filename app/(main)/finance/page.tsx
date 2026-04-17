@@ -51,6 +51,12 @@ export default async function FinanceHomePage() {
         <Link href="/finance/hr" className="border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink px-4 py-2 font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper transition-colors">
           HR
         </Link>
+        <Link href="/finance/marketing" className="border-[2.5px] border-nu-pink bg-nu-paper text-nu-pink px-4 py-2 font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-nu-pink hover:text-nu-paper transition-colors">
+          ✨ AI 마케팅
+        </Link>
+        <Link href="/finance/docs" className="border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink px-4 py-2 font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper transition-colors">
+          📋 규정
+        </Link>
       </div>
 
       <p className="text-[13px] sm:text-[14px] text-nu-graphite mb-6">
