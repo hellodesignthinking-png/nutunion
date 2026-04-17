@@ -114,22 +114,63 @@ ${topic}
 [요청사항]
 ${template.instructionFormat}`;
 
-    const { text } = await generateText({
-      model: "anthropic/claude-sonnet-4.5",
-      system,
-      prompt,
-      maxOutputTokens: 2000,
+    const startedAt = Date.now();
+    const MODEL = "anthropic/claude-sonnet-4.5";
+    let result;
+    try {
+      result = await generateText({
+        model: MODEL,
+        system,
+        prompt,
+        maxOutputTokens: 2000,
+      });
+    } catch (genErr) {
+      // 실패도 usage log 에 기록
+      await supabase.from("ai_usage_logs").insert({
+        actor_id: user.id,
+        actor_email: user.email,
+        endpoint: "marketing",
+        model: MODEL,
+        content_type: contentType,
+        entity_type: entityType,
+        entity_id: String(entityId),
+        duration_ms: Date.now() - startedAt,
+        success: false,
+        error: genErr instanceof Error ? genErr.message.slice(0, 500) : String(genErr).slice(0, 500),
+      });
+      throw genErr;
+    }
+
+    const usage = result.usage as { inputTokens?: number; outputTokens?: number } | undefined;
+
+    // 성공 시 사용량 로그
+    await supabase.from("ai_usage_logs").insert({
+      actor_id: user.id,
+      actor_email: user.email,
+      endpoint: "marketing",
+      model: MODEL,
+      input_tokens: usage?.inputTokens ?? 0,
+      output_tokens: usage?.outputTokens ?? 0,
+      content_type: contentType,
+      entity_type: entityType,
+      entity_id: String(entityId),
+      duration_ms: Date.now() - startedAt,
+      success: true,
     });
 
     return NextResponse.json({
       success: true,
       contentType,
       contentTypeLabel: template.label,
-      content: text,
+      content: result.text,
       entityType,
       entityId,
       topic,
       generatedAt: new Date().toISOString(),
+      tokens: {
+        input: usage?.inputTokens ?? 0,
+        output: usage?.outputTokens ?? 0,
+      },
     });
   } catch (err) {
     // 서버 로그에는 상세 기록, 클라이언트에는 일반 메시지
