@@ -40,17 +40,17 @@ begin
   where e.company is not null
     and not exists (select 1 from public.companies c where c.id = e.company);
 
-  -- attendances.employee_id → employees.id
+  -- attendances.employee_id → employees.id (양쪽 text 캐스트)
   select count(*) into att_orphan
   from public.attendances a
   where a.employee_id is not null
-    and not exists (select 1 from public.employees e where e.id::text = a.employee_id);
+    and not exists (select 1 from public.employees e where e.id::text = a.employee_id::text);
 
-  -- payroll.employee_id → employees.id
+  -- payroll.employee_id → employees.id (양쪽 text 캐스트)
   select count(*) into pay_orphan
   from public.payroll p
   where p.employee_id is not null
-    and not exists (select 1 from public.employees e where e.id::text = p.employee_id);
+    and not exists (select 1 from public.employees e where e.id::text = p.employee_id::text);
 
   -- approvals.company
   select count(*) into appr_orphan
@@ -139,7 +139,7 @@ set search_path = public
 as $$
 begin
   if new.employee_id is null then return new; end if;
-  if not exists (select 1 from public.employees where id::text = new.employee_id) then
+  if not exists (select 1 from public.employees where id::text = new.employee_id::text) then
     raise exception 'employee_id "%" 가 employees 테이블에 없습니다', new.employee_id;
   end if;
   return new;
