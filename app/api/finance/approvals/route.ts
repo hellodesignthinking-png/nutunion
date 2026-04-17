@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
+import { ApprovalCreateSchema, formatZodError } from "@/lib/finance/validators";
 
 /**
  * POST /api/finance/approvals — 결재 요청 작성
@@ -19,11 +20,15 @@ export async function POST(req: NextRequest) {
     if (!rl.allowed) return rateLimitResponse(rl);
 
     const body = await req.json();
-    const { title, doc_type, content, amount, company, attachments } = body || {};
-
-    if (!title?.trim() || !doc_type) {
-      return NextResponse.json({ error: "제목과 유형은 필수입니다" }, { status: 400 });
+    const normalized = {
+      ...body,
+      amount: body?.amount !== undefined && body.amount !== "" && body.amount !== null ? Number(body.amount) : undefined,
+    };
+    const parsed = ApprovalCreateSchema.safeParse(normalized);
+    if (!parsed.success) {
+      return NextResponse.json(formatZodError(parsed.error), { status: 400 });
     }
+    const { title, doc_type, content, amount, company, attachments } = parsed.data;
 
     // 요청자 직원 정보
     const { data: emp } = profile.email
@@ -31,10 +36,10 @@ export async function POST(req: NextRequest) {
       : { data: null };
 
     const record = {
-      title: title.trim(),
+      title,
       doc_type,
-      content: content?.trim() || "",
-      amount: amount ? Number(amount) : null,
+      content: content || "",
+      amount: amount ?? null,
       company: company || emp?.company || null,
       status: "대기",
       request_date: new Date().toISOString().slice(0, 10),

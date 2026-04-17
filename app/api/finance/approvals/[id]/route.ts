@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
+import { ApprovalActionSchema, formatZodError } from "@/lib/finance/validators";
 
 /**
  * POST /api/finance/approvals/[id]
@@ -22,8 +23,11 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     if (!rl.allowed) return rateLimitResponse(rl);
 
     const body = await req.json();
-    const action = body.action as string;
-    const rejectReason = body.reject_reason as string | undefined;
+    const parsed = ApprovalActionSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(formatZodError(parsed.error), { status: 400 });
+    }
+    const { action, reject_reason: rejectReason } = parsed.data;
 
     const { data: approval } = await supabase.from("approvals").select("*").eq("id", id).single();
     if (!approval) return NextResponse.json({ error: "결재 없음" }, { status: 404 });

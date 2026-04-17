@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
+import { TransactionCreateSchema, formatZodError } from "@/lib/finance/validators";
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,22 +19,14 @@ export async function POST(req: NextRequest) {
     if (!rl.allowed) return rateLimitResponse(rl);
 
     const body = await req.json();
-    const { date, company, type, description, amount, category, memo, receipt_type, vendor_name, payment_method } = body || {};
-
-    // 기본 검증
-    if (!date || !company || !description || amount === undefined) {
-      return NextResponse.json({ error: "필수 항목이 누락되었습니다" }, { status: 400 });
+    const parsed = TransactionCreateSchema.safeParse({
+      ...body,
+      amount: typeof body?.amount === "string" ? Number(body.amount) : body?.amount,
+    });
+    if (!parsed.success) {
+      return NextResponse.json(formatZodError(parsed.error), { status: 400 });
     }
-    const amt = Number(amount);
-    if (isNaN(amt)) {
-      return NextResponse.json({ error: "금액이 올바르지 않습니다" }, { status: 400 });
-    }
-    if (amt === 0) {
-      return NextResponse.json({ error: "금액은 0이 될 수 없습니다" }, { status: 400 });
-    }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      return NextResponse.json({ error: "날짜 형식이 올바르지 않습니다 (YYYY-MM-DD)" }, { status: 400 });
-    }
+    const { date, company, type, description, amount: amt, category, memo, receipt_type, vendor_name, payment_method } = parsed.data;
 
     // 중복 거래 감지 (같은 날짜/법인/금액/내용 — 최근 1시간 내)
     const { data: dupCheck } = await supabase
@@ -42,10 +35,10 @@ export async function POST(req: NextRequest) {
       .eq("date", date)
       .eq("company", company)
       .eq("amount", amt)
-      .eq("description", description.trim())
+      .eq("description", description)
       .gte("created_at", new Date(Date.now() - 60 * 60 * 1000).toISOString())
       .limit(1);
-    if (dupCheck && dupCheck.length > 0 && !body.force_duplicate) {
+    if (dupCheck && dupCheck.length > 0 && !parsed.data.force_duplicate) {
       return NextResponse.json({
         error: "동일한 거래가 1시간 내에 이미 등록되어 있습니다",
         duplicate: true,
@@ -56,13 +49,13 @@ export async function POST(req: NextRequest) {
       date,
       company,
       type: type || "기타",
-      description: description.trim(),
+      description,
       amount: amt,
       category: category || "미분류",
-      memo: memo || null,
-      receipt_type: receipt_type || null,
-      vendor_name: vendor_name || null,
-      payment_method: payment_method || null,
+      memo: memo ?? null,
+      receipt_type: receipt_type ?? null,
+      vendor_name: vendor_name ?? null,
+      payment_method: payment_method ?? null,
       created_at: new Date().toISOString(),
     };
 

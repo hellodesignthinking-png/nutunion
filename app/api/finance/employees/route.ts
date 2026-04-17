@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
+import { EmployeeCreateSchema, formatZodError } from "@/lib/finance/validators";
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,45 +19,47 @@ export async function POST(req: NextRequest) {
     if (!rl.allowed) return rateLimitResponse(rl);
 
     const body = await req.json();
-    const {
-      name, company, position, department, employment_type, email, phone,
-      annual_salary, hourly_wage, weekly_days, daily_hours, work_days,
-      bank_name, bank_account, join_date,
-    } = body || {};
-
-    if (!name?.trim() || !company) {
-      return NextResponse.json({ error: "이름과 법인은 필수입니다" }, { status: 400 });
+    // 숫자형 필드가 문자열로 오는 경우 변환
+    const normalized = {
+      ...body,
+      annual_salary: body?.annual_salary !== undefined && body.annual_salary !== "" ? Number(body.annual_salary) : undefined,
+      hourly_wage: body?.hourly_wage !== undefined && body.hourly_wage !== "" ? Number(body.hourly_wage) : undefined,
+      weekly_days: body?.weekly_days !== undefined && body.weekly_days !== "" ? Number(body.weekly_days) : undefined,
+      daily_hours: body?.daily_hours !== undefined && body.daily_hours !== "" ? Number(body.daily_hours) : undefined,
+    };
+    const parsed = EmployeeCreateSchema.safeParse(normalized);
+    if (!parsed.success) {
+      return NextResponse.json(formatZodError(parsed.error), { status: 400 });
     }
+    const d = parsed.data;
+    const isAlba = d.employment_type === "알바";
 
-    const isAlba = employment_type === "알바";
-    if (!isAlba && (!annual_salary || isNaN(Number(annual_salary)))) {
+    // 정규직은 연봉 필수
+    if (!isAlba && !d.annual_salary) {
       return NextResponse.json({ error: "연봉을 입력하세요" }, { status: 400 });
-    }
-    if (isAlba && (!hourly_wage || isNaN(Number(hourly_wage)))) {
-      return NextResponse.json({ error: "시급을 입력하세요" }, { status: 400 });
     }
 
     const record = {
-      name: name.trim(),
-      company,
-      position: position || "사원",
-      department: department || null,
-      employment_type: employment_type || "정규직",
+      name: d.name,
+      company: d.company,
+      position: d.position || "사원",
+      department: d.department ?? null,
+      employment_type: d.employment_type || "정규직",
       status: "재직",
-      email: email?.trim() || null,
-      phone: phone?.trim() || null,
-      join_date: join_date || new Date().toISOString().slice(0, 10),
+      email: d.email || null,
+      phone: d.phone ?? null,
+      join_date: d.join_date || new Date().toISOString().slice(0, 10),
       annual_salary: isAlba
-        ? Math.round(Number(hourly_wage) * Number(daily_hours || 8) * Number(weekly_days || 5) * 52)
-        : Number(annual_salary),
+        ? Math.round((d.hourly_wage ?? 0) * (d.daily_hours ?? 8) * (d.weekly_days ?? 5) * 52)
+        : (d.annual_salary ?? 0),
       annual_leave_total: isAlba ? 0 : 15,
       annual_leave_used: 0,
-      hourly_wage: isAlba ? Number(hourly_wage) : null,
-      weekly_days: isAlba ? Number(weekly_days || 5) : null,
-      daily_hours: isAlba ? Number(daily_hours || 8) : null,
-      work_days: isAlba ? work_days || null : null,
-      bank_name: bank_name || null,
-      bank_account: bank_account || null,
+      hourly_wage: isAlba ? (d.hourly_wage ?? null) : null,
+      weekly_days: isAlba ? (d.weekly_days ?? 5) : null,
+      daily_hours: isAlba ? (d.daily_hours ?? 8) : null,
+      work_days: isAlba ? (d.work_days ?? null) : null,
+      bank_name: d.bank_name ?? null,
+      bank_account: d.bank_account ?? null,
       created_at: new Date().toISOString(),
     };
 

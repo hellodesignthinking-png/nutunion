@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
-import { validateDataUrl } from "@/lib/finance/validators";
+import { validateDataUrl, ContractActionSchema, formatZodError } from "@/lib/finance/validators";
+import {
+  uploadDataUrl,
+  deleteStorageRef,
+  SIGNATURE_BUCKET,
+  isStorageRef,
+} from "@/lib/finance/storage";
 
 async function checkPermission() {
   const supabase = await createClient();
@@ -27,7 +33,11 @@ export async function POST(req: NextRequest, context: { params: Promise<{ employ
   if (!rl.allowed) return rateLimitResponse(rl);
 
   const body = await req.json();
-  const action = body.action as string;
+  const parsed = ContractActionSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(formatZodError(parsed.error), { status: 400 });
+  }
+  const { action, signature_image: signatureImage } = parsed.data;
 
   // 직원 조회
   const { data: employee } = await check.supabase.from("employees").select("*").eq("id", employeeId).single();
@@ -70,24 +80,58 @@ export async function POST(req: NextRequest, context: { params: Promise<{ employ
     if (!isOwner && !isAdminStaff) {
       return NextResponse.json({ error: "서명 권한이 없습니다" }, { status: 403 });
     }
-    // 서명 이미지 화이트리스트 검증 (SVG/HTML 차단)
-    const signatureImage = body.signature_image as string | undefined;
+
+    let signatureRef: string | undefined;
     if (signatureImage) {
+      // data: URL 화이트리스트 검증 (PDF 제외 — 서명은 이미지만)
       const validation = validateDataUrl(signatureImage, { maxBase64Length: 500_000 });
       if (!validation.ok) {
         return NextResponse.json({ error: validation.error }, { status: 400 });
       }
+
+      // Storage 업로드 (data: URL 일 때만)
+      if (signatureImage.startsWith("data:")) {
+        try {
+          const upload = await uploadDataUrl(check.supabase, {
+            bucket: SIGNATURE_BUCKET,
+            prefix: `employee-${employeeId}`,
+            dataUrl: signatureImage,
+          });
+          signatureRef = upload.ref;
+        } catch (uploadErr) {
+          console.error("[Contract sign upload]", uploadErr);
+          return NextResponse.json(
+            { error: uploadErr instanceof Error ? uploadErr.message : "서명 업로드 실패" },
+            { status: 500 }
+          );
+        }
+      } else {
+        signatureRef = signatureImage;
+      }
     }
+
+    // 기존 서명 Storage 객체 정리 준비
+    const oldSignature = employee.signature_image as string | null;
+
     const updates: Record<string, unknown> = {
       contract_status: "completed",
       contract_signed: true,
       contract_date: today,
     };
-    if (signatureImage) updates.signature_image = signatureImage;
+    if (signatureRef) updates.signature_image = signatureRef;
+
     const { error } = await check.supabase.from("employees").update(updates).eq("id", employeeId);
     if (error) {
       console.error("[Contracts sign]", error);
       return NextResponse.json({ error: "서명 저장 실패" }, { status: 500 });
+    }
+
+    // 기존 서명 Storage 객체 삭제 (교체 시)
+    if (signatureRef && oldSignature && isStorageRef(oldSignature) && oldSignature !== signatureRef) {
+      const delResult = await deleteStorageRef(check.supabase, oldSignature);
+      if (!delResult.ok) {
+        console.warn("[Contract sign] 기존 서명 삭제 실패:", delResult.error);
+      }
     }
 
     await writeAuditLog(check.supabase, check.user, {

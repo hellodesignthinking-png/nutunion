@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
+import { EmployeeUpdateSchema, formatZodError } from "@/lib/finance/validators";
 
 async function checkPermission() {
   const supabase = await createClient();
@@ -26,24 +27,26 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
   if (!rl.allowed) return rateLimitResponse(rl);
 
   const body = await req.json();
-  const allowed = [
-    "name", "company", "position", "department", "employment_type", "status",
-    "email", "phone", "join_date", "end_date",
-    "annual_salary", "annual_leave_total", "annual_leave_used",
-    "hourly_wage", "weekly_days", "daily_hours", "work_days", "work_start_time", "work_end_time",
-    "bank_name", "bank_account", "memo",
-  ];
-  const updates: Record<string, unknown> = {};
-  for (const k of allowed) {
-    if (k in body) {
-      if (NUMERIC_FIELDS.includes(k) && body[k] !== null && body[k] !== "") {
-        const n = Number(body[k]);
-        if (isNaN(n)) continue;
-        updates[k] = n;
-      } else {
-        updates[k] = body[k];
+  // 숫자 필드 정규화 (문자열/빈값 → number/undefined)
+  const normalized: Record<string, unknown> = { ...body };
+  for (const k of NUMERIC_FIELDS) {
+    if (k in normalized) {
+      const v = normalized[k];
+      if (v === "" || v === null) {
+        normalized[k] = null;
+      } else if (v !== undefined) {
+        const n = Number(v);
+        if (!isNaN(n)) normalized[k] = n;
       }
     }
+  }
+  const parsed = EmployeeUpdateSchema.safeParse(normalized);
+  if (!parsed.success) {
+    return NextResponse.json(formatZodError(parsed.error), { status: 400 });
+  }
+  const updates: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(parsed.data)) {
+    if (v !== undefined) updates[k] = v;
   }
 
   // 고용형태 전환 시 데이터 정리

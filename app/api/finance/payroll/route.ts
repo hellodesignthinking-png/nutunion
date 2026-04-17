@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { calculatePayroll } from "@/lib/finance/payroll-calc";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
+import { PayrollUpsertSchema, formatZodError } from "@/lib/finance/validators";
 
 /**
  * POST /api/finance/payroll
@@ -24,14 +25,18 @@ export async function POST(req: NextRequest) {
     if (!rl.allowed) return rateLimitResponse(rl);
 
     const body = await req.json();
-    const { employee_id, year_month, overtime_hours, bonus_pay, annual_leave_pay, other_pay, memo, paid_date } = body || {};
-
-    if (!employee_id || !year_month) {
-      return NextResponse.json({ error: "employee_id, year_month 필수" }, { status: 400 });
+    const normalized = {
+      ...body,
+      overtime_hours: body?.overtime_hours !== undefined && body.overtime_hours !== "" ? Number(body.overtime_hours) : undefined,
+      bonus_pay: body?.bonus_pay !== undefined && body.bonus_pay !== "" ? Number(body.bonus_pay) : undefined,
+      annual_leave_pay: body?.annual_leave_pay !== undefined && body.annual_leave_pay !== "" ? Number(body.annual_leave_pay) : undefined,
+      other_pay: body?.other_pay !== undefined && body.other_pay !== "" ? Number(body.other_pay) : undefined,
+    };
+    const parsed = PayrollUpsertSchema.safeParse(normalized);
+    if (!parsed.success) {
+      return NextResponse.json(formatZodError(parsed.error), { status: 400 });
     }
-    if (!/^\d{4}-\d{2}$/.test(year_month)) {
-      return NextResponse.json({ error: "year_month 형식 오류 (YYYY-MM)" }, { status: 400 });
-    }
+    const { employee_id, year_month, overtime_hours, bonus_pay, annual_leave_pay, other_pay, memo, paid_date } = parsed.data;
 
     const { data: employee } = await supabase.from("employees").select("*").eq("id", employee_id).single();
     if (!employee) return NextResponse.json({ error: "직원 없음" }, { status: 404 });

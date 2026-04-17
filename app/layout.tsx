@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "@/components/ui/sonner";
 import { GenreThemeProvider } from "@/components/brand/genre-theme-context";
 import { GlobalSearch } from "@/components/shared/global-search";
@@ -40,6 +42,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </GenreThemeProvider>
         <GlobalSearch />
         <Toaster position="bottom-right" />
+        <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );

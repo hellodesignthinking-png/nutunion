@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
+import { MarketingRequestSchema, formatZodError } from "@/lib/finance/validators";
 
 export const maxDuration = 60;
 
@@ -58,11 +59,11 @@ export async function POST(req: NextRequest) {
     if (!rl2.allowed) return rateLimitResponse(rl2);
 
     const body = await req.json();
-    const { contentType, topic, tone, target, entityType, entityId } = body || {};
-
-    if (!contentType || !topic || !entityType || !entityId) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    const parsed = MarketingRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(formatZodError(parsed.error), { status: 400 });
     }
+    const { contentType, topic, tone, target, entityType, entityId } = parsed.data;
 
     const template = CONTENT_TEMPLATES[contentType];
     if (!template) {

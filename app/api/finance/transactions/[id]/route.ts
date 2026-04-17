@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
+import { TransactionUpdateSchema, formatZodError } from "@/lib/finance/validators";
 
 async function checkPermission() {
   const supabase = await createClient();
@@ -24,27 +25,19 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
   if (!rl.allowed) return rateLimitResponse(rl);
 
   const body = await req.json();
-  const allowed = [
-    "date", "company", "type", "description", "amount", "category",
-    "memo", "receipt_type", "vendor_name", "payment_method",
-  ];
+  // amount 가 문자열로 오는 경우 숫자로 변환
+  const normalized = {
+    ...body,
+    ...(body?.amount !== undefined ? { amount: Number(body.amount) } : {}),
+  };
+  const parsed = TransactionUpdateSchema.safeParse(normalized);
+  if (!parsed.success) {
+    return NextResponse.json(formatZodError(parsed.error), { status: 400 });
+  }
+  // Zod 결과에서 undefined 필드 제거 (Supabase update 에 포함 안 되도록)
   const updates: Record<string, unknown> = {};
-  for (const k of allowed) {
-    if (k in body) updates[k] = body[k];
-  }
-
-  if (updates.date && !/^\d{4}-\d{2}-\d{2}$/.test(String(updates.date))) {
-    return NextResponse.json({ error: "날짜 형식 오류" }, { status: 400 });
-  }
-  if ("amount" in updates) {
-    const amt = Number(updates.amount);
-    if (isNaN(amt)) {
-      return NextResponse.json({ error: "금액 오류" }, { status: 400 });
-    }
-    if (amt === 0) {
-      return NextResponse.json({ error: "금액은 0이 될 수 없습니다" }, { status: 400 });
-    }
-    updates.amount = amt;
+  for (const [k, v] of Object.entries(parsed.data)) {
+    if (v !== undefined) updates[k] = v;
   }
 
   // 변경 전 스냅샷 (감사 로그용)

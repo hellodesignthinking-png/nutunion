@@ -3,12 +3,20 @@ import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
 import { validateDataUrl } from "@/lib/finance/validators";
+import {
+  uploadDataUrl,
+  deleteStorageRef,
+  RECEIPT_BUCKET,
+  isStorageRef,
+} from "@/lib/finance/storage";
 
 const MAX_RECEIPT_SIZE = 1_000_000; // 1MB base64 (~750KB raw)
 
 /**
  * PUT /api/finance/transactions/[id]/receipt
- * body: { receipt_url: string }  // data:image/...;base64,... 또는 URL
+ * body: { receipt_url: string | null }
+ *   · data: URL 을 받으면 Supabase Storage 에 업로드 후 참조 저장
+ *   · null 이면 기존 Storage 객체 삭제 + DB null 처리
  */
 export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
@@ -21,41 +29,79 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // rate limit: 분당 10건 (대용량 base64 업로드 제한)
     const rl = await checkRateLimit(supabase, `${user.id}:receipt-upload`, 10, 60);
     if (!rl.allowed) return rateLimitResponse(rl);
 
     const body = await req.json();
-    const receiptUrl = body.receipt_url as string | null;
+    const incoming = body.receipt_url as string | null;
 
-    if (receiptUrl !== null) {
-      if (typeof receiptUrl !== "string") {
+    // 기존 receipt_url 조회 — Storage 객체 삭제를 위해
+    const { data: existing } = await supabase
+      .from("transactions")
+      .select("receipt_url")
+      .eq("id", id)
+      .maybeSingle();
+    const oldUrl = (existing?.receipt_url ?? null) as string | null;
+
+    let newValue: string | null = null;
+
+    if (incoming !== null && incoming !== undefined) {
+      if (typeof incoming !== "string") {
         return NextResponse.json({ error: "잘못된 요청" }, { status: 400 });
       }
-      // 화이트리스트 기반 data: URL 검증 (svg/html 등 XSS 벡터 차단)
-      const validation = validateDataUrl(receiptUrl, {
+      const validation = validateDataUrl(incoming, {
         allowPdf: true,
         maxBase64Length: MAX_RECEIPT_SIZE,
       });
       if (!validation.ok) {
         return NextResponse.json({ error: validation.error }, { status: 400 });
       }
+
+      if (incoming.startsWith("data:")) {
+        // Storage 에 업로드
+        try {
+          const upload = await uploadDataUrl(supabase, {
+            bucket: RECEIPT_BUCKET,
+            prefix: `tx-${id}`,
+            dataUrl: incoming,
+          });
+          newValue = upload.ref;
+        } catch (uploadErr) {
+          console.error("[Receipt upload]", uploadErr);
+          return NextResponse.json(
+            { error: uploadErr instanceof Error ? uploadErr.message : "업로드 실패" },
+            { status: 500 }
+          );
+        }
+      } else {
+        // http(s) URL passthrough (외부 링크 저장)
+        newValue = incoming;
+      }
     }
 
     const { error } = await supabase
       .from("transactions")
-      .update({ receipt_url: receiptUrl })
+      .update({ receipt_url: newValue })
       .eq("id", id);
     if (error) {
       console.error("[Receipt PUT]", error);
       return NextResponse.json({ error: "저장 실패" }, { status: 500 });
     }
 
+    // 기존 Storage 객체 정리 (교체/삭제 시). base64/http 는 skip
+    if (oldUrl && isStorageRef(oldUrl) && oldUrl !== newValue) {
+      const delResult = await deleteStorageRef(supabase, oldUrl);
+      if (!delResult.ok) {
+        console.warn("[Receipt] 기존 Storage 객체 삭제 실패:", delResult.error);
+        // 로깅만 — 본 작업은 이미 성공
+      }
+    }
+
     await writeAuditLog(supabase, user, {
       entity_type: "receipt",
       entity_id: id,
-      action: receiptUrl === null ? "delete" : "update",
-      summary: receiptUrl === null ? `영수증 삭제 (거래 ${id})` : `영수증 첨부 (거래 ${id})`,
+      action: newValue === null ? "delete" : "update",
+      summary: newValue === null ? `영수증 삭제 (거래 ${id})` : `영수증 첨부 (거래 ${id})`,
       actor_role: profile.role,
     }, extractRequestMeta(req));
 
