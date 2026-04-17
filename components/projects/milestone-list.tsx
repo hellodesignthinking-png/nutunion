@@ -68,6 +68,32 @@ function SortableMilestoneWrapper({ id, children, canEdit }: { id: string, child
   );
 }
 
+function SortableTaskWrapper({ id, children, canEdit }: { id: string, children: React.ReactNode, canEdit: boolean }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : 1,
+    position: isDragging ? ("relative" as const) : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className={`relative group/taskdnd bg-nu-paper ${isDragging ? "shadow-lg ring-1 ring-nu-pink z-50 relative" : ""}`}>
+      {canEdit && (
+        <div
+          {...attributes}
+          {...listeners}
+          className="absolute -left-5 top-0 bottom-0 w-5 flex items-center justify-center cursor-grab hover:bg-nu-cream/50 transition-colors opacity-0 group-hover/taskdnd:opacity-100 touch-none z-10"
+        >
+          <GripVertical size={12} className="text-nu-muted hover:text-nu-ink" />
+        </div>
+      )}
+      <div className="relative">{children}</div>
+    </div>
+  );
+}
+
 const msStatusColors: Record<string, { bg: string; text: string; label: string }> = {
   pending: { bg: "bg-nu-gray/10", text: "text-nu-gray", label: "대기" },
   in_progress: { bg: "bg-nu-yellow/10", text: "text-nu-amber", label: "진행 중" },
@@ -187,6 +213,33 @@ export function MilestoneList({
     }
   }
 
+  async function handleTaskDragEnd(milestoneId: string, event: DragEndEvent) {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setMilestones((currentMilestones) => {
+        return currentMilestones.map((ms) => {
+          if (ms.id === milestoneId && ms.tasks) {
+            const oldIndex = ms.tasks.findIndex((t) => t.id === active.id);
+            const newIndex = ms.tasks.findIndex((t) => t.id === over.id);
+            const newTasks = arrayMove(ms.tasks, oldIndex, newIndex);
+            
+            // Push task sort_order updates
+            const supabase = createClient();
+            const promises = newTasks.map((task, idx) => {
+              return supabase.from("project_tasks").update({ sort_order: idx }).eq("id", task.id);
+            });
+            Promise.all(promises).then(() => {
+              onTaskChange?.();
+            });
+
+            return { ...ms, tasks: newTasks };
+          }
+          return ms;
+        });
+      });
+    }
+  }
+
   // ─── Fetch FRESH milestones from DB on mount ───
   const fetchMilestones = useCallback(async () => {
     const supabase = createClient();
@@ -211,7 +264,12 @@ export function MilestoneList({
         .order("sort_order");
 
       if (!fullError && fullData) {
-        setMilestones(fullData);
+        // Enforce ordering of tasks by sort_order
+        const sortedFullData = fullData.map(md => ({
+          ...md,
+          tasks: md.tasks ? md.tasks.sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0)) : []
+        }));
+        setMilestones(sortedFullData);
         return;
       }
     } catch { /* FK join not available */ }
@@ -818,94 +876,100 @@ export function MilestoneList({
                     {tasks.length === 0 && (
                       <p className="px-5 py-4 text-nu-gray text-sm">아직 태스크가 없습니다</p>
                     )}
-                    {tasks.map((task) => {
-                      const statusInfo = taskStatusIcons[task.status] || taskStatusIcons.todo;
-                      const Icon = statusInfo.icon;
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleTaskDragEnd(ms.id, e)}>
+                      <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+                        {tasks.map((task) => {
+                          const statusInfo = taskStatusIcons[task.status] || taskStatusIcons.todo;
+                          const Icon = statusInfo.icon;
 
-                      if (editingTask === task.id) {
-                        return (
-                          <div key={task.id} className="flex flex-col gap-2 px-5 py-3 border-b border-nu-ink/[0.04]">
-                            <div className="flex items-center gap-2">
-                              <input value={editTaskTitle} onChange={e => setEditTaskTitle(e.target.value)}
-                                className="flex-1 px-3 py-2 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink"
-                                autoFocus onKeyDown={e => { if (e.key === "Enter") saveTaskEdit(ms.id, task.id); if (e.key === "Escape") setEditingTask(null); }} />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {projectMembers.length > 0 && (
-                                <select 
-                                  value={editTaskAssignee} 
-                                  onChange={e => setEditTaskAssignee(e.target.value)}
-                                  className="px-3 py-2 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink flex-1"
-                                >
-                                  <option value="">담당자 없음</option>
-                                  {projectMembers.map(member => (
-                                    <option key={member.id} value={member.id}>{member.nickname}</option>
-                                  ))}
-                                </select>
-                              )}
-                              <input 
-                                type="date" 
-                                value={editTaskDueDate} 
-                                onChange={e => setEditTaskDueDate(e.target.value)}
-                                className="px-3 py-2 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink flex-1"
-                              />
-                              <button onClick={() => saveTaskEdit(ms.id, task.id)}
-                                className="font-mono-nu text-[12px] font-bold uppercase px-3 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors">저장</button>
-                              <button onClick={() => setEditingTask(null)}
-                                className="text-nu-muted hover:text-nu-ink text-sm px-2">취소</button>
-                            </div>
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <div key={task.id} className="flex items-center gap-3 px-5 py-3 border-b border-nu-ink/[0.04] last:border-0 hover:bg-nu-cream/10 group/task">
-                          <button
-                            onClick={() => toggleTaskStatus(ms.id, task)}
-                            disabled={!canEdit}
-                            className={`shrink-0 ${statusInfo.color} ${canEdit ? "cursor-pointer hover:opacity-70" : "cursor-default"}`}
-                          >
-                            <Icon size={18} />
-                          </button>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-sm ${task.status === "done" ? "line-through text-nu-muted" : "text-nu-ink"}`}>
-                              {task.title}
-                            </p>
-                          </div>
-                          {task.assignee && (
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <div className="w-5 h-5 rounded-full bg-nu-cream flex items-center justify-center font-head text-[10px] font-bold">
-                                {(task.assignee.nickname || "U").charAt(0).toUpperCase()}
+                          if (editingTask === task.id) {
+                            return (
+                              <div key={task.id} className="flex flex-col gap-2 px-5 py-3 border-b border-nu-ink/[0.04]">
+                                <div className="flex items-center gap-2">
+                                  <input value={editTaskTitle} onChange={e => setEditTaskTitle(e.target.value)}
+                                    className="flex-1 px-3 py-2 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink"
+                                    autoFocus onKeyDown={e => { if (e.key === "Enter") saveTaskEdit(ms.id, task.id); if (e.key === "Escape") setEditingTask(null); }} />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {projectMembers.length > 0 && (
+                                    <select 
+                                      value={editTaskAssignee} 
+                                      onChange={e => setEditTaskAssignee(e.target.value)}
+                                      className="px-3 py-2 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink flex-1"
+                                    >
+                                      <option value="">담당자 없음</option>
+                                      {projectMembers.map(member => (
+                                        <option key={member.id} value={member.id}>{member.nickname}</option>
+                                      ))}
+                                    </select>
+                                  )}
+                                  <input 
+                                    type="date" 
+                                    value={editTaskDueDate} 
+                                    onChange={e => setEditTaskDueDate(e.target.value)}
+                                    className="px-3 py-2 bg-nu-paper border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink flex-1"
+                                  />
+                                  <button onClick={() => saveTaskEdit(ms.id, task.id)}
+                                    className="font-mono-nu text-[12px] font-bold uppercase px-3 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors">저장</button>
+                                  <button onClick={() => setEditingTask(null)}
+                                    className="text-nu-muted hover:text-nu-ink text-sm px-2">취소</button>
+                                </div>
                               </div>
-                              <span className="font-mono-nu text-[11px] text-nu-muted">{task.assignee.nickname}</span>
-                            </div>
-                          )}
-                          {task.due_date && (
-                            <span className="font-mono-nu text-[11px] text-nu-muted shrink-0 flex items-center gap-1">
-                              <Calendar size={9} />
-                              {new Date(task.due_date).toLocaleDateString("ko", { month: "short", day: "numeric" })}
-                            </span>
-                          )}
-                          {canEdit && (
-                            <div className="hidden group-hover/task:flex items-center gap-0.5 shrink-0">
-                              <button onClick={() => { 
-                                setEditingTask(task.id); 
-                                setEditTaskTitle(task.title); 
-                                setEditTaskDueDate(task.due_date || "");
-                                setEditTaskAssignee(task.assigned_to || "");
-                              }}
-                                className="p-1 text-nu-muted hover:text-indigo-600 transition-colors" title="수정">
-                                <Edit3 size={11} />
-                              </button>
-                              <button onClick={() => deleteTask(ms.id, task.id)}
-                                className="p-1 text-nu-muted hover:text-red-500 transition-colors" title="삭제">
-                                <Trash2 size={11} />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                            );
+                          }
+
+                          return (
+                            <SortableTaskWrapper key={task.id} id={task.id} canEdit={canEdit}>
+                              <div className="flex items-center gap-3 px-5 py-3 border-b border-nu-ink/[0.04] last:border-0 hover:bg-nu-cream/10 group/task">
+                                <button
+                                  onClick={() => toggleTaskStatus(ms.id, task)}
+                                  disabled={!canEdit}
+                                  className={`shrink-0 ${statusInfo.color} ${canEdit ? "cursor-pointer hover:opacity-70" : "cursor-default"}`}
+                                >
+                                  <Icon size={18} />
+                                </button>
+                                <div className="flex-1 min-w-0">
+                                  <p className={`text-sm ${task.status === "done" ? "line-through text-nu-muted" : "text-nu-ink"}`}>
+                                    {task.title}
+                                  </p>
+                                </div>
+                                {task.assignee && (
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <div className="w-5 h-5 rounded-full bg-nu-cream flex items-center justify-center font-head text-[10px] font-bold">
+                                      {(task.assignee.nickname || "U").charAt(0).toUpperCase()}
+                                    </div>
+                                    <span className="font-mono-nu text-[11px] text-nu-muted">{task.assignee.nickname}</span>
+                                  </div>
+                                )}
+                                {task.due_date && (
+                                  <span className="font-mono-nu text-[11px] text-nu-muted shrink-0 flex items-center gap-1">
+                                    <Calendar size={9} />
+                                    {new Date(task.due_date).toLocaleDateString("ko", { month: "short", day: "numeric" })}
+                                  </span>
+                                )}
+                                {canEdit && (
+                                  <div className="hidden group-hover/task:flex items-center gap-0.5 shrink-0">
+                                    <button onClick={() => { 
+                                      setEditingTask(task.id); 
+                                      setEditTaskTitle(task.title); 
+                                      setEditTaskDueDate(task.due_date || "");
+                                      setEditTaskAssignee(task.assigned_to || "");
+                                    }}
+                                      className="p-1 text-nu-muted hover:text-indigo-600 transition-colors" title="수정">
+                                      <Edit3 size={11} />
+                                    </button>
+                                    <button onClick={() => deleteTask(ms.id, task.id)}
+                                      className="p-1 text-nu-muted hover:text-red-500 transition-colors" title="삭제">
+                                      <Trash2 size={11} />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </SortableTaskWrapper>
+                          );
+                        })}
+                      </SortableContext>
+                    </DndContext>
 
                     {/* Add task */}
                     {canEdit && (
