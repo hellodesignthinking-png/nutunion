@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getEmployeeDetail, getEmployeePayrollHistory } from "@/lib/finance/hr-queries";
 import { getCompanies } from "@/lib/finance/company-queries";
 import { createClient } from "@/lib/supabase/server";
+import { EmployeeEditButton } from "@/components/finance/employee-edit-button";
 
 export const dynamic = "force-dynamic";
 
@@ -71,10 +72,30 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-      <div className="mb-4">
+      <div className="mb-4 flex justify-between items-center flex-wrap gap-2">
         <Link href={`/finance/hr/employees${employee.company ? `?company=${employee.company}` : ""}`} className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-graphite hover:text-nu-ink no-underline">
           ← 직원 목록
         </Link>
+        <EmployeeEditButton
+          employee={{
+            id: employee.id,
+            name: employee.name,
+            company: employee.company,
+            position: employee.position,
+            department: employee.department,
+            employment_type: employee.employment_type,
+            email: employee.email,
+            phone: employee.phone,
+            annual_salary: employee.annual_salary,
+            hourly_wage: employee.hourly_wage,
+            weekly_days: employee.weekly_days,
+            daily_hours: employee.daily_hours,
+            work_days: employee.work_days,
+            join_date: employee.join_date,
+            status: employee.status,
+          }}
+          companies={companies.map((c) => ({ id: c.id, name: c.name }))}
+        />
       </div>
 
       {/* 프로필 헤더 */}

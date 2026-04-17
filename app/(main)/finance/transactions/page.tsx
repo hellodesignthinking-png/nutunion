@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCompanyTransactions, getCompanies } from "@/lib/finance/company-queries";
-import { TransactionList } from "@/components/finance/transaction-list";
+import { TransactionListInteractive } from "@/components/finance/transaction-list-interactive";
 import { TransactionCreateModal } from "@/components/finance/transaction-create-modal";
 import { parseYearMonth, firstDayOfMonth, lastDayOfMonth, prevMonth, nextMonth } from "@/lib/finance/date-utils";
 
@@ -115,7 +115,11 @@ export default async function FinanceTransactionsPage({ searchParams }: PageProp
         </div>
       </div>
 
-      <TransactionList transactions={transactions} />
+      <TransactionListInteractive
+        transactions={transactions}
+        companies={companies.map((c) => ({ id: c.id, name: c.name }))}
+        editable
+      />
 
       {/* 페이지네이션 */}
       {totalCount > PAGE_SIZE && (

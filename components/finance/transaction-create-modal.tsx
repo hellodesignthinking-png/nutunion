@@ -1,11 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 interface CompanyOpt {
   id: string;
   name: string;
+}
+
+interface TransactionData {
+  id: number | string;
+  date: string;
+  company: string;
+  type?: string;
+  description: string;
+  amount: number;
+  category?: string;
+  receipt_type?: string;
+  vendor_name?: string;
+  memo?: string;
 }
 
 const TYPES = ["수입", "지출", "이체", "기타"];
@@ -19,39 +32,53 @@ const CATEGORIES = [
 ];
 const RECEIPT_TYPES = ["세금계산서", "계산서", "현금영수증", "신용카드", "간이영수증", "미등록"];
 
-export function TransactionCreateModal({ companies, defaultCompany }: { companies: CompanyOpt[]; defaultCompany?: string }) {
+interface Props {
+  companies: CompanyOpt[];
+  defaultCompany?: string;
+  /** 수정 모드: 편집할 거래 객체 */
+  editing?: TransactionData | null;
+  /** 외부 제어용 — 수정 모드에서 사용 */
+  controlledOpen?: boolean;
+  onClose?: () => void;
+  /** 버튼 라벨 커스텀 (기본: + 거래 추가) */
+  triggerLabel?: string;
+}
+
+export function TransactionCreateModal({ companies, defaultCompany, editing, controlledOpen, onClose, triggerLabel }: Props) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = (v: boolean) => {
+    if (controlledOpen !== undefined) {
+      if (!v && onClose) onClose();
+    } else {
+      setInternalOpen(v);
+    }
+  };
+
+  const isEdit = !!editing;
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    date: new Date().toISOString().slice(0, 10),
-    company: defaultCompany && defaultCompany !== "all" ? defaultCompany : (companies[0]?.id || ""),
-    type: "지출",
-    description: "",
-    amount: "",
-    isExpense: true,
-    category: "미분류",
-    receipt_type: "미등록",
-    vendor_name: "",
-    memo: "",
+
+  const initialForm = () => ({
+    date: editing?.date || new Date().toISOString().slice(0, 10),
+    company: editing?.company || (defaultCompany && defaultCompany !== "all" ? defaultCompany : (companies[0]?.id || "")),
+    type: editing?.type || "지출",
+    description: editing?.description || "",
+    amount: editing ? String(Math.abs(editing.amount)) : "",
+    isExpense: editing ? editing.amount < 0 : true,
+    category: editing?.category || "미분류",
+    receipt_type: editing?.receipt_type || "미등록",
+    vendor_name: editing?.vendor_name || "",
+    memo: editing?.memo || "",
   });
 
-  const reset = () => {
-    setForm({
-      date: new Date().toISOString().slice(0, 10),
-      company: defaultCompany && defaultCompany !== "all" ? defaultCompany : (companies[0]?.id || ""),
-      type: "지출",
-      description: "",
-      amount: "",
-      isExpense: true,
-      category: "미분류",
-      receipt_type: "미등록",
-      vendor_name: "",
-      memo: "",
-    });
-    setError(null);
-  };
+  const [form, setForm] = useState(initialForm);
+
+  useEffect(() => {
+    if (open) setForm(initialForm());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editing]);
 
   const handleSubmit = async () => {
     if (!form.description.trim()) { setError("내용을 입력하세요"); return; }
@@ -62,8 +89,10 @@ export function TransactionCreateModal({ companies, defaultCompany }: { companie
     setError(null);
     setSubmitting(true);
     try {
-      const res = await fetch("/api/finance/transactions", {
-        method: "POST",
+      const url = isEdit ? `/api/finance/transactions/${editing!.id}` : "/api/finance/transactions";
+      const method = isEdit ? "PATCH" : "POST";
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           date: form.date,
@@ -80,7 +109,6 @@ export function TransactionCreateModal({ companies, defaultCompany }: { companie
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || "저장 실패");
       setOpen(false);
-      reset();
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "저장 중 오류");
@@ -89,14 +117,33 @@ export function TransactionCreateModal({ companies, defaultCompany }: { companie
     }
   };
 
+  const handleDelete = async () => {
+    if (!isEdit || !editing) return;
+    if (!confirm("이 거래를 삭제하시겠습니까? 되돌릴 수 없습니다.")) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/finance/transactions/${editing.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || "삭제 실패");
+      setOpen(false);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "삭제 실패");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="border-[2.5px] border-nu-ink bg-nu-pink text-nu-paper px-4 py-2 font-mono-nu text-[11px] uppercase tracking-widest hover:bg-nu-ink"
-      >
-        + 거래 추가
-      </button>
+      {controlledOpen === undefined && (
+        <button
+          onClick={() => setOpen(true)}
+          className="border-[2.5px] border-nu-ink bg-nu-pink text-nu-paper px-4 py-2 font-mono-nu text-[11px] uppercase tracking-widest hover:bg-nu-ink"
+        >
+          {triggerLabel || "+ 거래 추가"}
+        </button>
+      )}
 
       {open && (
         <div
@@ -109,7 +156,7 @@ export function TransactionCreateModal({ companies, defaultCompany }: { companie
           >
             <div className="flex justify-between items-center px-5 py-4 border-b-[2px] border-nu-ink">
               <div className="font-mono-nu text-[13px] uppercase tracking-widest text-nu-ink">
-                거래 추가
+                {isEdit ? "거래 수정" : "거래 추가"}
               </div>
               <button
                 onClick={() => !submitting && setOpen(false)}
@@ -244,6 +291,15 @@ export function TransactionCreateModal({ companies, defaultCompany }: { companie
               )}
 
               <div className="flex gap-2">
+                {isEdit && (
+                  <button
+                    onClick={handleDelete}
+                    disabled={submitting}
+                    className="border-[2.5px] border-red-500 bg-nu-paper text-red-600 px-4 py-2.5 font-mono-nu text-[11px] uppercase tracking-widest hover:bg-red-500 hover:text-nu-paper disabled:opacity-50"
+                  >
+                    삭제
+                  </button>
+                )}
                 <button
                   onClick={() => !submitting && setOpen(false)}
                   className="flex-1 border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink px-4 py-2.5 font-mono-nu text-[11px] uppercase tracking-widest hover:bg-nu-ink/5"
@@ -255,7 +311,7 @@ export function TransactionCreateModal({ companies, defaultCompany }: { companie
                   disabled={submitting}
                   className="flex-1 border-[2.5px] border-nu-ink bg-nu-pink text-nu-paper px-4 py-2.5 font-mono-nu text-[11px] uppercase tracking-widest hover:bg-nu-ink disabled:opacity-50"
                 >
-                  {submitting ? "저장 중..." : "저장"}
+                  {submitting ? "저장 중..." : isEdit ? "수정" : "저장"}
                 </button>
               </div>
             </div>

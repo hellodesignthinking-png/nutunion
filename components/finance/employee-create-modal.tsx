@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 interface CompanyOpt {
@@ -8,30 +8,71 @@ interface CompanyOpt {
   name: string;
 }
 
+interface EmployeeData {
+  id: string | number;
+  name: string;
+  company: string;
+  position?: string;
+  department?: string;
+  employment_type?: string;
+  email?: string;
+  phone?: string;
+  annual_salary?: number;
+  hourly_wage?: number;
+  weekly_days?: number;
+  daily_hours?: number;
+  work_days?: string;
+  join_date?: string;
+  status?: string;
+}
+
 const EMPLOYMENT_TYPES = ["정규직", "계약직", "인턴", "알바"];
 const POSITIONS = ["대표이사", "이사", "부장", "차장", "과장", "대리", "사원", "인턴", "프리랜서"];
 const DAYS_OF_WEEK = ["월", "화", "수", "목", "금", "토", "일"];
 
-export function EmployeeCreateModal({ companies, defaultCompany }: { companies: CompanyOpt[]; defaultCompany?: string }) {
+interface Props {
+  companies: CompanyOpt[];
+  defaultCompany?: string;
+  editing?: EmployeeData | null;
+  controlledOpen?: boolean;
+  onClose?: () => void;
+  triggerLabel?: string;
+}
+
+export function EmployeeCreateModal({ companies, defaultCompany, editing, controlledOpen, onClose, triggerLabel }: Props) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = (v: boolean) => {
+    if (controlledOpen !== undefined) {
+      if (!v && onClose) onClose();
+    } else {
+      setInternalOpen(v);
+    }
+  };
+
+  const isEdit = !!editing;
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    name: "",
-    company: defaultCompany && defaultCompany !== "all" ? defaultCompany : (companies[0]?.id || ""),
-    position: "사원",
-    department: "",
-    employment_type: "정규직",
-    email: "",
-    phone: "",
-    annual_salary: "",
-    hourly_wage: "",
-    weekly_days: "5",
-    daily_hours: "8",
-    work_days: "월,화,수,목,금",
-    join_date: new Date().toISOString().slice(0, 10),
+
+  const initialForm = () => ({
+    name: editing?.name || "",
+    company: editing?.company || (defaultCompany && defaultCompany !== "all" ? defaultCompany : (companies[0]?.id || "")),
+    position: editing?.position || "사원",
+    department: editing?.department || "",
+    employment_type: editing?.employment_type || "정규직",
+    email: editing?.email || "",
+    phone: editing?.phone || "",
+    annual_salary: editing?.annual_salary ? String(editing.annual_salary) : "",
+    hourly_wage: editing?.hourly_wage ? String(editing.hourly_wage) : "",
+    weekly_days: editing?.weekly_days ? String(editing.weekly_days) : "5",
+    daily_hours: editing?.daily_hours ? String(editing.daily_hours) : "8",
+    work_days: editing?.work_days || "월,화,수,목,금",
+    join_date: editing?.join_date || new Date().toISOString().slice(0, 10),
   });
+
+  const [form, setForm] = useState(initialForm);
+  useEffect(() => { if (open) setForm(initialForm()); /* eslint-disable-next-line */ }, [open, editing]);
 
   const isAlba = form.employment_type === "알바";
 
@@ -44,8 +85,10 @@ export function EmployeeCreateModal({ companies, defaultCompany }: { companies: 
     setError(null);
     setSubmitting(true);
     try {
-      const res = await fetch("/api/finance/employees", {
-        method: "POST",
+      const url = isEdit ? `/api/finance/employees/${editing!.id}` : "/api/finance/employees";
+      const method = isEdit ? "PATCH" : "POST";
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
@@ -60,6 +103,23 @@ export function EmployeeCreateModal({ companies, defaultCompany }: { companies: 
     }
   };
 
+  const handleDelete = async () => {
+    if (!isEdit || !editing) return;
+    if (!confirm(`${editing.name}님을 '퇴직' 상태로 변경하시겠습니까? (데이터는 보존됩니다)`)) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/finance/employees/${editing.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || "삭제 실패");
+      setOpen(false);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "삭제 실패");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const toggleDay = (day: string) => {
     const cur = form.work_days.split(",").filter(Boolean);
     const next = cur.includes(day) ? cur.filter((d) => d !== day) : [...cur, day];
@@ -69,12 +129,14 @@ export function EmployeeCreateModal({ companies, defaultCompany }: { companies: 
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="border-[2.5px] border-nu-ink bg-nu-pink text-nu-paper px-4 py-2 font-mono-nu text-[11px] uppercase tracking-widest hover:bg-nu-ink"
-      >
-        + 직원 등록
-      </button>
+      {controlledOpen === undefined && (
+        <button
+          onClick={() => setOpen(true)}
+          className="border-[2.5px] border-nu-ink bg-nu-pink text-nu-paper px-4 py-2 font-mono-nu text-[11px] uppercase tracking-widest hover:bg-nu-ink"
+        >
+          {triggerLabel || "+ 직원 등록"}
+        </button>
+      )}
 
       {open && (
         <div
@@ -86,7 +148,9 @@ export function EmployeeCreateModal({ companies, defaultCompany }: { companies: 
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center px-5 py-4 border-b-[2px] border-nu-ink">
-              <div className="font-mono-nu text-[13px] uppercase tracking-widest text-nu-ink">직원 등록</div>
+              <div className="font-mono-nu text-[13px] uppercase tracking-widest text-nu-ink">
+                {isEdit ? "직원 수정" : "직원 등록"}
+              </div>
               <button
                 onClick={() => !submitting && setOpen(false)}
                 aria-label="닫기"
@@ -242,6 +306,15 @@ export function EmployeeCreateModal({ companies, defaultCompany }: { companies: 
               )}
 
               <div className="flex gap-2">
+                {isEdit && editing?.status === "재직" && (
+                  <button
+                    onClick={handleDelete}
+                    disabled={submitting}
+                    className="border-[2.5px] border-red-500 bg-nu-paper text-red-600 px-4 py-2.5 font-mono-nu text-[11px] uppercase tracking-widest hover:bg-red-500 hover:text-nu-paper disabled:opacity-50"
+                  >
+                    퇴직
+                  </button>
+                )}
                 <button
                   onClick={() => !submitting && setOpen(false)}
                   className="flex-1 border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink px-4 py-2.5 font-mono-nu text-[11px] uppercase tracking-widest hover:bg-nu-ink/5"
@@ -253,7 +326,7 @@ export function EmployeeCreateModal({ companies, defaultCompany }: { companies: 
                   disabled={submitting}
                   className="flex-1 border-[2.5px] border-nu-ink bg-nu-pink text-nu-paper px-4 py-2.5 font-mono-nu text-[11px] uppercase tracking-widest hover:bg-nu-ink disabled:opacity-50"
                 >
-                  {submitting ? "저장 중..." : "저장"}
+                  {submitting ? "저장 중..." : isEdit ? "수정" : "저장"}
                 </button>
               </div>
 
