@@ -28,17 +28,31 @@ export default async function FinanceHomePage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
       {/* 헤더 */}
-      <div className="mb-8">
+      <div className="mb-6">
         <div className="font-mono-nu text-[11px] uppercase tracking-[0.3em] text-nu-graphite mb-2">
           FINANCE · 재무관리
         </div>
         <h1 className="text-[28px] sm:text-[36px] font-bold text-nu-ink leading-tight">
-          볼트별 재무 현황
+          재무 대시보드
         </h1>
-        <p className="text-[13px] sm:text-[14px] text-nu-graphite mt-2">
-          각 볼트(프로젝트)의 예산·지출·수익성을 한눈에 확인합니다.
-        </p>
       </div>
+
+      {/* 섹션 네비 */}
+      <div className="flex flex-wrap gap-2 mb-8">
+        <Link href="/finance" className="border-[2.5px] border-nu-ink bg-nu-ink text-nu-paper px-4 py-2 font-mono-nu text-[11px] uppercase tracking-widest no-underline">
+          볼트
+        </Link>
+        <Link href="/finance/companies" className="border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink px-4 py-2 font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper transition-colors">
+          법인
+        </Link>
+        <Link href="/finance/transactions" className="border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink px-4 py-2 font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper transition-colors">
+          거래
+        </Link>
+      </div>
+
+      <p className="text-[13px] sm:text-[14px] text-nu-graphite mb-6">
+        각 볼트(프로젝트)의 예산·지출·수익성을 한눈에 확인합니다.
+      </p>
 
       {/* 전체 요약 */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10">
