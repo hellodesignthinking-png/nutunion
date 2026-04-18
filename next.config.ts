@@ -63,8 +63,10 @@ const nextConfig: NextConfig = {
           },
           // DNS prefetch 허용 (성능)
           { key: "X-DNS-Prefetch-Control",   value: "on" },
-          // CSP — Report-Only 로 먼저 관찰 (향후 enforce 로 전환)
-          { key: "Content-Security-Policy-Report-Only", value: csp },
+          // CSP — Enforce 모드
+          // 운영 중 위반 발생 시 아래를 "Content-Security-Policy-Report-Only"
+          // 로 잠시 되돌리고 violation report 로 원인 확인 후 규칙 조정
+          { key: "Content-Security-Policy", value: csp },
         ],
       },
       // API 응답 기본 — 캐싱 금지

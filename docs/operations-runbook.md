@@ -187,3 +187,61 @@ UptimeRobot 등 — 5분 간격 `/api/health` 호출. `docs/uptime-monitoring.md
 
 **갱신 주기**: 큰 변경 시 이 문서 업데이트.
 **최종 검토**: 분기별로 각 섹션 유효성 확인.
+
+---
+
+## 부록 A — CI 활성화 (GitHub Actions)
+
+`docs/ci-workflow-template.yml` 파일이 리포지토리에 있지만 PAT scope 제한으로
+에이전트가 `.github/workflows/` 로 직접 생성 불가. 아래 방법 중 하나 선택:
+
+### 방법 1 — GitHub 웹 UI (원클릭)
+
+1. https://github.com/hellodesignthinking-png/nutunion/new/main/.github/workflows
+2. 파일명: `ci.yml`
+3. `docs/ci-workflow-template.yml` 내용을 복사/붙여넣기
+4. **Commit new file** → main 에 바로 반영
+5. 이후 Actions 탭에서 실행 확인
+
+### 방법 2 — 로컬 CLI
+
+로컬 git 인증에 `workflow` scope 가 포함된 PAT 가 있다면:
+```bash
+cd /Users/TaiNa0/Desktop/nutunion
+mkdir -p .github/workflows
+cp docs/ci-workflow-template.yml .github/workflows/ci.yml
+git add .github/workflows/ci.yml
+git commit -m "ci: GitHub Actions typecheck + build"
+git push
+```
+
+PAT 재발급: https://github.com/settings/tokens → **Generate new token (classic)** → `repo` + `workflow` 체크 → git credential 교체.
+
+---
+
+## 부록 B — 알림 웹훅 설정
+
+`/api/cron/health-watch` 가 5분마다 `/api/health` 를 체크해서 실패 시 웹훅 발송.
+**설정하지 않아도 크론은 동작** (콘솔 로그만 남음).
+
+### Slack 웹훅
+
+1. https://api.slack.com/messaging/webhooks → **Create New App** → **Incoming Webhooks**
+2. 채널 선택 → Webhook URL 복사
+3. Vercel env 추가:
+```bash
+cd /Users/TaiNa0/Desktop/nutunion
+printf '%s' 'https://hooks.slack.com/services/XXX/YYY/ZZZ' \
+  | npx vercel@latest env add ALERT_WEBHOOK_URL production --yes
+# 선택: @channel 멘션
+printf '%s' '<!channel>' \
+  | npx vercel@latest env add ALERT_MENTION production --yes
+npx vercel@latest --prod --yes
+```
+
+### Discord 웹훅
+
+1. 채널 설정 → **연동** → **웹훅 만들기** → URL 복사
+2. URL 끝에 `/slack` 추가 (Slack 포맷 호환):
+   `https://discord.com/api/webhooks/XXX/YYY/slack`
+3. Vercel env 에 동일하게 `ALERT_WEBHOOK_URL` 로 등록
