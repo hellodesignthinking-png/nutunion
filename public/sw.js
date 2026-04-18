@@ -9,7 +9,7 @@
 // 업데이트:
 //   VERSION 문자열 변경 시 구 캐시 자동 삭제됨.
 
-const VERSION = "nutunion-sw-v2";
+const VERSION = "nutunion-sw-v3";
 const STATIC_CACHE = `${VERSION}-static`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 
@@ -123,3 +123,50 @@ async function networkFirstWithOffline(req) {
     );
   }
 }
+
+// ── Web Push ─────────────────────────────────────────────────────
+
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+  let payload = {};
+  try {
+    payload = event.data.json();
+  } catch {
+    payload = { title: "nutunion", body: event.data.text() };
+  }
+
+  const title = payload.title || "nutunion";
+  const options = {
+    body: payload.body || "",
+    icon: payload.icon || "/icon-192.png",
+    badge: "/icon-192.png",
+    tag: payload.tag,
+    data: { url: payload.url || "/", ...(payload.data || {}) },
+    requireInteraction: false,
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = (event.notification.data && event.notification.data.url) || "/";
+  event.waitUntil(
+    (async () => {
+      const clientList = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      // 이미 열린 탭에 포커스 + 해당 URL 로 이동
+      for (const client of clientList) {
+        if ("focus" in client) {
+          await client.focus();
+          if ("navigate" in client) {
+            try { await client.navigate(targetUrl); } catch {}
+          }
+          return;
+        }
+      }
+      // 없으면 새 창
+      if (self.clients.openWindow) {
+        await self.clients.openWindow(targetUrl);
+      }
+    })()
+  );
+});

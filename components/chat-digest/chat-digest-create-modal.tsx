@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   entityType: "project" | "member" | "group";
@@ -78,13 +79,14 @@ export function ChatDigestCreateModal({
 
   return (
     <>
-      <button
+      <Button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink px-3 py-1.5 font-mono-nu text-[11px] uppercase tracking-widest hover:bg-nu-ink hover:text-nu-paper"
+        variant="brutalist"
+        size="brutal-sm"
       >
         {triggerLabel}
-      </button>
+      </Button>
 
       {open && (
         <div
@@ -183,21 +185,25 @@ export function ChatDigestCreateModal({
               )}
 
               <div className="flex gap-2 pt-1">
-                <button
+                <Button
                   type="button"
                   onClick={() => !loading && setOpen(false)}
-                  className="flex-1 border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink px-4 py-2.5 font-mono-nu text-[11px] uppercase tracking-widest hover:bg-nu-ink/5"
+                  variant="brutalist"
+                  size="brutal-md"
+                  className="flex-1"
                 >
                   취소
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
                   onClick={handleSubmit}
                   disabled={loading}
-                  className="flex-1 border-[2.5px] border-nu-ink bg-nu-pink text-nu-paper px-4 py-2.5 font-mono-nu text-[11px] uppercase tracking-widest hover:bg-nu-ink disabled:opacity-50"
+                  variant="brutalist-primary"
+                  size="brutal-md"
+                  className="flex-1"
                 >
                   {loading ? "AI 정리 중... (5~15초)" : "AI 로 정리"}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
