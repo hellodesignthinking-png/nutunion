@@ -152,6 +152,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 📝 회의록
               </Link>
             )}
+            {(isMember || isAdmin) && (
+              <Link href={`/projects/${id}/venture`} className="font-mono-nu text-[13px] uppercase tracking-widest px-5 py-2.5 border-[2px] border-nu-pink text-nu-pink no-underline hover:bg-nu-pink hover:text-nu-paper transition-all inline-flex items-center gap-2">
+                🚀 Venture
+              </Link>
+            )}
             {isAdmin && project.status !== "completed" && (
               <CloseProjectModal projectId={id} projectTitle={project.title} />
             )}
