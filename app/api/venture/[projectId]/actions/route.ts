@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
+import { dispatchPushToUsers } from "@/lib/push/dispatch";
+import { STAGES } from "@/lib/venture/types";
 
 export const runtime = "nodejs";
 
@@ -73,9 +75,39 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId:
         break;
       }
 
-      case "set_stage":
+      case "set_stage": {
+        // 현재 단계 조회 (전환 감지)
+        const { data: currentProj } = await supabase
+          .from("projects")
+          .select("venture_stage, title")
+          .eq("id", projectId)
+          .maybeSingle();
+        const prevStage = currentProj?.venture_stage as string | null;
+
         await supabase.from("projects").update({ venture_stage: d.stage }).eq("id", projectId);
+
+        // 실제 전환이 일어났을 때만 푸시
+        if (prevStage !== d.stage) {
+          const { data: members } = await supabase
+            .from("project_members")
+            .select("user_id")
+            .eq("project_id", projectId);
+          const memberIds = [...new Set(((members as { user_id: string }[] | null) ?? []).map((m) => m.user_id))]
+            .filter((uid) => uid !== user.id);  // 본인 제외
+
+          if (memberIds.length > 0) {
+            const stageLabel = STAGES.find((s) => s.id === d.stage)?.label ?? d.stage;
+            const icon = STAGES.find((s) => s.id === d.stage)?.icon ?? "🚀";
+            dispatchPushToUsers(memberIds, {
+              title: `${icon} ${stageLabel} 단계로 전환`,
+              body: `"${currentProj?.title ?? "볼트"}" 가 ${stageLabel} 단계로 이동했습니다.`,
+              url: `/projects/${projectId}/venture`,
+              tag: `venture-${projectId}`,
+            }).catch(() => {});
+          }
+        }
         break;
+      }
     }
     return NextResponse.json({ success: true });
   } catch (err) {

@@ -17,6 +17,9 @@ const MyTasksWidget = dynamic(() => import("@/components/dashboard/my-tasks-widg
 const MyCalendarWidget = dynamic(() => import("@/components/dashboard/my-calendar-widget").then(m => ({ default: m.MyCalendarWidget })), {
   loading: () => <div className="bg-white border border-nu-ink/[0.08] p-5 h-48 animate-pulse" />,
 });
+const MyVentureBoltsWidget = dynamic(() => import("@/components/dashboard/my-venture-bolts-widget").then(m => ({ default: m.MyVentureBoltsWidget })), {
+  loading: () => <div className="border-[2.5px] border-nu-ink bg-nu-paper p-5 h-40 animate-pulse" />,
+});
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -531,6 +534,9 @@ export default async function DashboardPage() {
               </div>
             </div>
           )}
+
+          {/* 내 Venture 볼트 */}
+          <MyVentureBoltsWidget userId={user.id} />
 
           {/* Google 할일 (Google Tasks) */}
           <MyTasksWidget />

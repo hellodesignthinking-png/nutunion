@@ -30,6 +30,14 @@ const TABLES = [
   "finance_audit_logs",
   "ai_usage_logs",
   "rate_limits",
+  // Venture Builder 테이블
+  "venture_insights",
+  "venture_problems",
+  "venture_ideas",
+  "venture_plans",
+  "venture_stage_history",
+  "funding_submissions",
+  "chat_digests",
 ];
 
 export async function getTableCounts(): Promise<TableCount[]> {
