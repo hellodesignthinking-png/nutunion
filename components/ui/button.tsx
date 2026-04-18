@@ -20,6 +20,23 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
+        // ── 브루탈리스트 계열 (nutunion 브랜드 DNA) ──────────────────────
+        // 사용 가이드:
+        //   brutalist          — 기본 경계 강조 버튼 (outline 대체)
+        //   brutalist-primary  — 주 액션 (nu-pink 채움)
+        //   brutalist-ink      — 강한 대비 (nu-ink 채움, 진지한 액션)
+        //   brutalist-ghost    — 보조 액션 (투명, 호버 시만 차오름)
+        //   brutalist-danger   — 파괴적 액션 (빨강 강조)
+        brutalist:
+          "rounded-none border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink font-mono-nu uppercase tracking-widest hover:bg-nu-ink hover:text-nu-paper active:translate-y-0 active:translate-x-0",
+        "brutalist-primary":
+          "rounded-none border-[2.5px] border-nu-ink bg-nu-pink text-nu-paper font-mono-nu uppercase tracking-widest hover:bg-nu-ink active:translate-y-0 active:translate-x-0",
+        "brutalist-ink":
+          "rounded-none border-[2.5px] border-nu-ink bg-nu-ink text-nu-paper font-mono-nu uppercase tracking-widest hover:bg-nu-pink hover:border-nu-pink active:translate-y-0 active:translate-x-0",
+        "brutalist-ghost":
+          "rounded-none border-[2.5px] border-nu-ink/30 bg-transparent text-nu-graphite font-mono-nu uppercase tracking-widest hover:border-nu-ink hover:text-nu-ink hover:bg-nu-ink/5 active:translate-y-0 active:translate-x-0",
+        "brutalist-danger":
+          "rounded-none border-[2.5px] border-red-600 bg-red-50 text-red-600 font-mono-nu uppercase tracking-widest hover:bg-red-600 hover:text-nu-paper active:translate-y-0 active:translate-x-0",
       },
       size: {
         default:
@@ -33,6 +50,10 @@ const buttonVariants = cva(
         "icon-sm":
           "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
         "icon-lg": "size-9",
+        // 브루탈리스트 전용 사이즈 — 라벨 중심 sharp 비율
+        "brutal-sm": "h-8 px-3 text-[10px]",
+        "brutal-md": "h-10 px-4 text-[11px]",
+        "brutal-lg": "h-12 px-6 text-[12px]",
       },
     },
     defaultVariants: {

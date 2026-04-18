@@ -5,14 +5,32 @@ import { cn } from "@/lib/utils"
 function Card({
   className,
   size = "default",
+  variant = "default",
   ...props
-}: React.ComponentProps<"div"> & { size?: "default" | "sm" }) {
+}: React.ComponentProps<"div"> & {
+  size?: "default" | "sm"
+  /**
+   * default   — 부드러운 ring + rounded (기본 SaaS)
+   * brutalist — 2.5px nu-ink 보더 + no-radius (강조)
+   * brutalist-shadow — brutalist + offset 그림자 (히어로/랜딩)
+   */
+  variant?: "default" | "brutalist" | "brutalist-shadow"
+}) {
+  const variantCls =
+    variant === "brutalist"
+      ? "border-[2.5px] border-nu-ink bg-nu-paper rounded-none ring-0"
+      : variant === "brutalist-shadow"
+      ? "border-[2.5px] border-nu-ink bg-nu-paper rounded-none ring-0 shadow-[4px_4px_0_0_rgba(13,13,13,1)]"
+      : ""
+
   return (
     <div
       data-slot="card"
       data-size={size}
+      data-variant={variant}
       className={cn(
         "group/card flex flex-col gap-4 overflow-hidden rounded-xl bg-card py-4 text-sm text-card-foreground ring-1 ring-foreground/10 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
+        variantCls,
         className
       )}
       {...props}

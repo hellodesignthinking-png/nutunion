@@ -39,12 +39,13 @@ export const APP_LINKS: NavLink[] = [
  * admin 전용 드롭다운 항목.
  */
 export const ADMIN_LINKS: NavLink[] = [
-  { label: "관리자 대시보드", href: "/admin"          },
-  { label: "회원 관리",       href: "/admin/users"    },
-  { label: "너트 관리",       href: "/admin/groups"   },
-  { label: "볼트 관리",       href: "/admin/projects" },
-  { label: "콘텐츠 관리",     href: "/admin/content"  },
-  { label: "미디어 관리",     href: "/admin/media"    },
+  { label: "관리자 대시보드", href: "/admin"               },
+  { label: "회원 관리",       href: "/admin/users"         },
+  { label: "너트 관리",       href: "/admin/groups"        },
+  { label: "볼트 관리",       href: "/admin/projects"      },
+  { label: "콘텐츠 관리",     href: "/admin/content"       },
+  { label: "미디어 관리",     href: "/admin/media"         },
+  { label: "디자인 시스템",   href: "/admin/design-system" },
 ];
 
 /**

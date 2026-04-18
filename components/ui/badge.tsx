@@ -19,6 +19,15 @@ const badgeVariants = cva(
         ghost:
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary underline-offset-4 hover:underline",
+        // 브루탈리스트 — 강한 경계 + font-mono-nu
+        brutalist:
+          "rounded-none border-[2px] border-nu-ink bg-nu-paper text-nu-ink font-mono-nu uppercase tracking-wider px-2 h-6 text-[10px]",
+        "brutalist-pink":
+          "rounded-none border-[2px] border-nu-pink bg-nu-pink text-nu-paper font-mono-nu uppercase tracking-wider px-2 h-6 text-[10px]",
+        "brutalist-ink":
+          "rounded-none border-[2px] border-nu-ink bg-nu-ink text-nu-paper font-mono-nu uppercase tracking-wider px-2 h-6 text-[10px]",
+        "brutalist-muted":
+          "rounded-none border-[2px] border-nu-ink/30 bg-transparent text-nu-graphite font-mono-nu uppercase tracking-wider px-2 h-6 text-[10px]",
       },
     },
     defaultVariants: {
