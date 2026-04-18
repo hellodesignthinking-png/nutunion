@@ -145,6 +145,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 <UserPlus size={16} /> 볼트 참여하기
               </Link>
             )}
+            {(isMember || isAdmin) && (
+              <Link href={`/projects/${id}/digests`} className="font-mono-nu text-[13px] uppercase tracking-widest px-5 py-2.5 border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all inline-flex items-center gap-2">
+                📝 회의록
+              </Link>
+            )}
             {isAdmin && (
               <Link href={`/projects/${id}/settings`} className="font-mono-nu text-[13px] uppercase tracking-widest px-5 py-2.5 border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all inline-flex items-center gap-2">
                 <Settings size={14} /> 볼트 설정
