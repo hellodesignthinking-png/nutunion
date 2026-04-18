@@ -7,12 +7,16 @@ export const maxDuration = 30;
 /**
  * GET /api/cron/health-watch
  *
- * Vercel Cron 에서 5분마다 호출. /api/health 를 체크해서 실패하면
- * ALERT_WEBHOOK_URL (Slack/Discord 웹훅) 으로 알림 발송.
+ * Vercel Hobby 플랜: 일 1회 (00:00 UTC) 자동 호출 — 장기 장애 포착용.
+ * Pro 플랜 업그레이드 시 vercel.json 의 schedule 을 */5 * * * * 로 변경
+ * 하면 5분 간격 감시 가능.
+ *
+ * /api/health 를 체크해서 실패하면 ALERT_WEBHOOK_URL (Slack/Discord 웹훅)
+ * 으로 알림 발송.
  *
  * 자기 자신을 호출하므로 Vercel edge/lambda 가 완전히 다운되면 감지 불가.
- * → 외부 UptimeRobot 과 중복 운영 권장. 이 크론은 앱은 살아있지만 DB 만
- *    다운된 케이스 (절반 장애) 를 잡기 위한 것.
+ * → 외부 UptimeRobot 과 중복 운영 권장 (docs/uptime-monitoring.md).
+ *    이 크론은 앱은 살아있지만 DB 만 다운된 케이스 (절반 장애) 를 잡기 위한 것.
  *
  * 환경변수:
  *   · CRON_SECRET (필수)
