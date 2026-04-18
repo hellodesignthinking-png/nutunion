@@ -34,6 +34,7 @@ export const APP_LINKS: NavLink[] = [
   { label: "와셔",     href: "/members"           },
   { label: "의뢰",     href: "/challenges"        },
   { label: "포트폴리오", href: "/profile/portfolio" },
+  { label: "성공 사례", href: "/ventures/showcase" },
 ];
 
 /**

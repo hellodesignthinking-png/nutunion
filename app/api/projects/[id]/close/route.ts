@@ -239,6 +239,24 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       return NextResponse.json({ error: upErr.message }, { status: 500 });
     }
 
+    // Venture 모드 볼트가 마감되면 자동으로 결재 상신 (admin/staff 보고용)
+    if (project.venture_mode) {
+      try {
+        await supabase.from("approvals").insert({
+          title: `[Venture 마감 보고] ${project.title}`,
+          doc_type: "마감보고",
+          content: `${object.headline}\n\n${object.summary}\n\n주요 성과:\n${(object.achievements || []).map((a: string) => `- ${a}`).join("\n")}`,
+          status: "대기",
+          request_date: new Date().toISOString().slice(0, 10),
+          requester_id: user.id,
+          company: null,
+          attachments: { project_id: id, source: "venture-closure" },
+        });
+      } catch (err) {
+        console.warn("[venture-closure approval]", err);
+      }
+    }
+
     return NextResponse.json({ success: true, confirmed: true, draft: object });
   } catch (err) {
     console.error("[project-close]", err);

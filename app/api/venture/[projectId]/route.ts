@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
+import { autoTagInsight } from "@/lib/venture/auto-tag";
 
 export const runtime = "nodejs";
 
@@ -119,5 +120,15 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId:
   }
 
   if (result.error) return NextResponse.json({ error: result.error.message }, { status: 500 });
+
+  // 인사이트에는 AI 자동 태깅 비동기 (사용자가 명시적 tags 제공 안 했을 때만)
+  if (d.kind === "insight" && (!d.tags || d.tags.length === 0) && result.data?.id) {
+    autoTagInsight(supabase, result.data.id, {
+      quote: d.quote,
+      pain_point: d.pain_point,
+      target_user: d.target_user,
+    }).catch(() => {});
+  }
+
   return NextResponse.json({ success: true, item: result.data });
 }

@@ -10,6 +10,7 @@ import { VentureEnableButton } from "@/components/venture/venture-enable-button"
 import { VentureSuggestIdeas } from "@/components/venture/venture-suggest-ideas";
 import { VentureAISummary } from "@/components/venture/venture-ai-summary";
 import { VentureTimeline } from "@/components/venture/venture-timeline";
+import { VentureContributionHeatmap } from "@/components/venture/venture-contribution-heatmap";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Venture Builder" };
@@ -203,6 +204,8 @@ export default async function VenturePage({ params }: PageProps) {
           locked={!overview.stageProgress[3].complete}
           lockReason={overview.stageProgress[3].blocker}
         />
+
+        <VentureContributionHeatmap projectId={id} />
 
         <VentureTimeline projectId={id} />
       </div>

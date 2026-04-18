@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { seedVentureTemplate } from "@/lib/venture/seed-template";
 
 export const runtime = "nodejs";
 
@@ -28,5 +29,15 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ projectId
     .update({ venture_mode: true, venture_stage: "empathize" })
     .eq("id", projectId);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ success: true });
+
+  // 템플릿 시드 — 실패해도 주 흐름 유지
+  let seeded = false;
+  try {
+    const result = await seedVentureTemplate(supabase, projectId, user.id);
+    seeded = result.seeded;
+  } catch (err) {
+    console.warn("[venture seed]", err);
+  }
+
+  return NextResponse.json({ success: true, seeded });
 }
