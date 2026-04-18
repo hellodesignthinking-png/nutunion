@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { VentureStageBadge } from "@/components/venture/venture-stage-badge";
 import {
   Users,
   Calendar,
@@ -61,6 +62,9 @@ interface ProjectItem {
   milestone_total?: number;
   milestone_completed?: number;
   user_role?: string | null;
+  venture_mode?: boolean | null;
+  venture_stage?: string | null;
+  recruiting?: boolean | null;
 }
 
 function formatDateRange(start: string | null, end: string | null) {
@@ -366,6 +370,17 @@ export function ProjectsGrid({
                       </span>
                     )}
                     <StatusBadge status={p.status} />
+                    <VentureStageBadge
+                      ventureMode={!!p.venture_mode}
+                      ventureStage={p.venture_stage ?? null}
+                      completed={p.status === "completed"}
+                      size="sm"
+                    />
+                    {p.recruiting && (
+                      <span className="font-mono-nu text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-nu-pink text-nu-paper border-[1.5px] border-nu-ink">
+                        🔎 구인중
+                      </span>
+                    )}
                   </div>
                   <DeadlineBadge endDate={p.end_date} status={p.status} />
                 </div>

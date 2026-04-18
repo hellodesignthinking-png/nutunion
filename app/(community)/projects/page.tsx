@@ -173,7 +173,7 @@ async function ProjectsListWrapper({ userId }: { userId?: string }) {
   ] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, title, description, status, category, image_url, start_date, end_date, created_at, creator:profiles!projects_created_by_fkey(nickname, avatar_url), project_members(count), project_milestones(id, status)")
+      .select("id, title, description, status, category, image_url, start_date, end_date, created_at, venture_mode, venture_stage, recruiting, needed_roles, creator:profiles!projects_created_by_fkey(nickname, avatar_url), project_members(count), project_milestones(id, status)")
       .neq("status", "draft")
       .order("created_at", { ascending: false }),
     userId ?
@@ -211,6 +211,9 @@ async function ProjectsListWrapper({ userId }: { userId?: string }) {
       milestone_total: milestoneTotal,
       milestone_completed: milestoneCompleted,
       user_role: memberMap.get(p.id) || null,
+      venture_mode: p.venture_mode ?? false,
+      venture_stage: p.venture_stage ?? null,
+      recruiting: p.recruiting ?? false,
     };
   });
 

@@ -8,6 +8,8 @@ import { VentureStageSection } from "@/components/venture/venture-stage-section"
 import { VenturePlanCard } from "@/components/venture/venture-plan-card";
 import { VentureEnableButton } from "@/components/venture/venture-enable-button";
 import { VentureSuggestIdeas } from "@/components/venture/venture-suggest-ideas";
+import { VentureAISummary } from "@/components/venture/venture-ai-summary";
+import { VentureTimeline } from "@/components/venture/venture-timeline";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Venture Builder" };
@@ -125,14 +127,22 @@ export default async function VenturePage({ params }: PageProps) {
       />
 
       <div className="mt-8 space-y-8">
-        <VentureStageSection
-          stageId="empathize"
-          title="① 공감 — 유저 인사이트"
-          description="유저 인터뷰, 관찰, 설문에서 발견한 고통점을 수집합니다."
-          items={overview.insights}
-          projectId={id}
-          kind="insight"
-        />
+        <div>
+          <VentureStageSection
+            stageId="empathize"
+            title="① 공감 — 유저 인사이트"
+            description="유저 인터뷰, 관찰, 설문에서 발견한 고통점을 수집합니다."
+            items={overview.insights}
+            projectId={id}
+            kind="insight"
+          />
+          <VentureAISummary
+            projectId={id}
+            kind="insights"
+            enabled={overview.insights.length >= 3}
+            disabledReason="인사이트 3건 이상부터 패턴 분석 가능"
+          />
+        </div>
 
         <VentureStageSection
           stageId="define"
@@ -166,16 +176,26 @@ export default async function VenturePage({ params }: PageProps) {
           )}
         </div>
 
-        <VentureStageSection
-          stageId="prototype"
-          title="④ 프로토타입 — 실행 & 검증"
-          description="MVP 체크리스트 실행과 유저 피드백 수집."
-          items={{ tasks: overview.tasks, feedback: overview.feedback }}
-          projectId={id}
-          kind="prototype"
-          locked={!overview.stageProgress[2].complete}
-          lockReason={overview.stageProgress[2].blocker}
-        />
+        <div>
+          <VentureStageSection
+            stageId="prototype"
+            title="④ 프로토타입 — 실행 & 검증"
+            description="MVP 체크리스트 실행과 유저 피드백 수집."
+            items={{ tasks: overview.tasks, feedback: overview.feedback }}
+            projectId={id}
+            kind="prototype"
+            locked={!overview.stageProgress[2].complete}
+            lockReason={overview.stageProgress[2].blocker}
+          />
+          {overview.stageProgress[2].complete && (
+            <VentureAISummary
+              projectId={id}
+              kind="feedback"
+              enabled={overview.feedback.length >= 1}
+              disabledReason="피드백 1건 이상부터 분석 가능"
+            />
+          )}
+        </div>
 
         <VenturePlanCard
           projectId={id}
@@ -183,6 +203,8 @@ export default async function VenturePage({ params }: PageProps) {
           locked={!overview.stageProgress[3].complete}
           lockReason={overview.stageProgress[3].blocker}
         />
+
+        <VentureTimeline projectId={id} />
       </div>
     </div>
   );
