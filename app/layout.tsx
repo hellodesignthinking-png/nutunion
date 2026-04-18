@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "@/components/ui/sonner";
 import { GenreThemeProvider } from "@/components/brand/genre-theme-context";
 import { GlobalSearch } from "@/components/shared/global-search";
+import { PwaBootstrap } from "@/components/shared/pwa-bootstrap";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </GenreThemeProvider>
         <GlobalSearch />
         <Toaster position="bottom-right" />
+        <PwaBootstrap />
         <SpeedInsights />
         <Analytics />
       </body>

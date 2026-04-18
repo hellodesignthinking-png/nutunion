@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 export interface ClosureDraft {
   headline: string;
@@ -111,13 +112,15 @@ export function CloseProjectModal({ projectId, projectTitle, triggerLabel = "üè
 
   return (
     <>
-      <button
+      <Button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink px-3 py-1.5 font-mono-nu text-[11px] uppercase tracking-widest hover:bg-red-600 hover:text-nu-paper hover:border-red-600"
+        variant="brutalist"
+        size="brutal-sm"
+        className="hover:!bg-red-600 hover:!text-nu-paper hover:!border-red-600"
       >
         {triggerLabel}
-      </button>
+      </Button>
 
       {open && (
         <div

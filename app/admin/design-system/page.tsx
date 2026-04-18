@@ -128,9 +128,31 @@ export default async function DesignSystemPage() {
         </p>
       </Section>
 
+      <Section title="Compound Styles (lib/brutalist-styles.ts)" slug="compound">
+        <p className="text-[13px] text-nu-graphite">
+          Dialog / Select / Tabs 같은 shadcn compound 컴포넌트는 <code>brutalist.xxx</code> 클래스
+          프리셋을 <code>className</code> 에 적용해 브루탈리스트화합니다.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+          <Preset label="Dialog" sample={`<DialogContent className={brutalist.dialogContent}>`} />
+          <Preset label="Select" sample={`<SelectTrigger className={brutalist.selectTrigger}>`} />
+          <Preset label="Tabs" sample={`<TabsList className={brutalist.tabsList}>`} />
+          <Preset label="Panel" sample={`<div className={brutalist.panel}>\n  <div className={brutalist.panelHeader}>...</div>\n  <div className={brutalist.panelBody}>...</div>\n</div>`} />
+        </div>
+      </Section>
+
       <div className="text-[11px] text-nu-graphite pt-6 border-t border-nu-ink/10">
         이 페이지는 admin 전용. 새 UI 요소 제작 시 이 시스템을 기준으로 조립하세요. 재사용 &gt; 중복 디자인.
       </div>
+    </div>
+  );
+}
+
+function Preset({ label, sample }: { label: string; sample: string }) {
+  return (
+    <div className="border-[2px] border-nu-ink/20 bg-nu-paper p-3">
+      <div className="font-mono-nu text-[10px] uppercase tracking-wider text-nu-graphite mb-1">{label}</div>
+      <pre className="font-mono text-[10px] text-nu-ink whitespace-pre-wrap">{sample}</pre>
     </div>
   );
 }
