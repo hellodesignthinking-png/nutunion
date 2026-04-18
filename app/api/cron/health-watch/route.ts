@@ -8,8 +8,8 @@ export const maxDuration = 30;
  * GET /api/cron/health-watch
  *
  * Vercel Hobby 플랜: 일 1회 (00:00 UTC) 자동 호출 — 장기 장애 포착용.
- * Pro 플랜 업그레이드 시 vercel.json 의 schedule 을 */5 * * * * 로 변경
- * 하면 5분 간격 감시 가능.
+ * Pro 플랜 업그레이드 시 vercel.json 의 schedule 을 "every 5 min" 표기로
+ * 변경하면 (5 분 주기) 단기 장애도 감지 가능.
  *
  * /api/health 를 체크해서 실패하면 ALERT_WEBHOOK_URL (Slack/Discord 웹훅)
  * 으로 알림 발송.
