@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { VentureRadar } from "@/components/portfolio/venture-radar";
+import { PushSubscribeToggle } from "@/components/shared/push-subscribe-toggle";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "포트폴리오" };
@@ -62,6 +63,10 @@ export default async function ProfilePortfolioPage() {
         <p className="text-[12px] text-nu-graphite mt-1">
           Venture Builder 프로젝트에서의 디자인 씽킹 단계별 기여를 레이더 차트로 보여줍니다.
         </p>
+      </div>
+
+      <div className="mb-6">
+        <PushSubscribeToggle />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] gap-6 items-start">
