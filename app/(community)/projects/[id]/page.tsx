@@ -9,6 +9,8 @@ import { PageHero } from "@/components/shared/page-hero";
 import { SquadRecommender } from "@/components/projects/squad-recommender";
 import { MilestoneSettlement } from "@/components/projects/milestone-settlement";
 import { CancelApplicationButton } from "@/components/projects/cancel-application-button";
+import { CloseProjectModal } from "@/components/project-closure/close-project-modal";
+import { ProjectClosureBanner } from "@/components/project-closure/project-closure-banner";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   try {
@@ -150,6 +152,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 📝 회의록
               </Link>
             )}
+            {isAdmin && project.status !== "completed" && (
+              <CloseProjectModal projectId={id} projectTitle={project.title} />
+            )}
             {isAdmin && (
               <Link href={`/projects/${id}/settings`} className="font-mono-nu text-[13px] uppercase tracking-widest px-5 py-2.5 border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all inline-flex items-center gap-2">
                 <Settings size={14} /> 볼트 설정
@@ -158,6 +163,15 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           </div>
         </div>
       </div>
+
+      {project.status === "completed" && project.closure_summary && (
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6">
+          <ProjectClosureBanner
+            project={project}
+            canCancel={isAdmin || project.closed_by === user.id}
+          />
+        </div>
+      )}
 
       {(!isMember && !isAdmin) ? (
         <div className="flex flex-col items-center justify-center min-h-[40vh] text-center px-4 pt-10 pb-20">
