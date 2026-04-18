@@ -5,7 +5,7 @@ import type {
   StageProgress, VentureStage,
 } from "./types";
 
-export async function getVentureOverview(projectId: string): Promise<{
+export interface VentureOverview {
   insights: VentureInsight[];
   problems: VentureProblem[];
   ideas: VentureIdea[];
@@ -13,26 +13,41 @@ export async function getVentureOverview(projectId: string): Promise<{
   feedback: VentureFeedback[];
   currentPlan: VenturePlan | null;
   stageProgress: StageProgress[];
-}> {
+  migrationMissing: boolean;
+}
+
+export async function getVentureOverview(projectId: string): Promise<VentureOverview> {
   const supabase = await createClient();
-  const [insights, problems, ideas, tasks, feedback, plan] = await Promise.all([
-    supabase.from("venture_insights").select("*").eq("project_id", projectId).order("created_at", { ascending: false }),
-    supabase.from("venture_problems").select("*").eq("project_id", projectId).order("is_selected", { ascending: false }).order("created_at", { ascending: false }),
-    supabase.from("venture_ideas").select("*").eq("project_id", projectId).order("is_main", { ascending: false }).order("created_at", { ascending: false }),
-    supabase.from("venture_prototype_tasks").select("*").eq("project_id", projectId).order("sort_order").order("created_at"),
-    supabase.from("venture_feedback").select("*").eq("project_id", projectId).order("created_at", { ascending: false }),
-    supabase.from("venture_plans").select("*").eq("project_id", projectId).eq("is_current", true).maybeSingle(),
+
+  // 각 쿼리를 safe wrap — 058 마이그레이션 미적용 시 테이블 없음 에러 graceful 처리
+  type QueryResult<T> = { data: T | null; error: { message?: string } | null };
+  async function safe<T>(p: PromiseLike<QueryResult<T>>): Promise<{ data: T | null; missing: boolean }> {
+    try {
+      const r = await p;
+      const missing = !!r.error?.message?.includes("does not exist")
+        || !!r.error?.message?.includes("relation");
+      return { data: r.error ? null : r.data, missing };
+    } catch {
+      return { data: null, missing: true };
+    }
+  }
+
+  const [ins, pb, idRes, tk, fb, plan] = await Promise.all([
+    safe(supabase.from("venture_insights").select("*").eq("project_id", projectId).order("created_at", { ascending: false })),
+    safe(supabase.from("venture_problems").select("*").eq("project_id", projectId).order("is_selected", { ascending: false }).order("created_at", { ascending: false })),
+    safe(supabase.from("venture_ideas").select("*").eq("project_id", projectId).order("is_main", { ascending: false }).order("created_at", { ascending: false })),
+    safe(supabase.from("venture_prototype_tasks").select("*").eq("project_id", projectId).order("sort_order").order("created_at")),
+    safe(supabase.from("venture_feedback").select("*").eq("project_id", projectId).order("created_at", { ascending: false })),
+    safe(supabase.from("venture_plans").select("*").eq("project_id", projectId).eq("is_current", true).maybeSingle()),
   ]);
 
-  // 아이디어 투표 합산
-  const ideaRows = (ideas.data as VentureIdea[]) ?? [];
+  const migrationMissing = ins.missing && pb.missing && idRes.missing;
+
+  const ideaRows = (idRes.data as VentureIdea[] | null) ?? [];
   if (ideaRows.length > 0) {
-    const { data: votes } = await supabase
-      .from("venture_idea_votes")
-      .select("idea_id, weight")
-      .in("idea_id", ideaRows.map((i) => i.id));
+    const votesRes = await safe(supabase.from("venture_idea_votes").select("idea_id, weight").in("idea_id", ideaRows.map((i) => i.id)));
     const map = new Map<string, { count: number; total: number }>();
-    for (const v of (votes as { idea_id: string; weight: number }[]) ?? []) {
+    for (const v of (votesRes.data as { idea_id: string; weight: number }[] | null) ?? []) {
       const cur = map.get(v.idea_id) ?? { count: 0, total: 0 };
       cur.count += 1;
       cur.total += v.weight;
@@ -43,36 +58,22 @@ export async function getVentureOverview(projectId: string): Promise<{
       i.vote_count = c?.count ?? 0;
       i.vote_total = c?.total ?? 0;
     }
-    // vote_total 기준 재정렬 (is_main 우선 유지)
     ideaRows.sort((a, b) => {
       if (a.is_main !== b.is_main) return a.is_main ? -1 : 1;
       return (b.vote_total ?? 0) - (a.vote_total ?? 0);
     });
   }
 
-  const pb = (problems.data as VentureProblem[]) ?? [];
-  const tk = (tasks.data as VenturePrototypeTask[]) ?? [];
-  const ins = (insights.data as VentureInsight[]) ?? [];
-  const fb = (feedback.data as VentureFeedback[]) ?? [];
+  const insights = (ins.data as VentureInsight[] | null) ?? [];
+  const problems = (pb.data as VentureProblem[] | null) ?? [];
+  const tasks = (tk.data as VenturePrototypeTask[] | null) ?? [];
+  const feedback = (fb.data as VentureFeedback[] | null) ?? [];
   const currentPlan = (plan.data as VenturePlan | null) ?? null;
 
-  const stageProgress = computeStageProgress({
-    insights: ins,
-    problems: pb,
-    ideas: ideaRows,
-    tasks: tk,
-    feedback: fb,
-    currentPlan,
-  });
+  const stageProgress = computeStageProgress({ insights, problems, ideas: ideaRows, tasks, feedback, currentPlan });
 
   return {
-    insights: ins,
-    problems: pb,
-    ideas: ideaRows,
-    tasks: tk,
-    feedback: fb,
-    currentPlan,
-    stageProgress,
+    insights, problems, ideas: ideaRows, tasks, feedback, currentPlan, stageProgress, migrationMissing,
   };
 }
 

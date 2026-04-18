@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Nav } from "@/components/shared/nav";
 import { AuthNav } from "@/components/shared/auth-nav";
-import { AppSidebar } from "@/components/shared/app-sidebar";
+import { AppSidebar, AppSidebarGutter } from "@/components/shared/app-sidebar";
 import { AppBottomTabs } from "@/components/shared/app-bottom-tabs";
 import { Footer } from "@/components/landing/footer";
 import type { Profile } from "@/lib/types";
@@ -44,9 +44,17 @@ export default async function CommunityLayout({
     <div className="min-h-screen bg-nu-paper flex flex-col">
       {profile ? <AuthNav profile={profile} /> : <Nav />}
       {profile && <AppSidebar isStaff={isStaff} isAdmin={isAdmin} />}
-      <div className={`flex-1 pt-[60px] ${profile ? "pb-[64px] md:pb-0 lg:pl-[220px]" : ""}`}>
-        {children}
-      </div>
+      {profile ? (
+        <AppSidebarGutter>
+          <div className="flex-1 pt-[60px] pb-[64px] md:pb-0">
+            {children}
+          </div>
+        </AppSidebarGutter>
+      ) : (
+        <div className="flex-1 pt-[60px]">
+          {children}
+        </div>
+      )}
       <Footer />
       {profile && <AppBottomTabs />}
     </div>

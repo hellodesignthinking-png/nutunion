@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import Link from "next/link";
 import { AdminNavClient } from "./admin-nav-client";
+import { AppSidebar, AppSidebarGutter } from "@/components/shared/app-sidebar";
+import { AppBottomTabs } from "@/components/shared/app-bottom-tabs";
 
 export default async function AdminLayout({
   children,
@@ -36,9 +37,13 @@ export default async function AdminLayout({
   const adminName = profile?.nickname || user.email?.split("@")[0] || "Admin";
 
   return (
-    <div className="min-h-screen bg-nu-paper">
+    <div className="min-h-screen bg-nu-paper flex flex-col">
       <AdminNavClient navItems={navItems} adminName={adminName} />
-      <div className="pt-[60px]">{children}</div>
+      <AppSidebar isStaff={true} isAdmin={true} />
+      <AppSidebarGutter>
+        <div className="flex-1 pt-[60px] pb-[64px] md:pb-0">{children}</div>
+      </AppSidebarGutter>
+      <AppBottomTabs />
     </div>
   );
 }

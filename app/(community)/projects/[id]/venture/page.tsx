@@ -91,6 +91,22 @@ export default async function VenturePage({ params }: PageProps) {
         </Link>
       </div>
 
+      {overview.migrationMissing && (
+        <div className="mb-6 border-[2.5px] border-orange-500 bg-orange-50 p-4">
+          <div className="font-mono-nu text-[10px] uppercase tracking-widest text-orange-700 mb-1">
+            ⚠ DB 마이그레이션 필요
+          </div>
+          <p className="text-[13px] text-orange-700 leading-relaxed">
+            Venture Builder 테이블(058) 과 성장 기능(059) 마이그레이션이 아직 적용되지 않았습니다.
+            Supabase SQL Editor 에서 다음 파일을 실행해주세요:
+          </p>
+          <ul className="mt-2 text-[12px] text-orange-700 list-disc pl-5">
+            <li><code>supabase/migrations/058_venture_builder.sql</code></li>
+            <li><code>supabase/migrations/059_growth_features.sql</code></li>
+          </ul>
+        </div>
+      )}
+
       <div className="mb-6 flex items-end justify-between flex-wrap gap-3">
         <div className="min-w-0 flex-1">
           <div className="font-mono-nu text-[10px] uppercase tracking-[0.3em] text-nu-graphite mb-1">

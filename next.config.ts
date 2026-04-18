@@ -23,14 +23,18 @@ const nextConfig: NextConfig = {
     // CSP — Next.js 16 + Vercel Analytics + Supabase 호환
     // 주의: inline style/script 는 Next.js 런타임에 필요 (우선 enforce)
     //       필요 시 nonce 방식으로 업그레이드
+    // CSP — 실사용 중 외부 폰트/이미지/CDN 차단 피드백 반영해 완화.
+    // Next.js 런타임은 unsafe-inline/eval 필요. 외부 HTTPS 리소스는 광범위 허용.
     const csp = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://vercel.live",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://vercel.live",
-      "font-src 'self' data:",
-      "connect-src 'self' https://htmrdefcbslgwttjayxt.supabase.co wss://htmrdefcbslgwttjayxt.supabase.co https://vitals.vercel-insights.com https://va.vercel-scripts.com https://vercel.live",
-      "frame-src 'self' https://vercel.live",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob:",
+      "style-src 'self' 'unsafe-inline' https:",
+      "style-src-elem 'self' 'unsafe-inline' https:",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' data: https:",
+      "media-src 'self' blob: https:",
+      "connect-src 'self' https: wss:",
+      "frame-src 'self' https:",
       "worker-src 'self' blob:",
       "object-src 'none'",
       "base-uri 'self'",

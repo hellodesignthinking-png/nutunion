@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { StaffNavClient } from "./staff-nav-client";
 import { ChatPanel } from "./chat-panel";
 import { CommandPalette } from "./command-palette";
+import { AppSidebar, AppSidebarGutter } from "@/components/shared/app-sidebar";
+import { AppBottomTabs } from "@/components/shared/app-bottom-tabs";
 
 export default async function StaffLayout({
   children,
@@ -34,10 +36,16 @@ export default async function StaffLayout({
 
   const staffName = profile.nickname || user.email?.split("@")[0] || "Staff";
 
+  const isAdmin = profile.role === "admin";
+
   return (
-    <div className="min-h-screen bg-nu-paper">
+    <div className="min-h-screen bg-nu-paper flex flex-col">
       <StaffNavClient navItems={navItems} staffName={staffName} />
-      <div className="pt-[60px]">{children}</div>
+      <AppSidebar isStaff={true} isAdmin={isAdmin} />
+      <AppSidebarGutter>
+        <div className="flex-1 pt-[60px] pb-[64px] md:pb-0">{children}</div>
+      </AppSidebarGutter>
+      <AppBottomTabs />
       {/* Global floating components */}
       <ChatPanel />
       <CommandPalette />

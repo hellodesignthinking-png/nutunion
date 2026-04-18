@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AuthNav } from "@/components/shared/auth-nav";
-import { AppSidebar } from "@/components/shared/app-sidebar";
+import { AppSidebar, AppSidebarGutter } from "@/components/shared/app-sidebar";
 import { AppBottomTabs } from "@/components/shared/app-bottom-tabs";
 import { Footer } from "@/components/landing/footer";
 import type { Profile } from "@/lib/types";
@@ -46,9 +46,11 @@ export default async function MainLayout({
     <div className="min-h-screen bg-nu-paper flex flex-col">
       <AuthNav profile={userProfile} />
       <AppSidebar isStaff={isStaff} isAdmin={isAdmin} />
-      <div className="flex-1 pt-[60px] pb-[64px] md:pb-0 lg:pl-[220px]">
-        {children}
-      </div>
+      <AppSidebarGutter>
+        <div className="flex-1 pt-[60px] pb-[64px] md:pb-0">
+          {children}
+        </div>
+      </AppSidebarGutter>
       <Footer />
       <AppBottomTabs />
     </div>
