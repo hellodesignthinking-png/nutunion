@@ -29,9 +29,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const siteUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : process.env.NEXT_PUBLIC_SITE_URL ?? "https://nutunion.co.kr";
+  // 커스텀 도메인 사용 — VERCEL_URL 은 deployment protection 에 걸릴 수 있음
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://nutunion.co.kr";
   const healthUrl = `${siteUrl}/api/health`;
 
   let status = 0;
@@ -45,10 +44,11 @@ export async function GET(req: NextRequest) {
       signal: AbortSignal.timeout(10_000),
     });
     status = res.status;
+    const text = await res.text();
     try {
-      body = await res.json();
+      body = JSON.parse(text);
     } catch {
-      body = { raw: (await res.text()).slice(0, 200) };
+      body = { raw: text.slice(0, 200) };
     }
   } catch (err) {
     error = err instanceof Error ? err.message : String(err);
