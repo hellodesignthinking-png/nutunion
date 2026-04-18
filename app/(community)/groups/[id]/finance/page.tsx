@@ -149,26 +149,26 @@ export default function GroupFinancePage() {
           setIsManager(memberData.role === "host" || memberData.role === "moderator");
         }
 
-        // Fetch expenditures — use explicit FK hint or fallback to separate payer query
+        // Fetch expenditures — 2-step fetch (FK 조인 400 에러 회피)
         let expendituresData: any[] = [];
         {
-          const { data, error: expendError } = await supabase
+          const { data: raw } = await supabase
             .from("group_expenditures")
-            .select("*, payer:profiles!group_expenditures_payer_id_fkey(id, nickname, avatar_url)")
+            .select("*")
             .eq("group_id", groupId)
             .order("date", { ascending: false });
-
-          if (expendError) {
-            // FK not yet in schema cache — fetch without join, then resolve payers separately
-            const { data: raw } = await supabase
-              .from("group_expenditures")
-              .select("*")
-              .eq("group_id", groupId)
-              .order("date", { ascending: false });
-            expendituresData = raw || [];
-          } else {
-            expendituresData = data || [];
+          const rows = raw || [];
+          // 결제자 프로필 별도 조회 후 merge
+          const payerIds = [...new Set(rows.map((r: any) => r.payer_id).filter(Boolean))];
+          let payerMap = new Map<string, { id: string; nickname: string; avatar_url: string | null }>();
+          if (payerIds.length > 0) {
+            const { data: profs } = await supabase
+              .from("profiles")
+              .select("id, nickname, avatar_url")
+              .in("id", payerIds);
+            payerMap = new Map((profs ?? []).map((p: any) => [p.id, p]));
           }
+          expendituresData = rows.map((r: any) => ({ ...r, payer: r.payer_id ? payerMap.get(r.payer_id) : null }));
         }
 
         {

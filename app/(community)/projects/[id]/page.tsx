@@ -11,6 +11,7 @@ import { MilestoneSettlement } from "@/components/projects/milestone-settlement"
 import { CancelApplicationButton } from "@/components/projects/cancel-application-button";
 import { CloseProjectModal } from "@/components/project-closure/close-project-modal";
 import { ProjectClosureBanner } from "@/components/project-closure/project-closure-banner";
+import { VentureStageBadge } from "@/components/venture/venture-stage-badge";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   try {
@@ -120,6 +121,12 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               {statusCfg.icon === "archive" && <AlertCircle size={14} />}
               {statusCfg.label}
             </span>
+            <VentureStageBadge
+              ventureMode={!!project.venture_mode}
+              ventureStage={project.venture_stage ?? null}
+              completed={project.status === "completed"}
+              size="md"
+            />
             <span className="text-nu-muted">진행자: <span className="text-nu-ink font-bold">{project.creator?.nickname || "—"}</span></span>
           </div>
 
@@ -132,28 +139,29 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 <CancelApplicationButton projectId={id} userId={user.id} />
               </div>
             )}
+            {/* 통일 스타일: 모든 버튼 border-[2.5px] h-10 px-4 text-[11px] uppercase tracking-widest */}
             {!isAdmin && applicationStatus === "approved" && (
-              <span className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-5 py-2.5 bg-green-600 text-white inline-flex items-center gap-2">
+              <span className="h-10 px-4 border-[2.5px] border-green-700 bg-green-600 text-white font-mono-nu text-[11px] font-bold uppercase tracking-widest inline-flex items-center gap-2">
                 <CheckCircle2 size={14} /> 참여중
               </span>
             )}
             {!isAdmin && applicationStatus === "rejected" && (
-              <Link href={`/projects/${id}/apply`} className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-6 py-2.5 border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all inline-flex items-center gap-2">
+              <Link href={`/projects/${id}/apply`} className="h-10 px-4 border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink font-mono-nu text-[11px] font-bold uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper inline-flex items-center gap-2 transition-colors">
                 다시 지원하기
               </Link>
             )}
             {!isAdmin && !applicationStatus && project.status === "active" && !isMember && (
-              <Link href={`/projects/${id}/apply`} className="font-mono-nu text-[12px] font-black uppercase tracking-widest px-8 py-3.5 bg-nu-pink text-nu-paper no-underline hover:bg-nu-pink/90 transition-all inline-flex items-center gap-2 shadow-lg shadow-nu-pink/20 border-[2px] border-nu-pink">
-                <UserPlus size={16} /> 볼트 참여하기
+              <Link href={`/projects/${id}/apply`} className="h-10 px-4 border-[2.5px] border-nu-ink bg-nu-pink text-nu-paper font-mono-nu text-[11px] font-black uppercase tracking-widest no-underline hover:bg-nu-ink inline-flex items-center gap-2 transition-colors">
+                <UserPlus size={14} /> 볼트 참여하기
               </Link>
             )}
             {(isMember || isAdmin) && (
-              <Link href={`/projects/${id}/digests`} className="font-mono-nu text-[13px] uppercase tracking-widest px-5 py-2.5 border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all inline-flex items-center gap-2">
+              <Link href={`/projects/${id}/digests`} className="h-10 px-4 border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper inline-flex items-center gap-2 transition-colors">
                 📝 회의록
               </Link>
             )}
             {(isMember || isAdmin) && (
-              <Link href={`/projects/${id}/venture`} className="font-mono-nu text-[13px] uppercase tracking-widest px-5 py-2.5 border-[2px] border-nu-pink text-nu-pink no-underline hover:bg-nu-pink hover:text-nu-paper transition-all inline-flex items-center gap-2">
+              <Link href={`/projects/${id}/venture`} className="h-10 px-4 border-[2.5px] border-nu-pink bg-nu-paper text-nu-pink font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-nu-pink hover:text-nu-paper inline-flex items-center gap-2 transition-colors">
                 🚀 Venture
               </Link>
             )}
@@ -161,7 +169,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               <CloseProjectModal projectId={id} projectTitle={project.title} />
             )}
             {isAdmin && (
-              <Link href={`/projects/${id}/settings`} className="font-mono-nu text-[13px] uppercase tracking-widest px-5 py-2.5 border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all inline-flex items-center gap-2">
+              <Link href={`/projects/${id}/settings`} className="h-10 px-4 border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper inline-flex items-center gap-2 transition-colors">
                 <Settings size={14} /> 볼트 설정
               </Link>
             )}

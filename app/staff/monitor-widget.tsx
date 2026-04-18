@@ -83,8 +83,8 @@ export function MonitorWidget() {
         { data: nutGroups },
         { data: nutMembers },
       ] = await Promise.all([
-        supabase.from("crews").select("id, name, status, updated_at").eq("status", "active"),
-        supabase.from("crew_members").select("id, crew_id"),
+        supabase.from("groups").select("id, name, status, updated_at").eq("status", "active"),
+        supabase.from("group_members").select("id, group_id"),
       ]);
 
       const todayStr = new Date().toISOString().split("T")[0];
@@ -129,7 +129,7 @@ export function MonitorWidget() {
 
       // 너트(소모임) 건강 데이터
       for (const ng of (nutGroups || [])) {
-        const members = (nutMembers || []).filter(m => m.crew_id === ng.id);
+        const members = (nutMembers || []).filter((m: { group_id: string }) => m.group_id === ng.id);
 
         result.push({
           id: ng.id, title: ng.name, type: "nut", status: ng.status,

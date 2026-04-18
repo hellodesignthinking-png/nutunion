@@ -7,6 +7,7 @@ import { VentureStageTracker } from "@/components/venture/venture-stage-tracker"
 import { VentureStageSection } from "@/components/venture/venture-stage-section";
 import { VenturePlanCard } from "@/components/venture/venture-plan-card";
 import { VentureEnableButton } from "@/components/venture/venture-enable-button";
+import { VentureSuggestIdeas } from "@/components/venture/venture-suggest-ideas";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Venture Builder" };
@@ -144,17 +145,26 @@ export default async function VenturePage({ params }: PageProps) {
           lockReason={overview.stageProgress[0].blocker}
         />
 
-        <VentureStageSection
-          stageId="ideate"
-          title="③ 아이디어 — 발산 후 수렴"
-          description="가능한 해결책을 다양하게 내고, 팀 투표로 Main Solution 을 선정합니다."
-          items={overview.ideas}
-          projectId={id}
-          kind="idea"
-          locked={!overview.stageProgress[1].complete}
-          lockReason={overview.stageProgress[1].blocker}
-          currentUserId={user.id}
-        />
+        <div>
+          <VentureStageSection
+            stageId="ideate"
+            title="③ 아이디어 — 발산 후 수렴"
+            description="가능한 해결책을 다양하게 내고, 팀 투표로 Main Solution 을 선정합니다."
+            items={overview.ideas}
+            projectId={id}
+            kind="idea"
+            locked={!overview.stageProgress[1].complete}
+            lockReason={overview.stageProgress[1].blocker}
+            currentUserId={user.id}
+          />
+          {overview.stageProgress[1].complete && (
+            <VentureSuggestIdeas
+              projectId={id}
+              disabled={!overview.stageProgress[1].complete}
+              disabledReason={overview.stageProgress[1].blocker}
+            />
+          )}
+        </div>
 
         <VentureStageSection
           stageId="prototype"

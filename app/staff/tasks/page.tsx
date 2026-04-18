@@ -76,7 +76,7 @@ export default function StaffTasksPage() {
         // 모든 스태프 프로필
         supabase.from("profiles").select("id, nickname, avatar_url").in("role", ["staff", "admin"]),
         // 너트(소모임)
-        supabase.from("crews").select("id, name").eq("status", "active").order("name"),
+        supabase.from("groups").select("id, name").eq("status", "active").order("name"),
       ]);
 
       setTasks(taskData || []);

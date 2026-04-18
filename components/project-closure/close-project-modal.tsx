@@ -112,15 +112,13 @@ export function CloseProjectModal({ projectId, projectTitle, triggerLabel = "üè
 
   return (
     <>
-      <Button
+      <button
         type="button"
         onClick={() => setOpen(true)}
-        variant="brutalist"
-        size="brutal-sm"
-        className="hover:!bg-red-600 hover:!text-nu-paper hover:!border-red-600"
+        className="h-10 px-4 border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink font-mono-nu text-[11px] uppercase tracking-widest inline-flex items-center gap-2 hover:bg-red-600 hover:text-nu-paper hover:border-red-600 transition-colors"
       >
         {triggerLabel}
-      </Button>
+      </button>
 
       {open && (
         <div

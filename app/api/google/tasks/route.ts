@@ -54,10 +54,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ taskLists: lists });
     }
   } catch (error: any) {
-    if (error.message === "GOOGLE_NOT_CONNECTED" || error.message === "GOOGLE_TOKEN_EXPIRED") {
-      return NextResponse.json({ error: "Google 계정을 연결해주세요" }, { status: 401 });
+    const msg = error?.message ?? "";
+    const detail = error?.response?.data?.error?.message || msg || "Unknown";
+    // 인증 실패 / 토큰 만료 / 스코프 부족 / 네트워크는 401 로 정규화 (클라이언트가 재연결 UI 노출)
+    const isAuthIssue =
+      msg === "GOOGLE_NOT_CONNECTED" ||
+      msg === "GOOGLE_TOKEN_EXPIRED" ||
+      msg === "GOOGLE_TOKEN_REFRESH_FAILED" ||
+      error?.code === 401 ||
+      /invalid_grant|token|unauthorized|scope/i.test(detail);
+    if (isAuthIssue) {
+      return NextResponse.json({ error: "Google 계정을 다시 연결해주세요", detail, reconnect: true }, { status: 401 });
     }
-    const detail = error?.response?.data?.error?.message || error?.message || "Unknown";
     console.error("Google Tasks API error:", detail);
     return NextResponse.json({ error: "Google Tasks API 오류", detail }, { status: 500 });
   }
