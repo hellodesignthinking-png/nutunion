@@ -11,22 +11,8 @@ import { NotificationCenter } from "@/components/shared/notification-center";
 import { getDailyVariant } from "@/lib/brand/genre-engine";
 import { OpenLogoArtwork } from "@/components/brand/brand-page-client";
 
-// ── 랜딩 전용 링크 (비로그인) ──────────────────────────────────────
-const landingLinks = [
-  { label: "About",    href: "/#about"   },
-  { label: "너트",     href: "/groups"   },
-  { label: "볼트",     href: "/projects" },
-  { label: "Scenes",   href: "/#scenes"  },
-];
-
-const appLinks = [
-  { label: "대시보드",  href: "/dashboard"    },
-  { label: "너트",      href: "/groups"       },
-  { label: "볼트",      href: "/projects"     },
-  { label: "탭",        href: "/wiki"         },
-  { label: "와셔",      href: "/members"      },
-  { label: "의뢰",      href: "/challenges"   },
-];
+// 전역 nav 링크는 lib/nav-links.ts 에서 import — Nav / AuthNav 간 불일치 방지
+import { LANDING_LINKS as landingLinks, APP_LINKS as appLinks } from "@/lib/nav-links";
 
 export function Nav() {
   const [user,       setUser]       = useState<any>(null);

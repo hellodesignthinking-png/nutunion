@@ -14,15 +14,8 @@ import { getGrade } from "@/lib/constants";
 import { GlobalSearch } from "@/components/shared/global-search";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
-// Unified with Nav component appLinks
-const appLinks = [
-  { label: "대시보드", href: "/dashboard" },
-  { label: "너트", href: "/groups" },
-  { label: "볼트", href: "/projects" },
-  { label: "탭", href: "/wiki" },
-  { label: "와셔", href: "/members" },
-  { label: "의뢰", href: "/challenges" },
-];
+// 단일 소스 — lib/nav-links.ts (Nav 와 공유)
+import { APP_LINKS as appLinks } from "@/lib/nav-links";
 
 export function AuthNav({ profile }: { profile: Profile }) {
   const router   = useRouter();
