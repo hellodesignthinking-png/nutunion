@@ -27,12 +27,13 @@ export const LANDING_LINKS: NavLink[] = [
  *   의뢰(챌린지) → 외부 요청
  */
 export const APP_LINKS: NavLink[] = [
-  { label: "대시보드", href: "/dashboard"  },
-  { label: "너트",     href: "/groups"     },
-  { label: "볼트",     href: "/projects"   },
-  { label: "탭",       href: "/wiki"       },
-  { label: "와셔",     href: "/members"    },
-  { label: "의뢰",     href: "/challenges" },
+  { label: "대시보드", href: "/dashboard"         },
+  { label: "너트",     href: "/groups"            },
+  { label: "볼트",     href: "/projects"          },
+  { label: "탭",       href: "/wiki"              },
+  { label: "와셔",     href: "/members"           },
+  { label: "의뢰",     href: "/challenges"        },
+  { label: "포트폴리오", href: "/profile/portfolio" },
 ];
 
 /**

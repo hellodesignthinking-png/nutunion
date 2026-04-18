@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
+import { dispatchPushToUsers } from "@/lib/push/dispatch";
 
 export const runtime = "nodejs";
 
@@ -34,7 +35,47 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     updates.decided_at = new Date().toISOString();
   }
 
+  // 변경 전 상태 조회 (결정 push 발송 대상 확인)
+  const { data: before } = await supabase
+    .from("funding_submissions")
+    .select("project_id, submitter_id, status, plan:venture_plans(content)")
+    .eq("id", id)
+    .maybeSingle();
+
   const { error } = await supabase.from("funding_submissions").update(updates).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // funded / rejected 로 "전환" 된 경우에만 푸시 발송
+  const newStatus = parsed.data.status;
+  if (before && (newStatus === "funded" || newStatus === "rejected") && before.status !== newStatus) {
+    // 대상: 제출자 + 프로젝트 멤버 + 프로젝트 호스트
+    const { data: members } = await supabase
+      .from("project_members")
+      .select("user_id")
+      .eq("project_id", before.project_id as string);
+    const { data: project } = await supabase
+      .from("projects")
+      .select("host_id, title")
+      .eq("id", before.project_id as string)
+      .maybeSingle();
+
+    const userIds = new Set<string>();
+    if (before.submitter_id) userIds.add(before.submitter_id as string);
+    if (project?.host_id) userIds.add(project.host_id as string);
+    for (const m of (members as { user_id: string }[] | null) ?? []) userIds.add(m.user_id);
+
+    if (userIds.size > 0) {
+      // 비동기 발송 — 응답 지연 최소화
+      dispatchPushToUsers([...userIds], {
+        title: newStatus === "funded" ? "✅ 펀딩 결정" : "❌ 펀딩 반려",
+        body: newStatus === "funded"
+          ? `"${project?.title ?? "프로젝트"}" 펀딩이 결정되었습니다.`
+          : `"${project?.title ?? "프로젝트"}" 펀딩이 반려되었습니다.${parsed.data.review_note ? ` 사유: ${parsed.data.review_note.slice(0, 80)}` : ""}`,
+        url: `/projects/${before.project_id}/venture`,
+        tag: `funding-${id}`,
+      }).catch((e) => console.warn("[funding push]", e));
+    }
+  }
+
   return NextResponse.json({ success: true });
 }
