@@ -18,8 +18,27 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // ── 정적/API 캐싱 헤더 ───────────────────────────────────────
+  // ── 정적/API 캐싱 + 보안 헤더 ─────────────────────────────────
   async headers() {
+    // CSP — Next.js 16 + Vercel Analytics + Supabase 호환
+    // 주의: inline style/script 는 Next.js 런타임에 필요 (우선 enforce)
+    //       필요 시 nonce 방식으로 업그레이드
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://vercel.live",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://vercel.live",
+      "font-src 'self' data:",
+      "connect-src 'self' https://htmrdefcbslgwttjayxt.supabase.co wss://htmrdefcbslgwttjayxt.supabase.co https://vitals.vercel-insights.com https://va.vercel-scripts.com https://vercel.live",
+      "frame-src 'self' https://vercel.live",
+      "worker-src 'self' blob:",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'self'",
+      "upgrade-insecure-requests",
+    ].join("; ");
+
     return [
       // 정적 에셋 (JS, CSS, 이미지) — 1년
       {
@@ -32,9 +51,27 @@ const nextConfig: NextConfig = {
       {
         source: "/(.*)",
         headers: [
-          { key: "X-Frame-Options",         value: "SAMEORIGIN" },
+          { key: "X-Frame-Options",          value: "SAMEORIGIN" },
           { key: "X-Content-Type-Options",   value: "nosniff" },
           { key: "Referrer-Policy",          value: "strict-origin-when-cross-origin" },
+          // HSTS — HTTPS 강제 (1년, 서브도메인 포함, preload 가능)
+          { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains; preload" },
+          // 기능 권한 — 불필요 센서 접근 차단
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), accelerometer=(), gyroscope=()",
+          },
+          // DNS prefetch 허용 (성능)
+          { key: "X-DNS-Prefetch-Control",   value: "on" },
+          // CSP — Report-Only 로 먼저 관찰 (향후 enforce 로 전환)
+          { key: "Content-Security-Policy-Report-Only", value: csp },
+        ],
+      },
+      // API 응답 기본 — 캐싱 금지
+      {
+        source: "/api/(.*)",
+        headers: [
+          { key: "Cache-Control", value: "no-store, max-age=0" },
         ],
       },
     ];

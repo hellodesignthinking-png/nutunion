@@ -22,6 +22,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "AI 마케팅", href: "/finance/marketing", icon: "✨", accent: true },
   { label: "비용", href: "/finance/cost", icon: "💰" },
   { label: "감사", href: "/finance/audit", icon: "🔒", adminOnly: true },
+  { label: "상태", href: "/finance/status", icon: "⚡", adminOnly: true },
   { label: "규정", href: "/finance/docs", icon: "📋" },
 ];
 

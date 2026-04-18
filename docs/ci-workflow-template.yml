@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  typecheck-and-build:
+    name: Type Check & Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build (NO env needed for static check)
+        env:
+          # CI 에서는 실제 DB 접근 없이 빌드만 검증
+          # 빌드 시 SSG 가 아닌 SSR 라우트는 런타임에 env 필요 — 빌드는 문제 없음
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+          # force-dynamic 라우트는 빌드 시 실행 안 됨 → DB 연결 불필요
+          SKIP_ENV_VALIDATION: "true"
+        run: npx next build
+
+      - name: Report migrations count (info)
+        run: |
+          echo "::notice::Migration files: $(ls supabase/migrations/*.sql 2>/dev/null | wc -l)"
+          echo "::notice::Finance API routes: $(find app/api/finance -name 'route.ts' 2>/dev/null | wc -l)"
