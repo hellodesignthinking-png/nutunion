@@ -72,8 +72,8 @@ export function AuthNav({ profile }: { profile: Profile }) {
         </span>
       </Link>
 
-      {/* Desktop links */}
-      <div className="hidden md:flex gap-6 items-center">
+      {/* Desktop links — lg 이상은 AppSidebar 가 대체하므로 숨김 */}
+      <div className="hidden md:flex lg:hidden gap-6 items-center">
         {appLinks.map((l) => (
           <Link
             key={l.href}

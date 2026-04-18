@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AuthNav } from "@/components/shared/auth-nav";
+import { AppSidebar } from "@/components/shared/app-sidebar";
+import { AppBottomTabs } from "@/components/shared/app-bottom-tabs";
 import { Footer } from "@/components/landing/footer";
 import type { Profile } from "@/lib/types";
 
@@ -37,11 +39,18 @@ export default async function MainLayout({
     created_at: new Date().toISOString(),
   };
 
+  const isStaff = userProfile.role === "staff" || userProfile.role === "admin";
+  const isAdmin = userProfile.role === "admin";
+
   return (
     <div className="min-h-screen bg-nu-paper flex flex-col">
       <AuthNav profile={userProfile} />
-      <div className="flex-1 pt-[60px]">{children}</div>
+      <AppSidebar isStaff={isStaff} isAdmin={isAdmin} />
+      <div className="flex-1 pt-[60px] pb-[64px] md:pb-0 lg:pl-[220px]">
+        {children}
+      </div>
       <Footer />
+      <AppBottomTabs />
     </div>
   );
 }

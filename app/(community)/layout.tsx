@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { Nav } from "@/components/shared/nav";
 import { AuthNav } from "@/components/shared/auth-nav";
+import { AppSidebar } from "@/components/shared/app-sidebar";
+import { AppBottomTabs } from "@/components/shared/app-bottom-tabs";
 import { Footer } from "@/components/landing/footer";
 import type { Profile } from "@/lib/types";
 
@@ -35,14 +37,18 @@ export default async function CommunityLayout({
     };
   }
 
+  const isStaff = profile?.role === "staff" || profile?.role === "admin";
+  const isAdmin = profile?.role === "admin";
+
   return (
     <div className="min-h-screen bg-nu-paper flex flex-col">
       {profile ? <AuthNav profile={profile} /> : <Nav />}
-      {/* Nav 높이 60px 고정 — (main) 과 동일한 pt-[60px] 유지 */}
-      <div className="flex-1 pt-[60px]">
+      {profile && <AppSidebar isStaff={isStaff} isAdmin={isAdmin} />}
+      <div className={`flex-1 pt-[60px] ${profile ? "pb-[64px] md:pb-0 lg:pl-[220px]" : ""}`}>
         {children}
       </div>
       <Footer />
+      {profile && <AppBottomTabs />}
     </div>
   );
 }
