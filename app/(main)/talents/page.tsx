@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 import { PageHero } from "@/components/shared/page-hero";
+import { RecruitingBoltsBanner } from "@/components/talents/recruiting-bolts-banner";
 
 const tierConfig: Record<string, { label: string; className: string; icon: any }> = {
   bronze: { label: "브론즈", className: "bg-amber-100 text-amber-700 border-amber-200", icon: Award },
@@ -344,6 +345,9 @@ export default function TalentSearchPage() {
       />
 
       <div className="max-w-7xl mx-auto px-8 py-12">
+        {/* 구인 중인 볼트 — 신뢰 기반 매칭 (Venture 데이터 연동) */}
+        <RecruitingBoltsBanner />
+
         {/* TOP TALENT READY Banner as a sub-header */}
         <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-nu-pink/5 border border-nu-pink/20 p-6 md:p-8">
            <div className="flex-1">

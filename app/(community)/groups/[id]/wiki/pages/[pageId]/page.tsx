@@ -4,6 +4,8 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { WikiPageViewer } from "@/components/wiki/wiki-page-viewer";
 import { WikiFloatingTOC } from "@/components/wiki/wiki-floating-toc";
+import { LineagePanel } from "@/components/wiki/lineage-panel";
+import { getAncestry, getDescendants, getConnections } from "@/lib/wiki/lineage";
 import type { Metadata } from "next";
 
 export const revalidate = 60;
@@ -67,6 +69,13 @@ export default async function WikiPageDetailPage({ params }: { params: Promise<{
   const versions = versionsResult.data;
   const contributions = contribsResult.data;
 
+  // 계보 / 연결 (Wiki Fork 기능)
+  const [ancestry, descendants, connections] = await Promise.all([
+    getAncestry(pageId),
+    getDescendants(pageId),
+    getConnections(pageId),
+  ]);
+
   // Record page view — deduplicate: max 1 view per user per page per day (fire-and-forget)
   try {
     const { count: viewedToday } = await supabase
@@ -113,6 +122,17 @@ export default async function WikiPageDetailPage({ params }: { params: Promise<{
             versions={versions || []}
             contributions={contributions || []}
           />
+
+          {/* 🧬 계보 / 연결 (Wiki Fork) */}
+          <div className="mt-8">
+            <LineagePanel
+              pageId={pageId}
+              ancestry={ancestry}
+              descendants={descendants}
+              connections={connections}
+              groupBasePath={`/groups/${groupId}/wiki/pages`}
+            />
+          </div>
         </div>
         <WikiFloatingTOC contentSelector=".wiki-page-content" title="이 문서의 목차" />
       </div>

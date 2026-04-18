@@ -23,6 +23,7 @@ import {
   Mail,
 } from "lucide-react";
 import type { Specialty, ProjectStatus } from "@/lib/types";
+import { RecruitingToggle } from "@/components/projects/recruiting-toggle";
 
 const categories: { value: Specialty; label: string }[] = [
   { value: "space", label: "Space" },
@@ -88,6 +89,9 @@ export default function ProjectSettingsPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [kakaoUrl, setKakaoUrl]   = useState("");
+  const [recruiting, setRecruiting] = useState(false);
+  const [neededRoles, setNeededRoles] = useState<string[]>([]);
+  const [recruitingNote, setRecruitingNote] = useState<string | null>(null);
   const [driveUrl, setDriveUrl]   = useState("");
   const [slackUrl, setSlackUrl]   = useState("");
   const [notionUrl, setNotionUrl] = useState("");
@@ -163,6 +167,9 @@ export default function ProjectSettingsPage() {
     setImageUrl(project.image_url);
     setImagePreview(project.image_url);
     setKakaoUrl(project.kakao_chat_url || project.tool_kakao || "");
+    setRecruiting(!!project.recruiting);
+    setNeededRoles(Array.isArray(project.needed_roles) ? project.needed_roles : []);
+    setRecruitingNote(project.recruiting_note ?? null);
     setDriveUrl(project.google_drive_url || project.tool_drive || "");
     setSlackUrl(project.tool_slack || "");
     setNotionUrl(project.tool_notion || "");
@@ -594,6 +601,17 @@ Generated at: ${new Date().toLocaleString()}
         볼트 설정
       </h1>
       <p className="text-nu-gray text-sm mb-8">{title}</p>
+
+      {/* 구인 공고 */}
+      <div className="mb-8">
+        <h2 className="font-head text-lg font-extrabold mb-3">🔎 인재 모집</h2>
+        <RecruitingToggle
+          projectId={projectId}
+          initialRecruiting={recruiting}
+          initialRoles={neededRoles}
+          initialNote={recruitingNote}
+        />
+      </div>
 
       {/* Edit form */}
       <form onSubmit={handleSave} className="space-y-6 mb-12">
