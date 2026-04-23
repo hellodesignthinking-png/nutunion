@@ -12,7 +12,6 @@ import {
   Users,
   Calendar,
   Clock,
-  MapPin,
   CheckCircle2,
   ExternalLink,
   MessageCircle,
@@ -25,7 +24,6 @@ import {
   Save,
   Zap,
   FolderOpen,
-  TrendingUp,
   Loader2,
   Columns3,
   BarChart3,
@@ -39,10 +37,9 @@ import { ProjectFinanceDashboard } from "@/components/projects/project-finance-d
 import { ProjectFinanceSnapshot, type FinanceSnapshot } from "@/components/projects/project-finance-snapshot";
 import { ProjectBurndownChart } from "@/components/projects/project-burndown-chart";
 import { ProjectMeetings } from "@/components/projects/project-meetings";
-import { ProjectRadarChart, ProjectActivityHeatmap } from "@/components/projects/project-vitals";
+import { ProjectRadarChart } from "@/components/projects/project-vitals";
 import { ProjectKanbanBoard } from "@/components/projects/project-kanban-board";
 import { ProjectInsights } from "@/components/projects/project-insights";
-import { EndorsementPanel } from "@/components/shared/endorsement-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AnchorDashboard } from "@/components/bolt/anchor/anchor-dashboard";
@@ -53,17 +50,19 @@ import { TorqueView } from "@/components/bolt/torque/TorqueView";
 import { BoltCalendar } from "@/components/bolt/bolt-calendar";
 import { ConsultingAddonManager } from "@/components/bolt/consulting-addon-manager";
 
+// 기본 탭 6개 — insights·modules는 overview Quick Actions에서 접근
 const baseTabs = [
-  { key: "overview",    label: "개요",     icon: Target },
-  { key: "kanban",      label: "칸반 보드", icon: Columns3 },
-  { key: "milestones", label: "마일스톤",  icon: Layers },
+  { key: "overview",   label: "개요",     icon: Target },
+  { key: "kanban",     label: "칸반",     icon: Columns3 },
+  { key: "milestones", label: "마일스톤", icon: Layers },
   { key: "calendar",   label: "캘린더",   icon: Calendar },
-  { key: "insights",   label: "인사이트",  icon: BarChart3 },
   { key: "meetings",   label: "회의록",   icon: FileText },
   { key: "resources",  label: "자료실",   icon: FolderOpen },
   { key: "finance",    label: "자금·보상", icon: Wallet },
-  { key: "modules",    label: "모듈",     icon: Puzzle },
   { key: "activity",   label: "활동",     icon: Activity },
+  // 숨김 탭 — Quick Actions / URL ?tab= 으로만 접근
+  { key: "insights",   label: "인사이트", icon: BarChart3, hidden: true },
+  { key: "modules",    label: "모듈",     icon: Puzzle,    hidden: true },
 ];
 
 const roleLabels: Record<string, string> = {
@@ -164,21 +163,21 @@ export function TabsInner({
     }
   }, [projectId]);
 
-  // Build tabs with item counts
+  // Build tabs — hidden 탭은 탭바에 표시 안 함
   const tabCounts: Record<string, number | null> = {
     overview: null,
     kanban: liveTotalTasks || null,
     milestones: milestones?.length || null,
-    insights: null,
     meetings: events?.length || null,
     resources: null,
     finance: null,
     activity: updates?.length || null,
+    insights: null,
+    modules: null,
   };
-  const tabs = baseTabs.map((t) => ({
-    ...t,
-    count: tabCounts[t.key] ?? null,
-  }));
+  const tabs = baseTabs
+    .filter((t) => !(t as any).hidden)
+    .map((t) => ({ ...t, count: tabCounts[t.key] ?? null }));
 
   // Calculate milestone progress
   const totalMilestones = milestones?.length || 0;
@@ -188,41 +187,6 @@ export function TabsInner({
 
   return (
     <>
-      {/* ── Milestone Progress Bar ── */}
-      <div className="bg-nu-paper border-b-[2px] border-nu-ink/[0.08] mb-8">
-        <div className="max-w-6xl mx-auto px-8 py-6">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h3 className="font-head text-sm font-bold text-nu-ink flex items-center gap-2">
-                <TrendingUp size={16} className="text-nu-pink" /> 마일스톤 진행률
-              </h3>
-            </div>
-            <span className="font-mono-nu text-[13px] font-bold text-nu-ink">
-              {completedMilestones}/{totalMilestones}
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <div className="h-2.5 bg-nu-cream rounded-full overflow-hidden">
-                <div
-                  className={`h-full transition-all ${
-                    isCompleted ? "bg-green-600" : "bg-nu-pink"
-                  }`}
-                  style={{ width: `${milestoneProgressPct}%` }}
-                />
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="font-mono-nu text-[12px] font-bold text-nu-ink">
-                {milestoneProgressPct}%
-              </p>
-              <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">
-                {isCompleted ? "완료" : "진행 중"}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Tab bar — full width, scrollable on mobile */}
       <div className="max-w-6xl mx-auto flex gap-0 border-b-[2px] border-nu-ink/[0.08] mb-8 overflow-x-auto scrollbar-hide">
@@ -437,88 +401,54 @@ export function TabsInner({
               </div>
             )}
 
-            {/* Linked events */}
+            {/* 이번 주 일정 미리보기 (최대 3개) — 캘린더 탭 링크 */}
             {events.length > 0 && (
-              <div className="bg-nu-white border border-nu-ink/[0.08] p-6">
-                <h3 className="font-head text-lg font-extrabold mb-4 flex items-center gap-2">
-                  <Calendar size={18} /> 연결된 일정
-                </h3>
-                <div className="space-y-3">
-                  {events.map((evt: any) => (
-                    <div key={evt.id} className="flex items-center gap-4 p-3 bg-nu-cream/30">
-                      <div className="w-12 h-12 bg-nu-pink/10 flex flex-col items-center justify-center shrink-0">
-                        <span className="font-head text-base font-extrabold text-nu-pink leading-none">{new Date(evt.start_at).getDate()}</span>
-                        <span className="font-mono-nu text-[10px] uppercase text-nu-pink/70">{new Date(evt.start_at).toLocaleDateString("ko", { month: "short" })}</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{evt.title}</p>
-                        <div className="flex items-center gap-3 text-xs text-nu-muted mt-0.5">
-                          <span className="flex items-center gap-1"><Clock size={10} />{new Date(evt.start_at).toLocaleTimeString("ko", { hour: "2-digit", minute: "2-digit" })}</span>
-                          {evt.location && <span className="flex items-center gap-1"><MapPin size={10} />{evt.location}</span>}
-                          {evt.group?.name && <span className="text-nu-pink">{evt.group.name}</span>}
-                        </div>
-                      </div>
+              <button
+                onClick={() => setActiveTab("calendar")}
+                className="w-full bg-nu-white border border-nu-ink/[0.08] p-4 text-left hover:border-nu-pink/30 transition-colors"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted font-bold flex items-center gap-1.5">
+                    <Calendar size={11} /> 일정 ({events.length})
+                  </span>
+                  <ChevronRight size={12} className="text-nu-muted" />
+                </div>
+                <div className="space-y-1.5">
+                  {events.slice(0, 3).map((evt: any) => (
+                    <div key={evt.id} className="flex items-center gap-2 text-[12px] text-nu-graphite">
+                      <span className="font-mono-nu text-nu-pink font-bold shrink-0">
+                        {new Date(evt.start_at).toLocaleDateString("ko", { month: "numeric", day: "numeric" })}
+                      </span>
+                      <span className="truncate">{evt.title}</span>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {/* ZeroSite Launch */}
-            {canEdit && (
-              <div className="bg-nu-white border-[2px] border-nu-pink/20 p-6 relative overflow-hidden group">
-                 <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                    <div className="flex-1">
-                      <span className="bg-nu-pink text-white text-[11px] font-bold uppercase tracking-widest px-2 py-0.5">ZeroSite</span>
-                      <h3 className="font-head text-lg font-extrabold text-nu-ink mt-2 mb-1">오프라인 프로그램 출시 제안</h3>
-                      <p className="text-xs text-nu-gray leading-relaxed max-w-lg">이 볼트의 결과물을 제로싸이트 공간의 정규 프로그램으로 출시해보세요.</p>
-                    </div>
-                    {!(project as any)?.zerosite_launch_status || (project as any)?.zerosite_launch_status === "idle" ? (
-                      <Button
-                        onClick={async () => {
-                          if (!confirm("제로싸이트 운영팀에 이 볼트를 오프라인 프로그램으로 제안하시겠습니까?")) return;
-                          const supabase = createClient();
-                          const { error } = await supabase.from("projects").update({ zerosite_launch_status: "pending" }).eq("id", projectId);
-                          if (error) toast.error("제안 발송 실패: " + error.message);
-                          else { toast.success("제안서가 운영팀에 성공적으로 전달되었습니다."); window.location.reload(); }
-                        }}
-                        className="bg-nu-ink text-nu-paper hover:bg-nu-pink transition-all font-mono-nu text-[12px] uppercase tracking-widest px-6 py-5 h-auto shrink-0"
-                      >
-                        Launch <ChevronRight size={14} className="ml-1" />
-                      </Button>
-                    ) : (
-                      <div className="bg-nu-cream/50 border border-nu-ink/5 px-5 py-3 text-center shrink-0">
-                        <p className="font-mono-nu text-[12px] text-nu-muted uppercase mb-0.5">Status</p>
-                        <p className="font-head text-sm font-extrabold text-nu-ink capitalize">{(project as any)?.zerosite_launch_status}</p>
-                      </div>
-                    )}
-                 </div>
-              </div>
+              </button>
             )}
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
 
-            {/* ── 빠른 액션 패널 ── */}
+            {/* ── Quick Actions ── */}
             <div className="bg-nu-ink text-nu-paper p-5">
-              <h3 className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-paper/60 mb-3">Quick Actions</h3>
-              <div className="grid grid-cols-2 gap-1.5">
+              <h3 className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-paper/50 mb-3">Quick Actions</h3>
+              <div className="grid grid-cols-3 gap-1">
                 {[
-                  { label: "칸반 보드",  tab: "kanban",    emoji: "📋" },
-                  { label: "마일스톤",   tab: "milestones", emoji: "🏁" },
-                  { label: "회의록",    tab: "meetings",   emoji: "📝" },
-                  { label: "자료실",    tab: "resources",  emoji: "📁" },
-                  { label: "인사이트",  tab: "insights",   emoji: "📊" },
-                  { label: "모듈",      tab: "modules",    emoji: "🧩" },
+                  { label: "칸반",    tab: "kanban",     emoji: "📋" },
+                  { label: "마일스톤", tab: "milestones", emoji: "🏁" },
+                  { label: "회의록",  tab: "meetings",   emoji: "📝" },
+                  { label: "자료실",  tab: "resources",  emoji: "📁" },
+                  { label: "인사이트", tab: "insights",  emoji: "📊" },
+                  { label: "모듈",    tab: "modules",    emoji: "🧩" },
                 ].map(({ label, tab, emoji }) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className="text-left px-3 py-2.5 bg-nu-paper/[0.06] hover:bg-nu-paper/[0.14] transition-colors border border-nu-paper/[0.08]"
+                    className="flex flex-col items-center gap-1 py-3 bg-nu-paper/[0.06] hover:bg-nu-paper/[0.14] transition-colors"
                   >
-                    <span className="block text-[16px] mb-0.5">{emoji}</span>
-                    <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-paper/80">{label}</span>
+                    <span className="text-[18px] leading-none">{emoji}</span>
+                    <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-paper/70">{label}</span>
                   </button>
                 ))}
               </div>
@@ -666,10 +596,22 @@ export function TabsInner({
               </div>
             )}
 
-            {/* Project Vitals */}
-            <ProjectRadarChart projectId={projectId} />
-            <ProjectActivityHeatmap projectId={projectId} />
           </div>
+        </div>
+      )}
+
+      {/* Insights 탭 — Quick Actions 또는 ?tab=insights 로 접근 */}
+      {activeTab === "insights" && (
+        <ProjectInsights
+          projectId={projectId}
+          totalBudget={project?.total_budget ? parseInt(project.total_budget) : 0}
+        />
+      )}
+
+      {/* Modules 탭 — Quick Actions 또는 ?tab=modules 로 접근 */}
+      {activeTab === "modules" && (
+        <div className="max-w-5xl mx-auto py-6">
+          <ConsultingAddonManager projectId={projectId} canEdit={canEdit} />
         </div>
       )}
 
@@ -696,13 +638,6 @@ export function TabsInner({
         </div>
       )}
 
-      {/* Insights Tab */}
-      {activeTab === "insights" && (
-        <ProjectInsights
-          projectId={projectId}
-          totalBudget={project?.total_budget ? parseInt(project.total_budget) : 0}
-        />
-      )}
 
       {/* Meetings Tab — project meeting notes */}
       {activeTab === "meetings" && (
@@ -768,31 +703,15 @@ export function TabsInner({
         </div>
       )}
 
-      {/* Activity Tab — constrained */}
+      {/* Activity Tab */}
       {activeTab === "activity" && (
-        <div className="max-w-6xl mx-auto space-y-8">
+        <div className="max-w-6xl mx-auto">
           <ProjectActivityFeed
             projectId={projectId}
             initialUpdates={updates}
             canPost={isMember}
             userId={userId}
           />
-          {/* 동료 보증 — 팀원들 상호 보증 */}
-          {userMembers.length > 0 && (
-            <div>
-              <h3 className="font-mono-nu text-[12px] font-black uppercase tracking-widest text-nu-muted mb-4">팀원 보증</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {userMembers.filter((m: any) => m.user_id !== userId).map((m: any) => (
-                  <EndorsementPanel
-                    key={m.user_id}
-                    targetUserId={m.user_id}
-                    projectId={projectId}
-                    compact
-                  />
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
     </>
