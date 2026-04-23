@@ -94,10 +94,9 @@ VALUES (
   true
 )
 ON CONFLICT (slug) DO UPDATE SET
-  thread_slugs = EXCLUDED.thread_slugs,
-  updated_at   = now();
+  thread_slugs = EXCLUDED.thread_slugs;
 
--- updated_at 컬럼 추가 (ON CONFLICT UPDATE 용)
+-- updated_at 컬럼 추가 (없는 경우에만)
 ALTER TABLE thread_kits
   ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
 

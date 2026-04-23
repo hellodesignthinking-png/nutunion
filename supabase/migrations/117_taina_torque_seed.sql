@@ -1,7 +1,138 @@
 -- ============================================================
--- Seeding: Taina의 실제 사업 5개 Torque Bolt 초기 데이터
--- 실행 전: 116_torque_bolt_consulting.sql 마이그레이션 완료 필요
+-- Migration 117: Torque Bolt 사전 조건 + Taina 실제 사업 5개 시딩
+-- 116 미적용 환경에서도 단독 실행 가능하도록 설계
 -- ============================================================
+
+-- ─────────────────────────────────────────────────────────
+-- STEP 0: projects.type 제약에 'torque' 추가 (idempotent)
+-- ─────────────────────────────────────────────────────────
+ALTER TABLE projects DROP CONSTRAINT IF EXISTS projects_type_check;
+ALTER TABLE projects
+  ADD CONSTRAINT projects_type_check
+  CHECK (type IN ('hex','anchor','carriage','eye','wing','torque'));
+
+-- ─────────────────────────────────────────────────────────
+-- STEP 1: 116에서 만들어야 할 테이블들 (IF NOT EXISTS로 안전)
+-- ─────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS project_torque (
+  project_id               uuid PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
+  engagement_type          text NOT NULL CHECK (engagement_type IN ('one_time','retainer','hybrid')) DEFAULT 'one_time',
+  started_at               date NOT NULL DEFAULT CURRENT_DATE,
+  ended_at                 date,
+  scope_summary            text,
+  retainer_monthly_hours   int,
+  retainer_hourly_rate_krw int,
+  created_at               timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS bolt_memberships (
+  project_id  uuid NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  user_id     uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  role        text NOT NULL CHECK (role IN ('owner','team','consultant','observer')),
+  joined_at   timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (project_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_bolt_memberships_user    ON bolt_memberships(user_id);
+CREATE INDEX IF NOT EXISTS idx_bolt_memberships_project ON bolt_memberships(project_id);
+
+CREATE TABLE IF NOT EXISTS consulting_requests (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id    uuid NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  title         text NOT NULL,
+  body          text,
+  requester_id  uuid REFERENCES profiles(id),
+  assignee_id   uuid REFERENCES profiles(id),
+  request_type  text CHECK (request_type IN ('advice','analysis','deliverable','introduction','review','other')) DEFAULT 'other',
+  priority      text CHECK (priority IN ('low','normal','high','urgent')) DEFAULT 'normal',
+  status        text CHECK (status IN ('draft','submitted','accepted','in_progress','delivered','accepted_by_requester','cancelled')) DEFAULT 'draft',
+  estimated_hours numeric,
+  actual_hours    numeric DEFAULT 0,
+  due_date        date,
+  delivered_at    timestamptz,
+  closed_at       timestamptz,
+  tags            text[] DEFAULT '{}',
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  updated_at      timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_consulting_requests_project ON consulting_requests(project_id);
+
+CREATE TABLE IF NOT EXISTS consulting_risks (
+  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id        uuid NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  title             text NOT NULL,
+  description       text,
+  category          text CHECK (category IN ('market','financial','operational','legal','people','technology','external')),
+  likelihood        int CHECK (likelihood BETWEEN 1 AND 5) DEFAULT 3,
+  impact            int CHECK (impact BETWEEN 1 AND 5) DEFAULT 3,
+  mitigation_plan   text,
+  mitigation_status text CHECK (mitigation_status IN ('identified','analyzing','mitigating','mitigated','accepted','closed')) DEFAULT 'identified',
+  owner_id          uuid REFERENCES profiles(id),
+  identified_by     uuid REFERENCES profiles(id),
+  review_due        date,
+  closed_at         timestamptz,
+  created_at        timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_consulting_risks_project ON consulting_risks(project_id);
+
+CREATE TABLE IF NOT EXISTS consulting_decisions (
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id          uuid NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  title               text NOT NULL,
+  context             text,
+  options_considered  jsonb DEFAULT '[]',
+  decision            text NOT NULL,
+  decision_rationale  text,
+  consequences        text,
+  status              text CHECK (status IN ('proposed','accepted','superseded','reverted')) DEFAULT 'proposed',
+  decision_makers     uuid[] DEFAULT '{}',
+  superseded_by       uuid REFERENCES consulting_decisions(id),
+  decided_at          timestamptz,
+  created_at          timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_consulting_decisions_project ON consulting_decisions(project_id);
+
+-- RLS 활성화 (이미 활성화된 경우 무해)
+ALTER TABLE project_torque        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bolt_memberships      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE consulting_requests   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE consulting_risks      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE consulting_decisions  ENABLE ROW LEVEL SECURITY;
+
+-- RLS 정책 (중복 방지)
+DROP POLICY IF EXISTS "project_torque_select"        ON project_torque;
+DROP POLICY IF EXISTS "project_torque_insert"        ON project_torque;
+DROP POLICY IF EXISTS "bolt_memberships_select"      ON bolt_memberships;
+DROP POLICY IF EXISTS "bolt_memberships_insert"      ON bolt_memberships;
+DROP POLICY IF EXISTS "consulting_requests_member"   ON consulting_requests;
+DROP POLICY IF EXISTS "consulting_risks_member"      ON consulting_risks;
+DROP POLICY IF EXISTS "consulting_decisions_member"  ON consulting_decisions;
+
+CREATE POLICY "project_torque_select" ON project_torque FOR SELECT
+  USING (project_id IN (SELECT project_id FROM bolt_memberships WHERE user_id = auth.uid())
+      OR project_id IN (SELECT id FROM projects WHERE created_by = auth.uid()));
+
+CREATE POLICY "project_torque_insert" ON project_torque FOR INSERT
+  WITH CHECK (project_id IN (SELECT id FROM projects WHERE created_by = auth.uid()));
+
+CREATE POLICY "bolt_memberships_select" ON bolt_memberships FOR SELECT
+  USING (user_id = auth.uid()
+      OR project_id IN (SELECT project_id FROM bolt_memberships WHERE user_id = auth.uid()));
+
+CREATE POLICY "bolt_memberships_insert" ON bolt_memberships FOR INSERT
+  WITH CHECK (project_id IN (SELECT id FROM projects WHERE created_by = auth.uid())
+           OR project_id IN (SELECT project_id FROM bolt_memberships WHERE user_id = auth.uid() AND role = 'owner'));
+
+CREATE POLICY "consulting_requests_member" ON consulting_requests FOR ALL
+  USING (project_id IN (SELECT project_id FROM bolt_memberships WHERE user_id = auth.uid())
+      OR project_id IN (SELECT id FROM projects WHERE created_by = auth.uid()));
+
+CREATE POLICY "consulting_risks_member" ON consulting_risks FOR ALL
+  USING (project_id IN (SELECT project_id FROM bolt_memberships WHERE user_id = auth.uid())
+      OR project_id IN (SELECT id FROM projects WHERE created_by = auth.uid()));
+
+CREATE POLICY "consulting_decisions_member" ON consulting_decisions FOR ALL
+  USING (project_id IN (SELECT project_id FROM bolt_memberships WHERE user_id = auth.uid())
+      OR project_id IN (SELECT id FROM projects WHERE created_by = auth.uid()));
 
 DO $$
 DECLARE
