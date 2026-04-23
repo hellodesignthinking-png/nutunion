@@ -288,57 +288,73 @@ export function TabsInner({
               </div>
             )}
 
-            {/* ── Progress + Budget Summary (connected view) ── */}
+            {/* ── Progress Dashboard ── */}
             <div className="bg-nu-white border-[2px] border-nu-ink p-6">
               <h3 className="font-head text-lg font-extrabold mb-5 flex items-center gap-2">
-                <Target size={18} /> 진행 현황 & 비용
+                <Target size={18} /> 볼트 현황
               </h3>
 
               {/* Stats row */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                 <div className="text-center p-4 bg-nu-cream/50 border border-nu-ink/5">
                   <p className="font-head text-3xl font-extrabold text-nu-ink">{liveProgressPct}%</p>
-                  <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mt-1">전체 진행률</p>
+                  <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mt-1">태스크 완료율</p>
                 </div>
                 <div className="text-center p-4 bg-nu-cream/50 border border-nu-ink/5">
-                  <p className="font-head text-3xl font-extrabold text-nu-ink">{liveTotalTasks}</p>
-                  <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mt-1">전체 태스크</p>
+                  <p className="font-head text-3xl font-extrabold text-nu-ink">{milestoneProgressPct}%</p>
+                  <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mt-1">마일스톤</p>
                 </div>
                 <div className="text-center p-4 bg-green-50 border border-green-200">
                   <p className="font-head text-3xl font-extrabold text-green-600">{liveTaskStats.done}</p>
-                  <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mt-1">완료</p>
+                  <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mt-1">완료</p>
                 </div>
                 {project?.total_budget ? (
                   <div className="text-center p-4 bg-nu-blue/5 border border-nu-blue/20 cursor-pointer hover:bg-nu-blue/10 transition-colors" onClick={() => setActiveTab("finance")}>
-                    <p className="font-head text-2xl font-extrabold text-nu-ink">
+                    <p className="font-head text-xl font-extrabold text-nu-ink">
                       {parseInt(project.total_budget).toLocaleString("ko-KR")}
                     </p>
-                    <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mt-1">총 예산 ({project.budget_currency || "KRW"})</p>
+                    <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mt-1">예산 ({project.budget_currency || "KRW"})</p>
                   </div>
                 ) : (
                   <div className="text-center p-4 bg-nu-cream/50 border border-nu-ink/5">
                     <p className="font-head text-3xl font-extrabold text-nu-amber">{liveTaskStats.in_progress}</p>
-                    <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mt-1">진행 중</p>
+                    <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mt-1">진행 중</p>
                   </div>
                 )}
               </div>
 
-              {/* Progress bar */}
-              <div className="mb-5">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest">태스크 진행률</span>
-                  <span className="font-mono-nu text-[12px] font-bold">{liveTaskStats.done}/{liveTotalTasks}</span>
+              {/* 태스크 현황 바 */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest">태스크</span>
+                  <span className="font-mono-nu text-[11px] font-bold">{liveTaskStats.done}/{liveTotalTasks}</span>
                 </div>
-                <div className="h-3 bg-nu-cream rounded-full overflow-hidden flex">
+                <div className="h-2.5 bg-nu-cream rounded-full overflow-hidden flex">
                   <div className="h-full bg-green-600 transition-all" style={{ width: `${liveTotalTasks > 0 ? (liveTaskStats.done / liveTotalTasks) * 100 : 0}%` }} />
                   <div className="h-full bg-nu-amber transition-all" style={{ width: `${liveTotalTasks > 0 ? (liveTaskStats.in_progress / liveTotalTasks) * 100 : 0}%` }} />
                 </div>
-                <div className="flex items-center gap-4 mt-2">
-                  <span className="flex items-center gap-1.5 text-[12px] text-nu-muted"><span className="w-2 h-2 bg-green-600 rounded-full" /> 완료 {liveTaskStats.done}</span>
-                  <span className="flex items-center gap-1.5 text-[12px] text-nu-muted"><span className="w-2 h-2 bg-nu-amber rounded-full" /> 진행 중 {liveTaskStats.in_progress}</span>
-                  <span className="flex items-center gap-1.5 text-[12px] text-nu-muted"><span className="w-2 h-2 bg-nu-cream rounded-full border border-nu-ink/10" /> 대기 {liveTaskStats.todo}</span>
+                <div className="flex items-center gap-4 mt-1.5">
+                  <span className="flex items-center gap-1 text-[11px] text-nu-muted"><span className="w-2 h-2 bg-green-600 rounded-full" /> 완료 {liveTaskStats.done}</span>
+                  <span className="flex items-center gap-1 text-[11px] text-nu-muted"><span className="w-2 h-2 bg-nu-amber rounded-full" /> 진행 {liveTaskStats.in_progress}</span>
+                  <span className="flex items-center gap-1 text-[11px] text-nu-muted"><span className="w-2 h-2 bg-nu-cream rounded-full border border-nu-ink/10" /> 대기 {liveTaskStats.todo}</span>
                 </div>
               </div>
+
+              {/* 마일스톤 현황 바 */}
+              {totalMilestones > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest">마일스톤</span>
+                    <span className="font-mono-nu text-[11px] font-bold">{completedMilestones}/{totalMilestones}</span>
+                  </div>
+                  <div className="h-2.5 bg-nu-cream rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all ${isCompleted ? "bg-green-600" : "bg-nu-pink"}`}
+                      style={{ width: `${milestoneProgressPct}%` }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* ── Milestone Summary with budget per milestone ── */}

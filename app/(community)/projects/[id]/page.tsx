@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Settings, Calendar, UserPlus, Clock, CheckCircle2, AlertCircle, TrendingUp, Users } from "lucide-react";
+import { Settings, Calendar, UserPlus, Clock, CheckCircle2, AlertCircle, TrendingUp, Users, Zap } from "lucide-react";
 import { TabsInner } from "./tabs-inner";
 import { ProjectStatusPanel } from "@/components/projects/project-status-panel";
 import { RoleSlotsDisplay } from "@/components/projects/role-slots-editor";
@@ -61,10 +61,20 @@ const catColors: Record<string, string> = {
 };
 
 const statusConfig: Record<string, { bg: string; label: string; icon: "clock" | "check" | "pencil" | "archive" }> = {
-  draft: { bg: "bg-nu-gray text-white", label: "준비중", icon: "pencil" },
-  active: { bg: "bg-green-600 text-white", label: "진행중", icon: "clock" },
-  completed: { bg: "bg-nu-blue text-white", label: "완료", icon: "check" },
-  archived: { bg: "bg-nu-muted text-white", label: "보관", icon: "archive" },
+  draft:     { bg: "bg-nu-gray text-white",    label: "준비중", icon: "pencil" },
+  active:    { bg: "bg-green-600 text-white",  label: "진행중", icon: "clock" },
+  idle:      { bg: "bg-nu-amber text-white",   label: "대기중", icon: "clock" },
+  completed: { bg: "bg-nu-blue text-white",   label: "완료",   icon: "check" },
+  archived:  { bg: "bg-nu-muted text-white",   label: "보관",   icon: "archive" },
+};
+
+const boltTypeLabels: Record<string, { label: string; color: string }> = {
+  hex:      { label: "Hex",     color: "text-nu-muted bg-nu-ink/5 border-nu-ink/15" },
+  anchor:   { label: "Anchor", color: "text-blue-700 bg-blue-50 border-blue-200" },
+  carriage: { label: "Carriage", color: "text-amber-700 bg-amber-50 border-amber-200" },
+  eye:      { label: "Eye",    color: "text-purple-700 bg-purple-50 border-purple-200" },
+  wing:     { label: "Wing",   color: "text-sky-700 bg-sky-50 border-sky-200" },
+  torque:   { label: "Torque", color: "text-teal-700 bg-teal-50 border-teal-300" },
 };
 
 function formatDateClean(dateStr: string) {
@@ -175,8 +185,14 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       {/* Detail Meta & Actions — constrained width */}
       <div className="max-w-6xl mx-auto px-4 md:px-8 pt-10 pb-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-0 border-b border-nu-ink/5 pb-6">
-          <div className="flex flex-wrap items-center gap-4 font-mono-nu text-[13px]">
-            {/* Prominent status badge */}
+          <div className="flex flex-wrap items-center gap-3 font-mono-nu text-[13px]">
+            {/* 볼트 유형 배지 */}
+            {project.type && boltTypeLabels[project.type] && (
+              <span className={`font-mono-nu text-[11px] font-black uppercase tracking-[0.15em] px-3 py-1.5 border-[2px] flex items-center gap-1.5 ${boltTypeLabels[project.type].color}`}>
+                <Zap size={11} /> {boltTypeLabels[project.type].label}
+              </span>
+            )}
+            {/* 상태 배지 */}
             <span className={`font-mono-nu text-[13px] font-black uppercase tracking-[0.12em] px-4 py-2 inline-flex items-center gap-2 ${statusCfg.bg}`}>
               {statusCfg.icon === "clock" && <Clock size={14} />}
               {statusCfg.icon === "check" && <CheckCircle2 size={14} />}
@@ -231,10 +247,10 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               </Link>
             )}
             <Link href={`/projects/${id}/tap`} className="h-10 px-4 border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper inline-flex items-center gap-2 transition-colors">
-              📚 탭
+              📚 Tap
             </Link>
             {(isMember || isAdmin) && (
-              <Link href={`/projects/${id}/digests`} className="h-10 px-4 border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper inline-flex items-center gap-2 transition-colors">
+              <Link href={`/projects/${id}?tab=meetings`} className="h-10 px-4 border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper inline-flex items-center gap-2 transition-colors">
                 📝 회의록
               </Link>
             )}
