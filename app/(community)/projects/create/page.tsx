@@ -366,6 +366,7 @@ export default function ProjectCreatePage() {
   const [boltType, setBoltType] = useState<BoltType>(
     isConsultingTemplate ? "torque" : "hex"
   );
+  const todayStr = new Date().toISOString().slice(0, 10);
   const [typeFields, setTypeFields] = useState<TypeFieldsPayload>(
     isConsultingTemplate
       ? {
@@ -373,9 +374,33 @@ export default function ProjectCreatePage() {
             templateKey === "consulting-retainer" ? "retainer"
             : templateKey === "consulting-strategy" ? "one_time"
             : "hybrid",
+          started_at: todayStr,
         }
       : {}
   );
+
+  // Torque 볼트 선택 시 started_at 오늘로 자동 초기화
+  function handleBoltTypeChange(t: BoltType) {
+    setBoltType(t);
+    if (t === "torque") {
+      setTypeFields((prev: any) => ({
+        engagement_type: "one_time",
+        started_at: todayStr,
+        ...prev,
+        // 다른 타입에서 전환 시 기존 값 초기화
+        ...(boltType !== "torque" ? {
+          engagement_type: "one_time",
+          started_at: todayStr,
+          ended_at: undefined,
+          scope_summary: undefined,
+          retainer_monthly_hours: undefined,
+          retainer_hourly_rate_krw: undefined,
+        } : {}),
+      }));
+    } else {
+      setTypeFields({});
+    }
+  }
   // After creation invite step
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
   const [createdProjectTitle, setCreatedProjectTitle] = useState<string>("");
@@ -484,6 +509,14 @@ export default function ProjectCreatePage() {
       // 유형별 서브타입 insert (best-effort — 실패해도 볼트는 생성된 상태)
       if (boltType !== "hex") {
         const subPayload: any = { project_id: project.id, ...typeFields };
+        // Torque: started_at 미입력 시 오늘 날짜 기본값
+        if (boltType === "torque" && !subPayload.started_at) {
+          subPayload.started_at = new Date().toISOString().slice(0, 10);
+        }
+        // Torque: engagement_type 미입력 시 기본값
+        if (boltType === "torque" && !subPayload.engagement_type) {
+          subPayload.engagement_type = "one_time";
+        }
         const tableMap: Record<BoltType, string | null> = {
           hex: null,
           anchor: "project_anchor",
@@ -978,7 +1011,22 @@ export default function ProjectCreatePage() {
       ) : (
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Bolt Type Selector — 6가지 유형 중 선택 */}
-        <BoltTypeSelector value={boltType} onChange={setBoltType} />
+        <BoltTypeSelector value={boltType} onChange={handleBoltTypeChange} />
+
+        {/* Torque 선택 시 컨설팅 안내 배너 */}
+        {boltType === "torque" && (
+          <div className="p-4 bg-teal-50 border-[2px] border-teal-300 space-y-2">
+            <p className="font-mono-nu text-[11px] uppercase tracking-widest text-teal-700 font-bold flex items-center gap-1.5">
+              🎓 컨설팅형 볼트 (Torque) 안내
+            </p>
+            <ul className="text-[12px] text-teal-800 space-y-1 leading-relaxed">
+              <li>• 팀 미팅 + 컨설턴트 세션 <strong>이중 트랙</strong>이 자동 설치됩니다</li>
+              <li>• 요청 큐, 산출물 라이브러리, 리스크 레지스터 등 <strong>11개 Thread</strong> 자동 구성</li>
+              <li>• 생성 후 멤버 관리에서 <strong>컨설턴트를 초대</strong>할 수 있습니다</li>
+              <li>• 리테이너 계약 시 월 계약 시간과 단가를 입력하면 <strong>소진율</strong>을 실시간 추적합니다</li>
+            </ul>
+          </div>
+        )}
 
         {/* Title */}
         <div>
@@ -995,8 +1043,9 @@ export default function ProjectCreatePage() {
           />
         </div>
 
-        {/* Bolt Type Fields — 유형별 전용 필드 */}
+        {/* Bolt Type Fields — 유형별 전용 필드 (Torque 시 컨설팅 계약 정보) */}
         <BoltTypeFields type={boltType} value={typeFields} onChange={setTypeFields} />
+
 
         {/* Category */}
         <div>
