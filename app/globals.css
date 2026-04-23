@@ -1,8 +1,170 @@
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css");
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @custom-variant dark (&:is(.dark *));
+
+/* Reader Mode · 커뮤니티 본문 한정. 랜딩/푸터 Riso 미학에는 영향 없음. */
+
+/* ──────────────────────────────────────────────────────────
+   Design System v1 — Foundation 토큰 (CSS 변수)
+   Layer 1: 불변. Tokens 는 /tokens/foundation.ts 원본 유지.
+   ────────────────────────────────────────────────────────── */
+:root {
+  --neutral-0:   #ffffff;
+  --neutral-25:  #fafafa;
+  --neutral-50:  #f5f5f5;
+  --neutral-100: #e5e5e5;
+  --neutral-200: #d4d4d4;
+  --neutral-300: #a3a3a3;
+  --neutral-500: #737373;
+  --neutral-700: #404040;
+  --neutral-900: #1a1a1a;
+  --neutral-950: #0a0a0a;
+
+  --sem-success: #16a34a;
+  --sem-warning: #ca8a04;
+  --sem-danger:  #dc2626;
+  --sem-info:    #2563eb;
+
+  --ds-font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", system-ui, sans-serif;
+  --ds-font-mono: "JetBrains Mono", "Geist Mono", Consolas, monospace;
+  --ds-font-display: "Inter", -apple-system, sans-serif;
+
+  --ds-radius-sm:  4px;
+  --ds-radius-md:  8px;
+  --ds-radius-lg:  12px;
+  --ds-radius-xl:  16px;
+  --ds-radius-2xl: 24px;
+
+  --ds-shadow-xs: 0 1px 2px rgb(0 0 0 / 0.04);
+  --ds-shadow-sm: 0 2px 4px rgb(0 0 0 / 0.06);
+  --ds-shadow-md: 0 4px 12px rgb(0 0 0 / 0.08);
+  --ds-shadow-lg: 0 12px 32px rgb(0 0 0 / 0.12);
+
+  --ds-dur-utility:    150ms;
+  --ds-dur-expressive: 400ms;
+  --ds-dur-signature:  800ms;
+  --ds-ease-standard:  cubic-bezier(0.2, 0, 0, 1);
+  --ds-ease-overshoot: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Layer 2: Liquid (오늘의 변화) — 기본값, layout.tsx 에서 덮어씀 */
+  --liquid-primary:   #FF3D88;
+  --liquid-secondary: #4A90E2;
+  --liquid-surface:   #FAF8F5;
+}
+
+:root {
+  --reader-bg: #fafafa;
+  --reader-card: #ffffff;
+  --reader-border: #e5e5e5;
+  --reader-border-soft: #f0f0f0;
+  --reader-text: #1a1a1a;
+  --reader-text-muted: #737373;
+  --reader-accent: #FF3D88;
+  --reader-font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", system-ui, sans-serif;
+}
+
+.reader-shell {
+  isolation: isolate;
+  background: var(--reader-bg);
+  color: var(--reader-text);
+  font-family: var(--reader-font);
+  font-feature-settings: "kern" 1;
+}
+
+/* Riso 장식 요소가 Reader 내부로 새지 않도록 */
+.reader-shell [data-riso],
+.reader-shell .halftone-paper,
+.reader-shell .liquid-gradient,
+[data-mode="reader"] [data-riso],
+[data-mode="reader"] .halftone-paper,
+[data-mode="reader"] .liquid-gradient,
+[data-mode="reader"] .ornament-cross,
+[data-mode="quiet"] [data-riso],
+[data-mode="quiet"] .halftone-paper {
+  display: none !important;
+}
+
+/* Mode 간 전환 */
+[data-mode="reader"] {
+  font-family: var(--reader-font);
+  background-image: none !important;
+}
+[data-mode="quiet"] {
+  font-family: var(--reader-font);
+  background: var(--neutral-0);
+}
+
+.reader-shell .reader-body {
+  font-size: 15px;
+  line-height: 1.75;
+  letter-spacing: -0.01em;
+  color: var(--reader-text);
+}
+
+.reader-shell .reader-meta {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--reader-text-muted);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.reader-shell h1.reader-h1 {
+  font-family: var(--reader-font);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.015em;
+  color: var(--reader-text);
+}
+
+.reader-shell h2.reader-h2 {
+  font-family: var(--reader-font);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  color: var(--reader-text);
+}
+
+.reader-shell h3.reader-h3 {
+  font-family: var(--reader-font);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--reader-text);
+}
+
+.reader-shell .reader-card {
+  background: var(--reader-card);
+  border: 1px solid var(--reader-border);
+  border-radius: 10px;
+  padding: 16px;
+  transition: border-color 150ms ease;
+}
+.reader-shell .reader-card:hover {
+  border-color: #d4d4d4;
+}
+
+.reader-shell a.reader-link {
+  color: var(--reader-accent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--reader-accent) 35%, transparent);
+  text-underline-offset: 2px;
+  transition: text-decoration-color 150ms ease;
+}
+.reader-shell a.reader-link:hover {
+  text-decoration-color: var(--reader-accent);
+}
+
+.reader-shell :focus-visible {
+  outline: 2px solid var(--reader-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
 
 @theme inline {
   --color-background: var(--background);
@@ -594,4 +756,75 @@ a:not(.no-underline):not([class*="uppercase"]):hover::after {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* ──────────────────────────────────────────────────────────
+   Motion System — keyframes + reduced-motion global fallback
+   ────────────────────────────────────────────────────────── */
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────
+   Chat system font — 카카오톡 스타일 네이티브 폰트 스택.
+   채팅 전용. 브랜드 폰트(Pretendard)는 그대로 유지.
+   ────────────────────────────────────────────────────────── */
+.chat-system-font,
+.chat-system-font * {
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+    "Pretendard Variable", "Pretendard", "Noto Sans KR", "Malgun Gothic",
+    "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* 채팅 슬라이드 애니메이션 — 모바일 /chat 상세 진입 */
+@keyframes chat-slide-in-right {
+  from { transform: translateX(12%); opacity: 0.4; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.animate-slide-in-right {
+  animation: chat-slide-in-right 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity;
+}
+
+/* 첨부 시트 slide-up */
+@keyframes chat-slide-up {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-slide-up {
+  animation: chat-slide-up 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ──────────────────────────────────────────────────────────
+   Chat fullscreen mode (mobile) — 상단 로고 / 사이드바 / 푸터만 숨김
+   (하단 탭 AppBottomTabs 는 유지 — 사용자가 다른 페이지로 이동 가능해야 함)
+   AuthNav: z-[500], AppBottomTabs: z-[450] (유지), AppSidebar: z-[400]
+   ────────────────────────────────────────────────────────── */
+body.nu-chat-fullscreen nav.z-\[500\],
+body.nu-chat-fullscreen aside.z-\[400\],
+body.nu-chat-fullscreen footer,
+body.nu-chat-fullscreen [data-app-nav],
+body.nu-chat-fullscreen [data-app-sidebar] {
+  display: none !important;
+}
+body.nu-chat-fullscreen .pt-\[60px\] {
+  padding-top: 0 !important;
+}
+body.nu-chat-fullscreen .pb-\[64px\] {
+  padding-bottom: 0 !important;
 }

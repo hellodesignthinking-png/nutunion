@@ -98,16 +98,7 @@ export default async function BoltFinanceDetailPage({ params }: PageProps) {
           >
             프로젝트 상세 →
           </Link>
-          {data.project.kakao_chat_url && (
-            <a
-              href={data.project.kakao_chat_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-graphite no-underline hover:underline"
-            >
-              카카오톡 ↗
-            </a>
-          )}
+          {/* 카카오톡 링크 제거 — 내장 채팅 사용 */}
           {data.project.google_drive_url && (
             <a
               href={data.project.google_drive_url}

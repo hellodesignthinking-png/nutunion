@@ -81,7 +81,7 @@ function HostAvatar({ src, name }: { src?: string | null; name: string }) {
   );
 }
 
-export function GroupsList({ groups, userId }: { groups: GroupItem[]; userId?: string }) {
+export function GroupsList({ groups, userId, joinedCount: _joinedCount }: { groups: GroupItem[]; userId?: string; joinedCount?: number }) {
   const [filter, setFilter]     = useState("all");
   const [search, setSearch]     = useState("");
   const [sort, setSort]         = useState<SortKey>("newest");

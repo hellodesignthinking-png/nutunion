@@ -140,8 +140,9 @@ export function ProjectRoadmap({
 
           setMilestones(enrichedMilestones);
         }
-      } catch (err: any) {
-        toast.error(err.message || "마일스톤을 로드할 수 없습니다");
+      } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+        toast.error(__err.message || "마일스톤을 로드할 수 없습니다");
       } finally {
         setLoading(false);
       }
@@ -218,8 +219,9 @@ export function ProjectRoadmap({
       );
 
       toast.success("태스크 상태가 변경되었습니다");
-    } catch (err: any) {
-      toast.error(err.message || "상태 변경 실패");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "상태 변경 실패");
     } finally {
       setTogglingTaskId(null);
     }

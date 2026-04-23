@@ -44,9 +44,17 @@ const STATUS_MAP: Record<string, { label: string; color: string; bg: string }> =
   converted: { label: "볼트 전환됨", color: "text-nu-pink", bg: "bg-nu-pink/10" },
 };
 
+interface TrustStats {
+  washers: number;
+  endorsements: number;
+  completedBolts: number;
+  avgRating: number | null;
+}
+
 export default function ChallengesPage() {
   const supabase = createBrowserClient();
   const [user, setUser] = useState<any>(null);
+  const [stats, setStats] = useState<TrustStats>({ washers: 0, endorsements: 0, completedBolts: 0, avgRating: null });
   const [form, setForm] = useState<ChallengeForm>({
     companyName: "",
     contactEmail: "",
@@ -65,15 +73,48 @@ export default function ChallengesPage() {
   const [showMyProposals, setShowMyProposals] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }: any) => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
       if (user) {
-        // Pre-fill email
         setForm(prev => ({ ...prev, contactEmail: user.email || "" }));
-        // Fetch my proposals
         loadMyProposals();
       }
     });
+
+    // 실제 Trust Metrics 로드 — DB count 기반
+    (async () => {
+      try {
+        const [washersRes, endorseRes, completedRes, ratingsRes] = await Promise.all([
+          supabase.from("profiles").select("id", { count: "exact", head: true }),
+          // endorsements 테이블 (있을 경우)
+          supabase.from("endorsements").select("id", { count: "exact", head: true }).then(
+            (r) => r, () => ({ count: 0 })
+          ),
+          supabase.from("projects").select("id", { count: "exact", head: true }).eq("status", "completed"),
+          // 완료된 프로젝트들의 closure_highlights 에 rating 이 있으면 평균 계산 — 없으면 null
+          supabase.from("projects").select("closure_highlights").eq("status", "completed").limit(50).then(
+            (r) => r, () => ({ data: null })
+          ),
+        ]);
+
+        type ClosureRow = { closure_highlights?: { rating?: number } | null };
+        const ratings = ((ratingsRes.data as ClosureRow[] | null) ?? [])
+          .map((r) => r.closure_highlights?.rating)
+          .filter((n): n is number => typeof n === "number" && n > 0 && n <= 5);
+        const avgRating = ratings.length > 0
+          ? Math.round((ratings.reduce((s, n) => s + n, 0) / ratings.length) * 10) / 10
+          : null;
+
+        setStats({
+          washers: washersRes.count ?? 0,
+          endorsements: (endorseRes as { count?: number }).count ?? 0,
+          completedBolts: completedRes.count ?? 0,
+          avgRating,
+        });
+      } catch (err) {
+        console.warn("[challenges stats]", err);
+      }
+    })();
   }, []);
 
   async function loadMyProposals() {
@@ -124,8 +165,8 @@ export default function ChallengesPage() {
       if (user) {
         loadMyProposals();
       }
-    } catch (err: any) {
-      toast.error(err.message || "의뢰 등록에 실패했습니다");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "의뢰 등록에 실패했습니다");
     } finally {
       setSubmitting(false);
     }
@@ -150,26 +191,39 @@ export default function ChallengesPage() {
   return (
     <div className="bg-nu-paper min-h-screen pb-20">
       <PageHero
+        compact
         category="Business"
-        title="Challenge Portal"
-        description="넛유니온의 검증된 와셔풀에 볼트를 의뢰하세요. 관리자가 검토 후 최적의 PM을 배정합니다."
+        title="의뢰 (Challenge)"
+        description="검증된 와셔풀에 볼트를 의뢰하세요. 관리자가 검토 후 최적의 PM 배정."
       />
 
       <div className="max-w-6xl mx-auto px-8 py-12">
-        {/* Trust Metrics */}
+        {/* Trust Metrics — 실제 DB 집계 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-          {[
-            { icon: Users, value: "150+", label: "검증된 와셔", color: "text-nu-pink" },
-            { icon: Shield, value: "2,400+", label: "누적 동료 보증", color: "text-nu-blue" },
-            { icon: Briefcase, value: "45+", label: "완료된 볼트", color: "text-nu-amber" },
-            { icon: Star, value: "4.8/5", label: "클라이언트 만족도", color: "text-green-600" },
-          ].map(m => (
-            <div key={m.label} className="bg-nu-white border-[2px] border-nu-ink/[0.08] p-5 text-center">
-              <m.icon size={20} className={`mx-auto mb-2 ${m.color}`} />
-              <p className="font-head text-2xl font-extrabold text-nu-ink">{m.value}</p>
-              <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mt-1">{m.label}</p>
-            </div>
-          ))}
+          {(() => {
+            const metrics = [
+              { icon: Users, value: stats.washers, label: "등록된 와셔", color: "text-nu-pink", suffix: "명" },
+              { icon: Shield, value: stats.endorsements, label: "누적 동료 보증", color: "text-nu-blue", suffix: "건" },
+              { icon: Briefcase, value: stats.completedBolts, label: "완료된 볼트", color: "text-nu-amber", suffix: "건" },
+              {
+                icon: Star,
+                value: stats.avgRating,
+                label: stats.avgRating !== null ? "클라이언트 평점" : "평가 수집 중",
+                color: "text-green-600",
+                suffix: stats.avgRating !== null ? "/5" : "",
+              },
+            ];
+            return metrics.map((m) => (
+              <div key={m.label} className="bg-nu-white border-[2px] border-nu-ink/[0.08] p-5 text-center">
+                <m.icon size={20} className={`mx-auto mb-2 ${m.color}`} />
+                <p className="font-head text-2xl font-extrabold text-nu-ink tabular-nums">
+                  {m.value === null ? "—" : (typeof m.value === "number" ? m.value.toLocaleString("ko-KR") : m.value)}
+                  <span className="text-[14px] text-nu-muted font-normal">{m.suffix}</span>
+                </p>
+                <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mt-1">{m.label}</p>
+              </div>
+            ));
+          })()}
         </div>
 
         {/* My Proposals (로그인한 경우) */}

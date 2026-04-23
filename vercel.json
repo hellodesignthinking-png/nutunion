@@ -6,7 +6,47 @@
       "schedule": "17 3 * * *"
     },
     {
+      "path": "/api/cron/close-polls",
+      "schedule": "10 0 * * *"
+    },
+    {
       "path": "/api/cron/health-watch",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/venture-reminder",
+      "schedule": "30 0 * * *"
+    },
+    {
+      "path": "/api/cron/process-jobs",
+      "schedule": "45 0 * * *"
+    },
+    {
+      "path": "/api/cron/embeddings-refresh",
+      "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-matches",
+      "schedule": "0 23 * * 0"
+    },
+    {
+      "path": "/api/cron/notifications-digest",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/daily-metrics",
+      "schedule": "5 0 * * *"
+    },
+    {
+      "path": "/api/cron/sync-carriage",
+      "schedule": "10 15 * * *"
+    },
+    {
+      "path": "/api/cron/migrate-to-r2",
+      "schedule": "30 16 * * *"
+    },
+    {
+      "path": "/api/cron/daily-master",
       "schedule": "0 0 * * *"
     }
   ]

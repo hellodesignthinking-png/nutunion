@@ -9,7 +9,8 @@ const TagsSchema = z.object({
   tags: z.array(z.string().min(1).max(20)).min(1).max(5),
 });
 
-const MODEL = "anthropic/claude-sonnet-4.5";
+import { NU_AI_MODEL } from "@/lib/ai/model";
+const MODEL = NU_AI_MODEL;
 
 const ALLOWED = [
   "감정", "비용", "시간", "접근성", "품질",

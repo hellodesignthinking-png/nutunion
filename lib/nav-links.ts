@@ -28,6 +28,7 @@ export const LANDING_LINKS: NavLink[] = [
  */
 export const APP_LINKS: NavLink[] = [
   { label: "대시보드", href: "/dashboard"         },
+  { label: "채팅",     href: "/chat"              },
   { label: "너트",     href: "/groups"            },
   { label: "볼트",     href: "/projects"          },
   { label: "탭",       href: "/wiki"              },

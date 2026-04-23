@@ -6,7 +6,8 @@ export const maxDuration = 60;
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = "gemini-2.5-flash";
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const GEMINI_HEADERS = { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY ?? "" };
 
 const SYSTEM_PROMPT = `당신은 NutUnion 플랫폼의 AI 지식 추출 어시스턴트입니다.
 사용자가 제공하는 회의 내용에서 탭에 반영할 핵심 지식을 추출합니다.
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
       try {
         response = await fetch(GEMINI_URL, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: GEMINI_HEADERS,
           body: JSON.stringify(geminiBody),
         });
         if (response.ok) break;
@@ -106,8 +107,8 @@ export async function POST(request: NextRequest) {
           continue;
         }
         break;
-      } catch (fetchErr: any) {
-        lastError = fetchErr.message || "Network error";
+      } catch (fetchErr: unknown) {
+        lastError = fetchErr instanceof Error ? fetchErr.message : "Network error";
         await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
       }
     }
@@ -159,10 +160,11 @@ export async function POST(request: NextRequest) {
     };
 
     return NextResponse.json(normalized);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Wiki extract error:", error);
+    const msg = error instanceof Error ? error.message : "탭 추출 중 오류가 발생했습니다";
     return NextResponse.json(
-      { error: error.message || "탭 추출 중 오류가 발생했습니다" },
+      { error: msg },
       { status: 500 }
     );
   }

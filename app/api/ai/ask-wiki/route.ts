@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+import { aiError, mapGeminiError } from "@/lib/ai/error";
+
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 export const maxDuration = 30;
@@ -108,10 +110,10 @@ ${meetingContext || "기록된 회의가 없습니다."}`;
 
     // Call Gemini
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY ?? "" },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemPrompt }] },
           contents: [{ role: "user", parts: [{ text: question }] }],
@@ -125,25 +127,19 @@ ${meetingContext || "기록된 회의가 없습니다."}`;
 
     if (!geminiRes.ok) {
       const errText = await geminiRes.text().catch(() => "");
-      return NextResponse.json(
-        { error: `AI 응답 오류 (${geminiRes.status}): ${errText.slice(0, 200)}` },
-        { status: 502 }
-      );
+      const code = mapGeminiError(geminiRes.status, errText);
+      return aiError(code, "ai/ask-wiki", { internal: `${geminiRes.status}: ${errText.slice(0, 300)}` });
     }
-
     const data = await geminiRes.json();
 
     if (data?.promptFeedback?.blockReason) {
-      return NextResponse.json(
-        { error: `AI가 요청을 차단했습니다: ${data.promptFeedback.blockReason}` },
-        { status: 502 }
-      );
+      return aiError("ai_bad_response", "ai/ask-wiki", { internal: `blocked: ${data.promptFeedback.blockReason}` });
     }
 
     const answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || "답변을 생성할 수 없습니다.";
 
     return NextResponse.json({ answer });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || "서버 오류" }, { status: 500 });
+  } catch (e: unknown) {
+    return aiError("server_error", "ai/ask-wiki", { internal: e });
   }
 }

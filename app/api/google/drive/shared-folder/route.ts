@@ -7,6 +7,12 @@ import { google } from "googleapis";
 import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { createClient } from "@/lib/supabase/server";
+import { asGoogleErr } from "@/lib/google/error-helpers";
+import {
+  getDriveStorageTarget,
+  withParents,
+  driveRequestOptions,
+} from "@/lib/google/drive-config";
 
 export async function POST(req: NextRequest) {
   const userId = await getCurrentUserId();
@@ -44,30 +50,47 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "올바르지 않은 targetType" }, { status: 400 });
   }
 
-  // ── Create folder in host's Drive ───────────────────────────
+  // ── Create folder (Shared Drive 우선, 없으면 host Drive) ────
   try {
     const auth = await getGoogleClient(userId);
     const drive = google.drive({ version: "v3", auth });
+    const target = getDriveStorageTarget();
 
     const name = folderName || (targetType === "group" ? "너트 공유 자료실" : "볼트 공유 자료실");
 
     const folderRes = await drive.files.create({
-      requestBody: {
-        name,
-        mimeType: "application/vnd.google-apps.folder",
-      },
-      fields: "id, name, webViewLink",
+      requestBody: withParents(
+        {
+          name,
+          mimeType: "application/vnd.google-apps.folder",
+        },
+        target,
+      ),
+      fields: "id, name, webViewLink, parents, driveId",
+      ...driveRequestOptions(target),
     });
 
     const folderId = folderRes.data.id!;
     const folderUrl = folderRes.data.webViewLink!;
 
-    // Set "anyone with link = reader" so links are publicly viewable
+    // Shared Drive 인 경우 "조직 내부만 접근" (보안 ↑),
+    // 호스트 Drive 인 경우 "링크 있으면 보기" (하위 호환)
     try {
-      await drive.permissions.create({
-        fileId: folderId,
-        requestBody: { role: "reader", type: "anyone" },
-      });
+      if (target.strategy === "shared-drive") {
+        // Shared Drive 는 이미 멤버십 기반 접근 제어. 추가 permission 불필요.
+        // 필요시 호스트에게 writer 권한 부여
+        await drive.permissions.create({
+          fileId: folderId,
+          requestBody: { role: "writer", type: "user", emailAddress: "" },
+          supportsAllDrives: true,
+          sendNotificationEmail: false,
+        }).catch(() => {}); // 실패해도 무시 (optional)
+      } else {
+        await drive.permissions.create({
+          fileId: folderId,
+          requestBody: { role: "reader", type: "anyone" },
+        });
+      }
     } catch (e) {
       console.warn("Could not set folder permission:", e);
     }
@@ -92,12 +115,13 @@ export async function POST(req: NextRequest) {
       folderName: folderRes.data.name,
     });
 
-  } catch (err: any) {
-    if (err.message === "GOOGLE_NOT_CONNECTED") {
+  } catch (err: unknown) {
+    const e = asGoogleErr(err);
+    if (e.message === "GOOGLE_NOT_CONNECTED") {
       return NextResponse.json({ error: "Google 계정을 먼저 연결해주세요.", code: "NOT_CONNECTED" }, { status: 403 });
     }
     console.error("Shared folder creation error:", err);
-    return NextResponse.json({ error: "폴더 생성 실패: " + err.message }, { status: 500 });
+    return NextResponse.json({ error: "폴더 생성 실패" }, { status: 500 });
   }
 }
 

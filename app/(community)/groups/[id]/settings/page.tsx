@@ -24,7 +24,7 @@ interface GroupData {
   description: string;
   max_members: number;
   host_id: string;
-  kakao_chat_url: string | null;
+  kakao_chat_url?: string | null; // deprecated — 내장 채팅으로 대체
   google_drive_url: string | null;
   image_url: string | null;
 }
@@ -106,21 +106,16 @@ export default function GroupSettingsPage() {
 
     let finalImageUrl = group.image_url;
     if (imageFile) {
-      const ext = imageFile.name.split(".").pop();
-      const path = `crews/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from("media")
-        .upload(path, imageFile, {
-          contentType: imageFile.type,
-          upsert: true
-        });
-      if (uploadError) {
-        toast.error("업로드 실패: " + uploadError.message);
+      // [Phase 3b] R2 canonical — avatars prefix.
+      try {
+        const { uploadFile } = await import("@/lib/storage/upload-client");
+        const up = await uploadFile(imageFile, { prefix: "avatars", scopeId: groupId });
+        finalImageUrl = up.url;
+      } catch (err: any) {
+        toast.error("업로드 실패: " + (err?.message || "unknown"));
         setLoading(false);
         return;
       }
-      const { data: { publicUrl } } = supabase.storage.from("media").getPublicUrl(path);
-      finalImageUrl = publicUrl;
     }
 
     const { error } = await supabase
@@ -130,7 +125,7 @@ export default function GroupSettingsPage() {
         category: group.category,
         description: fd.get("description") as string,
         max_members: Math.max(2, Math.min(200, parseInt(fd.get("maxMembers") as string) || 20)),
-        kakao_chat_url: (fd.get("kakao_chat_url") as string) || null,
+        // kakao_chat_url 제거 — 너트 내장 채팅으로 통일 (2026-04)
         google_drive_url: (fd.get("google_drive_url") as string) || null,
         image_url: finalImageUrl,
       })
@@ -351,12 +346,8 @@ export default function GroupSettingsPage() {
             <span className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-pink block mb-4">외부 연동</span>
             <div className="flex flex-col gap-4">
               <div>
-                <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">카카오톡 오픈채팅 URL</Label>
-                <Input name="kakao_chat_url" defaultValue={group.kakao_chat_url || ""} placeholder="https://open.kakao.com/o/..." className="mt-1.5 border-nu-ink/15 bg-transparent" />
-              </div>
-              <div>
-                <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">Google Drive URL</Label>
-                <Input name="google_drive_url" defaultValue={group.google_drive_url || ""} placeholder="https://drive.google.com/drive/folders/..." className="mt-1.5 border-nu-ink/15 bg-transparent" />
+                <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">Google Drive 링크 (선택 · 가져오기용)</Label>
+                <Input name="google_drive_url" defaultValue={group.google_drive_url || ""} placeholder="필요 시 Drive 폴더 URL 을 입력 (새 자료는 서버에 저장됨)" className="mt-1.5 border-nu-ink/15 bg-transparent" />
               </div>
             </div>
           </div>

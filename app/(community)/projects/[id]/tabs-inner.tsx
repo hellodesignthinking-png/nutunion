@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import {
@@ -34,6 +35,7 @@ import { ProjectActivityFeed } from "@/components/projects/project-activity-feed
 import { ProjectRoadmap } from "@/components/projects/project-roadmap";
 import { ProjectResourceHub } from "@/components/projects/project-resource-hub";
 import { ProjectFinanceDashboard } from "@/components/projects/project-finance-dashboard";
+import { ProjectFinanceSnapshot, type FinanceSnapshot } from "@/components/projects/project-finance-snapshot";
 import { ProjectBurndownChart } from "@/components/projects/project-burndown-chart";
 import { ProjectMeetings } from "@/components/projects/project-meetings";
 import { ProjectRadarChart, ProjectActivityHeatmap } from "@/components/projects/project-vitals";
@@ -42,11 +44,18 @@ import { ProjectInsights } from "@/components/projects/project-insights";
 import { EndorsementPanel } from "@/components/shared/endorsement-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AnchorDashboard } from "@/components/bolt/anchor/anchor-dashboard";
+import { CarriageDashboard } from "@/components/bolt/carriage/carriage-dashboard";
+import { EyeDashboard } from "@/components/bolt/eye/eye-dashboard";
+import { WingDashboard } from "@/components/bolt/wing/wing-dashboard";
+import { TorqueView } from "@/components/bolt/torque/TorqueView";
+import { BoltCalendar } from "@/components/bolt/bolt-calendar";
 
 const baseTabs = [
   { key: "overview", label: "개요", icon: Target },
   { key: "kanban", label: "칸반 보드", icon: Columns3 },
   { key: "milestones", label: "마일스톤", icon: Layers },
+  { key: "calendar", label: "캘린더", icon: Calendar },
   { key: "insights", label: "인사이트", icon: BarChart3 },
   { key: "meetings", label: "회의록", icon: FileText },
   { key: "resources", label: "자료실", icon: FolderOpen },
@@ -104,7 +113,21 @@ export function TabsInner({
   projectData?: string;
   myTasksData?: string;
 }) {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState("overview");
+
+  // URL ?tab=... 반영 + 해시 스크롤 (캘린더에서 클릭한 경우)
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t) setActiveTab(t);
+    // 해시 스크롤은 렌더 뒤 지연 실행
+    if (window.location.hash) {
+      setTimeout(() => {
+        const el = document.querySelector(window.location.hash);
+        el?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 300);
+    }
+  }, [searchParams]);
 
   const milestones  = JSON.parse(milestonesData);
   const updates     = JSON.parse(updatesData);
@@ -233,8 +256,46 @@ export function TabsInner({
         )}
       </div>
 
-      {/* Overview Tab — constrained width */}
-      {activeTab === "overview" && (
+      {/* Overview Tab — 유형별 전용 대시보드 */}
+      {activeTab === "overview" && project?.type === "anchor" && (
+        <div className="max-w-6xl mx-auto">
+          <AnchorDashboard projectId={projectId} title={project?.title || "매장"} />
+        </div>
+      )}
+      {activeTab === "overview" && project?.type === "carriage" && (
+        <div className="max-w-6xl mx-auto">
+          <CarriageDashboard projectId={projectId} title={project?.title || "플랫폼"} />
+        </div>
+      )}
+      {activeTab === "overview" && project?.type === "eye" && (
+        <div className="max-w-6xl mx-auto">
+          <EyeDashboard projectId={projectId} title={project?.title || "포트폴리오"} />
+        </div>
+      )}
+      {activeTab === "overview" && project?.type === "wing" && (
+        <div className="max-w-6xl mx-auto">
+          <WingDashboard
+            projectId={projectId}
+            title={project?.title || "캠페인"}
+            startDate={project?.start_date}
+            endDate={project?.end_date}
+          />
+        </div>
+      )}
+
+      {/* Overview Tab — Torque (컨설팅형) */}
+      {activeTab === "overview" && project?.type === "torque" && (
+        <div className="max-w-6xl mx-auto">
+          <TorqueView
+            projectId={projectId}
+            projectTitle={project?.title || "컨설팅"}
+            torqueMeta={null}  // 서버에서 조회 필요 — 현재는 클라이언트 직접 조회
+          />
+        </div>
+      )}
+
+      {/* Overview Tab — Hex(기본) constrained width */}
+      {activeTab === "overview" && (!project?.type || project?.type === "hex") && (
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
 
@@ -463,7 +524,7 @@ export function TabsInner({
             </div>
 
             {/* ── Tool Hub (compact) ─── */}
-            {project && (project.tool_slack || project.tool_notion || project.tool_drive || project.tool_kakao) && (
+            {project && (project.tool_slack || project.tool_notion || project.tool_drive) && (
               <div className="bg-nu-white border border-nu-ink/[0.08] p-5">
                 <h3 className="font-head text-base font-extrabold flex items-center gap-2 mb-3">
                   <ExternalLink size={15} /> 툴 허브
@@ -496,15 +557,7 @@ export function TabsInner({
                       Drive
                     </a>
                   )}
-                  {project.tool_kakao && (
-                    <a href={project.tool_kakao} target="_blank" rel="noreferrer"
-                      className="flex items-center gap-2 px-3 py-2 border border-nu-ink/[0.08] hover:border-[#FAE100]/50 hover:bg-[#FAE100]/10 transition-colors no-underline text-sm text-nu-ink">
-                      <div className="w-5 h-5 bg-[#FAE100] flex items-center justify-center shrink-0">
-                        <MessageCircle size={10} className="text-nu-ink" />
-                      </div>
-                      카카오
-                    </a>
-                  )}
+                  {/* 카카오 툴 제거 — 내장 채팅 사용 */}
                 </div>
               </div>
             )}
@@ -534,12 +587,19 @@ export function TabsInner({
               <div className="space-y-3">
                 {userMembers.map((m: any) => (
                   <div key={m.id} className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-nu-cream flex items-center justify-center font-head text-xs font-bold text-nu-ink">
+                    <div className="w-8 h-8 rounded-full bg-nu-cream flex items-center justify-center font-head text-xs font-bold text-nu-ink shrink-0">
                       {(m.profile?.nickname || "U").charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{m.profile?.nickname}</p>
-                      <p className="text-[12px] text-nu-muted">{roleLabels[m.role] || m.role}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[11px] text-nu-muted">{roleLabels[m.role] || m.role}</span>
+                        {m._from_nut && m.crew?.name && (
+                          <span className="inline-flex items-center gap-0.5 font-mono-nu text-[9px] uppercase tracking-widest px-1.5 py-0.5 bg-nu-amber/10 text-nu-amber border border-nu-amber/20 shrink-0">
+                            🥜 {m.crew.name}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -585,9 +645,18 @@ export function TabsInner({
       {/* Milestones Tab (includes roadmap + burndown) — constrained */}
       {activeTab === "milestones" && (
         <div className="max-w-6xl mx-auto space-y-8">
+          {/* ── 전체 번다운 차트 — 모든 타입에서 표시 ── */}
           <ProjectBurndownChart projectId={projectId} />
+
           <ProjectRoadmap projectId={projectId} milestones={milestones} isLead={canEdit} />
           <MilestoneList projectId={projectId} initialMilestones={milestones} canEdit={canEdit} onTaskChange={refreshTaskStats} />
+        </div>
+      )}
+
+      {/* Calendar Tab — events + meetings + milestones due_date 통합 월 뷰 */}
+      {activeTab === "calendar" && (
+        <div className="max-w-6xl mx-auto">
+          <BoltCalendar projectId={projectId} canEdit={canEdit} />
         </div>
       )}
 
@@ -623,15 +692,43 @@ export function TabsInner({
       {/* Finance + Rewards Tab — constrained */}
       {activeTab === "finance" && (
         <div className="max-w-6xl mx-auto space-y-10">
-          <ProjectFinanceDashboard
-            projectId={projectId}
-            totalBudget={project?.total_budget ? parseInt(project.total_budget) : 0}
-            isLead={canEdit}
-            milestones={milestones}
-          />
-          <div className="border-t-2 border-nu-ink/10 pt-10">
-            <ProjectRewardsTab project={project} members={userMembers} canEdit={canEdit} />
-          </div>
+          {project?.closed_at && project?.finance_snapshot ? (
+            // 마감된 볼트 — 정산 스냅샷 우선 렌더
+            <>
+              <ProjectFinanceSnapshot
+                snapshot={project.finance_snapshot as FinanceSnapshot}
+                finalizedAt={project.rewards_finalized_at ?? project.closed_at}
+              />
+              {canEdit && (
+                <details className="border-[2px] border-nu-ink/20">
+                  <summary className="px-4 py-2 font-mono-nu text-[10px] uppercase tracking-widest text-nu-graphite hover:text-nu-ink cursor-pointer">
+                    ▼ 원본 거래 내역 보기 (호스트 전용)
+                  </summary>
+                  <div className="p-4 border-t-[2px] border-nu-ink/10">
+                    <ProjectFinanceDashboard
+                      projectId={projectId}
+                      totalBudget={project?.total_budget ? parseInt(project.total_budget) : 0}
+                      isLead={canEdit}
+                      milestones={milestones}
+                    />
+                  </div>
+                </details>
+              )}
+            </>
+          ) : (
+            // 진행 중 볼트 — 대시보드 + 편집기
+            <>
+              <ProjectFinanceDashboard
+                projectId={projectId}
+                totalBudget={project?.total_budget ? parseInt(project.total_budget) : 0}
+                isLead={canEdit}
+                milestones={milestones}
+              />
+              <div className="border-t-2 border-nu-ink/10 pt-10">
+                <ProjectRewardsTab project={project} members={userMembers} canEdit={canEdit} />
+              </div>
+            </>
+          )}
         </div>
       )}
 

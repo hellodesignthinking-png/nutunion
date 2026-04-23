@@ -70,7 +70,8 @@ export async function GET(request: NextRequest) {
   // wiki_weekly_resources has "select using (true)" RLS — allow any authenticated user to read
 
   // 1) Fetch wiki_weekly_resources (gracefully skip if table doesn't exist)
-  let weeklyResources: any[] = [];
+  type WeeklyResource = Record<string, unknown> & { url?: string; created_at: string; source?: "weekly" };
+  let weeklyResources: WeeklyResource[] = [];
   try {
     let query = supabase
       .from("wiki_weekly_resources")
@@ -86,8 +87,9 @@ export async function GET(request: NextRequest) {
     const { data: weeklyData, error: weeklyError } = await query;
 
     if (!weeklyError && weeklyData) {
-      weeklyResources = weeklyData.map((r: any) => ({
+      weeklyResources = (weeklyData as Record<string, unknown>[]).map((r) => ({
         ...r,
+        created_at: String(r.created_at),
         source: "weekly" as const,
       }));
     }
@@ -97,7 +99,19 @@ export async function GET(request: NextRequest) {
   }
 
   // 2) Fetch file_attachments for the same group (with optional week filter)
-  let fileAttachments: any[] = [];
+  type FileAttachmentView = {
+    id: string;
+    title: string;
+    url: string;
+    resource_type: string;
+    description: string | null;
+    created_at: string;
+    source: "resources";
+    sharer: { id: string; nickname: string; avatar_url: string | null } | null;
+    _fa_file_type?: string;
+    _fa_file_size?: number;
+  };
+  let fileAttachments: FileAttachmentView[] = [];
   try {
     let faQuery = supabase
       .from("file_attachments")
@@ -119,7 +133,8 @@ export async function GET(request: NextRequest) {
     const { data: faData, error: faError } = await faQuery;
 
     if (!faError && faData) {
-      fileAttachments = faData.map((fa: any) => ({
+      type RawFa = { id: string; file_name: string; file_url: string; file_type: string; file_size?: number; created_at: string; uploader?: { id: string; nickname: string; avatar_url: string | null } };
+      fileAttachments = (faData as RawFa[]).map((fa) => ({
         id: fa.id,
         title: fa.file_name,
         url: fa.file_url,
@@ -140,7 +155,7 @@ export async function GET(request: NextRequest) {
   }
 
   // 3) Merge & deduplicate (avoid showing the same URL from both tables)
-  const weeklyUrls = new Set(weeklyResources.map((r: any) => r.url));
+  const weeklyUrls = new Set(weeklyResources.map((r) => r.url).filter((u): u is string => !!u));
   const uniqueFileAttachments = fileAttachments.filter((fa) => !weeklyUrls.has(fa.url));
 
   const merged = [...weeklyResources, ...uniqueFileAttachments].sort(

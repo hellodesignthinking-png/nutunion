@@ -1,6 +1,7 @@
 import { google } from "googleapis";
 import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
+import { asGoogleErr } from "@/lib/google/error-helpers";
 
 export async function GET(req: NextRequest) {
   const userId = await getCurrentUserId();
@@ -49,11 +50,12 @@ export async function GET(req: NextRequest) {
       files: res.data.files || [],
       nextPageToken: res.data.nextPageToken || null,
     });
-  } catch (err: any) {
-    if (err.message === "GOOGLE_NOT_CONNECTED") {
+  } catch (err: unknown) {
+    const e = asGoogleErr(err);
+    if (e.message === "GOOGLE_NOT_CONNECTED") {
       return NextResponse.json({ error: "Google 계정이 연결되지 않았습니다.", code: "NOT_CONNECTED" }, { status: 403 });
     }
-    if (err.message === "GOOGLE_TOKEN_EXPIRED") {
+    if (e.message === "GOOGLE_TOKEN_EXPIRED") {
       return NextResponse.json({ error: "Google 토큰이 만료되었습니다. 다시 연결해주세요.", code: "TOKEN_EXPIRED" }, { status: 401 });
     }
     console.error("Drive API error:", err);

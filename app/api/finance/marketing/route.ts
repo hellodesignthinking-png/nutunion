@@ -116,7 +116,9 @@ ${topic}
 ${template.instructionFormat}`;
 
     const startedAt = Date.now();
-    const MODEL = "anthropic/claude-sonnet-4.5";
+    const { NU_AI_MODEL, NU_AI_MODEL_LABEL } = await import("@/lib/ai/model");
+    const MODEL = NU_AI_MODEL;
+    const MODEL_LABEL = NU_AI_MODEL_LABEL;
     let result;
     try {
       result = await generateText({

@@ -2,6 +2,8 @@ import { google } from "googleapis";
 import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 
+import { asGoogleErr } from "@/lib/google/error-helpers";
+
 export async function GET(req: NextRequest) {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -57,8 +59,9 @@ export async function GET(req: NextRequest) {
       embedUrl: `https://docs.google.com/presentation/d/${presentationId}/embed`,
       viewUrl: `https://docs.google.com/presentation/d/${presentationId}/edit`,
     });
-  } catch (err: any) {
-    if (err.message === "GOOGLE_NOT_CONNECTED") {
+  } catch (err: unknown) {
+    const e = asGoogleErr(err);
+    if (e.message === "GOOGLE_NOT_CONNECTED") {
       return NextResponse.json({ error: "Google 계정이 연결되지 않았습니다.", code: "NOT_CONNECTED" }, { status: 403 });
     }
     console.error("Slides API error:", err);

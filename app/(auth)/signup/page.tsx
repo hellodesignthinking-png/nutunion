@@ -110,14 +110,28 @@ export default function SignupPage() {
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const name = formData.get("name") as string;
-    const nickname = formData.get("nickname") as string;
+    const name = (formData.get("name") as string)?.trim();
+    const nickname = (formData.get("nickname") as string)?.trim();
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     const phone = formData.get("phone") as string;
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
+
+    // signUp 직전 닉네임 최종 중복 검사 (race condition 대비)
+    const { data: dupNick } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("nickname", nickname)
+      .limit(1);
+    if (dupNick && dupNick.length > 0) {
+      toast.error("방금 다른 분이 이 닉네임을 가져갔어요. 다른 닉네임을 선택해주세요.");
+      setNicknameStatus("taken");
+      setLoading(false);
+      return;
+    }
+
+    const { data: signed, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -133,6 +147,17 @@ export default function SignupPage() {
       toast.error(msg);
       setLoading(false);
       return;
+    }
+
+    // 트리거로 profiles 자동 생성되지만, 닉네임이 기본값(user_xxx) 으로 박혔을 수 있어
+    // 명시적으로 한 번 더 update 시도 (idempotent).
+    if (signed?.user) {
+      try {
+        await supabase
+          .from("profiles")
+          .update({ name, nickname, specialty: specialty || null, phone: phone || null })
+          .eq("id", signed.user.id);
+      } catch { /* 트리거가 아직 실행 전이면 RLS/업데이트 실패 가능 — onboarding 가드가 이어받음 */ }
     }
 
     toast.success("가입이 완료되었습니다!");

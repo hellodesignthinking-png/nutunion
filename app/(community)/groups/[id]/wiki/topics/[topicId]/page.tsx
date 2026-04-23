@@ -60,6 +60,49 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ id
   const pages = pagesResult.data || [];
   const pageIds = (topicStatsResult.data || []).map(p => p.id);
 
+  // Fetch resources (자료실 — youtube/article/drive/pdf/link 등)
+  //  1) 이 주제의 페이지와 링크된 자료
+  //  2) 그룹의 전체 자료실 (미링크 자료 중 최신순)
+  const [linkedResRes, allResRes] = await Promise.all([
+    pageIds.length > 0
+      ? supabase
+          .from("wiki_weekly_resources")
+          .select("id, title, url, resource_type, auto_summary, created_at, linked_wiki_page_id, shared_by, contributor:profiles!wiki_weekly_resources_shared_by_fkey(nickname), linked_page:wiki_pages!wiki_weekly_resources_linked_wiki_page_id_fkey(title)")
+          .in("linked_wiki_page_id", pageIds)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] as any[] }),
+    supabase
+      .from("wiki_weekly_resources")
+      .select("id, title, url, resource_type, auto_summary, created_at, linked_wiki_page_id, contributor:profiles!wiki_weekly_resources_shared_by_fkey(nickname)")
+      .eq("group_id", groupId)
+      .is("linked_wiki_page_id", null)
+      .order("created_at", { ascending: false })
+      .limit(30),
+  ]);
+
+  const linkedResources = (linkedResRes.data || []).map((r: any) => ({
+    id: r.id,
+    title: r.title,
+    url: r.url || "",
+    resource_type: r.resource_type || "link",
+    auto_summary: r.auto_summary || null,
+    created_at: r.created_at,
+    contributor_nickname: r.contributor?.nickname || null,
+    linked_page_title: r.linked_page?.title || null,
+    linked_wiki_page_id: r.linked_wiki_page_id || null,
+  }));
+  const groupResources = (allResRes.data || []).map((r: any) => ({
+    id: r.id,
+    title: r.title,
+    url: r.url || "",
+    resource_type: r.resource_type || "link",
+    auto_summary: r.auto_summary || null,
+    created_at: r.created_at,
+    contributor_nickname: r.contributor?.nickname || null,
+    linked_page_title: null,
+    linked_wiki_page_id: null,
+  }));
+
   // Compute stats in parallel
   let totalContribs = 0;
   let totalViews = 0;
@@ -137,6 +180,8 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ id
           isHost={isHost}
           isPublic={topic.is_public || false}
           publicSlug={topic.public_slug || null}
+          linkedResources={linkedResources}
+          groupResources={groupResources}
         />
       </div>
     </div>

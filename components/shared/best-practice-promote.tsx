@@ -121,9 +121,10 @@ export function BestPracticePromote({
         onPromoted?.();
         onClose();
       }, 2000);
-    } catch (err: any) {
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
       console.error("Error promoting best practice:", err);
-      toast.error(err.message || "승격 실패");
+      toast.error(__err.message || "승격 실패");
     } finally {
       setIsSubmitting(false);
     }

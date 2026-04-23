@@ -29,14 +29,25 @@ import {
   MessageSquare,
   Clock,
   ChevronDown,
+  Upload,
 } from "lucide-react";
-import { DrivePicker } from "@/components/integrations/drive-picker";
+import NextLink from "next/link";
+import dynamic from "next/dynamic";
 import { ResourcePreviewModal } from "@/components/shared/resource-preview-modal";
+
+// Lazy-load FilePreviewPanel — pulls in highlight.js (~100kb) only when user opens a file preview.
+const FilePreviewPanel = dynamic(
+  () => import("@/components/shared/file-preview-panel").then((m) => ({ default: m.FilePreviewPanel })),
+  { ssr: false },
+);
+import { WikiPagePreviewPanel } from "@/components/shared/wiki-preview-panel";
 import { ResourceInteractions } from "@/components/shared/resource-interactions";
 import { ResourceEditor } from "@/components/shared/resource-editor";
 import { resolveTemplateContent } from "@/lib/template-resolver";
 import { NewDocumentModal } from "@/components/shared/new-document-modal";
-import { DriveUploader } from "@/components/integrations/drive-uploader";
+import { DriveImportButton } from "@/components/shared/drive-import-button";
+import { DropZoneUpload } from "@/components/shared/drop-zone-upload";
+import { LinkPreviewPanel } from "@/components/shared/link-preview-panel";
 
 type ResourceStage = "planning" | "interim" | "evidence" | "final";
 type ResourceType = "google_doc" | "google_sheet" | "google_slide" | "drive" | "notion" | "link";
@@ -108,6 +119,19 @@ function detectType(url: string): ResourceType {
   return "link";
 }
 
+// storage_type === 'r2' 게이트 완화: 구버전 supabase/null storage 업로드도 미리보기 허용.
+function isDirectPreviewable(url?: string | null, storageType?: string | null): boolean {
+  if (!url) return false;
+  const u = url.toLowerCase();
+  if (u.includes("docs.google.com") || u.includes("drive.google.com")) return false;
+  if (u.includes("notion.so") || u.includes("notion.site")) return false;
+  if (storageType === "r2" || storageType === "supabase") return true;
+  if (u.includes(".r2.dev") || u.includes(".r2.cloudflarestorage.com")) return true;
+  if (u.includes("/storage/v1/object/") || u.includes("supabase.co/storage")) return true;
+  if (/^https?:\/\/.+\.(pdf|png|jpe?g|gif|webp|svg|mp4|mov|webm|mp3|wav|ogg|txt|md|csv|json|docx?|xlsx?|pptx?)(\?|#|$)/i.test(url)) return true;
+  return false;
+}
+
 function getEmbedUrl(url: string | null): string {
   if (!url) return "";
   if (url.includes("notion.so")) {
@@ -163,7 +187,16 @@ export function ProjectResourceHub({
   const [activeStage, setActiveStage] = useState<ResourceStage | "all">("all");
   const [showAddForm, setShowAddForm] = useState(false);
   const [showNewDocModal, setShowNewDocModal] = useState(false);
-  const [previewData, setPreviewData] = useState<{ url: string; name: string; id?: string; content?: string | null } | null>(null);
+  const [previewData, setPreviewData] = useState<{
+    url: string;
+    name: string;
+    id?: string;
+    content?: string | null;
+    storage_type?: string | null;
+    storage_key?: string | null;
+    uploaded_by?: string | null;
+    mime?: string | null;
+  } | null>(null);
   const [isSplitView, setIsSplitView] = useState(true);
 
   // Right panel sub-tabs: preview / feedback / actions
@@ -182,6 +215,17 @@ export function ProjectResourceHub({
   const [members, setMembers] = useState<{ id: string; nickname: string }[]>([]);
   const [newActionAssignee, setNewActionAssignee] = useState("");
 
+  // Project's parent group id (for pulling group wiki pages) + wiki state
+  const [projectGroupId, setProjectGroupId] = useState<string | null>(null);
+  const [wikiPages, setWikiPages] = useState<{
+    id: string; title: string; content: string; updated_at: string;
+    topic_name?: string | null; author_nickname?: string | null; google_doc_url?: string | null;
+  }[]>([]);
+  const [wikiPreviewPage, setWikiPreviewPage] = useState<null | {
+    id: string; title: string; content: string; updated_at: string;
+    topic_name?: string | null; author_nickname?: string | null; google_doc_url?: string | null;
+  }>(null);
+
   // Form state
   const [formData, setFormData] = useState({
     name: "", url: "", stage: "planning" as ResourceStage, description: "",
@@ -189,6 +233,7 @@ export function ProjectResourceHub({
   const [submitting, setSubmitting] = useState(false);
   const [sharedFolder, setSharedFolder] = useState<{ id: string; url: string } | null>(null);
   const [creatingFolder, setCreatingFolder] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const canEdit = isLead || isMember;
 
@@ -212,8 +257,9 @@ export function ProjectResourceHub({
       if (!res.ok) throw new Error(data.error || "폴더 생성 실패");
       setSharedFolder({ id: data.folderId, url: data.folderUrl });
       toast.success(`공유 폴더 "${data.folderName}" 생성 완료!`);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message);
     } finally {
       setCreatingFolder(false);
     }
@@ -226,34 +272,82 @@ export function ProjectResourceHub({
     loadFeedback();
     loadActionItems();
     loadMembers();
+    loadProjectWiki();
   }, [projectId]);
+
+  // ── Load project's parent group → wiki pages under that group ──
+  async function loadProjectWiki() {
+    try {
+      const supabase = createClient();
+      // projects has no group_id column; derive parent group from project_members (crew_id)
+      const { data: mem } = await supabase
+        .from("project_members")
+        .select("crew_id")
+        .eq("project_id", projectId)
+        .not("crew_id", "is", null)
+        .limit(1)
+        .maybeSingle();
+      const gid = (mem as any)?.crew_id || null;
+      setProjectGroupId(gid);
+      if (!gid) { setWikiPages([]); return; }
+
+      const { data: wikiData } = await supabase
+        .from("wiki_pages")
+        .select("id, title, content, updated_at, google_doc_url, topic:wiki_topics!wiki_pages_topic_id_fkey(name, group_id), author:profiles!wiki_pages_created_by_fkey(nickname)")
+        .order("updated_at", { ascending: false })
+        .limit(50);
+      const filtered = ((wikiData as any[]) || [])
+        .filter((w: any) => w.topic?.group_id === gid)
+        .slice(0, 20)
+        .map((w: any) => ({
+          id: w.id,
+          title: w.title,
+          content: w.content || "",
+          updated_at: w.updated_at,
+          topic_name: w.topic?.name || null,
+          author_nickname: w.author?.nickname || null,
+          google_doc_url: w.google_doc_url || null,
+        }));
+      setWikiPages(filtered);
+    } catch { setWikiPages([]); }
+  }
 
   async function loadResources() {
     setLoading(true);
     try {
       const supabase = createClient();
-      // Try full query with uploader join
-      const { data, error } = await supabase
+      // project_resources.uploaded_by references auth.users, not profiles —
+      // so FK-embed syntax cannot be used. Load resources first, then hydrate uploader nicknames manually.
+      const { data: basicData, error: basicError } = await supabase
         .from("project_resources")
-        .select("*, uploader:profiles!uploaded_by(nickname)")
+        .select("*")
         .eq("project_id", projectId)
         .order("created_at", { ascending: false });
-      if (error) {
-        // Fallback: without uploader join (FK may not exist in schema cache)
-        const { data: basicData, error: basicError } = await supabase
-          .from("project_resources")
-          .select("*")
-          .eq("project_id", projectId)
-          .order("created_at", { ascending: false });
-        if (basicError) {
-          console.warn("project_resources not available:", basicError.message);
-          setResources([]);
-        } else {
-          setResources((basicData || []) as ProjectResource[]);
-        }
-      } else {
-        setResources(data as ProjectResource[]);
+      if (basicError) {
+        console.warn("project_resources not available:", basicError.message);
+        setResources([]);
+        return;
       }
+      const rows = (basicData || []) as ProjectResource[];
+      const uploaderIds = Array.from(
+        new Set(rows.map((r: any) => r.uploaded_by).filter(Boolean))
+      ) as string[];
+      let profileMap: Record<string, { nickname?: string | null }> = {};
+      if (uploaderIds.length > 0) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("id, nickname")
+          .in("id", uploaderIds);
+        for (const p of (profs || []) as Array<{ id: string; nickname: string | null }>) {
+          profileMap[p.id] = { nickname: p.nickname };
+        }
+      }
+      setResources(
+        rows.map((r: any) => ({
+          ...r,
+          uploader: r.uploaded_by ? profileMap[r.uploaded_by] || null : null,
+        })) as ProjectResource[]
+      );
     } catch { setResources([]); }
     finally { setLoading(false); }
   }
@@ -279,45 +373,98 @@ export function ProjectResourceHub({
   async function loadActionItems() {
     try {
       const supabase = createClient();
-      const { data, error } = await supabase
+      // project_action_items.assigned_to references auth.users, not profiles —
+      // load base rows, then hydrate assignee nicknames via a secondary query.
+      const { data: basicData, error: basicError } = await supabase
         .from("project_action_items")
-        .select("*, assignee:profiles!assigned_to(id, nickname)")
+        .select("*")
         .eq("project_id", projectId)
         .order("created_at", { ascending: false })
         .limit(50);
-      if (!error && data) {
-        setActionItems(data as ProjectActionItem[]);
-      } else {
-        // Fallback without assignee join
-        const { data: basicData } = await supabase
-          .from("project_action_items")
-          .select("*")
-          .eq("project_id", projectId)
-          .order("created_at", { ascending: false })
-          .limit(50);
-        if (basicData) setActionItems(basicData as ProjectActionItem[]);
+      if (basicError || !basicData) return;
+      const rows = basicData as ProjectActionItem[];
+      const assigneeIds = Array.from(
+        new Set(rows.map((r: any) => r.assigned_to).filter(Boolean))
+      ) as string[];
+      let profileMap: Record<string, { id: string; nickname: string | null }> = {};
+      if (assigneeIds.length > 0) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("id, nickname")
+          .in("id", assigneeIds);
+        for (const p of (profs || []) as Array<{ id: string; nickname: string | null }>) {
+          profileMap[p.id] = p;
+        }
       }
+      setActionItems(
+        rows.map((r: any) => ({
+          ...r,
+          assignee: r.assigned_to ? profileMap[r.assigned_to] || null : null,
+        })) as ProjectActionItem[]
+      );
     } catch {}
   }
 
   async function loadMembers() {
     try {
       const supabase = createClient();
+      // 직접 와셔(user_id)
       const { data, error } = await supabase
         .from("project_members")
-        .select("user_id, profiles!project_members_user_id_fkey(id, nickname)")
+        .select("user_id, role, crew_id, profiles!project_members_user_id_fkey(id, nickname)")
         .eq("project_id", projectId);
+      
+      const directMembers: { id: string; nickname: string }[] = [];
+      const crewIdsLocal: string[] = [];
+      
       if (!error && data) {
-        setMembers(data.map((m: any) => m.profiles).filter(Boolean));
+        for (const m of data as any[]) {
+          if (m.user_id && m.profiles) {
+            directMembers.push(m.profiles);
+          }
+          if (m.crew_id) crewIdsLocal.push(m.crew_id);
+        }
       } else {
-        const { data: basicData } = await supabase.from("project_members").select("user_id").eq("project_id", projectId);
-        if (basicData) setMembers(basicData.map((m: any) => ({ id: m.user_id, nickname: "멤버" })));
+        const { data: basicData } = await supabase.from("project_members").select("user_id, crew_id").eq("project_id", projectId);
+        if (basicData) {
+          for (const m of basicData as any[]) {
+            if (m.user_id) directMembers.push({ id: m.user_id, nickname: "멤버" });
+            if (m.crew_id) crewIdsLocal.push(m.crew_id);
+          }
+        }
       }
+
+      // 너트(crew) 소속 멤버도 포함
+      const nutMembers: { id: string; nickname: string }[] = [];
+      if (crewIdsLocal.length > 0) {
+        try {
+          const { data: gmData } = await supabase
+            .from("group_members")
+            .select("user_id, profiles!group_members_user_id_fkey(id, nickname)")
+            .in("group_id", crewIdsLocal);
+          if (gmData) {
+            const existingIds = new Set(directMembers.map((m) => m.id));
+            for (const gm of gmData as any[]) {
+              if (gm.user_id && gm.profiles && !existingIds.has(gm.user_id)) {
+                nutMembers.push(gm.profiles);
+                existingIds.add(gm.user_id);
+              }
+            }
+          }
+        } catch { /* 무시 */ }
+      }
+
+      setMembers([...directMembers, ...nutMembers].filter(Boolean));
     } catch {}
   }
 
+  // Genesis folder placeholders filtered out of main stage columns
+  const isGenesisFolder = (r: ProjectResource) =>
+    (r as any).type === "folder-placeholder" || (r.name || "").startsWith("📁 ");
+
   // Filter
   const filtered = resources.filter((r) => {
+    if (isGenesisFolder(r)) return false;
     const stageOk = activeStage === "all" || r.stage === activeStage;
     const searchOk = r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.description?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -345,6 +492,38 @@ export function ProjectResourceHub({
     else { toast.success(`"${driveFile.name}" 추가됨`); await loadResources(); }
   }
 
+  // R2 direct upload for 파일 업로드 button
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const { uploadFile } = await import("@/lib/storage/upload-client");
+      const up = await uploadFile(file, { prefix: "resources", scopeId: projectId });
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("로그인이 필요합니다");
+      const stageVal = activeStage === "all" ? "evidence" : activeStage;
+      const { error } = await supabase.from("project_resources").insert({
+        project_id: projectId,
+        name: up.name,
+        url: up.url,
+        type: detectType(up.url) || "drive",
+        stage: stageVal,
+        description: null,
+        uploaded_by: user.id,
+      });
+      if (error) throw error;
+      toast.success(`파일이 업로드되었습니다 · ${up.storage.toUpperCase()}`);
+      await loadResources();
+    } catch (err: any) {
+      toast.error(err?.message || "업로드 실패");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
+
   // Link form
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -364,7 +543,8 @@ export function ProjectResourceHub({
       setFormData({ name: "", url: "", stage: "planning", description: "" });
       setShowAddForm(false);
       await loadResources();
-    } catch (err: any) { toast.error(err.message || "자료 추가에 실패했습니다"); }
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string }; toast.error(__err.message || "자료 추가에 실패했습니다"); }
     finally { setSubmitting(false); }
   }
 
@@ -406,7 +586,8 @@ export function ProjectResourceHub({
       }
       setNewFeedback("");
       toast.success("피드백이 게시되었습니다");
-    } catch (err: any) { toast.error(err.message || "피드백 게시 실패"); }
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string }; toast.error(__err.message || "피드백 게시 실패"); }
     finally { setPostingFeedback(false); }
   }
 
@@ -421,21 +602,26 @@ export function ProjectResourceHub({
         status: "open", assigned_to: newActionAssignee || null,
         source_url: previewData?.url || null,
       };
-      const { data, error } = await supabase
+      const { data: basicData, error: basicError } = await supabase
         .from("project_action_items")
         .insert(actionPayload)
-        .select("*, assignee:profiles!assigned_to(id, nickname)")
+        .select("*")
         .single();
-      if (error) {
-        const { data: basicData, error: basicError } = await supabase.from("project_action_items").insert(actionPayload).select("*").single();
-        if (basicError) throw basicError;
-        setActionItems((prev) => [basicData as ProjectActionItem, ...prev]);
-      } else {
-        setActionItems((prev) => [data as ProjectActionItem, ...prev]);
+      if (basicError) throw basicError;
+      let assignee: { id: string; nickname: string | null } | null = null;
+      if ((basicData as any).assigned_to) {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("id, nickname")
+          .eq("id", (basicData as any).assigned_to)
+          .maybeSingle();
+        if (prof) assignee = prof as any;
       }
+      setActionItems((prev) => [{ ...(basicData as any), assignee } as ProjectActionItem, ...prev]);
       setNewActionTitle(""); setNewActionAssignee(""); setNewActionPriority("medium");
       toast.success("액션 아이템이 추가되었습니다");
-    } catch (err: any) { toast.error(err.message || "액션 아이템 추가 실패"); }
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string }; toast.error(__err.message || "액션 아이템 추가 실패"); }
     finally { setSavingAction(false); }
   }
 
@@ -448,7 +634,8 @@ export function ProjectResourceHub({
       const { error } = await supabase.from("project_action_items").update({ status: next }).eq("id", item.id);
       if (error) throw error;
       setActionItems((prev) => prev.map((a) => (a.id === item.id ? { ...a, status: next } : a)));
-    } catch (err: any) { toast.error(err.message || "상태 업데이트 실패"); }
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string }; toast.error(__err.message || "상태 업데이트 실패"); }
   }
 
   // Filtered feedback for current resource
@@ -496,59 +683,96 @@ export function ProjectResourceHub({
             />
           </div>
 
-          {/* Quick Add */}
+          {/* Drag-drop upload zone */}
+          {canEdit && (
+            <div className="mb-4">
+              <DropZoneUpload
+                prefix="resources"
+                scopeId={projectId}
+                multiple
+                onUploaded={async (up) => {
+                  try {
+                    const supabase = createClient();
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (!user) throw new Error("로그인이 필요합니다");
+                    const stageVal = activeStage === "all" ? "evidence" : activeStage;
+                    const { error } = await supabase.from("project_resources").insert({
+                      project_id: projectId,
+                      name: up.name,
+                      url: up.url,
+                      type: detectType(up.url) || "drive",
+                      stage: stageVal,
+                      description: null,
+                      uploaded_by: user.id,
+                    });
+                    if (error) throw error;
+                    toast.success(`등록 완료 · ${up.storage.toUpperCase()}`);
+                    await loadResources();
+                  } catch (err: any) {
+                    toast.error(err?.message || "등록 실패");
+                  }
+                }}
+              />
+            </div>
+          )}
+
+          {/* Quick Add (3-button consolidated) */}
           {canEdit && (
             <div className="mb-5 border-[2px] border-dashed border-nu-ink/15 bg-nu-white">
-              <div className="px-4 py-3 flex flex-col sm:flex-row items-center gap-2">
+              <div className="px-3 md:px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-2">
                 <div className="flex items-center gap-2 text-nu-muted flex-shrink-0">
                   <Plus size={14} />
-                  <span className="font-mono-nu text-[12px] uppercase tracking-widest font-bold">Quick Add</span>
+                  <span className="font-mono-nu text-[11px] md:text-[12px] uppercase tracking-widest font-bold">Quick Add</span>
                 </div>
-                <div className="flex-1 flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                  {/* New Document */}
+                <div className="flex-1 w-full flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:flex-wrap">
+                  {/* 1. 새 문서 — full width on mobile */}
                   <button
                     onClick={() => setShowNewDocModal(true)}
-                    className="flex items-center gap-2 font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2 bg-nu-pink text-white hover:bg-nu-pink/90 transition-all cursor-pointer border-none"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 font-mono-nu text-xs md:text-sm font-bold uppercase tracking-widest px-4 py-2 bg-nu-pink text-white hover:bg-nu-pink/90 transition-all cursor-pointer border-[2px] border-nu-pink"
                   >
-                    <FileText size={13} /> 새 문서
+                    <FileText size={13} /> ✍️ 새 문서
                   </button>
-                  <DrivePicker onFilePicked={handleDriveFile} />
-                  <DriveUploader
-                    onUploaded={() => loadResources()}
-                    targetType="project"
-                    targetId={projectId}
-                    stage={activeStage === "all" ? "evidence" : activeStage}
-                    sharedFolder={sharedFolder}
+
+                  {/* 2. 파일 업로드 + 3. Drive — 2-col on mobile, inline on desktop */}
+                  <div className="grid grid-cols-2 sm:contents gap-2 w-full sm:w-auto">
+                  <label className={`flex items-center justify-center gap-2 font-mono-nu text-xs md:text-sm font-bold uppercase tracking-widest px-3 md:px-4 py-2 border-[2px] border-nu-ink bg-nu-white text-nu-ink transition-all cursor-pointer hover:bg-nu-ink hover:text-white ${uploading ? "opacity-60 pointer-events-none" : ""}`}>
+                    {uploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+                    📎 {uploading ? "업로드 중..." : "파일 업로드"}
+                    <input type="file" className="hidden" onChange={handleFileUpload} />
+                  </label>
+
+                  {/* 3. Google Drive 업로드 */}
+                  <DriveImportButton
+                    prefix="resources"
+                    scopeId={projectId}
+                    onImported={async (fi) => {
+                      const supabase = createClient();
+                      const { data: { user } } = await supabase.auth.getUser();
+                      if (!user) { toast.error("로그인이 필요합니다"); return; }
+                      const stageVal = activeStage === "all" ? "evidence" : activeStage;
+                      const { error } = await supabase.from("project_resources").insert({
+                        project_id: projectId,
+                        name: fi.name,
+                        url: fi.url,
+                        type: detectType(fi.url) || "drive",
+                        stage: stageVal,
+                        description: null,
+                        uploaded_by: user.id,
+                      });
+                      if (error) toast.error("등록 실패: " + error.message);
+                      else { toast.success(`"${fi.name}" 추가됨`); await loadResources(); }
+                    }}
                   />
-                  {/* Shared folder badge / create button for leads */}
-                  {sharedFolder ? (
-                    <a
-                      href={sharedFolder.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 font-mono-nu text-[11px] uppercase tracking-widest text-green-700 border border-green-600/30 px-3 py-2 hover:bg-green-600/10 transition-all"
-                      title="공유 Drive 폴더 열기"
-                    >
-                      <HardDrive size={11} /> 공유 폴더
-                    </a>
-                  ) : isLead && (
-                    <button
-                      onClick={createSharedFolder}
-                      disabled={creatingFolder}
-                      className="flex items-center gap-1.5 font-mono-nu text-[11px] uppercase tracking-widest px-3 py-2 bg-green-600/10 text-green-700 border border-green-600/30 hover:bg-green-600/20 transition-all disabled:opacity-50 cursor-pointer"
-                      title="팀원 모두가 업로드할 수 있는 공유 Drive 폴더를 만듭니다"
-                    >
-                      {creatingFolder ? <Loader2 size={11} className="animate-spin" /> : <HardDrive size={11} />}
-                      {creatingFolder ? "생성 중..." : "공유 폴더 만들기"}
-                    </button>
-                  )}
+                  </div>
+
+                  {/* Link Add (secondary) */}
                   <button
                     onClick={() => setShowAddForm(!showAddForm)}
-                    className={`flex items-center gap-2 font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2 border-[2px] transition-all ${
+                    className={`w-full sm:w-auto flex items-center justify-center gap-2 font-mono-nu text-[11px] uppercase tracking-widest px-3 py-2 border-[2px] transition-all ${
                       showAddForm ? "bg-nu-blue text-white border-nu-blue" : "border-nu-ink/10 text-nu-muted hover:border-nu-ink"
                     }`}
                   >
-                    <Link2 size={13} /> 링크 추가
+                    <Link2 size={12} /> 링크
                   </button>
                 </div>
               </div>
@@ -612,6 +836,91 @@ export function ProjectResourceHub({
             </div>
           </div>
 
+          {/* ── 📝 프로젝트 위키 (그룹 위키 surfacing) ── */}
+          <div className="mb-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="font-mono-nu text-[11px] font-black uppercase tracking-widest text-nu-ink">📝 프로젝트 위키</span>
+                <span className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
+                  {projectGroupId ? `그룹 위키 ${wikiPages.length}건` : "연결된 그룹 없음"}
+                </span>
+              </div>
+              {projectGroupId && (
+                <NextLink
+                  href={`/groups/${projectGroupId}/wiki`}
+                  className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-blue hover:underline flex items-center gap-1 no-underline"
+                >
+                  그룹 위키 열기 <ExternalLink size={10} />
+                </NextLink>
+              )}
+            </div>
+            {!projectGroupId ? (
+              <div className="bg-nu-white border-2 border-dashed border-nu-ink/15 p-4 text-center">
+                <p className="text-[13px] text-nu-muted">
+                  프로젝트 위키는 아직 없어요. 그룹 위키에서 참고 자료를 가져올 수 있어요.
+                </p>
+              </div>
+            ) : wikiPages.length === 0 ? (
+              <div className="bg-nu-white border-2 border-dashed border-nu-ink/15 p-4 text-center">
+                <p className="text-[13px] text-nu-muted mb-2">이 그룹에는 아직 위키 페이지가 없습니다</p>
+                <NextLink
+                  href={`/groups/${projectGroupId}/wiki`}
+                  className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-pink hover:underline no-underline"
+                >
+                  ✍️ 그룹 위키 시작하기
+                </NextLink>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-2">
+                {wikiPages.slice(0, 6).map((w) => (
+                  <div key={w.id} className="bg-nu-white border-2 border-nu-ink/[0.08] hover:border-nu-pink/40 transition-colors p-3 flex items-center gap-3">
+                    <div className="w-8 h-8 flex items-center justify-center bg-nu-cream/50 border border-nu-ink/5 shrink-0">
+                      <BookOpen size={14} className="text-nu-ink/70" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-bold text-nu-ink truncate">{w.title}</p>
+                      <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                        {w.topic_name && (
+                          <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">{w.topic_name}</span>
+                        )}
+                        {w.author_nickname && (
+                          <span className="font-mono-nu text-[10px] text-nu-muted">· {w.author_nickname}</span>
+                        )}
+                        <span className="font-mono-nu text-[10px] text-nu-muted">· {new Date(w.updated_at).toLocaleDateString("ko", { month: "short", day: "numeric" })}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => setWikiPreviewPage(w)}
+                        className="font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 border-2 border-nu-ink/15 hover:border-nu-pink hover:text-nu-pink transition-colors flex items-center gap-1"
+                        title="미리보기"
+                      >
+                        <Eye size={11} /> 👁️ 미리보기
+                      </button>
+                      {projectGroupId && (
+                        <NextLink
+                          href={`/groups/${projectGroupId}/wiki/pages/${w.id}`}
+                          className="font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 border-2 border-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-colors flex items-center gap-1 no-underline"
+                          title="편집"
+                        >
+                          📝 편집
+                        </NextLink>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {wikiPages.length > 6 && projectGroupId && (
+                  <NextLink
+                    href={`/groups/${projectGroupId}/wiki`}
+                    className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted hover:text-nu-ink text-center py-2 no-underline"
+                  >
+                    더 보기 ({wikiPages.length - 6}개) →
+                  </NextLink>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Resources List */}
           <div className="relative min-h-[250px]">
             {loading ? (
@@ -632,7 +941,7 @@ export function ProjectResourceHub({
                     resource={r}
                     canEdit={canEdit}
                     isSelected={previewData?.url === r.url}
-                    onPreview={() => { setPreviewData({ url: r.url, name: r.name, id: r.id, content: resolveTemplateContent(r.url, r.content) }); setRightTab("preview"); }}
+                    onPreview={() => { setPreviewData({ url: r.url, name: r.name, id: r.id, content: resolveTemplateContent(r.url, r.content), storage_type: (r as any).storage_type, storage_key: (r as any).storage_key, uploaded_by: r.uploaded_by, mime: (r as any).mime_type || null }); setRightTab("preview"); if (!isSplitView) setIsSplitView(true); }}
                     onDelete={() => handleDelete(r.id)}
                   />
                 ))}
@@ -671,7 +980,7 @@ export function ProjectResourceHub({
               {rightTab === "preview" && (
                 previewData ? (
                   previewData.content ? (
-                    /* ─── Inline Editor for template resources ─── */
+                    /* ─── 인라인 문서 에디터 (template 전용) ─── */
                     <ResourceEditor
                       targetType="project_resource"
                       resourceId={previewData.id || ""}
@@ -679,56 +988,20 @@ export function ProjectResourceHub({
                       initialContent={previewData.content}
                       canEdit={isMember}
                       onSave={(newContent) => {
-                        // Update local state so re-clicking shows saved content
                         setResources((prev) => prev.map((r) => r.id === previewData.id ? { ...r, content: newContent } : r));
                         setPreviewData((prev) => prev ? { ...prev, content: newContent } : prev);
                       }}
                       onClose={() => setPreviewData(null)}
                     />
                   ) : (
-                    /* ─── iframe preview for external links ─── */
-                    <div className="flex-1 flex flex-col h-full">
-                      <div className="flex items-center justify-between px-4 py-2.5 border-b-2 border-nu-ink bg-nu-cream/30 shrink-0">
-                        <div className="min-w-0 pr-3">
-                          <p className="font-head text-[12px] font-black text-nu-ink truncate uppercase tracking-tight">{previewData.name}</p>
-                          <p className="font-mono-nu text-[10px] text-nu-muted truncate uppercase tracking-widest mt-0.5">Live Preview</p>
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <a href={previewData.url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-nu-muted hover:text-nu-ink" title="원본 보기">
-                            <ExternalLink size={13} />
-                          </a>
-                          <button onClick={() => setPreviewData(null)} className="p-1.5 text-nu-muted hover:text-nu-ink">
-                            <X size={14} />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="flex-1 bg-nu-white overflow-hidden relative">
-                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-nu-paper/95 opacity-0 pointer-events-none transition-opacity" id="project-perm-guard">
-                          <div className="text-center px-6 max-w-xs">
-                            <div className="w-12 h-12 bg-nu-amber/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                              <span className="text-xl">🔒</span>
-                            </div>
-                            <p className="font-head text-sm font-bold text-nu-ink mb-2">공유 설정을 확인해주세요</p>
-                            <p className="text-[12px] text-nu-muted leading-relaxed mb-3">
-                              원본 문서의 공유 설정에서 <span className="font-bold text-nu-ink">&quot;링크가 있는 모든 사용자에게 공개&quot;</span>로 변경해 주세요.
-                            </p>
-                            <a href={previewData.url} target="_blank" rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2 bg-nu-ink text-nu-paper no-underline">
-                              <ExternalLink size={11} /> 원본에서 열기
-                            </a>
-                          </div>
-                        </div>
-                        <iframe
-                          src={getEmbedUrl(previewData.url)}
-                          className="w-full h-full border-0"
-                          allow="autoplay; encrypted-media; fullscreen"
-                          onError={() => {
-                            const guard = document.getElementById("project-perm-guard");
-                            if (guard) { guard.style.opacity = "1"; guard.style.pointerEvents = "auto"; }
-                          }}
-                        />
-                      </div>
-                    </div>
+                    /* ─── 모든 파일 타입 통합 미리보기 (이미지·동영상·오디오·PDF·링크) ─── */
+                    <LinkPreviewPanel
+                      key={previewData.url}
+                      url={previewData.url}
+                      name={previewData.name}
+                      mime={previewData.mime}
+                      onClose={() => setPreviewData(null)}
+                    />
                   )
                 ) : (
                   <div className="flex-1 flex flex-col items-center justify-center p-10 text-center text-nu-muted">
@@ -879,7 +1152,23 @@ export function ProjectResourceHub({
 
       {/* Fallback Modal for non-split mode */}
       {!isSplitView && previewData && (
-        previewData.content ? (
+        isDirectPreviewable(previewData.url, previewData.storage_type) ? (
+          <FilePreviewPanel
+            open={!!previewData}
+            onClose={() => setPreviewData(null)}
+            file={{
+              id: previewData.id || "",
+              name: previewData.name,
+              url: previewData.url,
+              mime: previewData.mime,
+              storage_type: previewData.storage_type,
+              storage_key: previewData.storage_key,
+            }}
+            targetTable="project_resources"
+            canEdit={(!!userId && previewData.uploaded_by === userId) || isLead}
+            onUpdated={() => { loadResources(); }}
+          />
+        ) : previewData.content ? (
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
             <div className="bg-nu-white w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col border-2 border-nu-ink">
               <ResourceEditor
@@ -914,6 +1203,17 @@ export function ProjectResourceHub({
           stage={activeStage === "all" ? "planning" : activeStage}
           onCreated={loadResources}
           onClose={() => setShowNewDocModal(false)}
+        />
+      )}
+
+      {/* Wiki Page Preview Panel (group wiki surfaced in project hub) */}
+      {projectGroupId && (
+        <WikiPagePreviewPanel
+          open={!!wikiPreviewPage}
+          onClose={() => setWikiPreviewPage(null)}
+          page={wikiPreviewPage}
+          groupId={projectGroupId}
+          canEdit
         />
       )}
     </div>
@@ -953,30 +1253,32 @@ function ResourceCard({ resource, canEdit, isSelected, onPreview, onDelete }: {
             {resolveTemplateContent(resource.url, resource.content) && <span className="shrink-0 font-mono-nu text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 bg-nu-blue/10 text-nu-blue border border-nu-blue/20">편집</span>}
             {isNew && <span className="shrink-0 font-mono-nu text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 bg-nu-pink text-white animate-pulse">NEW</span>}
           </div>
-          <div className="flex items-center gap-1.5 mt-0.5">
+          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
             <span className={`font-mono-nu text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 border ${stageCfg.badge}`}>{stageCfg.label}</span>
             <span className={`font-mono-nu text-[10px] uppercase tracking-widest ${typeCfg.color}`}>{typeCfg.label}</span>
             {resource.uploader?.nickname && (
-              <>
+              <span className="hidden md:inline-flex items-center gap-1.5">
                 <span className="w-0.5 h-0.5 bg-nu-ink/10 rounded-full" />
                 <span className="font-mono-nu text-[10px] text-nu-muted">{resource.uploader.nickname}</span>
-              </>
+              </span>
             )}
-            <span className="w-0.5 h-0.5 bg-nu-ink/10 rounded-full" />
-            <span className="font-mono-nu text-[10px] text-nu-muted">
-              {new Date(resource.created_at).toLocaleDateString("ko", { month: "short", day: "numeric" })}
+            <span className="hidden md:inline-flex items-center gap-1.5">
+              <span className="w-0.5 h-0.5 bg-nu-ink/10 rounded-full" />
+              <span className="font-mono-nu text-[10px] text-nu-muted">
+                {new Date(resource.created_at).toLocaleDateString("ko", { month: "short", day: "numeric" })}
+              </span>
             </span>
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-          <button onClick={onPreview} className={`p-1.5 transition-colors ${isSelected ? "text-nu-pink" : "text-nu-muted hover:text-nu-pink"}`} title="미리보기">
+          <button onClick={onPreview} className={`min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 p-1.5 flex items-center justify-center transition-colors ${isSelected ? "text-nu-pink" : "text-nu-muted hover:text-nu-pink"}`} title="미리보기" aria-label="미리보기">
             <Eye size={14} />
           </button>
-          <a href={resource.url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-nu-muted hover:text-nu-blue transition-colors">
+          <a href={resource.url} target="_blank" rel="noopener noreferrer" className="min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 p-1.5 flex items-center justify-center text-nu-muted hover:text-nu-blue transition-colors" aria-label="원본 열기">
             <ExternalLink size={14} />
           </a>
           {canEdit && (
-            <button onClick={onDelete} className="p-1.5 text-nu-muted/30 hover:text-red-500 transition-colors" title="삭제">
+            <button onClick={onDelete} className="min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 p-1.5 flex items-center justify-center text-nu-muted/30 hover:text-red-500 transition-colors" title="삭제" aria-label="삭제">
               <Trash2 size={14} />
             </button>
           )}

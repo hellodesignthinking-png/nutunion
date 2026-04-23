@@ -2,16 +2,24 @@ interface FooterProps {
   content?: Record<string, string>;
 }
 
+// 모든 페이지에서 동일하게 동작하도록 `/` prefix 사용 — 볼트/너트 상세에서도 홈 앵커로 점프
 const defaultNav = [
-  { label: "About", href: "#about" },
-  { label: "Groups", href: "#groups" },
-  { label: "Join", href: "#join" },
+  { label: "About", href: "/#about" },
+  { label: "Groups", href: "/groups" },
+  { label: "Join", href: "/#join" },
 ];
 
-const defaultProtocol = [
-  { label: "Brand Guidelines", href: "#" },
-  { label: "Templates", href: "#" },
-  { label: "Open Source", href: "#" },
+interface ProtocolLink {
+  label: string;
+  href: string;
+  soon?: boolean;
+  external?: boolean;
+}
+
+const defaultProtocol: ProtocolLink[] = [
+  { label: "Brand Guidelines", href: "/brand" },
+  { label: "Templates", href: "/tap-store", soon: true },
+  { label: "Open Source", href: "/protocol", soon: true },
 ];
 
 export function Footer({ content }: FooterProps) {
@@ -84,13 +92,21 @@ export function Footer({ content }: FooterProps) {
             Protocol
           </span>
           <div className="flex flex-col gap-2.5">
-            {protocolLinks.map((l) => (
+            {protocolLinks.map((l: any) => (
               <a
                 key={l.label}
                 href={l.href}
-                className="text-sm hover:text-nu-pink transition-colors no-underline font-mono-nu text-[12px] uppercase tracking-widest"
+                target={l.external ? "_blank" : undefined}
+                rel={l.external ? "noopener noreferrer" : undefined}
+                className="text-sm hover:text-nu-pink transition-colors no-underline font-mono-nu text-[12px] uppercase tracking-widest inline-flex items-center gap-1.5"
               >
-                <span className="text-nu-blue/40 mr-2">→</span>{l.label}
+                <span className="text-nu-blue/40">→</span>
+                <span>{l.label}</span>
+                {l.soon && (
+                  <span className="font-mono-nu text-[9px] uppercase tracking-widest bg-nu-pink/15 text-nu-pink/70 px-1 py-0.5 border border-nu-pink/30">
+                    Soon
+                  </span>
+                )}
               </a>
             ))}
           </div>

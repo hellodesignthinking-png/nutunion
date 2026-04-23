@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { AuthNav } from "@/components/shared/auth-nav";
 import { AppSidebar, AppSidebarGutter } from "@/components/shared/app-sidebar";
 import { AppBottomTabs } from "@/components/shared/app-bottom-tabs";
+import { CommandPalette } from "@/components/shared/command-palette";
+import { OnlineStatusBanner } from "@/components/shared/online-status-banner";
 import { Footer } from "@/components/landing/footer";
 import type { Profile } from "@/lib/types";
 
@@ -26,6 +28,14 @@ export default async function MainLayout({
     .eq("id", user.id)
     .single();
 
+  // 닉네임이 기본값(user_xxxxxx) 이거나 비어있으면 온보딩으로.
+  // 소셜 로그인 및 handle_new_user 트리거 fallback 케이스 커버.
+  const nick = (profile?.nickname || "").trim();
+  const isDefaultNick = !nick || nick === "user" || /^user_[a-f0-9]{4,}$/i.test(nick);
+  if (isDefaultNick) {
+    redirect("/onboarding/nickname");
+  }
+
   const userProfile: Profile = profile ?? {
     id: user.id,
     name: user.user_metadata?.name || "",
@@ -44,7 +54,9 @@ export default async function MainLayout({
 
   return (
     <div className="min-h-screen bg-nu-paper flex flex-col">
+      <OnlineStatusBanner />
       <AuthNav profile={userProfile} />
+      <CommandPalette isAdmin={isAdmin} />
       <AppSidebar isStaff={isStaff} isAdmin={isAdmin} />
       <AppSidebarGutter>
         <div className="flex-1 pt-[60px] pb-[64px] md:pb-0">

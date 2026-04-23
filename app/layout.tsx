@@ -33,6 +33,19 @@ export const metadata: Metadata = {
     type: "website",
     url: "https://nutunion.co.kr",
   },
+  alternates: {
+    canonical: "https://nutunion.co.kr",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

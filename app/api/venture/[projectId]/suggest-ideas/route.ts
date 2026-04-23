@@ -7,7 +7,9 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const MODEL = "anthropic/claude-sonnet-4.5";
+import { NU_AI_MODEL, NU_AI_MODEL_LABEL } from "@/lib/ai/model";
+const MODEL = NU_AI_MODEL;
+const MODEL_LABEL = NU_AI_MODEL_LABEL;
 
 const SuggestionsSchema = z.object({
   ideas: z

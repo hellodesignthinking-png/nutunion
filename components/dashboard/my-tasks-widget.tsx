@@ -11,7 +11,8 @@ interface Task {
   title: string;
   status: string;
   due_date: string | null;
-  source: "google" | "bolt";
+  /** google=Google Tasks, bolt=내게 할당된 볼트 태스크, bolt_mine=내가 만든 볼트의 미배정 태스크, group_event=너트 호스트의 오늘/내일 이벤트 */
+  source: "google" | "bolt" | "bolt_mine" | "group_event";
   projectTitle?: string;
   projectHref?: string;
   _listId?: string;
@@ -35,10 +36,10 @@ export function MyTasksWidget() {
 
     const combined: Task[] = [];
 
-    // Bolt tasks assigned to me
+    // 1) 내게 할당된 볼트 태스크
     const { data: boltTasks } = await supabase
       .from("project_tasks")
-      .select("id, title, status, due_date, milestone:project_milestones(project:projects(id, title))")
+      .select("id, title, status, due_date, project_id, milestone:project_milestones(project:projects(id, title))")
       .eq("assigned_to", user.id)
       .in("status", ["todo", "in_progress"])
       .order("due_date", { ascending: true })
@@ -56,6 +57,68 @@ export function MyTasksWidget() {
         projectHref: proj?.id ? `/projects/${proj.id}` : undefined,
       });
     });
+
+    // 2) 내가 만든 볼트의 미배정 태스크 (리더가 할 일)
+    const assignedIds = new Set((boltTasks || []).map((t: any) => t.id));
+    const { data: myProjects } = await supabase
+      .from("projects")
+      .select("id, title")
+      .eq("created_by", user.id);
+    const myProjectIds = ((myProjects as any[]) || []).map((p) => p.id);
+    if (myProjectIds.length > 0) {
+      const { data: unassigned } = await supabase
+        .from("project_tasks")
+        .select("id, title, status, due_date, project_id")
+        .in("project_id", myProjectIds)
+        .is("assigned_to", null)
+        .in("status", ["todo", "in_progress"])
+        .order("due_date", { ascending: true })
+        .limit(5);
+      (unassigned || []).forEach((t: any) => {
+        if (assignedIds.has(t.id)) return;
+        const proj = (myProjects as any[])?.find((p) => p.id === t.project_id);
+        combined.push({
+          id: t.id,
+          title: t.title,
+          status: t.status === "in_progress" ? "in_progress" : "todo",
+          due_date: t.due_date,
+          source: "bolt_mine",
+          projectTitle: proj?.title,
+          projectHref: proj?.id ? `/projects/${proj.id}` : undefined,
+        });
+      });
+    }
+
+    // 3) 내 너트(호스팅)의 오늘/내일 events (task-like)
+    const { data: hostedGroups } = await supabase
+      .from("groups")
+      .select("id, name")
+      .eq("host_id", user.id)
+      .eq("is_active", true);
+    const hostedIds = ((hostedGroups as any[]) || []).map((g) => g.id);
+    if (hostedIds.length > 0) {
+      const nowIso = new Date().toISOString();
+      const in2daysIso = new Date(Date.now() + 2 * 86400000).toISOString();
+      const { data: upcomingEvents } = await supabase
+        .from("events")
+        .select("id, title, start_at, group_id")
+        .in("group_id", hostedIds)
+        .gte("start_at", nowIso)
+        .lte("start_at", in2daysIso)
+        .limit(5);
+      (upcomingEvents || []).forEach((e: any) => {
+        const g = (hostedGroups as any[])?.find((x) => x.id === e.group_id);
+        combined.push({
+          id: `event-${e.id}`,
+          title: e.title,
+          status: "todo",
+          due_date: e.start_at,
+          source: "group_event",
+          projectTitle: g?.name,
+          projectHref: g?.id ? `/groups/${g.id}/events/${e.id}` : undefined,
+        });
+      });
+    }
 
     // Google Tasks
     try {
@@ -88,23 +151,45 @@ export function MyTasksWidget() {
   }
 
   async function toggleTask(task: Task) {
+    // 이벤트는 완료 개념 X — 해당 페이지로 이동만
+    if (task.source === "group_event") {
+      if (task.projectHref) {
+        window.location.href = task.projectHref;
+      } else {
+        toast.info("이벤트는 완료 체크가 아닙니다. 상세 페이지에서 확인하세요.");
+      }
+      return;
+    }
+
+    // Google Tasks — API 경유
     if (task.source === "google") {
       setTasks(prev => prev.filter(t => t.id !== task.id));
       try {
-        await fetch("/api/google/tasks", {
+        const res = await fetch("/api/google/tasks", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ listId: task._listId || "@default", taskId: task.id, status: "completed" }),
         });
+        if (!res.ok) throw new Error("google update failed");
       } catch {
         setTasks(prev => [...prev, task]);
         toast.error("Google Task 완료 실패");
       }
+      return;
+    }
+
+    // 볼트 태스크 — 내가 할당받은 것(bolt) + 내가 만든 볼트의 미배정(bolt_mine) 모두 project_tasks 테이블 업데이트
+    const supabase = createClient();
+    const { error } = await supabase.from("project_tasks").update({ status: "done" }).eq("id", task.id);
+    if (error) {
+      // RLS 차단 메시지를 명확히
+      if (/row-level security|permission|rls/i.test(error.message)) {
+        toast.error("완료 권한이 없어요 (리더 또는 할당자만 가능)");
+      } else {
+        toast.error("할일 완료 실패: " + error.message);
+      }
     } else {
-      const supabase = createClient();
-      const { error } = await supabase.from("project_tasks").update({ status: "done" }).eq("id", task.id);
-      if (error) toast.error("할일 완료 실패");
-      else setTasks(prev => prev.filter(t => t.id !== task.id));
+      setTasks(prev => prev.filter(t => t.id !== task.id));
     }
   }
 
@@ -155,11 +240,19 @@ export function MyTasksWidget() {
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-nu-ink truncate">{t.title}</p>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className={`font-mono-nu text-[9px] uppercase px-1 py-px ${
-                      t.source === "google" ? "bg-blue-50 text-blue-500" : "bg-purple-50 text-purple-500"
-                    }`}>
-                      {t.source === "google" ? "Google" : "볼트"}
-                    </span>
+                    {(() => {
+                      const badge = {
+                        google:      { cls: "bg-blue-50 text-blue-500",   label: "Google" },
+                        bolt:        { cls: "bg-purple-50 text-purple-500", label: "내 볼트" },
+                        bolt_mine:   { cls: "bg-amber-50 text-amber-700",   label: "리더 Todo" },
+                        group_event: { cls: "bg-pink-50 text-nu-pink",      label: "너트 이벤트" },
+                      }[t.source];
+                      return (
+                        <span className={`font-mono-nu text-[9px] uppercase px-1 py-px ${badge.cls}`}>
+                          {badge.label}
+                        </span>
+                      );
+                    })()}
                     {t.projectTitle && (
                       <Link href={t.projectHref || "#"} className="font-mono-nu text-[9px] text-indigo-500 no-underline hover:underline truncate max-w-[80px]"
                         onClick={e => e.stopPropagation()}>

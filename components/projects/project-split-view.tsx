@@ -159,39 +159,69 @@ export function ProjectSplitView({
 
   const loadActionItems = useCallback(async () => {
     const supabase = createClient();
-    // Try full query with assignee join
-    const { data, error } = await supabase
+    // project_action_items.assigned_to references auth.users, not profiles —
+    // FK-embed is not valid. Fetch rows, then hydrate assignee profiles manually.
+    const { data: basicData, error: basicError } = await supabase
       .from("project_action_items")
-      .select("*, assignee:profiles!assigned_to(id, nickname, avatar_url)")
+      .select("*")
       .eq("project_id", projectId)
       .order("created_at", { ascending: false })
       .limit(100);
-
-    if (!error && data) {
-      setActionItems(data as ProjectActionItem[]);
-    } else {
-      // Fallback: without assignee join (table or FK may not exist)
-      const { data: basicData } = await supabase
-        .from("project_action_items")
-        .select("*")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (basicData) {
-        setActionItems(basicData as ProjectActionItem[]);
+    if (basicError || !basicData) return;
+    const rows = basicData as ProjectActionItem[];
+    const assigneeIds = Array.from(
+      new Set(rows.map((r: any) => r.assigned_to).filter(Boolean))
+    ) as string[];
+    let profileMap: Record<string, { id: string; nickname: string | null; avatar_url: string | null }> = {};
+    if (assigneeIds.length > 0) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, nickname, avatar_url")
+        .in("id", assigneeIds);
+      for (const p of (profs || []) as Array<{ id: string; nickname: string | null; avatar_url: string | null }>) {
+        profileMap[p.id] = p;
       }
     }
+    setActionItems(
+      rows.map((r: any) => ({
+        ...r,
+        assignee: r.assigned_to ? profileMap[r.assigned_to] || null : null,
+      })) as ProjectActionItem[]
+    );
   }, [projectId]);
 
   const loadMembers = useCallback(async () => {
     const supabase = createClient();
     const { data, error } = await supabase
       .from("project_members")
-      .select("user_id, profiles!project_members_user_id_fkey(id, nickname, avatar_url)")
+      .select("user_id, crew_id, profiles!project_members_user_id_fkey(id, nickname, avatar_url)")
       .eq("project_id", projectId);
 
+    let allMembers: any[] = [];
     if (!error && data) {
-      setMembers(data.map((m: any) => m.profiles).filter(Boolean));
+      allMembers = data.map((m: any) => m.profiles).filter(Boolean);
+
+      // crew(너트) 멤버도 포함
+      const crewIds = (data as any[]).filter((m: any) => m.crew_id).map((m: any) => m.crew_id);
+      if (crewIds.length > 0) {
+        try {
+          const { data: gmData } = await supabase
+            .from("group_members")
+            .select("user_id, profiles!group_members_user_id_fkey(id, nickname, avatar_url)")
+            .in("group_id", crewIds)
+            .eq("status", "active");
+          if (gmData) {
+            const existingIds = new Set(allMembers.map((m: any) => m.id));
+            for (const gm of gmData as any[]) {
+              if (gm.user_id && gm.profiles && !existingIds.has(gm.user_id)) {
+                allMembers.push(gm.profiles);
+                existingIds.add(gm.user_id);
+              }
+            }
+          }
+        } catch { /* 무시 */ }
+      }
+      setMembers(allMembers);
     } else {
       // Fallback: just get user_ids without profile join
       const { data: basicData } = await supabase.from("project_members").select("user_id").eq("project_id", projectId);
@@ -244,8 +274,9 @@ export function ProjectSplitView({
       }
       setNewFeedback("");
       toast.success("피드백이 게시되었습니다");
-    } catch (err: any) {
-      toast.error(err.message || "피드백 게시 실패");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "피드백 게시 실패");
     } finally {
       setPostingFeedback(false);
     }
@@ -265,25 +296,30 @@ export function ProjectSplitView({
         assigned_to: newActionAssignee || null,
         source_url: selectedResource?.url || null,
       };
-      const { data, error } = await supabase
+      const { data: basicData, error: basicError } = await supabase
         .from("project_action_items")
         .insert(actionPayload)
-        .select("*, assignee:profiles!assigned_to(id, nickname, avatar_url)")
+        .select("*")
         .single();
-
-      if (error) {
-        const { data: basicData, error: basicError } = await supabase.from("project_action_items").insert(actionPayload).select("*").single();
-        if (basicError) throw basicError;
-        setActionItems((prev) => [basicData as ProjectActionItem, ...prev]);
-      } else {
-        setActionItems((prev) => [data as ProjectActionItem, ...prev]);
+      if (basicError) throw basicError;
+      // Hydrate assignee manually so UI shows nickname immediately
+      let assignee: { id: string; nickname: string | null; avatar_url: string | null } | null = null;
+      if ((basicData as any).assigned_to) {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("id, nickname, avatar_url")
+          .eq("id", (basicData as any).assigned_to)
+          .maybeSingle();
+        if (prof) assignee = prof as any;
       }
+      setActionItems((prev) => [{ ...(basicData as any), assignee } as ProjectActionItem, ...prev]);
       setNewActionTitle("");
       setNewActionAssignee("");
       setNewActionPriority("medium");
       toast.success("액션 아이템이 추가되었습니다");
-    } catch (err: any) {
-      toast.error(err.message || "액션 아이템 추가 실패");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "액션 아이템 추가 실패");
     } finally {
       setSavingAction(false);
     }
@@ -307,8 +343,9 @@ export function ProjectSplitView({
         prev.map((a) => (a.id === item.id ? { ...a, status: nextStatus } : a))
       );
       toast.success("액션 아이템 상태가 업데이트되었습니다");
-    } catch (err: any) {
-      toast.error(err.message || "상태 업데이트 실패");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "상태 업데이트 실패");
     }
   }
 

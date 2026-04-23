@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -27,7 +27,8 @@ import { AiMeetingAssistant } from "@/components/meetings/ai-meeting-assistant";
 import { WikiSyncPanel } from "@/components/wiki/wiki-sync-panel";
 import { WeeklyDigestEngine } from "@/components/wiki/weekly-digest-engine";
 import { AiErrorBoundary } from "@/components/shared/ai-error-boundary";
-import { MeetingRecorder } from "@/components/meetings/meeting-recorder";
+import { MeetingRecorder, type MeetingRecorderHandle } from "@/components/meetings/meeting-recorder";
+import { LiveMeetingPanel, ConcludeProgressModal } from "@/components/meetings/live-meeting-panel";
 import { QuickRetro } from "./components/quick-retro";
 
 function getEmbedUrl(url: string) {
@@ -249,6 +250,18 @@ export default function MeetingDetailPage() {
     return "agendas";
   });
 
+  // Conclude progress modal
+  const [concludeOpen, setConcludeOpen] = useState(false);
+  const [concludeStep, setConcludeStep] = useState("");
+  const [concludeError, setConcludeError] = useState<string | null>(null);
+
+  // Recorder handle + latest blob (for one-click conclude)
+  const recorderRef = useRef<MeetingRecorderHandle | null>(null);
+  const [pendingAudio, setPendingAudio] = useState<{ blob: Blob; mime: string } | null>(null);
+
+  // 고급 도구 패널 열기 토글 (기본 숨김 — 사용자가 원할 때만)
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
   const loadMeeting = useCallback(async () => {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -350,31 +363,119 @@ export default function MeetingDetailPage() {
     const supabase = createClient();
     const { error } = await supabase.from("meetings").update({ status: "in_progress" }).eq("id", meetingId);
     if (error) toast.error("상태 변경에 실패했습니다");
-    else { toast.success("미팅이 시작되었습니다!"); await loadMeeting(); }
+    else { toast.success("회의가 시작되었습니다!"); await loadMeeting(); }
     setActionLoading(false);
   }
 
   async function handleCompleteMeeting() {
-    if (!summary.trim()) { toast.error("미팅 요약을 입력해주세요"); return; }
+    // 회의록 본문이 있으면 그대로 저장, 없으면 AI(녹음+노트) 기반으로 생성
     setActionLoading(true);
-    const supabase = createClient();
-    const { error } = await supabase.from("meetings").update({ status: "completed", summary: summary.trim() }).eq("id", meetingId);
-    if (error) toast.error("상태 변경에 실패했습니다");
-    else {
-      toast.success("미팅이 완료되었습니다!", {
-        description: "주간 다이제스트를 생성하여 다음 회의 AI 컨텍스트를 준비하세요.",
-        duration: 8000,
-        action: {
-          label: "다이제스트 생성",
-          onClick: () => {
-            setActiveTab("digest");
-          },
-        },
-      });
-      setShowSummaryInput(false);
-      await loadMeeting();
+    setConcludeError(null);
+    setConcludeOpen(true);
+    setConcludeStep("🎙️ 녹음 확인 중...");
+
+    // Pull the freshest live notes (from meetings.notes, if column exists)
+    const liveNotes = (meeting as any)?.notes || "";
+    const combinedNotes = [liveNotes, meetingNotes.join("\n")].filter(Boolean).join("\n\n");
+
+    // 1) 녹음이 진행 중이거나 이미 잡힌 blob 이 있으면 확보
+    let audioInfo: { blob: Blob; mime: string } | null = pendingAudio;
+    try {
+      const stopped = recorderRef.current?.isRecording() ? await recorderRef.current?.stopAndGetBlob() : null;
+      if (stopped) audioInfo = stopped;
+      else if (!audioInfo) {
+        const current = recorderRef.current?.getCurrentBlob() || null;
+        if (current) audioInfo = current;
+      }
+    } catch { /* 녹음 처리 실패는 무시하고 노트만으로 진행 */ }
+
+    // 2) blob 이 있으면 R2 업로드 + file_attachments 저장
+    let audioUrl: string | undefined;
+    let audioMimeType: string | undefined;
+    if (audioInfo && audioInfo.blob.size > 0) {
+      try {
+        setConcludeStep("🎙️ 녹음 업로드 중...");
+        const ext = (audioInfo.mime.split("/")[1] || "webm").split(";")[0];
+        const displayName = `recording_${Date.now()}.${ext}`;
+        const audioFile = new File([audioInfo.blob], displayName, { type: audioInfo.mime });
+        const { uploadFile } = await import("@/lib/storage/upload-client");
+        const up = await uploadFile(audioFile, { prefix: "resources", scopeId: meetingId });
+        audioUrl = up.url;
+        audioMimeType = audioInfo.mime;
+
+        // file_attachments 에 등록 (group 기준)
+        try {
+          const supabase = createClient();
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user && groupId) {
+            const faPayload: any = {
+              target_type: "group",
+              target_id: groupId,
+              uploaded_by: user.id,
+              file_name: displayName,
+              file_url: up.url,
+              file_size: audioInfo.blob.size,
+              file_type: audioInfo.mime,
+              storage_type: up.storage,
+              storage_key: up.key,
+            };
+            const { error: faErr } = await supabase.from("file_attachments").insert(faPayload);
+            if (faErr && /storage_type|storage_key/.test(faErr.message)) {
+              delete faPayload.storage_type;
+              delete faPayload.storage_key;
+              await supabase.from("file_attachments").insert(faPayload);
+            }
+          }
+        } catch { /* file_attachments 저장 실패는 무시 */ }
+      } catch (e: any) {
+        // 업로드 실패 — 노트만으로 진행
+        console.warn("[conclude] audio upload failed", e?.message);
+      }
     }
-    setActionLoading(false);
+
+    // Rotating progress hints while the server processes
+    const steps = [
+      audioUrl ? "🧠 AI가 녹음 + 노트 분석 중..." : "🧠 AI 회의록 초안 작성 중...",
+      "노트와 교차 검증 중...",
+      "Google Docs 저장 중...",
+      "마무리 중...",
+    ];
+    let idx = 0;
+    setConcludeStep(steps[0]);
+    const timer = setInterval(() => {
+      idx = Math.min(idx + 1, steps.length - 1);
+      setConcludeStep(steps[idx]);
+    }, 2500);
+
+    try {
+      const res = await fetch(`/api/meetings/${meetingId}/conclude`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          summaryOverride: summary.trim() || undefined,
+          notes: combinedNotes,
+          audioUrl,
+          audioMimeType,
+          agendas: ((meeting as any)?.agendas || []).map((a: any) => ({ topic: a.topic, description: a.description })),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      clearInterval(timer);
+      if (!res.ok) {
+        setConcludeError(data.error || "회의 종료 처리에 실패했습니다");
+        return;
+      }
+      setConcludeStep("완료!");
+      toast.success("회의가 완료되었습니다. 회의록이 저장되었습니다.");
+      setShowSummaryInput(false);
+      setConcludeOpen(false);
+      await loadMeeting();
+    } catch (e: any) {
+      clearInterval(timer);
+      setConcludeError(e?.message || "회의 종료 실패");
+    } finally {
+      setActionLoading(false);
+    }
   }
 
   async function handleSaveNextTopic() {
@@ -417,7 +518,7 @@ export default function MeetingDetailPage() {
             target_type: "group",
             target_id: groupId,
             uploaded_by: userId,
-            file_name: `[미팅] ${newRes.title.trim()}`,
+            file_name: `[회의] ${newRes.title.trim()}`,
             file_url: newRes.url.trim(),
             file_type: newRes.url.includes("drive.google") ? "drive-link" : "url-link",
             file_size: null,
@@ -517,7 +618,7 @@ export default function MeetingDetailPage() {
         <ChevronRight size={12} className="text-nu-muted/40" />
         <Link href={`/groups/${groupId}/meetings`}
           className="text-nu-muted hover:text-nu-ink no-underline transition-colors">
-          미팅
+          회의
         </Link>
         <ChevronRight size={12} className="text-nu-muted/40" />
         <span className="text-nu-ink truncate max-w-[200px]">{meeting.title}</span>
@@ -648,17 +749,39 @@ export default function MeetingDetailPage() {
         onUpdate={loadMeeting}
       />
 
+      {/* Live notes — in_progress only, auto-saved, cross-validated by AI on conclude */}
+      {meeting.status === "in_progress" && (
+        <LiveMeetingPanel
+          meetingId={meetingId}
+          initialNotes={(meeting as any).notes || ""}
+          disabled={!canEdit}
+        />
+      )}
+
       {/* Meeting Recorder — active during in_progress or for file upload when completed */}
       <MeetingRecorder
+        ref={recorderRef}
         meetingId={meetingId}
         meetingTitle={meeting.title}
         meetingStatus={meeting.status}
         canEdit={canEdit}
+        onAudioReady={(blob, mime) => {
+          if (blob && mime) setPendingAudio({ blob, mime });
+          else setPendingAudio(null);
+        }}
         onTranscriptionComplete={() => {
           setActiveTab("ai-notes");
           loadMeeting();
         }}
       />
+
+      {/* Auto-combine hint — before meeting end */}
+      {meeting.status === "in_progress" && canEdit && (
+        <div className="mb-4 flex items-center gap-2 px-3 py-2 bg-nu-pink/5 border border-nu-pink/20 text-[12px] text-nu-ink">
+          <Sparkles size={12} className="text-nu-pink shrink-0" />
+          <span>🎙️ 녹음 + ✍️ 실시간 노트가 <b>함께 AI 회의록으로 합쳐집니다</b> — "회의 종료"를 누르면 한 번에 처리됩니다.</span>
+        </div>
+      )}
 
       {/* Google Calendar */}
       {meeting.status === "upcoming" && (
@@ -673,14 +796,92 @@ export default function MeetingDetailPage() {
         </div>
       )}
 
-      {/* Completed summary */}
+      {/* Completed: 회의록 section */}
       {meeting.status === "completed" && (
         <div className="bg-nu-pink/5 border-[2px] border-nu-pink/20 p-5 mb-6">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <p className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-pink font-bold flex items-center gap-1.5">
-              <FileText size={12} /> 회의 요약
+              <FileText size={12} /> 📋 회의록
             </p>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              {(meeting as any).google_doc_url && (
+                <a
+                  href={(meeting as any).google_doc_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-3 py-1.5 border-[2px] border-green-600 text-green-700 hover:bg-green-600 hover:text-white transition-all flex items-center gap-1.5"
+                >
+                  <ExternalLink size={11} /> 📄 Google Docs에서 열기
+                </a>
+              )}
+              {canEdit && !(meeting as any).google_doc_url && meeting.summary && (
+                <button
+                  onClick={async () => {
+                    setActionLoading(true);
+                    try {
+                      const res = await fetch(`/api/google/docs/create`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          title: `회의록 - ${meeting.title} (${new Date(meeting.scheduled_at).toLocaleDateString("ko-KR")})`,
+                          content: meeting.summary,
+                          targetType: "group",
+                          targetId: groupId,
+                          meetingId,
+                        }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok) {
+                        toast.error(data.error || "Google Docs 저장 실패");
+                      } else {
+                        toast.success("Google Docs에 저장되었습니다");
+                        await loadMeeting();
+                      }
+                    } catch (err: any) {
+                      toast.error(err?.message || "Google Docs 저장 실패");
+                    } finally {
+                      setActionLoading(false);
+                    }
+                  }}
+                  disabled={actionLoading}
+                  className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-blue text-nu-blue hover:bg-nu-blue hover:text-white transition-all flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <Sparkles size={11} /> 📋 Google Docs로 저장
+                </button>
+              )}
+              {canEdit && (
+                <button
+                  onClick={async () => {
+                    if (!confirm("AI로 회의록을 다시 생성하시겠습니까? 기존 요약이 덮어씌워집니다.")) return;
+                    setActionLoading(true);
+                    try {
+                      const res = await fetch(`/api/meetings/${meetingId}/conclude`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          notes: meeting.summary || "",
+                          agendas: (meeting as any).agendas || [],
+                        }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok) {
+                        toast.error(data.error || "회의록 재생성 실패");
+                      } else {
+                        toast.success("회의록을 다시 생성했습니다");
+                        await loadMeeting();
+                      }
+                    } catch (err: any) {
+                      toast.error(err?.message || "회의록 재생성 실패");
+                    } finally {
+                      setActionLoading(false);
+                    }
+                  }}
+                  disabled={actionLoading}
+                  className="font-mono-nu text-[12px] text-nu-muted hover:underline flex items-center gap-1 disabled:opacity-50"
+                >
+                  <Sparkles size={11} /> 🔄 다시 생성
+                </button>
+              )}
               {canEdit && (
                 <button onClick={() => setShowPromote(true)}
                   className="font-mono-nu text-[12px] text-nu-pink hover:underline flex items-center gap-1">
@@ -698,7 +899,7 @@ export default function MeetingDetailPage() {
           {editingSummary ? (
             <div className="flex flex-col gap-2">
               <Textarea value={editedSummary} onChange={e => setEditedSummary(e.target.value)}
-                rows={4} className="border-nu-ink/15 bg-nu-white resize-none text-sm" />
+                rows={6} className="border-nu-ink/15 bg-nu-white resize-none text-sm font-mono" />
               <div className="flex gap-2">
                 <Button onClick={handleSaveEditedSummary} className="bg-nu-pink text-nu-paper hover:bg-nu-pink/90 font-mono-nu text-[12px] uppercase tracking-widest">
                   <Save size={12} /> 저장
@@ -707,9 +908,9 @@ export default function MeetingDetailPage() {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-nu-ink leading-relaxed whitespace-pre-wrap">
-              {meeting.summary || <span className="text-nu-muted italic">요약이 아직 작성되지 않았습니다.</span>}
-            </p>
+            <div className="text-sm text-nu-ink leading-relaxed whitespace-pre-wrap font-mono">
+              {meeting.summary || <span className="text-nu-muted italic font-sans">회의록이 아직 작성되지 않았습니다. "AI 회의록" 탭에서 생성하거나, 회의 종료 시 자동 생성됩니다.</span>}
+            </div>
           )}
         </div>
       )}
@@ -720,13 +921,13 @@ export default function MeetingDetailPage() {
           {meeting.status === "upcoming" && (
             <Button onClick={handleStartMeeting} disabled={actionLoading}
               className="bg-nu-blue text-nu-paper hover:bg-nu-blue/90 font-mono-nu text-[13px] uppercase tracking-widest">
-              <Play size={14} /> 미팅 시작
+              <Play size={14} /> 🎬 회의 시작
             </Button>
           )}
           {meeting.status === "in_progress" && !showSummaryInput && (
             <Button onClick={() => setShowSummaryInput(true)}
               className="bg-nu-pink text-nu-paper hover:bg-nu-pink/90 font-mono-nu text-[13px] uppercase tracking-widest">
-              <CheckCircle2 size={14} /> 미팅 완료
+              <CheckCircle2 size={14} /> ⏹️ 회의 종료
             </Button>
           )}
           {showSummaryInput && (
@@ -741,7 +942,7 @@ export default function MeetingDetailPage() {
                 </button>
               )}
               <Textarea value={summary} onChange={e => setSummary(e.target.value)}
-                placeholder="미팅에서 논의된 내용을 요약해주세요 (AI 회의록 탭에서 먼저 분석하면 자동 저장됩니다)" rows={3}
+                placeholder="회의 내용을 직접 입력하거나 비워두고 종료하면 AI가 녹음/노트 기반으로 회의록을 생성합니다" rows={3}
                 className="border-nu-ink/15 bg-transparent resize-none mb-3" />
               <div className="flex items-center gap-2">
                 <Button onClick={handleCompleteMeeting} disabled={actionLoading}
@@ -780,7 +981,7 @@ export default function MeetingDetailPage() {
         </div>
       )}
 
-      {/* Tabs */}
+      {/* ── 탭 — 핵심 4개 항상 표시 ─────────────────── */}
       <Tabs
         value={activeTab}
         onValueChange={(val) => {
@@ -788,24 +989,40 @@ export default function MeetingDetailPage() {
           try { localStorage.setItem(`nutunion_tab_${meetingId}`, val); } catch {}
         }}
       >
-        <TabsList variant="line" className="mb-6">
-          <TabsTrigger value="agendas" className="font-mono-nu text-[13px] uppercase tracking-widest">안건</TabsTrigger>
-          <TabsTrigger value="ai-notes" className="font-mono-nu text-[13px] uppercase tracking-widest flex items-center gap-1"><Sparkles size={11} /> AI 회의록</TabsTrigger>
-          <TabsTrigger value="resources" className="font-mono-nu text-[13px] uppercase tracking-widest">자료 공유 ({resources.length})</TabsTrigger>
-          <TabsTrigger value="notes" className="font-mono-nu text-[13px] uppercase tracking-widest">노트</TabsTrigger>
-          <TabsTrigger value="next" className="font-mono-nu text-[13px] uppercase tracking-widest">다음 주제</TabsTrigger>
-          <TabsTrigger value="retro" className="font-mono-nu text-[13px] uppercase tracking-widest flex items-center gap-1 text-nu-amber font-bold">
-            <Zap size={11} /> 빠른 회고
+        <div className="overflow-x-auto mb-6 -mx-4 px-4 md:mx-0 md:px-0 snap-x snap-mandatory">
+        <TabsList variant="line" className="whitespace-nowrap flex-nowrap">
+          {/* 핵심 탭 */}
+          <TabsTrigger value="agendas" className="font-mono-nu text-[12px] md:text-[13px] uppercase tracking-widest whitespace-nowrap snap-start">
+            안건
           </TabsTrigger>
-          <TabsTrigger value="attendance" className="font-mono-nu text-[13px] uppercase tracking-widest">출석</TabsTrigger>
-          <TabsTrigger value="wiki-sync" className="font-mono-nu text-[13px] uppercase tracking-widest flex items-center gap-1 text-nu-pink font-bold">
+          <TabsTrigger value="ai-notes" className="font-mono-nu text-[12px] md:text-[13px] uppercase tracking-widest flex items-center gap-1 whitespace-nowrap snap-start">
+            <Sparkles size={11} /> 회의록
+          </TabsTrigger>
+          <TabsTrigger value="resources" className="font-mono-nu text-[12px] md:text-[13px] uppercase tracking-widest whitespace-nowrap snap-start">
+            자료 {resources.length > 0 && <span className="ml-1 px-1.5 py-0.5 bg-nu-ink/10 text-nu-ink rounded-full text-[10px]">{resources.length}</span>}
+          </TabsTrigger>
+          <TabsTrigger value="notes" className="font-mono-nu text-[12px] md:text-[13px] uppercase tracking-widest whitespace-nowrap snap-start">
+            노트
+          </TabsTrigger>
+          {/* 고급 탭 — 항상 노출 (접기 없음) */}
+          <TabsTrigger value="next" className="font-mono-nu text-[12px] md:text-[13px] uppercase tracking-widest whitespace-nowrap snap-start text-nu-amber">
+            다음 주제
+          </TabsTrigger>
+          <TabsTrigger value="attendance" className="font-mono-nu text-[12px] md:text-[13px] uppercase tracking-widest whitespace-nowrap snap-start">
+            출석
+          </TabsTrigger>
+          <TabsTrigger value="retro" className="font-mono-nu text-[12px] md:text-[13px] uppercase tracking-widest flex items-center gap-1 whitespace-nowrap snap-start">
+            <Zap size={11} /> 회고
+          </TabsTrigger>
+          <TabsTrigger value="wiki-sync" className="font-mono-nu text-[12px] md:text-[13px] uppercase tracking-widest flex items-center gap-1 whitespace-nowrap snap-start">
             <Sparkles size={11} /> 탭 동기화
           </TabsTrigger>
-          <TabsTrigger value="digest" className="font-mono-nu text-[13px] uppercase tracking-widest flex items-center gap-1 text-purple-600 font-bold">
-            <Zap size={11} /> 주간 다이제스트
-            {previousDigest && <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />}
+          <TabsTrigger value="digest" className="font-mono-nu text-[12px] md:text-[13px] uppercase tracking-widest flex items-center gap-1 whitespace-nowrap snap-start">
+            <Zap size={11} /> 다이제스트
+            {previousDigest && <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse ml-0.5" />}
           </TabsTrigger>
         </TabsList>
+        </div>
 
         {/* ── 안건 */}
         <TabsContent value="agendas">
@@ -828,6 +1045,7 @@ export default function MeetingDetailPage() {
             previousDigest={previousDigest || undefined}
             agendas={(meeting as any).agendas?.map((a: any) => ({ topic: a.topic, description: a.description })) || []}
             canEdit={canEdit}
+            groupId={groupId}
             onSaveSummary={async (summary) => {
               const supabase = createClient();
               await supabase.from("meetings").update({ summary }).eq("id", meetingId);
@@ -1018,10 +1236,10 @@ export default function MeetingDetailPage() {
             <div className="bg-nu-white border border-nu-ink/[0.08] p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Lightbulb size={18} className="text-nu-amber" />
-                <h3 className="font-head text-lg font-extrabold text-nu-ink">다음 미팅 주제</h3>
+                <h3 className="font-head text-lg font-extrabold text-nu-ink">다음 회의 주제</h3>
               </div>
               <Textarea value={nextTopic} onChange={e => setNextTopic(e.target.value)}
-                placeholder="다음 미팅에서 논의할 주제를 적어주세요" rows={4}
+                placeholder="다음 회의에서 논의할 주제를 적어주세요" rows={4}
                 className="border-nu-ink/15 bg-transparent resize-none mb-3" disabled={!canEdit} />
               {canEdit && (
                 <Button onClick={handleSaveNextTopic} disabled={savingNextTopic}
@@ -1158,7 +1376,7 @@ export default function MeetingDetailPage() {
                     <Eye size={32} className="opacity-20 text-nu-pink" />
                   </div>
                   <p className="font-head text-sm font-bold text-nu-ink/40 uppercase tracking-widest">Select a resource to pin</p>
-                  <p className="text-[13px] mt-2 max-w-[200px] leading-relaxed">자료 공유 탭에서 '눈' 아이콘을 클릭하면 이 패널에 문서가 고정되어 미팅 중에 함께 볼 수 있습니다.</p>
+                  <p className="text-[13px] mt-2 max-w-[200px] leading-relaxed">자료 공유 탭에서 '눈' 아이콘을 클릭하면 이 패널에 문서가 고정되어 회의 중에 함께 볼 수 있습니다.</p>
                 </div>
               )}
             </div>
@@ -1175,6 +1393,15 @@ export default function MeetingDetailPage() {
           name={previewData?.name || ""}
         />
       )}
+
+      {/* Conclude progress / error modal */}
+      <ConcludeProgressModal
+        open={concludeOpen}
+        step={concludeStep}
+        error={concludeError}
+        onRetry={() => { setConcludeError(null); handleCompleteMeeting(); }}
+        onClose={() => { setConcludeOpen(false); setConcludeError(null); }}
+      />
 
       {/* Best Practice Promote Modal */}
       {showPromote && meeting && (

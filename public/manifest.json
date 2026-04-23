@@ -25,19 +25,29 @@
   ],
   "shortcuts": [
     {
-      "name": "대시보드",
-      "short_name": "대시보드",
-      "url": "/dashboard"
+      "name": "새 노트",
+      "short_name": "노트",
+      "description": "새 개인 노트 작성",
+      "url": "/notes?new=1",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "볼트",
-      "short_name": "볼트",
-      "url": "/projects"
+      "name": "통합 캘린더",
+      "short_name": "캘린더",
+      "url": "/calendar",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "너트",
-      "short_name": "너트",
-      "url": "/groups"
+      "name": "AI 작전봉",
+      "short_name": "AI",
+      "url": "/dashboard#ai-command",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "오늘 할 일",
+      "short_name": "할일",
+      "url": "/dashboard#tasks",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

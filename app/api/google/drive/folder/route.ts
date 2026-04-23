@@ -2,6 +2,12 @@ import { google } from "googleapis";
 import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { createClient } from "@/lib/supabase/server";
+import { asGoogleErr } from "@/lib/google/error-helpers";
+import {
+  getDriveStorageTarget,
+  withParents,
+  driveRequestOptions,
+} from "@/lib/google/drive-config";
 
 /**
  * POST /api/google/drive/folder
@@ -55,31 +61,38 @@ export async function POST(req: NextRequest) {
 
     const auth = await getGoogleClient(userId);
     const drive = google.drive({ version: "v3", auth });
+    const target = getDriveStorageTarget();
 
     // Determine folder prefix
     const prefix = projectId ? "볼트" : staffProjectId ? "스태프" : "너트";
 
-    // Create folder in Google Drive
+    // Create folder in Google Drive (Shared Drive 우선)
     const folderRes = await drive.files.create({
-      requestBody: {
-        name: `[nutunion ${prefix}] ${folderName}`,
-        mimeType: "application/vnd.google-apps.folder",
-      },
-      fields: "id, name, webViewLink",
+      requestBody: withParents(
+        {
+          name: `[nutunion ${prefix}] ${folderName}`,
+          mimeType: "application/vnd.google-apps.folder",
+        },
+        target,
+      ),
+      fields: "id, name, webViewLink, parents, driveId",
+      ...driveRequestOptions(target),
     });
 
     const folderId = folderRes.data.id!;
     const webViewLink = folderRes.data.webViewLink!;
 
-    // Set "anyone with link can view" — no individual sharing needed.
-    // All nut/bolt members access the folder through the nutunion UI link.
-    try {
-      await drive.permissions.create({
-        fileId: folderId,
-        requestBody: { role: "reader", type: "anyone" },
-      });
-    } catch (permErr: any) {
-      console.warn("Folder permission setting skipped:", permErr.message);
+    // Shared Drive: 이미 조직 멤버십으로 접근 제어. 추가 public permission 불필요.
+    // Host Drive (legacy): "anyone with link" 로 공유.
+    if (target.strategy === "host-drive") {
+      try {
+        await drive.permissions.create({
+          fileId: folderId,
+          requestBody: { role: "reader", type: "anyone" },
+        });
+      } catch (permErr: unknown) {
+        console.warn("Folder permission setting skipped:", asGoogleErr(permErr).message);
+      }
     }
 
     // Create context-appropriate sub-folders
@@ -96,20 +109,22 @@ export async function POST(req: NextRequest) {
           requestBody: {
             name: subName,
             mimeType: "application/vnd.google-apps.folder",
-            parents: [folderId],
+            parents: [folderId], // 부모는 항상 상위 폴더 (Shared Drive 여도 parent 만 지정)
           },
           fields: "id, name",
+          ...driveRequestOptions(target),
         });
         subFolders[subName] = subRes.data.id!;
-        // Inherit "anyone with link" permission
-        try {
-          await drive.permissions.create({
-            fileId: subRes.data.id!,
-            requestBody: { role: "reader", type: "anyone" },
-          });
-        } catch { /* inherits parent perm */ }
-      } catch (subErr: any) {
-        console.warn(`Sub-folder ${subName} creation skipped:`, subErr.message);
+        if (target.strategy === "host-drive") {
+          try {
+            await drive.permissions.create({
+              fileId: subRes.data.id!,
+              requestBody: { role: "reader", type: "anyone" },
+            });
+          } catch { /* inherits parent perm */ }
+        }
+      } catch (subErr: unknown) {
+        console.warn(`Sub-folder ${subName} creation skipped:`, asGoogleErr(subErr).message);
       }
     }
 
@@ -159,14 +174,15 @@ export async function POST(req: NextRequest) {
       folderName: folderRes.data.name,
       subFolders,
     });
-  } catch (err: any) {
-    if (err.message === "GOOGLE_NOT_CONNECTED") {
+  } catch (err: unknown) {
+    const e = asGoogleErr(err);
+    if (e.message === "GOOGLE_NOT_CONNECTED") {
       return NextResponse.json(
         { error: "Google 계정이 연결되지 않았습니다.", code: "NOT_CONNECTED" },
         { status: 403 }
       );
     }
-    if (err.message === "GOOGLE_TOKEN_EXPIRED") {
+    if (e.message === "GOOGLE_TOKEN_EXPIRED") {
       return NextResponse.json(
         { error: "Google 토큰이 만료되었습니다. 다시 연결해주세요.", code: "TOKEN_EXPIRED" },
         { status: 401 }

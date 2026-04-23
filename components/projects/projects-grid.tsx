@@ -65,6 +65,7 @@ interface ProjectItem {
   venture_mode?: boolean | null;
   venture_stage?: string | null;
   recruiting?: boolean | null;
+  has_dev_plan?: boolean | null;
 }
 
 function formatDateRange(start: string | null, end: string | null) {
@@ -127,12 +128,38 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function DeadlineBadge({ endDate, status }: { endDate: string | null; status: string }) {
-  if (status !== "active") return null;
+  if (status === "completed" || status === "archived") return null;
   const days = getDaysUntil(endDate);
-  if (days === null || days < 0 || days > 7) return null;
+  if (days === null) return null;
+
+  // 색상 단계: ≤3일 빨강 긴급, ≤7일 주황, ≤30일 노랑, >30일 무채
+  let bg = "bg-nu-ink";
+  let fg = "text-nu-paper";
+  let label: string;
+
+  if (days < 0) {
+    bg = "bg-red-700"; fg = "text-white";
+    label = `D+${Math.abs(days)} 지남`;
+  } else if (days === 0) {
+    bg = "bg-red-600"; fg = "text-white";
+    label = "D-DAY";
+  } else if (days <= 3) {
+    bg = "bg-red-600"; fg = "text-white";
+    label = `D-${days}`;
+  } else if (days <= 7) {
+    bg = "bg-orange-500"; fg = "text-white";
+    label = `D-${days}`;
+  } else if (days <= 30) {
+    bg = "bg-nu-amber"; fg = "text-nu-ink";
+    label = `D-${days}`;
+  } else {
+    bg = "bg-nu-ink/80"; fg = "text-nu-paper";
+    label = `D-${days}`;
+  }
+
   return (
-    <span className="absolute top-4 right-4 font-mono-nu text-[12px] font-black uppercase tracking-wider px-2.5 py-1 bg-red-600 text-white">
-      D-{days}
+    <span className={`absolute top-4 right-4 font-mono-nu text-[11px] font-black uppercase tracking-wider px-2 py-1 ${bg} ${fg} shadow-sm`}>
+      {label}
     </span>
   );
 }
@@ -381,6 +408,16 @@ export function ProjectsGrid({
                         🔎 구인중
                       </span>
                     )}
+                    {p.has_dev_plan && (
+                      <Link
+                        href={userId ? `/projects/${p.id}/dev-plan` : "/login"}
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-mono-nu text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-nu-ink text-nu-paper border-[1.5px] border-nu-ink no-underline hover:bg-nu-pink transition-colors"
+                        title="기술 개발 로드맵 보기"
+                      >
+                        🛠️ 로드맵
+                      </Link>
+                    )}
                   </div>
                   <DeadlineBadge endDate={p.end_date} status={p.status} />
                 </div>
@@ -489,6 +526,15 @@ export function ProjectsGrid({
                       <span className="font-mono-nu text-[10px] font-black uppercase tracking-wider px-2 py-0.5 bg-red-600 text-white">
                         D-{daysLeft}
                       </span>
+                    )}
+                    {p.has_dev_plan && (
+                      <Link
+                        href={userId ? `/projects/${p.id}/dev-plan` : "/login"}
+                        className="font-mono-nu text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-nu-ink text-nu-paper no-underline hover:bg-nu-pink transition-colors"
+                        title="기술 개발 로드맵 보기"
+                      >
+                        🛠️ 로드맵
+                      </Link>
                     )}
                     <Link
                       href={userId ? `/projects/${p.id}` : "/login"}

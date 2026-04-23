@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Readable } from "stream";
+import { asGoogleErr } from "@/lib/google/error-helpers";
 
 /**
  * POST /api/google/docs/create
@@ -111,8 +112,8 @@ export async function POST(req: NextRequest) {
         fileId,
         requestBody: { role: "reader", type: "anyone" },
       });
-    } catch (permErr: any) {
-      console.warn("Permission setting skipped:", permErr.message);
+    } catch (permErr: unknown) {
+      console.warn("Permission setting skipped:", asGoogleErr(permErr).message);
     }
 
     // Auto-register in DB
@@ -140,15 +141,15 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // Try to update the meeting record with the doc link (column may not exist)
+      // Try to update the meeting record with the doc link (column added in migration 105)
       if (meetingId) {
         try {
           await supabase
             .from("meetings")
-            .update({ doc_url: webViewLink } as any)
+            .update({ google_doc_url: webViewLink, google_doc_id: fileId } as any)
             .eq("id", meetingId);
         } catch {
-          // doc_url column may not exist — ignore
+          // google_doc_url column may not exist on legacy DB — ignore
         }
       }
     }
@@ -159,11 +160,12 @@ export async function POST(req: NextRequest) {
       webViewLink,
       title: driveRes.data.name,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const e = asGoogleErr(err);
     if (
-      err.code === 403 ||
-      err.message?.includes("insufficient") ||
-      err.message?.includes("Insufficient Permission")
+      e.code === 403 ||
+      e.message?.includes("insufficient") ||
+      e.message?.includes("Insufficient Permission")
     ) {
       return NextResponse.json(
         {
@@ -173,13 +175,13 @@ export async function POST(req: NextRequest) {
         { status: 403 }
       );
     }
-    if (err.message === "GOOGLE_NOT_CONNECTED") {
+    if (e.message === "GOOGLE_NOT_CONNECTED") {
       return NextResponse.json(
         { error: "Google 계정이 연결되지 않았습니다.", code: "NOT_CONNECTED" },
         { status: 403 }
       );
     }
-    if (err.message === "GOOGLE_TOKEN_EXPIRED") {
+    if (e.message === "GOOGLE_TOKEN_EXPIRED") {
       return NextResponse.json(
         { error: "Google 토큰이 만료되었습니다. 다시 연결해주세요.", code: "TOKEN_EXPIRED" },
         { status: 401 }

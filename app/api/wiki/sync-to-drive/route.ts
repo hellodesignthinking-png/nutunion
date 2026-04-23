@@ -1,3 +1,6 @@
+// [Phase 3b] Deprecated auto-sync.
+// Wiki content is canonical on DB/R2. This route is kept for manual export to a
+// user's personal Drive (explicit button click only — never auto-called).
 import { google } from "googleapis";
 import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
@@ -8,6 +11,8 @@ import { Readable } from "stream";
  * POST /api/wiki/sync-to-drive
  * Syncs a wiki page to Google Docs in the group's Drive wiki folder.
  * If the page already has a google_doc_id, updates it. Otherwise creates new.
+ *
+ * [Phase 3b] Opt-in manual export only. Do not call automatically.
  */
 export async function POST(req: NextRequest) {
   const userId = await getCurrentUserId();
@@ -61,9 +66,9 @@ export async function POST(req: NextRequest) {
       .single();
 
     // Determine parent folder (wiki subfolder, or main group folder, or root)
-    const parentFolderId = (group as any)?.google_drive_wiki_folder_id
-      || (group as any)?.google_drive_folder_id
-      || null;
+    type GroupRow = { name?: string; google_drive_wiki_folder_id?: string; google_drive_folder_id?: string };
+    const g = group as GroupRow | null;
+    const parentFolderId = g?.google_drive_wiki_folder_id || g?.google_drive_folder_id || null;
 
     // Check if this wiki page already has a Google Doc
     let existingDocId: string | null = null;
@@ -73,7 +78,7 @@ export async function POST(req: NextRequest) {
         .select("google_doc_id")
         .eq("id", pageId)
         .single();
-      existingDocId = (page as any)?.google_doc_id || null;
+      existingDocId = (page as { google_doc_id?: string } | null)?.google_doc_id || null;
     }
 
     // Format content: add header with metadata
@@ -110,7 +115,7 @@ export async function POST(req: NextRequest) {
       webViewLink = fileRes.data.webViewLink!;
     } else {
       // Create new Google Doc
-      const fileMetadata: any = {
+      const fileMetadata: { name: string; mimeType: string; parents?: string[] } = {
         name: `[탭] ${title}`,
         mimeType: "application/vnd.google-apps.document",
       };
@@ -172,14 +177,15 @@ export async function POST(req: NextRequest) {
       webViewLink,
       isUpdate: !!existingDocId,
     });
-  } catch (err: any) {
-    if (err.message === "GOOGLE_NOT_CONNECTED") {
+  } catch (err: unknown) {
+    const errObj = err as { message?: string; code?: number; response?: { data?: { error?: { message?: string; code?: number } } } };
+    if (errObj.message === "GOOGLE_NOT_CONNECTED") {
       return NextResponse.json(
         { error: "Google 계정이 연결되지 않았습니다. 설정에서 연결해주세요.", code: "NOT_CONNECTED" },
         { status: 403 }
       );
     }
-    if (err.message === "GOOGLE_TOKEN_EXPIRED") {
+    if (errObj.message === "GOOGLE_TOKEN_EXPIRED") {
       return NextResponse.json(
         { error: "Google 토큰이 만료되었습니다.", code: "TOKEN_EXPIRED" },
         { status: 401 }
@@ -187,7 +193,7 @@ export async function POST(req: NextRequest) {
     }
     console.error("Wiki sync to Drive error:", err);
     return NextResponse.json(
-      { error: "Google Docs 동기화 실패: " + (err.message || "알 수 없는 오류") },
+      { error: "Google Docs 동기화 실패: " + (errObj.message || "알 수 없는 오류") },
       { status: 500 }
     );
   }

@@ -8,6 +8,43 @@ export const STAGES: { id: VentureStage; label: string; short: string; icon: str
   { id: "plan", label: "사업계획", short: "Plan", icon: "📑" },
 ];
 
+export type VentureSourceKind =
+  | "youtube"
+  | "article"
+  | "drive_doc"
+  | "pdf"
+  | "link"
+  | "raw_text"
+  | "meeting_note"
+  | "interview";
+
+export interface VentureSource {
+  id: string;
+  project_id: string;
+  added_by: string | null;
+  kind: VentureSourceKind;
+  title: string;
+  url: string | null;
+  content_text: string | null;
+  excerpt: string | null;
+  ai_summary: string | null;
+  tags: string[];
+  author_name: string | null;
+  published_at: string | null;
+  thumbnail_url: string | null;
+  summary_status: "pending" | "processing" | "ready" | "failed";
+  summary_error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SourceCitation {
+  source_id: string;
+  title: string;
+  kind: VentureSourceKind;
+  quote: string;
+}
+
 export interface VentureInsight {
   id: string;
   project_id: string;

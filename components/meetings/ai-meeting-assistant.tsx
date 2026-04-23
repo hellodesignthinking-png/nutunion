@@ -51,6 +51,18 @@ interface AiMeetingAssistantProps {
   onArchiveToGoogleDoc?: (title: string, content: string) => Promise<{ url?: string; error?: string } | void>;
   /** Callback to navigate to a specific tab */
   onNavigateTab?: (tab: string) => void;
+  /** 자료실 audio 파일 목록 조회용 — group 또는 project id 중 하나 */
+  groupId?: string;
+  projectId?: string;
+}
+
+interface LibraryAudio {
+  id: string;
+  name: string;
+  url: string;
+  mime: string;
+  size: number;
+  uploaded_at: string;
 }
 
 interface AiResult {
@@ -90,11 +102,16 @@ export function AiMeetingAssistant({
   onAddNote,
   onArchiveToGoogleDoc,
   onNavigateTab,
+  groupId,
+  projectId,
 }: AiMeetingAssistantProps) {
   const [rawNotes, setRawNotes] = useState(existingNotes.join("\n") || "");
   const [audioUrl, setAudioUrl] = useState("");
   const [showAudioInput, setShowAudioInput] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
+  const [libraryAudios, setLibraryAudios] = useState<LibraryAudio[]>([]);
+  const [libraryLoading, setLibraryLoading] = useState(false);
   const [aiResult, setAiResult] = useState<AiResult | null>(null);
   const [editingResult, setEditingResult] = useState(false);
   const [editedSummary, setEditedSummary] = useState("");
@@ -172,6 +189,55 @@ export function AiMeetingAssistant({
     setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  /* ── 자료실 audio 목록 로드 ─── */
+  async function loadLibraryAudios() {
+    if (!groupId && !projectId) {
+      toast.error("자료실 맥락 정보 없음");
+      return;
+    }
+    setLibraryLoading(true);
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const target_type = groupId ? "group" : "project";
+      const target_id = groupId || projectId;
+      const { data, error } = await supabase
+        .from("file_attachments")
+        .select("id, file_name, file_url, file_type, file_size, created_at")
+        .eq("target_type", target_type)
+        .eq("target_id", target_id!)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      const audios: LibraryAudio[] = ((data as any[]) || [])
+        .filter((f) => {
+          const mime = (f.file_type || "").toLowerCase();
+          const name = (f.file_name || "").toLowerCase();
+          if (mime.startsWith("audio/")) return true;
+          if (/\.(mp3|wav|m4a|ogg|webm|aac|flac)$/i.test(name)) return true;
+          // chat-upload 가 PDF/audio 를 mp4 로 위장시킨 케이스 (disguiseMimeForSupabase) 까지 포괄
+          if (/recording_\d+\.(webm|mp4|m4a)/i.test(name)) return true;
+          return false;
+        })
+        .map((f) => ({
+          id: f.id,
+          name: f.file_name,
+          url: f.file_url,
+          mime: f.file_type || "audio/webm",
+          size: f.file_size || 0,
+          uploaded_at: f.created_at,
+        }));
+      setLibraryAudios(audios);
+      if (audios.length === 0) {
+        toast.info("자료실에 녹음 파일이 없어요 — 먼저 자료실에 업로드하거나 채팅에서 녹음해보세요");
+      }
+    } catch (err: any) {
+      toast.error("자료실 불러오기 실패: " + (err.message || err));
+    } finally {
+      setLibraryLoading(false);
+    }
+  }
+
   /* ── Audio file upload ─── */
   async function handleAudioUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -238,11 +304,39 @@ export function AiMeetingAssistant({
         previousDigest: previousDigest || null,
       };
 
-      // If audio file exists, convert to base64 for Gemini
+      // If audio file exists: Vercel 4.5MB body 제한 우회를 위해 R2 로 먼저 업로드 → URL 만 서버에 전달
       if (audioFile) {
-        const base64 = await fileToBase64(audioFile);
-        body.audioBase64 = base64;
-        body.audioMimeType = audioFile.type || "audio/mpeg";
+        const SMALL_LIMIT = 3 * 1024 * 1024; // 3MB 미만만 base64 인라인 시도 (여유 있게)
+        if (audioFile.size < SMALL_LIMIT) {
+          const base64 = await fileToBase64(audioFile);
+          body.audioBase64 = base64;
+          body.audioMimeType = audioFile.type || "audio/mpeg";
+        } else {
+          // 큰 파일 → R2 업로드 후 URL 전달 (서버가 Gemini Files API 로 재업로드)
+          const { uploadFile } = await import("@/lib/storage/upload-client");
+          toast.loading("녹음 파일 업로드 중...", { id: "audio-upload" });
+          try {
+            const up = await uploadFile(audioFile, { prefix: "resources" });
+            toast.success("업로드 완료 — AI 요약 시작", { id: "audio-upload" });
+            body.audioUrl = up.url;
+            body.audioMimeType = audioFile.type || "audio/mpeg";
+          } catch (uploadErr: any) {
+            toast.error(`업로드 실패: ${uploadErr.message || uploadErr}`, { id: "audio-upload" });
+            throw uploadErr;
+          }
+        }
+      } else if (audioUrl) {
+        // 자료실/Drive 에서 선택한 URL — 서버가 다운로드해서 Gemini 에 전달
+        body.audioUrl = audioUrl;
+        // mime 추정 (파일명 확장자 기반)
+        const name = audioUrl.toLowerCase();
+        if (name.match(/\.mp3(\?|$)/)) body.audioMimeType = "audio/mpeg";
+        else if (name.match(/\.wav(\?|$)/)) body.audioMimeType = "audio/wav";
+        else if (name.match(/\.m4a(\?|$)/)) body.audioMimeType = "audio/mp4";
+        else if (name.match(/\.ogg(\?|$)/)) body.audioMimeType = "audio/ogg";
+        else if (name.match(/\.flac(\?|$)/)) body.audioMimeType = "audio/flac";
+        else if (name.match(/\.aac(\?|$)/)) body.audioMimeType = "audio/aac";
+        else body.audioMimeType = "audio/webm"; // 채팅 녹음 기본
       }
 
       const res = await fetch("/api/ai/meeting-summary", {
@@ -260,9 +354,10 @@ export function AiMeetingAssistant({
       setAiResult(result);
       setEditedSummary(result.summary);
       toast.success("AI 정리가 완료되었습니다");
-    } catch (err: any) {
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
       console.error("AI processing error:", err);
-      toast.error(err.message || "AI 처리 중 오류가 발생했습니다");
+      toast.error(__err.message || "AI 처리 중 오류가 발생했습니다");
     } finally {
       setProcessing(false);
     }
@@ -472,6 +567,98 @@ export function AiMeetingAssistant({
                   className="flex-1 px-3 py-2 text-sm border border-nu-ink/10 bg-transparent focus:outline-none focus:border-nu-pink"
                 />
               </div>
+
+              {/* 자료실에서 선택 */}
+              {(groupId || projectId) && (
+                <div>
+                  <button
+                    onClick={() => {
+                      setShowLibrary(true);
+                      if (libraryAudios.length === 0) loadLibraryAudios();
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-2 font-mono-nu text-[11px] uppercase tracking-widest border-[1.5px] border-nu-ink/20 bg-nu-cream/30 text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-colors"
+                  >
+                    📁 자료실에서 선택
+                  </button>
+                </div>
+              )}
+
+              {/* 자료실 picker 모달 */}
+              {showLibrary && (
+                <div
+                  className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4"
+                  onClick={() => setShowLibrary(false)}
+                >
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="bg-white w-full max-w-lg max-h-[80vh] border-[2px] border-nu-ink flex flex-col overflow-hidden"
+                  >
+                    <div className="px-4 py-3 border-b-[2px] border-nu-ink flex items-center justify-between bg-nu-cream/30 shrink-0">
+                      <div>
+                        <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">자료실 녹음</p>
+                        <h3 className="font-head text-[15px] font-extrabold text-nu-ink">녹음 파일 선택</h3>
+                      </div>
+                      <button
+                        onClick={() => setShowLibrary(false)}
+                        className="p-1.5 text-nu-muted hover:text-nu-ink"
+                        aria-label="닫기"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                    <div className="flex-1 overflow-auto">
+                      {libraryLoading ? (
+                        <div className="flex items-center justify-center py-12">
+                          <Loader2 size={20} className="animate-spin text-nu-pink" />
+                        </div>
+                      ) : libraryAudios.length === 0 ? (
+                        <div className="p-8 text-center">
+                          <FileAudio size={28} className="mx-auto mb-2 text-nu-muted/40" />
+                          <p className="text-[13px] text-nu-graphite">자료실에 녹음 파일이 없어요</p>
+                          <p className="text-[11px] text-nu-muted mt-1">
+                            자료실에 .mp3, .wav, .m4a 등의 오디오 파일을 업로드하거나
+                            <br />
+                            채팅창에서 녹음하면 여기서 바로 선택할 수 있어요
+                          </p>
+                        </div>
+                      ) : (
+                        <ul className="divide-y divide-nu-ink/5">
+                          {libraryAudios.map((a) => (
+                            <li key={a.id}>
+                              <button
+                                onClick={() => {
+                                  setAudioUrl(a.url);
+                                  setShowLibrary(false);
+                                  toast.success(`"${a.name}" 선택됨`);
+                                }}
+                                className="w-full text-left px-4 py-3 hover:bg-nu-cream/30 flex items-center gap-3 transition-colors"
+                              >
+                                <FileAudio size={18} className="text-nu-amber shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[13px] font-semibold text-nu-ink truncate">
+                                    {a.name}
+                                  </p>
+                                  <p className="font-mono-nu text-[10px] text-nu-muted tabular-nums">
+                                    {(a.size / 1024 / 1024).toFixed(1)} MB ·{" "}
+                                    {new Date(a.uploaded_at).toLocaleDateString("ko-KR", {
+                                      month: "numeric",
+                                      day: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      timeZone: "Asia/Seoul",
+                                    })}
+                                  </p>
+                                </div>
+                                <span className="font-mono-nu text-[10px] uppercase text-nu-pink">선택 →</span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {audioUrl && (
                 <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200">

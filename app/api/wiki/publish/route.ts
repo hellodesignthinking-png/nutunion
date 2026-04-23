@@ -12,7 +12,7 @@ function generateSlug(name: string): string {
 }
 
 // ── Verify host access ──────────────────────────────────────────────────
-async function verifyHost(supabase: any, groupId: string, userId: string): Promise<boolean> {
+async function verifyHost(supabase: import("@supabase/supabase-js").SupabaseClient, groupId: string, userId: string): Promise<boolean> {
   const { data: group } = await supabase
     .from("groups")
     .select("host_id")
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "발행하려면 최소 1개 이상의 섹션이 필요합니다" }, { status: 400 });
   }
 
-  const topicIds = topics.map((t: any) => t.id);
+  const topicIds = (topics as { id: string }[]).map((t) => t.id);
   const { count: pageCount } = await supabase
     .from("wiki_pages")
     .select("id", { count: "exact", head: true })
@@ -162,7 +162,7 @@ export async function DELETE(request: NextRequest) {
     await supabase
       .from("wiki_topics")
       .update({ is_public: false })
-      .in("id", topics.map((t: any) => t.id));
+      .in("id", (topics as { id: string }[]).map((t) => t.id));
   }
 
   // Reset group wiki status to 'building'
@@ -181,7 +181,7 @@ export async function DELETE(request: NextRequest) {
 }
 
 // ── Legacy: publish single topic ───────────────────────────────────────
-async function publishSingleTopic(supabase: any, topicId: string, publicDescription: string, userId: string) {
+async function publishSingleTopic(supabase: import("@supabase/supabase-js").SupabaseClient, topicId: string, publicDescription: string, userId: string) {
   const { data: topic } = await supabase
     .from("wiki_topics")
     .select("id, name, group_id")

@@ -345,8 +345,9 @@ export function AdminUserList({ users, migrationDone = false }: { users: UserWit
       } : u));
 
       toast.success(data.gradeSaved ? "회원 정보가 저장되었습니다 ✓" : "역할/너트 권한이 저장되었습니다");
-    } catch (e: any) {
-      toast.error("네트워크 오류: " + e.message);
+    } catch (e: unknown) {
+    const __e = e as { message?: string; code?: number; name?: string };
+      toast.error("네트워크 오류: " + __e.message);
     }
     setEditingId(null);
     setSavingId(null);

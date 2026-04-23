@@ -1,8 +1,52 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { BookOpen, ExternalLink, Loader2 } from "lucide-react";
+
+function ArchiveToTapButton({ projectId }: { projectId: string }) {
+  const [loading, setLoading] = useState(false);
+  const [archived, setArchived] = useState<{ url: string } | null>(null);
+
+  async function handleArchive() {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/archive-to-wiki`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "승격 실패");
+      setArchived({ url: data.url });
+      toast.success(data.already_archived ? "이미 승격됨" : "탭(Tap) 아카이브에 승격됐습니다");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (archived) {
+    return (
+      <Link href={archived.url}
+        className="border-[2px] border-green-600 text-green-700 bg-green-50 px-2 py-1 font-mono-nu text-[9px] uppercase tracking-wider no-underline inline-flex items-center gap-1">
+        <BookOpen size={10} /> 탭 보기 <ExternalLink size={9} />
+      </Link>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleArchive}
+      disabled={loading}
+      title="이 볼트의 회고를 탭(Tap) 아카이브에 영구 보관"
+      className="border-[2px] border-nu-pink text-nu-pink px-2 py-1 font-mono-nu text-[9px] uppercase tracking-wider hover:bg-nu-pink hover:text-nu-paper disabled:opacity-50 inline-flex items-center gap-1"
+    >
+      {loading ? <Loader2 size={10} className="animate-spin" /> : <BookOpen size={10} />}
+      탭 아카이브
+    </button>
+  );
+}
 
 interface Contributor {
   name: string;
@@ -76,16 +120,19 @@ export function ProjectClosureBanner({
             <span className="font-mono-nu text-[11px] text-nu-graphite">{closedDate} 마감</span>
           )}
         </div>
-        {canCancel && (
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={cancelling}
-            className="border-[2px] border-nu-ink/30 text-nu-graphite px-2 py-1 font-mono-nu text-[9px] uppercase tracking-wider hover:border-red-500 hover:text-red-600 disabled:opacity-50"
-          >
-            {cancelling ? "취소 중..." : "마감 취소"}
-          </button>
-        )}
+        <div className="flex items-center gap-1.5">
+          <ArchiveToTapButton projectId={project.id} />
+          {canCancel && (
+            <button
+              type="button"
+              onClick={handleCancel}
+              disabled={cancelling}
+              className="border-[2px] border-nu-ink/30 text-nu-graphite px-2 py-1 font-mono-nu text-[9px] uppercase tracking-wider hover:border-red-500 hover:text-red-600 disabled:opacity-50"
+            >
+              {cancelling ? "취소 중..." : "마감 취소"}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="p-5">

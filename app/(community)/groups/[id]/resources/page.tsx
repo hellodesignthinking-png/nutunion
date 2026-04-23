@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { createClient } from "@/lib/supabase/client";
 import { FileAttachment } from "@/lib/types";
 import { Input } from "@/components/ui/input";
@@ -38,13 +39,21 @@ import {
   Check,
 } from "lucide-react";
 import { toast } from "sonner";
-import { DrivePicker } from "@/components/integrations/drive-picker";
 import { ResourcePreviewModal } from "@/components/shared/resource-preview-modal";
+// Lazy-load FilePreviewPanel — defers highlight.js (~100kb) until user opens a preview.
+const FilePreviewPanel = dynamic(
+  () => import("@/components/shared/file-preview-panel").then((m) => ({ default: m.FilePreviewPanel })),
+  { ssr: false },
+);
+import { WikiPagePreviewPanel } from "@/components/shared/wiki-preview-panel";
 import { ResourceInteractions } from "@/components/shared/resource-interactions";
 import { ResourceEditor } from "@/components/shared/resource-editor";
 import { resolveTemplateContent } from "@/lib/template-resolver";
 import { NewDocumentModal } from "@/components/shared/new-document-modal";
-import { DriveUploader } from "@/components/integrations/drive-uploader";
+import { DriveLinkBanner } from "@/components/shared/drive-link-banner";
+import { DriveImportButton } from "@/components/shared/drive-import-button";
+import { DropZoneUpload } from "@/components/shared/drop-zone-upload";
+import { LinkPreviewPanel } from "@/components/shared/link-preview-panel";
 
 function getFileIcon(fileType: string | null) {
   if (!fileType) return <File size={20} />;
@@ -137,9 +146,29 @@ export default function ResourcesPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [isManager, setIsManager] = useState(false);
   const [hostId, setHostId] = useState<string | null>(null);
+  const [driveUrl, setDriveUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"all" | "files" | "drive" | "links" | "meetings" | "wiki" | "wiki-resources">("all");
   const [groupName, setGroupName] = useState("");
-  const [previewData, setPreviewData] = useState<{ url: string; name: string; id?: string; content?: string | null } | null>(null);
+  const [previewData, setPreviewData] = useState<{
+    url: string;
+    name: string;
+    id?: string;
+    content?: string | null;
+    mime?: string | null;
+    size?: number | null;
+    storage_type?: string | null;
+    storage_key?: string | null;
+    uploaded_by?: string | null;
+  } | null>(null);
+  const [wikiPreviewPage, setWikiPreviewPage] = useState<null | {
+    id: string;
+    title: string;
+    content: string;
+    updated_at: string;
+    topic_name?: string | null;
+    author_nickname?: string | null;
+    google_doc_url?: string | null;
+  }>(null);
   const [isSplitView, setIsSplitView] = useState(true);
   const [showAiSummary, setShowAiSummary] = useState(true);
   // isDragging removed — server upload deprecated
@@ -179,6 +208,7 @@ export default function ResourcesPage() {
       setGroupName(grp.name || "너트");
       setHostId(grp.host_id || null);
       setIsManager(grp.host_id === user.id || membership?.role === "moderator" || membership?.role === "host");
+      setDriveUrl((grp as any).google_drive_url || null);
     }
 
     // Fetch shared Google Drive folder info
@@ -469,34 +499,35 @@ export default function ResourcesPage() {
     if (!file) return;
 
     setUploading(true);
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { toast.error("로그인이 필요합니다"); setUploading(false); return; }
+    try {
+      // [Drive migration Phase 3a] R2 canonical 업로드 — 클라에서 직접 R2 로 PUT 후
+      // 서버 API 에는 메타만 전달 (RLS 우회용 DB insert 만 수행).
+      const { uploadFile } = await import("@/lib/storage/upload-client");
+      const up = await uploadFile(file, { prefix: "resources", scopeId: groupId });
 
-    const filePath = `groups/${groupId}/${Date.now()}_${file.name}`;
-    const { error: uploadError } = await supabase.storage.from("media").upload(filePath, file);
-    if (uploadError) { toast.error("파일 업로드에 실패했습니다"); setUploading(false); return; }
-
-    const { data: { publicUrl } } = supabase.storage.from("media").getPublicUrl(filePath);
-
-    const { error: insertError } = await supabase.from("file_attachments").insert({
-      target_type: "group",
-      target_id: groupId,
-      uploaded_by: user.id,
-      file_name: file.name,
-      file_url: publicUrl,
-      file_size: file.size,
-      file_type: file.type,
-    });
-
-    if (insertError) {
-      toast.error("파일 정보 저장에 실패했습니다");
-    } else {
-      toast.success("파일이 업로드되었습니다");
+      const res = await fetch("/api/resources/group", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          group_id: groupId,
+          file_name: up.name,
+          file_url: up.url,
+          file_size: up.size,
+          file_type: up.mime,
+          storage_type: up.storage,
+          storage_key: up.key,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "업로드 실패");
+      toast.success(`파일이 업로드되었습니다 · ${up.storage.toUpperCase()}`);
       await loadData();
+    } catch (err: any) {
+      toast.error(err.message || "업로드 실패");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
     }
-    setUploading(false);
-    e.target.value = "";
   }
 
 
@@ -551,9 +582,12 @@ export default function ResourcesPage() {
     }
   }
 
-  const uploadedFiles = files.filter((f) => f.file_type !== "drive-link" && f.file_type !== "url-link");
-  const driveFiles = files.filter((f) => f.file_type === "drive-link");
-  const externalLinks = files.filter((f) => f.file_type === "url-link");
+  // Genesis R2 folder placeholders — 자료실 상단 "폴더" 섹션에 별도 표시
+  const genesisFolders = files.filter((f) => f.file_type === "folder-placeholder" || (f.file_name || "").startsWith("📁 "));
+  const normalFiles = files.filter((f) => f.file_type !== "folder-placeholder" && !(f.file_name || "").startsWith("📁 "));
+  const uploadedFiles = normalFiles.filter((f) => f.file_type !== "drive-link" && f.file_type !== "url-link");
+  const driveFiles = normalFiles.filter((f) => f.file_type === "drive-link");
+  const externalLinks = normalFiles.filter((f) => f.file_type === "url-link");
 
   const filteredUploadedFiles = uploadedFiles.filter((f) => f.file_name.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredDriveFiles = driveFiles.filter((f) => f.file_name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -589,6 +623,20 @@ export default function ResourcesPage() {
             <ChevronRight size={12} className="text-nu-muted/40" />
             <span className="text-nu-ink">자료실</span>
           </nav>
+
+          {/* Google Drive 연결 상태 배너 */}
+          {groupId && (
+            <DriveLinkBanner
+              targetType="group"
+              targetId={String(groupId)}
+              canManage={!!(userId && hostId && userId === hostId)}
+              driveUrl={driveUrl}
+            />
+          )}
+
+          {/* 미리보기 힌트 */}
+          <ResourcePreviewHint />
+
 
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
@@ -634,69 +682,61 @@ export default function ResourcesPage() {
             />
           </div>
 
-          {/* ── Quick Upload Hub ── */}
+          {/* ── Quick Upload Hub (3-button consolidated) ── */}
           <div className="mb-6 border-[2px] border-dashed border-nu-ink/15 bg-nu-white">
             <div className="px-5 py-4 flex flex-col sm:flex-row items-center gap-3">
-              <>
-                <div className="flex items-center gap-2 text-nu-muted flex-shrink-0">
-                  <Upload size={16} />
-                  <span className="font-mono-nu text-[12px] uppercase tracking-widest font-bold">Quick Add</span>
-                </div>
-                <div className="flex-1 flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                    {/* Link Add */}
-                    <button
-                      onClick={() => setShowLinkInput(!showLinkInput)}
-                      className={`flex items-center gap-2 font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2.5 border-[2px] transition-all ${
-                        showLinkInput ? "bg-nu-blue text-white border-nu-blue" : "border-nu-ink/10 text-nu-muted hover:border-nu-ink"
-                      }`}
-                    >
-                      <Link2 size={14} /> 링크 연결
-                    </button>
+              <div className="flex items-center gap-2 text-nu-muted flex-shrink-0">
+                <Upload size={16} />
+                <span className="font-mono-nu text-[12px] uppercase tracking-widest font-bold">Quick Add</span>
+              </div>
+              <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-wrap">
+                {/* 1. 새 문서 */}
+                <button
+                  onClick={() => setShowNewDocModal(true)}
+                  className="flex items-center justify-center gap-2 font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-pink text-white hover:bg-nu-pink/90 transition-all cursor-pointer border-[2px] border-nu-pink"
+                >
+                  <FileText size={14} /> ✍️ 새 문서
+                </button>
 
-                    {/* New Document */}
-                    <button
-                      onClick={() => setShowNewDocModal(true)}
-                      className="flex items-center gap-2 font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-pink text-white hover:bg-nu-pink/90 transition-all cursor-pointer border-none"
-                    >
-                      <FileText size={14} /> 새 문서
-                    </button>
+                {/* 2. 파일 업로드 (R2) */}
+                <label className={`flex items-center justify-center gap-2 font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2.5 border-[2px] border-nu-ink bg-nu-white text-nu-ink transition-all cursor-pointer hover:bg-nu-ink hover:text-white ${uploading ? "opacity-60 pointer-events-none" : ""}`}>
+                  {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                  📎 {uploading ? "업로드 중..." : "파일 업로드"}
+                  <input type="file" className="hidden" onChange={handleUpload} multiple={false} />
+                </label>
 
-                    {/* Drive */}
-                    <DrivePicker onFilePicked={handleDriveFilePicked} />
+                {/* 3. Google Drive 업로드 */}
+                <DriveImportButton
+                  prefix="resources"
+                  scopeId={groupId}
+                  onImported={async (fi) => {
+                    const supabase = createClient();
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (!user) { toast.error("로그인이 필요합니다"); return; }
+                    const { error } = await supabase.from("file_attachments").insert({
+                      target_type: "group",
+                      target_id: groupId,
+                      uploaded_by: user.id,
+                      file_name: fi.name,
+                      file_url: fi.url,
+                      file_size: fi.size,
+                      file_type: fi.mime,
+                    });
+                    if (error) toast.error("자료실 등록 실패: " + error.message);
+                    else await loadData();
+                  }}
+                />
 
-                    {/* Drive Upload (shared folder aware) */}
-                    <DriveUploader
-                      onUploaded={() => loadData()}
-                      targetType="group"
-                      targetId={groupId}
-                      sharedFolder={sharedFolder}
-                    />
-
-                    {/* Shared folder badge / create button for managers */}
-                    {sharedFolder ? (
-                      <a
-                        href={sharedFolder.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 font-mono-nu text-[11px] uppercase tracking-widest text-green-700 border border-green-600/30 px-3 py-2 hover:bg-green-600/10 transition-all"
-                        title="공유 Drive 폴더 열기"
-                      >
-                        <FolderOpen size={12} /> 공유 폴더
-                      </a>
-                    ) : isManager && (
-                      <button
-                        onClick={createSharedFolder}
-                        disabled={creatingFolder}
-                        className="flex items-center gap-1.5 font-mono-nu text-[11px] uppercase tracking-widest px-3 py-2 bg-green-600/10 text-green-700 border border-green-600/30 hover:bg-green-600/20 transition-all disabled:opacity-50 cursor-pointer"
-                        title="구성원 모두가 업로드할 수 있는 공유 Drive 폴더를 만듭니다"
-                      >
-                        {creatingFolder ? <Loader2 size={11} className="animate-spin" /> : <HardDrive size={11} />}
-                        {creatingFolder ? "생성 중..." : "공유 폴더 만들기"}
-                      </button>
-                    )}
-
-                  </div>
-              </>
+                {/* Link Add (secondary) */}
+                <button
+                  onClick={() => setShowLinkInput(!showLinkInput)}
+                  className={`flex items-center justify-center gap-2 font-mono-nu text-[11px] uppercase tracking-widest px-3 py-2.5 border-[2px] transition-all ${
+                    showLinkInput ? "bg-nu-blue text-white border-nu-blue" : "border-nu-ink/10 text-nu-muted hover:border-nu-ink"
+                  }`}
+                >
+                  <Link2 size={12} /> 링크
+                </button>
+              </div>
             </div>
 
             {/* Inline Link Input */}
@@ -746,7 +786,7 @@ export default function ResourcesPage() {
                 activeTab === "all" ? "border-nu-ink text-nu-ink" : "border-transparent text-nu-muted hover:text-nu-ink"
               }`}
             >
-              전체 ({files.length + wikiPages.length + meetingResources.length})
+              전체 ({files.length + wikiPages.length + meetingResources.length + wikiResources.length})
             </button>
             {([
               { key: "files", label: "파일", icon: <Upload size={13} />, count: filteredUploadedFiles.length },
@@ -795,19 +835,36 @@ export default function ResourcesPage() {
               <div className="space-y-3">
                 {/* Wiki pages */}
                 {filteredWikiPages.slice(0, 5).map((page) => (
-                  <Link key={`wiki-${page.id}`} href={`/groups/${groupId}/wiki/pages/${page.id}`}
-                    className="bg-nu-white border-[2px] border-nu-ink/[0.08] hover:border-nu-pink/40 transition-all p-4 flex items-center gap-3 no-underline group">
+                  <div key={`wiki-${page.id}`}
+                    className="bg-nu-white border-[2px] border-nu-ink/[0.08] hover:border-nu-pink/40 transition-all p-4 flex items-center gap-3 group">
                     <div className="w-9 h-9 bg-nu-pink/10 flex items-center justify-center shrink-0">
                       <Sparkles size={16} className="text-nu-pink" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 bg-nu-pink/10 text-nu-pink">탭</span>
-                        <span className="text-sm font-medium text-nu-ink truncate group-hover:text-nu-pink transition-colors">{page.title}</span>
+                        <button
+                          onClick={() => { setWikiPreviewPage({ id: page.id, title: page.title, content: page.content, updated_at: page.updated_at, topic_name: page.topic_name, author_nickname: page.author_nickname, google_doc_url: page.google_doc_url }); setPreviewData(null); if (!isSplitView) setIsSplitView(true); }}
+                          className="text-sm font-medium text-nu-ink truncate group-hover:text-nu-pink transition-colors bg-transparent border-none p-0 text-left cursor-pointer"
+                        >
+                          {page.title}
+                        </button>
                       </div>
                       <span className="font-mono-nu text-[11px] text-nu-muted/60">{new Date(page.updated_at).toLocaleDateString("ko")}</span>
                     </div>
-                  </Link>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => { setWikiPreviewPage({ id: page.id, title: page.title, content: page.content, updated_at: page.updated_at, topic_name: page.topic_name, author_nickname: page.author_nickname, google_doc_url: page.google_doc_url }); setPreviewData(null); if (!isSplitView) setIsSplitView(true); }}
+                        className="p-1.5 text-nu-muted hover:text-nu-pink transition-colors"
+                        title="미리보기"
+                      >
+                        <Eye size={14} />
+                      </button>
+                      <Link href={`/groups/${groupId}/wiki/pages/${page.id}`} className="p-1.5 text-nu-muted hover:text-nu-ink transition-colors" title="페이지로 이동">
+                        <ExternalLink size={14} />
+                      </Link>
+                    </div>
+                  </div>
                 ))}
                 {/* Recent files with source labels */}
                 {files.slice(0, 10).map((f) => (
@@ -823,7 +880,7 @@ export default function ResourcesPage() {
                           </span>
                           {resolveTemplateContent(f.file_url, f.content) ? (
                             <button
-                              onClick={() => setPreviewData({ url: f.file_url, name: f.file_name, id: f.id, content: resolveTemplateContent(f.file_url, f.content) })}
+                              onClick={() => setPreviewData({ url: f.file_url, name: f.file_name, id: f.id, content: resolveTemplateContent(f.file_url, f.content), mime: f.file_type, size: f.file_size, storage_type: (f as any).storage_type, storage_key: (f as any).storage_key, uploaded_by: f.uploaded_by })}
                               className="text-sm font-medium text-nu-ink truncate hover:text-nu-pink transition-colors text-left bg-transparent border-none cursor-pointer p-0"
                             >
                               {f.file_name}
@@ -876,19 +933,19 @@ export default function ResourcesPage() {
                         >
                           {addingWikiResource === f.id ? <Loader2 size={14} className="animate-spin" /> : <BookOpen size={14} />}
                         </button>
-                        {f.file_url && !resolveTemplateContent(f.file_url, f.content) && (
-                          <a href={f.file_url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-nu-muted hover:text-nu-ink transition-colors" onClick={(e) => e.stopPropagation()}>
-                            <ExternalLink size={14} />
-                          </a>
-                        )}
-                        {resolveTemplateContent(f.file_url, f.content) && (
+                        {f.file_url && (
                           <button
-                            onClick={() => setPreviewData({ url: f.file_url, name: f.file_name, id: f.id, content: resolveTemplateContent(f.file_url, f.content) })}
+                            onClick={() => setPreviewData({ url: f.file_url, name: f.file_name, id: f.id, content: resolveTemplateContent(f.file_url, f.content), mime: f.file_type, size: f.file_size, storage_type: (f as any).storage_type, storage_key: (f as any).storage_key, uploaded_by: f.uploaded_by })}
                             className="p-1.5 text-nu-muted hover:text-nu-pink transition-colors"
                             title="미리보기"
                           >
                             <Eye size={14} />
                           </button>
+                        )}
+                        {f.file_url && (
+                          <a href={f.file_url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-nu-muted hover:text-nu-ink transition-colors" onClick={(e) => e.stopPropagation()}>
+                            <ExternalLink size={14} />
+                          </a>
                         )}
                         {(f.uploaded_by === userId || isManager || (hostId && userId === hostId)) && (
                           <button
@@ -938,7 +995,40 @@ export default function ResourcesPage() {
                     </div>
                   </a>
                 ))}
-                {files.length === 0 && wikiPages.length === 0 && meetingResources.length === 0 && (
+                {/* 탭 자료공유(wiki_weekly_resources) — 전체 탭에 포함 */}
+                {wikiResources.filter(r => r.title.toLowerCase().includes(searchQuery.toLowerCase()) || r.url.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 8).map((r) => (
+                  <div key={`wr-${r.id}`} className="bg-nu-white border-[2px] border-nu-ink/[0.08] hover:border-nu-blue/40 transition-all p-4 flex items-center gap-3 group">
+                    <div className="w-9 h-9 bg-nu-blue/10 flex items-center justify-center shrink-0">
+                      <Link2 size={16} className="text-nu-blue" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 bg-nu-blue/10 text-nu-blue">탭 자료</span>
+                        <button
+                          onClick={() => { setPreviewData({ url: r.url, name: r.title }); if (!isSplitView) setIsSplitView(true); }}
+                          className="text-sm font-medium text-nu-ink truncate hover:text-nu-blue transition-colors text-left bg-transparent border-none cursor-pointer p-0"
+                        >
+                          {r.title}
+                        </button>
+                      </div>
+                      {r.auto_summary && <p className="text-[11px] text-nu-muted mt-0.5 line-clamp-1">{r.auto_summary}</p>}
+                      <span className="font-mono-nu text-[11px] text-nu-muted/60">{r.contributor || ""} · {timeAgo(r.created_at)}</span>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => { setPreviewData({ url: r.url, name: r.title }); if (!isSplitView) setIsSplitView(true); }}
+                        className="p-1.5 text-nu-muted hover:text-nu-pink transition-colors"
+                        title="미리보기"
+                      >
+                        <Eye size={14} />
+                      </button>
+                      <a href={r.url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-nu-muted hover:text-nu-ink transition-colors">
+                        <ExternalLink size={14} />
+                      </a>
+                    </div>
+                  </div>
+                ))}
+                {files.length === 0 && wikiPages.length === 0 && meetingResources.length === 0 && wikiResources.length === 0 && (
                   <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-12 text-center">
                     <FolderOpen size={32} className="text-nu-muted/30 mx-auto mb-3" />
                     <p className="text-nu-gray text-sm mb-2">아직 자료가 없습니다</p>
@@ -973,10 +1063,12 @@ export default function ResourcesPage() {
                               <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">{page.topic_name}</span>
                             )}
                           </div>
-                          <Link href={`/groups/${groupId}/wiki/pages/${page.id}`}
-                            className="font-head text-sm font-bold text-nu-ink group-hover:text-nu-pink transition-colors no-underline block truncate">
+                          <button
+                            onClick={() => setWikiPreviewPage({ id: page.id, title: page.title, content: page.content, updated_at: page.updated_at, topic_name: page.topic_name, author_nickname: page.author_nickname, google_doc_url: page.google_doc_url })}
+                            className="font-head text-sm font-bold text-nu-ink group-hover:text-nu-pink transition-colors block truncate bg-transparent border-none p-0 text-left cursor-pointer w-full"
+                          >
                             {page.title}
-                          </Link>
+                          </button>
                           <p className="text-xs text-nu-muted mt-1 line-clamp-2">{page.content}</p>
                           <div className="flex items-center gap-3 mt-2">
                             {page.author_nickname && (
@@ -993,6 +1085,22 @@ export default function ResourcesPage() {
                             )}
                           </div>
                         </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => setWikiPreviewPage({ id: page.id, title: page.title, content: page.content, updated_at: page.updated_at, topic_name: page.topic_name, author_nickname: page.author_nickname, google_doc_url: page.google_doc_url })}
+                            className="px-2.5 py-1.5 border-2 border-nu-ink/20 hover:border-nu-pink hover:bg-nu-pink/5 transition-colors font-mono-nu text-[11px] uppercase tracking-widest text-nu-ink inline-flex items-center gap-1"
+                            title="미리보기"
+                          >
+                            <Eye size={12} /> 미리보기
+                          </button>
+                          <Link
+                            href={`/groups/${groupId}/wiki/pages/${page.id}`}
+                            className="px-2.5 py-1.5 border-2 border-nu-ink bg-nu-cream hover:bg-nu-pink hover:text-nu-paper transition-colors font-mono-nu text-[11px] uppercase tracking-widest no-underline text-nu-ink inline-flex items-center gap-1"
+                            title="편집"
+                          >
+                            <Pencil size={12} /> 편집
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   ))
@@ -1002,6 +1110,36 @@ export default function ResourcesPage() {
 
             {activeTab === "files" && (
               <section className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="mb-4">
+                  <DropZoneUpload
+                    prefix="resources"
+                    scopeId={groupId}
+                    multiple
+                    onUploaded={async (up) => {
+                      try {
+                        const res = await fetch("/api/resources/group", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            group_id: groupId,
+                            file_name: up.name,
+                            file_url: up.url,
+                            file_size: up.size,
+                            file_type: up.mime,
+                            storage_type: up.storage,
+                            storage_key: up.key,
+                          }),
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if (!res.ok) throw new Error(data.error || "등록 실패");
+                        toast.success(`등록 완료 · ${up.storage.toUpperCase()}`);
+                        await loadData();
+                      } catch (e: any) {
+                        toast.error(e?.message || "등록 실패");
+                      }
+                    }}
+                  />
+                </div>
                 {filteredUploadedFiles.length === 0 ? (
                   <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-12 text-center overflow-hidden relative">
                     <Upload size={48} className="text-nu-muted/20 mx-auto mb-3" />
@@ -1021,7 +1159,7 @@ export default function ResourcesPage() {
                         isManager={isManager}
                         onDelete={handleDelete}
                         onRename={handleRename}
-                        onPreview={(url, name) => setPreviewData({ url, name, id: file.id, content: resolveTemplateContent(url, file.content) })}
+                        onPreview={(url, name) => setPreviewData({ url, name, id: file.id, content: resolveTemplateContent(url, file.content), mime: file.file_type, size: file.file_size, storage_type: (file as any).storage_type, storage_key: (file as any).storage_key, uploaded_by: file.uploaded_by })}
                         showAiSummary={showAiSummary}
                         aiSummary={getAiSummary(file.file_name)}
                         onToggleComments={() => toggleComments(file.id)}
@@ -1056,7 +1194,7 @@ export default function ResourcesPage() {
                     {filteredDriveFiles.map((file) => (
                       <FileCard
                         key={file.id} file={file} userId={userId} hostId={hostId} isManager={isManager} onDelete={handleDelete} onRename={handleRename} isDrive isWikiLinked={wikiLinkedIds.has(file.id)}
-                        onPreview={(url, name) => setPreviewData({ url, name, id: file.id, content: resolveTemplateContent(url, file.content) })}
+                        onPreview={(url, name) => setPreviewData({ url, name, id: file.id, content: resolveTemplateContent(url, file.content), mime: file.file_type, size: file.file_size, storage_type: (file as any).storage_type, storage_key: (file as any).storage_key, uploaded_by: file.uploaded_by })}
                         onToggleComments={() => toggleComments(file.id)}
                         commentsExpanded={!!expandedComments[file.id]}
                         comments={commentsByResource[file.id] || []}
@@ -1088,7 +1226,7 @@ export default function ResourcesPage() {
                     {filteredExternalLinks.map((file) => (
                       <FileCard
                         key={file.id} file={file} userId={userId} hostId={hostId} isManager={isManager} onDelete={handleDelete} onRename={handleRename} isLink isWikiLinked={wikiLinkedIds.has(file.id)}
-                        onPreview={(url, name) => setPreviewData({ url, name, id: file.id, content: resolveTemplateContent(url, file.content) })}
+                        onPreview={(url, name) => setPreviewData({ url, name, id: file.id, content: resolveTemplateContent(url, file.content), mime: file.file_type, size: file.file_size, storage_type: (file as any).storage_type, storage_key: (file as any).storage_key, uploaded_by: file.uploaded_by })}
                         onToggleComments={() => toggleComments(file.id)}
                         commentsExpanded={!!expandedComments[file.id]}
                         comments={commentsByResource[file.id] || []}
@@ -1247,9 +1385,16 @@ export default function ResourcesPage() {
         {isSplitView && (
           <div className="lg:flex-1 lg:sticky lg:top-8 w-full animate-in fade-in slide-in-from-right-4 duration-500 overflow-hidden">
             <div className="bg-nu-paper border-2 border-nu-ink shadow-2xl flex flex-col h-[80vh] lg:h-[calc(100vh-80px)]">
-              {previewData ? (
+              {/* 위키 페이지 콘텐츠 사이드패널 인라인 렌더링 */}
+              {wikiPreviewPage ? (
+                <WikiSidePanel
+                  page={wikiPreviewPage}
+                  groupId={groupId}
+                  onClose={() => setWikiPreviewPage(null)}
+                />
+              ) : previewData ? (
                 previewData.content ? (
-                  /* ─── Inline Editor for template resources ─── */
+                  /* ─── 인라인 문서 에디터 (template / wiki 노트 전용) ─── */
                   <ResourceEditor
                     targetType="file_attachment"
                     resourceId={previewData.id || ""}
@@ -1263,52 +1408,13 @@ export default function ResourcesPage() {
                     onClose={() => setPreviewData(null)}
                   />
                 ) : (
-                  /* ─── iframe preview for external links ─── */
-                  <div className="flex-1 flex flex-col h-full">
-                    <div className="flex items-center justify-between px-5 py-3 border-b-2 border-nu-ink bg-nu-cream/30">
-                      <div className="min-w-0 pr-4">
-                        <p className="font-head text-[13px] font-black text-nu-ink truncate uppercase tracking-tight">{previewData.name}</p>
-                        <p className="font-mono-nu text-[11px] text-nu-muted truncate uppercase tracking-widest mt-0.5">Live Document Integration</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <a href={previewData.url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-nu-muted hover:text-nu-ink" title="원본 보기">
-                          <ExternalLink size={14} />
-                        </a>
-                        <button onClick={() => setPreviewData(null)} className="p-1.5 text-nu-muted hover:text-nu-ink">
-                          <X size={16} />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex-1 bg-nu-white overflow-hidden relative">
-                      {/* Permission Guard Overlay */}
-                      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-nu-paper/95 opacity-0 pointer-events-none peer-[.iframe-error]:opacity-100 peer-[.iframe-error]:pointer-events-auto transition-opacity" id="permission-guard">
-                        <div className="text-center px-6 max-w-xs">
-                          <div className="w-14 h-14 bg-nu-amber/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <span className="text-2xl">🔒</span>
-                          </div>
-                          <p className="font-head text-sm font-bold text-nu-ink mb-2">공유 설정을 확인해주세요</p>
-                          <p className="text-[13px] text-nu-muted leading-relaxed mb-4">
-                            이 문서가 보이지 않는다면 원본 문서의 공유 설정에서
-                            <span className="font-bold text-nu-ink"> &quot;링크가 있는 모든 사용자에게 공개&quot;</span>로
-                            변경해 주세요.
-                          </p>
-                          <a href={previewData.url} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2 bg-nu-ink text-nu-paper hover:bg-nu-graphite transition-colors no-underline">
-                            <ExternalLink size={12} /> 원본에서 열기
-                          </a>
-                        </div>
-                      </div>
-                      <iframe
-                        src={getEmbedUrl(previewData.url)}
-                        className="w-full h-full border-0"
-                        allow="autoplay; encrypted-media; fullscreen"
-                        onError={() => {
-                          const guard = document.getElementById("permission-guard");
-                          if (guard) { guard.style.opacity = "1"; guard.style.pointerEvents = "auto"; }
-                        }}
-                      />
-                    </div>
-                  </div>
+                  /* ─── 모든 파일 타입 통합 미리보기 (이미지·동영상·오디오·PDF·링크·기사) ─── */
+                  <LinkPreviewPanel
+                    url={previewData.url}
+                    name={previewData.name}
+                    mime={previewData.mime}
+                    onClose={() => setPreviewData(null)}
+                  />
                 )
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-nu-muted">
@@ -1324,8 +1430,26 @@ export default function ResourcesPage() {
         )}
       </div>
 
+      {/* !isSplitView 상태에서 미리보기: 파일/PDF는 FilePreviewPanel, 템플릿은 에디터 모달, 나머지는 LinkPreviewPanel 모달 */}
       {!isSplitView && previewData && (
-        previewData.content ? (
+        isDirectPreviewable(previewData.url, previewData.storage_type) ? (
+          <FilePreviewPanel
+            open={!!previewData}
+            onClose={() => setPreviewData(null)}
+            file={{
+              id: previewData.id || "",
+              name: previewData.name,
+              url: previewData.url,
+              mime: previewData.mime,
+              size: previewData.size,
+              storage_type: previewData.storage_type,
+              storage_key: previewData.storage_key,
+            }}
+            targetTable="file_attachments"
+            canEdit={previewData.uploaded_by === userId || isManager || (hostId !== null && userId === hostId)}
+            onUpdated={() => { loadData(); }}
+          />
+        ) : previewData.content ? (
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
             <div className="bg-nu-white w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col border-2 border-nu-ink">
               <ResourceEditor
@@ -1343,12 +1467,19 @@ export default function ResourcesPage() {
             </div>
           </div>
         ) : (
-          <ResourcePreviewModal
-            isOpen={!!previewData}
-            onClose={() => setPreviewData(null)}
-            url={previewData?.url || ""}
-            name={previewData?.name || ""}
-          />
+          /* 외부 링크·기사 → 오버레이 패널로 미리보기 */
+          <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setPreviewData(null)}>
+            <div
+              className="bg-nu-white w-full sm:max-w-2xl h-[85vh] sm:h-[80vh] overflow-hidden flex flex-col border-2 border-nu-ink sm:shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <LinkPreviewPanel
+                url={previewData.url}
+                name={previewData.name}
+                onClose={() => setPreviewData(null)}
+              />
+            </div>
+          </div>
         )
       )}
 
@@ -1361,6 +1492,8 @@ export default function ResourcesPage() {
           onClose={() => setShowNewDocModal(false)}
         />
       )}
+
+      {/* 위키 페이지: 사이드패널에서 직접 렌더링되므로 WikiPagePreviewPanel 오버레이 사용 안 함 */}
     </div>
   );
 }
@@ -1551,8 +1684,28 @@ function FileCard({
   const ageHours = (Date.now() - new Date(file.created_at).getTime()) / 3600000;
   const isNew = ageHours < 48;
 
+  // ?focus=<id> 로 진입 시 해당 카드로 스크롤 + 2초간 핑크 하이라이트
+  const [focused, setFocused] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const focusId = params.get("focus");
+    if (focusId === file.id) {
+      setTimeout(() => {
+        document.getElementById(`resource-${file.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+        setFocused(true);
+        setTimeout(() => setFocused(false), 2400);
+      }, 100);
+    }
+  }, [file.id]);
+
   return (
-    <div className="group bg-nu-white border-2 border-nu-ink transition-all hover:bg-nu-cream/10 overflow-hidden">
+    <div
+      id={`resource-${file.id}`}
+      className={`group bg-nu-white border-2 border-nu-ink transition-all hover:bg-nu-cream/10 overflow-hidden ${
+        focused ? "ring-4 ring-nu-pink ring-offset-2 animate-pulse" : ""
+      }`}
+    >
       <div className="p-4 flex items-center gap-4">
         <div className={`w-12 h-12 flex items-center justify-center shrink-0 border-2 border-nu-ink/5 ${isDrive ? "bg-green-50" : isLink ? "bg-nu-blue/5" : "bg-nu-cream/50"}`}>
           {isDrive ? <HardDrive size={20} className="text-green-600" /> : isLink ? <Link2 size={20} className="text-nu-blue" /> : getFileIcon(file.file_type)}
@@ -1651,6 +1804,14 @@ function FileCard({
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* Primary: 미리보기 button — prominent for discoverability */}
+          <button
+            onClick={() => onPreview(file.file_url, file.file_name)}
+            className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-2 border-[2px] border-nu-ink bg-nu-paper text-nu-ink hover:bg-nu-pink hover:text-nu-paper hover:border-nu-pink transition-all flex items-center gap-1.5"
+            title="미리보기"
+          >
+            👁️ 미리보기
+          </button>
           {onToggleComments && (
             <button
               onClick={onToggleComments}
@@ -1670,13 +1831,6 @@ function FileCard({
               {addingWiki ? <Loader2 size={16} className="animate-spin" /> : <BookOpen size={16} />}
             </button>
           )}
-          <button
-            onClick={() => onPreview(file.file_url, file.file_name)}
-            className="p-2 text-nu-muted hover:text-nu-pink transition-colors bg-nu-paper border border-nu-ink/10"
-            title="미리보기"
-          >
-            <Eye size={16} />
-          </button>
           {!resolveTemplateContent(file.file_url, file.content) && (
             <a href={file.file_url} target="_blank" rel="noopener noreferrer" className="p-2 text-nu-muted hover:text-nu-blue transition-colors bg-nu-paper border border-nu-ink/10">
               <ExternalLink size={16} />
@@ -1817,6 +1971,28 @@ function getWikiResourceTypeLabel(resourceType: string, url: string): string {
   return resourceType || "링크";
 }
 
+// 미리보기 패널(FilePreviewPanel) 로 바로 랜더 가능한 URL 인지 판정.
+// 과거 storage_type === 'r2' 게이트는 마이그레이션 이전 파일(null/supabase) 을 전부
+// 미리보기 불가 상태로 만들었기 때문에, public URL 이기만 하면 모두 허용한다.
+// Google Drive / Docs / Notion / Sheets 는 iframe embed 로 별도 처리.
+function isDirectPreviewable(url?: string | null, storageType?: string | null): boolean {
+  if (!url) return false;
+  const u = url.toLowerCase();
+  if (u.includes("docs.google.com")) return false;
+  if (u.includes("drive.google.com")) return false;
+  if (u.includes("notion.so") || u.includes("notion.site")) return false;
+  if (u.includes("sheets.google.com")) return false;
+  // r2 / supabase storage / 기타 직접 다운로드 가능한 public URL 은 모두 OK
+  if (storageType === "r2" || storageType === "supabase") return true;
+  // storage_type 이 null 이어도 R2/Supabase public URL 패턴이면 허용
+  if (u.includes(".r2.dev") || u.includes(".r2.cloudflarestorage.com")) return true;
+  if (u.includes("/storage/v1/object/")) return true;
+  if (u.includes("supabase.co/storage")) return true;
+  // URL 에 확장자가 포함된 http(s) 파일이면 허용 (보수적)
+  if (/^https?:\/\/.+\.(pdf|png|jpe?g|gif|webp|svg|mp4|mov|webm|mp3|wav|ogg|txt|md|csv|json|docx?|xlsx?|pptx?)(\?|#|$)/i.test(url)) return true;
+  return false;
+}
+
 function getEmbedUrl(url: string | null) {
   if (!url) return "";
   if (url.includes("notion.so")) {
@@ -1842,3 +2018,131 @@ function getEmbedUrl(url: string | null) {
   }
   return url;
 }
+
+function ResourcePreviewHint() {
+  const [dismissed, setDismissed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem("nu:hint:resources-preview");
+    setDismissed(stored === "1");
+    setLoaded(true);
+  }, []);
+  if (!loaded || dismissed) return null;
+  return (
+    <div className="mb-4 flex items-center gap-3 px-4 py-3 bg-nu-blue/5 border-[2px] border-nu-blue/30">
+      <span className="text-lg">💡</span>
+      <p className="flex-1 text-sm text-nu-ink">
+        <span className="font-bold">파일을 클릭하면 미리보기와 편집이 가능합니다.</span>
+        <span className="text-nu-muted ml-2">각 자료 행의 <span className="font-mono-nu text-[12px] font-bold">👁️ 미리보기</span> 버튼으로도 열 수 있습니다.</span>
+      </p>
+      <button
+        onClick={() => {
+          try { window.localStorage.setItem("nu:hint:resources-preview", "1"); } catch {}
+          setDismissed(true);
+        }}
+        className="p-1.5 text-nu-muted hover:text-nu-ink"
+        title="닫기"
+      >
+        <X size={14} />
+      </button>
+    </div>
+  );
+}
+
+/* ── WikiSidePanel: 사이드패널 안에서 위키 페이지 인라인 표시 ───────────────── */
+const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false, loading: () => <span className="text-xs text-nu-muted">불러오는 중…</span> });
+
+function WikiSidePanel({
+  page,
+  groupId,
+  onClose,
+}: {
+  page: {
+    id: string;
+    title: string;
+    content: string;
+    updated_at: string;
+    topic_name?: string | null;
+    author_nickname?: string | null;
+    google_doc_url?: string | null;
+  };
+  groupId: string;
+  onClose: () => void;
+}) {
+  const editHref = `/groups/${groupId}/wiki/pages/${page.id}`;
+  const updatedLabel = (() => {
+    try { return new Date(page.updated_at).toLocaleString("ko"); } catch { return page.updated_at; }
+  })();
+
+  return (
+    <div className="flex-1 flex flex-col h-full overflow-hidden">
+      {/* 헤더 */}
+      <div className="flex items-start justify-between px-4 py-3 border-b-2 border-nu-ink bg-nu-cream/30 shrink-0 gap-3">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="w-8 h-8 bg-nu-pink/10 border border-nu-pink/20 flex items-center justify-center shrink-0 mt-0.5">
+            <Sparkles size={14} className="text-nu-pink" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-0.5">
+              <span className="font-mono-nu text-[9px] uppercase tracking-widest px-1.5 py-0.5 bg-nu-pink/10 text-nu-pink border border-nu-pink/20">탭 페이지</span>
+              {page.topic_name && (
+                <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">{page.topic_name}</span>
+              )}
+            </div>
+            <h3 className="font-head text-[14px] font-bold text-nu-ink leading-snug break-words">{page.title}</h3>
+            <div className="flex items-center gap-2 mt-0.5 font-mono-nu text-[10px] text-nu-muted">
+              {page.author_nickname && <span>by {page.author_nickname}</span>}
+              <span className="text-nu-muted/60">{updatedLabel}</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <Link
+            href={editHref}
+            className="inline-flex items-center gap-1 px-2 py-1 border-2 border-nu-ink bg-nu-white hover:bg-nu-ink hover:text-nu-paper transition-colors font-mono-nu text-[10px] uppercase tracking-widest no-underline text-nu-ink"
+            title="편집 페이지로 이동"
+          >
+            <ExternalLink size={11} /> 편집
+          </Link>
+          <button onClick={onClose} className="p-1.5 text-nu-muted hover:text-nu-ink transition-colors">
+            <X size={14} />
+          </button>
+        </div>
+      </div>
+
+      {/* 본문 */}
+      <div className="flex-1 overflow-y-auto px-5 py-4">
+        {page.google_doc_url && (
+          <a
+            href={page.google_doc_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 mb-4 px-2.5 py-1.5 border-2 border-green-600/30 bg-green-50 text-green-700 font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-green-600 hover:text-white transition-colors"
+          >
+            <ExternalLink size={11} /> Google Docs 원본
+          </a>
+        )}
+        {page.content ? (
+          <article className="prose prose-sm max-w-none text-nu-ink prose-headings:font-head prose-headings:text-nu-ink prose-a:text-nu-pink prose-strong:text-nu-ink prose-code:text-nu-pink prose-code:bg-nu-pink/5 prose-code:px-1 prose-code:py-0.5 prose-code:rounded-none prose-code:before:content-[''] prose-code:after:content-[''] prose-pre:bg-nu-ink prose-pre:text-nu-paper">
+            <ReactMarkdown>{page.content}</ReactMarkdown>
+          </article>
+        ) : (
+          <p className="font-mono-nu text-[12px] text-nu-muted">(내용이 비어 있는 페이지입니다)</p>
+        )}
+      </div>
+
+      {/* 푸터 */}
+      <div className="border-t-2 border-nu-ink px-4 py-2.5 bg-nu-cream/50 flex items-center justify-between shrink-0">
+        <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">Read-only preview</span>
+        <Link
+          href={editHref}
+          className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-pink hover:underline no-underline"
+        >
+          페이지로 이동 →
+        </Link>
+      </div>
+    </div>
+  );
+}
+

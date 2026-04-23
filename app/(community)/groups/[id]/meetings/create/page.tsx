@@ -317,7 +317,7 @@ export default function CreateMeetingPage() {
 
             {/* Add agenda form */}
             <div className="flex flex-col gap-3 bg-nu-cream/20 border border-dashed border-nu-ink/10 p-4">
-              <div className="grid grid-cols-1 md:grid-cols-[1fr_80px] gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_110px] gap-3">
                 <Input
                   value={newAgenda.topic}
                   onChange={(e) =>
@@ -326,6 +326,7 @@ export default function CreateMeetingPage() {
                   placeholder="안건 주제"
                   className="border-nu-ink/15 bg-transparent"
                 />
+                <div className="relative">
                 <Input
                   type="number"
                   min={1}
@@ -336,9 +337,13 @@ export default function CreateMeetingPage() {
                       duration_min: parseInt(e.target.value) || 10,
                     }))
                   }
-                  placeholder="분"
-                  className="border-nu-ink/15 bg-transparent"
+                  placeholder="10"
+                  className="border-nu-ink/15 bg-transparent pr-10"
                 />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 font-mono-nu text-[11px] text-nu-muted pointer-events-none select-none">
+                  분
+                </span>
+                </div>
               </div>
               <Textarea
                 value={newAgenda.description}

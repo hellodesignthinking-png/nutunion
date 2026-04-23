@@ -12,8 +12,10 @@ import { PageHero } from "@/components/shared/page-hero";
 import type { Notification } from "@/lib/types";
 
 // ─── 타입별 설정 ────────────────────────────────────────────────────
+type NotifMeta = { group_id?: string; event_id?: string; project_id?: string; [k: string]: unknown };
+type IconComponent = React.ComponentType<{ size?: number | string; className?: string }>;
 const TYPE_CONFIG: Record<string, {
-  icon: any; color: string; bg: string; label: string; getLink?: (meta: any) => string
+  icon: IconComponent; color: string; bg: string; label: string; getLink?: (meta: NotifMeta) => string
 }> = {
   group_invite:       { icon: Users,        color: "text-nu-blue",   bg: "bg-nu-blue/10",   label: "너트 초대",   getLink: (m) => m?.group_id ? `/groups/${m.group_id}` : "/groups" },
   group_accepted:     { icon: UserPlus,     color: "text-green-600", bg: "bg-green-50",     label: "가입 승인",    getLink: (m) => m?.group_id ? `/groups/${m.group_id}` : "/groups" },
@@ -29,10 +31,11 @@ function getConfig(type: string) {
   return TYPE_CONFIG[type] || { icon: Bell, color: "text-nu-muted", bg: "bg-nu-cream", label: type, getLink: () => "/dashboard" };
 }
 
-function parseMetadata(meta: any) {
+function parseMetadata(meta: unknown): NotifMeta {
   if (!meta) return {};
-  if (typeof meta === "string") { try { return JSON.parse(meta); } catch { return {}; } }
-  return meta;
+  if (typeof meta === "string") { try { return JSON.parse(meta) as NotifMeta; } catch { return {}; } }
+  if (typeof meta === "object") return meta as NotifMeta;
+  return {};
 }
 
 function timeAgo(dateStr: string) {
@@ -77,13 +80,14 @@ export default function NotificationsPage() {
   useEffect(() => {
     if (!userId) return;
     const supabase = createClient();
+    const uniq = Math.random().toString(36).slice(2, 8);
     const channel = supabase
-      .channel("notif-page")
+      .channel(`notif-page-${uniq}`)
       .on("postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
         (payload) => {
           setNotifications((prev) => [payload.new as Notification, ...prev]);
-          toast.info((payload.new as any).title || "새 알림이 도착했습니다");
+          toast.info((payload.new as { title?: string }).title || "새 알림이 도착했습니다");
         }
       )
       .subscribe();
@@ -206,7 +210,7 @@ export default function NotificationsPage() {
               <div className="space-y-2">
                 {grouped[group].map((n) => {
                   const cfg    = getConfig(n.type);
-                  const meta   = parseMetadata((n as any).metadata);
+                  const meta   = parseMetadata((n as { metadata?: unknown }).metadata);
                   const href   = cfg.getLink ? cfg.getLink(meta) : "/dashboard";
                   const CfgIcon = cfg.icon;
 
@@ -226,8 +230,8 @@ export default function NotificationsPage() {
                           {!n.is_read && <span className="w-1.5 h-1.5 rounded-full bg-nu-pink shrink-0" />}
                         </div>
                         <p className="text-sm font-medium text-nu-ink">{n.title}</p>
-                        {(n as any).body && (
-                          <p className="text-xs text-nu-gray mt-0.5 line-clamp-2">{(n as any).body}</p>
+                        {(n as { body?: string }).body && (
+                          <p className="text-xs text-nu-gray mt-0.5 line-clamp-2">{(n as { body?: string }).body}</p>
                         )}
                         <p className="font-mono-nu text-[12px] text-nu-muted mt-1.5">{timeAgo(n.created_at)}</p>
                       </div>

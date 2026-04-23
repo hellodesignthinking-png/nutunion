@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { ProfileEnhanceSuggest } from "@/components/ai/profile-enhance-suggest";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,6 +23,7 @@ import type { Profile } from "@/lib/types";
 import { SkillBadgeDisplay } from "@/components/shared/skill-badge-display";
 import { EndorsementPanel } from "@/components/shared/endorsement-panel";
 import { PortfolioManager } from "@/components/portfolio/portfolio-manager";
+import { RoleTagsPicker } from "@/components/washer/role-tags-picker";
 
 // ─── 등급 helper ──────────────────────────────────────────────────────
 const GRADE_MAP: Record<string, { label: string; color: string; icon: any }> = {
@@ -178,7 +180,17 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<any | null>(null);
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ name: "", nickname: "", specialty: "", bio: "", phone: "", skill_tags: [] as string[] });
+  const [form, setForm] = useState({
+    name: "", nickname: "", specialty: "", bio: "", phone: "", slogan: "",
+    skill_tags: [] as string[], role_tags: [] as string[],
+    availability: "observing" as "looking" | "focused" | "observing",
+    birth_date: "", birth_time: "",
+    birth_calendar: "solar" as "solar" | "lunar",
+    gender: "" as "" | "male" | "female" | "other",
+    address_region: "",
+  });
+  const [personalOpen, setPersonalOpen] = useState(true);
+  const [hasBirthColumn, setHasBirthColumn] = useState(true);
   const [links, setLinks] = useState({ notion: "", github: "", drive: "", website: "", instagram: "", facebook: "" });
   const [newSkill, setNewSkill] = useState("");
   const [editLinks, setEditLinks] = useState(false);
@@ -202,13 +214,23 @@ export default function ProfilePage() {
       const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
       if (data) {
         setProfile(data);
-        setForm({ 
-          name: data.name||"", 
-          nickname: data.nickname||"", 
-          specialty: data.specialty||"", 
-          bio: data.bio||"", 
+        // birth_date 컬럼이 응답에 포함되어 있으면 migration 102 OK
+        setHasBirthColumn(Object.prototype.hasOwnProperty.call(data, "birth_date"));
+        setForm({
+          name: data.name||"",
+          nickname: data.nickname||"",
+          specialty: data.specialty||"",
+          bio: data.bio||"",
           phone: data.phone||"",
-          skill_tags: data.skill_tags || []
+          slogan: data.slogan||"",
+          skill_tags: data.skill_tags || [],
+          role_tags: data.role_tags || [],
+          availability: (data.availability as any) || "observing",
+          birth_date: data.birth_date || "",
+          birth_time: data.birth_time ? String(data.birth_time).slice(0, 5) : "",
+          birth_calendar: (data.birth_calendar as any) || "solar",
+          gender: (data.gender as any) || "",
+          address_region: data.address_region || "",
         });
         setLinks({ 
           notion: data.link_notion||"", 
@@ -264,18 +286,66 @@ export default function ProfilePage() {
     load();
   }, []);
 
+  // URL ?edit=1 → 자동 편집모드 + #personal-info 스크롤
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("edit") === "1") {
+      setEditing(true);
+      setPersonalOpen(true);
+    }
+    if (window.location.hash === "#personal-info") {
+      setEditing(true);
+      setPersonalOpen(true);
+      // DOM 렌더 대기 후 스크롤
+      setTimeout(() => {
+        const el = document.getElementById("personal-info");
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 400);
+    }
+  }, [profile]);
+
   async function handleSave() {
     if (!profile) return;
     setLoading(true);
     const supabase = createClient();
-    const { error } = await supabase.from("profiles").update({
-      name: form.name, 
+    const payload: any = {
+      name: form.name,
       nickname: form.nickname,
       specialty: form.specialty || null,
-      bio: form.bio || null, 
+      bio: form.bio || null,
       phone: form.phone || null,
-      skill_tags: form.skill_tags
-    }).eq("id", profile.id);
+      slogan: form.slogan || null,
+      skill_tags: form.skill_tags,
+      role_tags: form.role_tags,
+      availability: form.availability,
+      birth_date: form.birth_date || null,
+      birth_time: form.birth_time || null,
+      birth_calendar: form.birth_calendar || "solar",
+      gender: form.gender || null,
+      address_region: form.address_region || null,
+    };
+    let { error } = await supabase.from("profiles").update(payload).eq("id", profile.id);
+    if (error && /birth_date|birth_time|birth_calendar|gender|address_region/.test(error.message || "")) {
+      // migration 102 미적용 시 — 개인정보 필드 제거 후 재시도
+      delete payload.birth_date;
+      delete payload.birth_time;
+      delete payload.birth_calendar;
+      delete payload.gender;
+      delete payload.address_region;
+      ({ error } = await supabase.from("profiles").update(payload).eq("id", profile.id));
+    }
+    if (error && /role_tags/.test(error.message || "")) {
+      // migration 086 미적용 시
+      delete payload.role_tags;
+      ({ error } = await supabase.from("profiles").update(payload).eq("id", profile.id));
+    }
+    if (error && /slogan|availability/.test(error.message || "")) {
+      // 컬럼 누락 시 graceful fallback
+      delete payload.slogan;
+      delete payload.availability;
+      ({ error } = await supabase.from("profiles").update(payload).eq("id", profile.id));
+    }
     if (error) toast.error(error.code === "23505" ? "이미 사용 중인 닉네임입니다" : error.message);
     else { setProfile({ ...profile, ...form }); setEditing(false); toast.success("프로필이 업데이트되었습니다"); }
     setLoading(false);
@@ -322,16 +392,50 @@ export default function ProfilePage() {
   async function handleAvatarUpload(file: File) {
     if (!profile) return;
     setUploading(true);
-    const supabase = createClient();
-    const ext = file.name.split(".").pop();
-    const fileName = `avatar_${profile.id}_${Date.now()}.${ext}`;
-    const { error: uploadErr } = await supabase.storage.from("media").upload(fileName, file, { upsert: false });
-    if (uploadErr) { toast.error("업로드 실패"); setUploading(false); return; }
-    const { data: urlData } = supabase.storage.from("media").getPublicUrl(fileName);
-    await supabase.from("profiles").update({ avatar_url: urlData.publicUrl }).eq("id", profile.id);
-    setProfile({ ...profile, avatar_url: urlData.publicUrl });
-    toast.success("프로필 사진이 변경되었습니다");
-    setUploading(false);
+    try {
+      // 1) R2 우선 시도 (대용량·CDN 이점)
+      let publicUrl: string | null = null;
+      let storageLabel = "SUPABASE";
+      try {
+        const { uploadFile } = await import("@/lib/storage/upload-client");
+        const r2tryPresign = await fetch("/api/storage/r2/presign", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prefix: "avatars", fileName: file.name, contentType: file.type, size: file.size }),
+        });
+        const presignJson = await r2tryPresign.json();
+        if (r2tryPresign.ok && presignJson.configured) {
+          const result = await uploadFile(file, { prefix: "avatars", scopeId: profile.id });
+          publicUrl = result.url;
+          storageLabel = result.storage.toUpperCase();
+        }
+      } catch {
+        /* R2 불가 — 다음 폴백 */
+      }
+
+      // 2) Supabase 는 RLS 회피 위해 반드시 서버 API 경유
+      if (!publicUrl) {
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch("/api/profile/avatar", { method: "POST", body: form });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "업로드 실패");
+        publicUrl = data.url;
+        storageLabel = "SUPABASE";
+      }
+
+      // 3) profiles.avatar_url 갱신 (서버 API 는 이미 자체 업데이트하지만, R2 경로는 클라가 업데이트)
+      if (publicUrl) {
+        const supabase = createClient();
+        await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", profile.id);
+        setProfile({ ...profile, avatar_url: publicUrl });
+        toast.success(`프로필 사진 변경 · ${storageLabel}`);
+      }
+    } catch (err: any) {
+      toast.error(err.message || "업로드 실패");
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function handleGoogleDisconnect() {
@@ -442,6 +546,24 @@ export default function ProfilePage() {
             <h3 className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-4">기본 정보</h3>
             {editing ? (
               <div className="space-y-3">
+                {/* 편집 모드 진입 배너 — 개인정보 섹션으로 스크롤 유도 */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPersonalOpen(true);
+                    setTimeout(() => {
+                      const el = document.getElementById("personal-info");
+                      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }, 150);
+                  }}
+                  className="w-full text-left flex items-center justify-between gap-2 bg-nu-pink/10 border-[2px] border-nu-pink px-3 py-2 hover:bg-nu-pink/20 transition-colors"
+                >
+                  <span className="text-[12px] text-nu-ink">
+                    🔮 <b>AI 비서 개인화</b>를 위한 선택 정보는 아래에서 입력할 수 있어요
+                  </span>
+                  <ChevronRight size={12} className="text-nu-pink shrink-0" />
+                </button>
+
                 <div>
                   <Label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">이름</Label>
                   <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="mt-1 border-nu-ink/15 bg-transparent text-sm" />
@@ -465,6 +587,43 @@ export default function ProfilePage() {
                       <SelectItem value="vibe">바이브 (Vibe)</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div>
+                  <Label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">한줄 슬로건</Label>
+                  <Input value={form.slogan} onChange={e => setForm({...form, slogan: e.target.value.slice(0, 60)})} placeholder="내 철학을 한 줄로 (최대 60자)" className="mt-1 border-nu-ink/15 bg-transparent text-sm" />
+                  <p className="mt-0.5 text-[10px] text-nu-graphite font-mono-nu">포트폴리오 페이지 상단에 인용구처럼 표시됩니다</p>
+                </div>
+
+                <div>
+                  <ProfileEnhanceSuggest
+                    currentSkills={form.skill_tags}
+                    onApplySkills={(skills) => setForm({ ...form, skill_tags: skills })}
+                    onApplySlogan={(slogan) => setForm({ ...form, slogan: slogan.slice(0, 60) })}
+                  />
+                </div>
+                <div>
+                  <Label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">가용성 (지금 상태)</Label>
+                  <div className="grid grid-cols-3 gap-1 mt-1">
+                    {([
+                      { k: "looking",   label: "🔍 찾는 중", hint: "새 볼트 OK" },
+                      { k: "focused",   label: "🔥 집중 중", hint: "기존 볼트만" },
+                      { k: "observing", label: "👀 관망",    hint: "가끔 살펴봄" },
+                    ] as const).map((v) => (
+                      <button
+                        key={v.k}
+                        type="button"
+                        onClick={() => setForm({ ...form, availability: v.k })}
+                        className={`p-2 border-[2px] text-left transition-colors ${
+                          form.availability === v.k
+                            ? "border-nu-ink bg-nu-ink text-nu-paper"
+                            : "border-nu-ink/15 text-nu-graphite hover:border-nu-ink/40"
+                        }`}
+                      >
+                        <div className="font-mono-nu text-[11px] font-bold">{v.label}</div>
+                        <div className="font-mono-nu text-[9px] opacity-70">{v.hint}</div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div>
                   <Label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">자기소개</Label>
@@ -497,6 +656,122 @@ export default function ProfilePage() {
                     />
                   </div>
                 </div>
+
+                {/* Role Tags — 매칭용 역할 팔레트 */}
+                <div className="pt-2 border-t border-nu-ink/10">
+                  <RoleTagsPicker
+                    value={form.role_tags as any}
+                    onChange={(tags) => setForm({ ...form, role_tags: tags })}
+                  />
+                </div>
+
+                {/* 🔮 개인 정보 (바이오리듬/사주) — 기본 펼침 */}
+                <div id="personal-info" className="pt-3 border-t-[2px] border-nu-ink/10 scroll-mt-24">
+                  <button
+                    type="button"
+                    onClick={() => setPersonalOpen(v => !v)}
+                    className="w-full flex items-center justify-between font-mono-nu text-[11px] uppercase tracking-widest text-nu-ink hover:text-nu-pink py-1"
+                  >
+                    <span>🔮 개인 정보 (바이오리듬/사주) — AI 비서 개인화</span>
+                    <ChevronRight size={11} className={`transition-transform ${personalOpen ? "rotate-90" : ""}`} />
+                  </button>
+                  {personalOpen && (
+                    <div className="mt-3 space-y-3 border-[2px] border-nu-pink/40 bg-nu-cream/30 p-3">
+                      <p className="font-mono-nu text-[10px] text-nu-graphite leading-relaxed">
+                        이 정보는 본인만 볼 수 있으며, AI 비서 개인화(바이오리듬/사주/날씨/연령별 톤)에만 사용됩니다.
+                      </p>
+                      {!hasBirthColumn && (
+                        <div className="flex items-start gap-2 bg-amber-50 border-[2px] border-amber-400 px-2 py-1.5">
+                          <AlertTriangle size={12} className="shrink-0 text-amber-700 mt-0.5" />
+                          <p className="text-[11px] text-amber-800 leading-snug">
+                            생년월일 저장을 위해 서버 마이그레이션(<code>102_profile_personal.sql</code>)이 필요합니다. 관리자에게 문의하세요.
+                            아래 값을 미리 입력해 두면 마이그레이션 적용 직후 저장됩니다.
+                          </p>
+                        </div>
+                      )}
+
+                      <div>
+                        <Label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">생년월일</Label>
+                        <input
+                          type="date"
+                          value={form.birth_date}
+                          onChange={e => setForm({ ...form, birth_date: e.target.value })}
+                          className="mt-1 w-full px-2 py-1.5 border border-nu-ink/15 bg-transparent text-sm focus:outline-none focus:border-nu-pink"
+                        />
+                      </div>
+
+                      <div>
+                        <Label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">출생 시각</Label>
+                        <input
+                          type="time"
+                          value={form.birth_time}
+                          onChange={e => setForm({ ...form, birth_time: e.target.value })}
+                          className="mt-1 w-full px-2 py-1.5 border border-nu-ink/15 bg-transparent text-sm focus:outline-none focus:border-nu-pink"
+                        />
+                        <p className="mt-0.5 text-[10px] text-nu-graphite font-mono-nu">사주 정확도를 위해 (선택)</p>
+                      </div>
+
+                      <div>
+                        <Label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">양력/음력</Label>
+                        <div className="grid grid-cols-2 gap-1 mt-1">
+                          {([
+                            { k: "solar", label: "양력" },
+                            { k: "lunar", label: "음력" },
+                          ] as const).map(o => (
+                            <button
+                              key={o.k}
+                              type="button"
+                              onClick={() => setForm({ ...form, birth_calendar: o.k })}
+                              className={`p-2 border-[2px] font-mono-nu text-[11px] uppercase tracking-widest transition-colors ${
+                                form.birth_calendar === o.k
+                                  ? "border-nu-ink bg-nu-ink text-nu-paper"
+                                  : "border-nu-ink/15 text-nu-graphite hover:border-nu-ink/40"
+                              }`}
+                            >
+                              {o.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">성별</Label>
+                        <div className="grid grid-cols-3 gap-1 mt-1">
+                          {([
+                            { k: "male", label: "남성" },
+                            { k: "female", label: "여성" },
+                            { k: "other", label: "기타" },
+                          ] as const).map(o => (
+                            <button
+                              key={o.k}
+                              type="button"
+                              onClick={() => setForm({ ...form, gender: form.gender === o.k ? "" : o.k })}
+                              className={`p-2 border-[2px] font-mono-nu text-[11px] uppercase tracking-widest transition-colors ${
+                                form.gender === o.k
+                                  ? "border-nu-ink bg-nu-ink text-nu-paper"
+                                  : "border-nu-ink/15 text-nu-graphite hover:border-nu-ink/40"
+                              }`}
+                            >
+                              {o.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">거주 지역</Label>
+                        <Input
+                          value={form.address_region}
+                          onChange={e => setForm({ ...form, address_region: e.target.value.slice(0, 60) })}
+                          placeholder="예: 서울 강남구"
+                          className="mt-1 border-nu-ink/15 bg-transparent text-sm"
+                        />
+                        <p className="mt-0.5 text-[10px] text-nu-graphite font-mono-nu">아침 브리핑 날씨를 거주지 기준으로 조정합니다</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex gap-2 pt-1">
                   <button onClick={handleSave} disabled={loading}
                     className="flex-1 font-mono-nu text-[12px] uppercase tracking-widest py-2 bg-nu-ink text-nu-paper hover:bg-nu-pink transition-colors disabled:opacity-50 flex items-center justify-center gap-1">
@@ -510,9 +785,49 @@ export default function ProfilePage() {
               </div>
             ) : (
               <div className="space-y-2 text-sm">
+                {hasBirthColumn && !profile.birth_date && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditing(true);
+                      setPersonalOpen(true);
+                      setTimeout(() => {
+                        const el = document.getElementById("personal-info");
+                        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }, 200);
+                    }}
+                    className="w-full text-left flex items-center justify-between gap-2 bg-nu-pink/10 border-[2px] border-nu-pink px-3 py-2 mb-1 hover:bg-nu-pink/20 transition-colors"
+                  >
+                    <span className="text-[12px] text-nu-ink">
+                      🔮 AI 비서 개인화를 위해 생년월일을 등록해보세요
+                    </span>
+                    <ChevronRight size={12} className="text-nu-pink shrink-0" />
+                  </button>
+                )}
                 <div className="flex gap-2"><span className="text-nu-muted w-14 shrink-0">이름</span><span>{profile.name || "-"}</span></div>
                 <div className="flex gap-2"><span className="text-nu-muted w-14 shrink-0">전화</span><span>{profile.phone || "-"}</span></div>
                 <div className="flex gap-2"><span className="text-nu-muted w-14 shrink-0">분야</span><span>{CAT_LABELS[profile.specialty] || profile.specialty || "-"}</span></div>
+                {profile.birth_date && (
+                  <div className="flex gap-2">
+                    <span className="text-nu-muted w-14 shrink-0">생일</span>
+                    <span>
+                      {profile.birth_date}
+                      {profile.birth_calendar === "lunar" ? " (음력)" : ""}
+                    </span>
+                  </div>
+                )}
+                {profile.gender && (
+                  <div className="flex gap-2">
+                    <span className="text-nu-muted w-14 shrink-0">성별</span>
+                    <span>{profile.gender === "male" ? "남성" : profile.gender === "female" ? "여성" : "기타"}</span>
+                  </div>
+                )}
+                {profile.address_region && (
+                  <div className="flex gap-2">
+                    <span className="text-nu-muted w-14 shrink-0">거주지</span>
+                    <span>{profile.address_region}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>

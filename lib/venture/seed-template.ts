@@ -1,60 +1,38 @@
-// Venture 모드 활성화 시 각 단계에 프리셋 항목을 자동 시드.
-// 온보딩 가속 — 빈 화면 공포 제거.
+// Venture 모드 활성화 시 분야별 프리셋 시드.
+//
+// 중요 (2026-04 업데이트):
+//   이전에는 venture_problems/ideas/tasks 에 플레이스홀더 포함 예시 행을 실제로 insert 했으나,
+//   `[타겟 유저]` 같은 치환 전 문구가 사용자 UI 에 "진짜 데이터"처럼 표시되는 문제로 인해
+//   **기본적으로 DB insert 를 하지 않음**. 템플릿은 UI 에서 "제안 예시" 로 표시만 함.
+//
+//   기존 스키마 호환을 위해 함수 시그니처는 유지하되, seeded=false 반환 + history 만 기록.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { TEMPLATES, type TemplateCategory } from "./templates";
 
-const DEFAULT_PROTOTYPE_TASKS = [
-  "타겟 유저 10명 리스트업",
-  "핵심 가치 한 줄 (Value Proposition) 작성",
-  "최소 기능 MVP 스케치/와이어프레임",
-  "MVP 실사용 테스트 세션 3회 예약",
-  "초기 피드백 수집 양식 준비 (점수 + 노트)",
-];
-
-/**
- * Venture 모드 활성화 직후 호출.
- * 이미 데이터가 있으면 건너뛴다 (재활성화 시 중복 방지).
- */
 export async function seedVentureTemplate(
   supabase: SupabaseClient,
   projectId: string,
-  userId: string
-): Promise<{ seeded: boolean; counts: { tasks: number } }> {
-  // 이미 태스크 있으면 skip
-  const { count: existingTasks } = await supabase
-    .from("venture_prototype_tasks")
-    .select("id", { count: "exact", head: true })
-    .eq("project_id", projectId);
+  userId: string,
+  category: TemplateCategory = "generic"
+): Promise<{ seeded: boolean; counts: { tasks: number; problems: number; ideas: number }; errors: string[] }> {
+  const template = TEMPLATES[category] ?? TEMPLATES.generic;
 
-  if ((existingTasks ?? 0) > 0) {
-    return { seeded: false, counts: { tasks: 0 } };
-  }
-
-  const taskRows = DEFAULT_PROTOTYPE_TASKS.map((title, idx) => ({
+  // history 에만 "카테고리 선택" 기록 — 실제 problem/idea/task 는 insert 하지 않음
+  const { error: histErr } = await supabase.from("venture_stage_history").insert({
     project_id: projectId,
-    title,
-    status: "todo" as const,
-    sort_order: idx + 1,
-    assignee_id: null,
-  }));
+    from_stage: null,
+    to_stage: "empathize",
+    changed_by: userId,
+    note: `${template.icon} ${template.label} 카테고리 선택 · 실제 데이터는 사용자가 직접 입력`,
+  });
 
-  const { error } = await supabase.from("venture_prototype_tasks").insert(taskRows);
-  if (error) {
-    return { seeded: false, counts: { tasks: 0 } };
-  }
+  const errors: string[] = [];
+  if (histErr) errors.push(`history: ${histErr.message}`);
 
-  // 시스템 노트로 히스토리에 남김 (선택) — 실패해도 무시
-  try {
-    await supabase.from("venture_stage_history").insert({
-      project_id: projectId,
-      from_stage: null,
-      to_stage: "empathize",
-      changed_by: userId,
-      note: `템플릿 시드: 프로토타입 체크리스트 ${taskRows.length}개 자동 생성`,
-    });
-  } catch {
-    // noop
-  }
-
-  return { seeded: true, counts: { tasks: taskRows.length } };
+  return {
+    seeded: false,
+    counts: { tasks: 0, problems: 0, ideas: 0 },
+    errors,
+  };
 }

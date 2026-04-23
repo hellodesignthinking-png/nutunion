@@ -1,19 +1,24 @@
-// nutunion PWA 서비스 워커 — 정적 에셋 캐싱 + 오프라인 폴백
+// nutunion PWA 서비스 워커 v5 — 최소주의 / 안전한 전략
+//
+// v5 철학 (v3/v4 의 OFFLINE 오표시 버그 최종 해결):
+//   - navigation 에 절대 offline fallback 안 함 (navigator.onLine 믿지 않음)
+//   - fetch 실패 시 캐시에 있으면 캐시, 없으면 그냥 throw → 브라우저 네이티브 에러
+//   - SW 는 네트워크 빠르게 만드는 역할만 (정적 에셋 캐시)
+//   - OFFLINE 페이지는 유저가 직접 /offline 방문할 때만 표시 (SW 개입 없음)
 //
 // 전략:
-//   1) 정적 에셋 (_next/static, icons, manifest) — Cache First
-//   2) 이미지 / 폰트 — Stale-While-Revalidate
-//   3) 네비게이션 (HTML) — Network First with /offline fallback
-//   4) API / 동적 데이터 — Network Only (캐싱 금지)
+//   1) /_next/static — Cache First
+//   2) 이미지/폰트 — Stale-While-Revalidate
+//   3) 네비게이션 — pure network pass-through (SW 개입 최소화)
+//   4) API — 통과
 //
 // 업데이트:
-//   VERSION 문자열 변경 시 구 캐시 자동 삭제됨.
+//   VERSION 변경 → install 시 구 캐시 싹 삭제 + skipWaiting 즉시 적용
 
-const VERSION = "nutunion-sw-v3";
+const VERSION = "nutunion-sw-v6";
 const STATIC_CACHE = `${VERSION}-static`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 
-const OFFLINE_URL = "/offline";
 const STATIC_ASSETS = ["/manifest.json", "/icon-192.png", "/icon-512.png"];
 
 // ── install ──────────────────────────────────────────────────────
@@ -21,27 +26,37 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(STATIC_CACHE);
-      await cache.addAll(STATIC_ASSETS);
-      // 오프라인 페이지도 프리캐시
       try {
-        await cache.add(new Request(OFFLINE_URL, { cache: "reload" }));
+        await cache.addAll(STATIC_ASSETS);
       } catch {}
       await self.skipWaiting();
     })()
   );
 });
 
-// ── activate (구 버전 캐시 정리) ───────────────────────────────────
+// ── activate ─────────────────────────────────────────────────────
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
+      // 구 버전 캐시 전부 삭제 (v1~v4 잔상 + 잘못 캐시된 offline 페이지)
       const names = await caches.keys();
       await Promise.all(
-        names
-          .filter((n) => !n.startsWith(VERSION))
-          .map((n) => caches.delete(n))
+        names.filter((n) => !n.startsWith(VERSION)).map((n) => caches.delete(n))
       );
+      // navigationPreload 비활성화 — fetch 핸들러가 navigation 에 개입하지 않으므로
+      // preload 응답이 소비되지 않아 "cancelled before 'preloadResponse' settled" 경고가
+      // 발생. 명시적으로 disable 해서 경고 제거.
+      if (self.registration.navigationPreload) {
+        try {
+          await self.registration.navigationPreload.disable();
+        } catch {}
+      }
       await self.clients.claim();
+      // 현재 열린 클라이언트들에게 알림 — 자동 새로고침
+      const clients = await self.clients.matchAll({ type: "window" });
+      for (const client of clients) {
+        client.postMessage({ type: "SW_UPDATED", version: VERSION });
+      }
     })()
   );
 });
@@ -51,14 +66,17 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // 외부 도메인 / WebSocket / SSE 등은 통과
+  // 외부 도메인 / non-GET — 통과
   if (url.origin !== self.location.origin) return;
   if (req.method !== "GET") return;
 
-  // API / 동적 라우트 — Network Only (캐싱 안 함)
+  // API / _next/data — 통과 (SW 개입 X)
   if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/_next/data/")) {
     return;
   }
+
+  // /sw.js 자체 — 통과 (업데이트 항상 네트워크에서)
+  if (url.pathname === "/sw.js") return;
 
   // 정적 _next 에셋 — Cache First
   if (url.pathname.startsWith("/_next/static/")) {
@@ -75,11 +93,9 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // HTML 네비게이션 — Network First with offline fallback
-  if (req.mode === "navigate") {
-    event.respondWith(networkFirstWithOffline(req));
-    return;
-  }
+  // 네비게이션 — SW 개입 안 함, 브라우저에 맡김
+  // (fetch 에러 시 브라우저 네이티브 에러 페이지 → 유저가 정상 판단 가능)
+  return;
 });
 
 async function cacheFirst(req, cacheName) {
@@ -105,23 +121,6 @@ async function staleWhileRevalidate(req, cacheName) {
     })
     .catch(() => cached);
   return cached || networkPromise;
-}
-
-async function networkFirstWithOffline(req) {
-  try {
-    const res = await fetch(req);
-    return res;
-  } catch (err) {
-    const cache = await caches.open(STATIC_CACHE);
-    const offline = await cache.match(OFFLINE_URL);
-    return (
-      offline ||
-      new Response(
-        "<h1>오프라인 상태입니다</h1><p>네트워크 연결 후 다시 시도해주세요.</p>",
-        { headers: { "Content-Type": "text/html; charset=utf-8" } }
-      )
-    );
-  }
 }
 
 // ── Web Push ─────────────────────────────────────────────────────
@@ -153,7 +152,6 @@ self.addEventListener("notificationclick", (event) => {
   event.waitUntil(
     (async () => {
       const clientList = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-      // 이미 열린 탭에 포커스 + 해당 URL 로 이동
       for (const client of clientList) {
         if ("focus" in client) {
           await client.focus();
@@ -163,10 +161,25 @@ self.addEventListener("notificationclick", (event) => {
           return;
         }
       }
-      // 없으면 새 창
       if (self.clients.openWindow) {
         await self.clients.openWindow(targetUrl);
       }
     })()
   );
+});
+
+// ── message (긴급 캐시 초기화 + 재등록) ──────────────────────────────
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "CLEAR_CACHES") {
+    event.waitUntil(
+      (async () => {
+        const names = await caches.keys();
+        await Promise.all(names.map((n) => caches.delete(n)));
+        await self.registration.unregister();
+      })()
+    );
+  }
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });

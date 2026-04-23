@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { seedGroupTemplate } from "@/lib/template-seeder";
+import { NutDescriptionSuggest } from "@/components/ai/nut-description-suggest";
+import { GenesisFlow } from "@/components/genesis/GenesisFlow";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -544,6 +546,7 @@ export default function CreateGroupPage() {
   const [permitted, setPermitted] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
   const [category, setCategory] = useState(template?.defaultCategory || "");
+  const [mode, setMode] = useState<"genesis" | "manual">(template ? "manual" : "genesis");
 
   // Form values (for AI to read before submit)
   const [formName, setFormName] = useState("");
@@ -705,6 +708,9 @@ export default function CreateGroupPage() {
         : "너트가 생성되었습니다!"
     );
 
+    // [Drive migration Phase A] 자동 Google Drive 폴더 생성 비활성화 — 신규 너트 자료는 Cloudflare R2 에 저장됩니다
+    toast.info("자료는 Cloudflare R2 에 저장됩니다");
+
     // Go to invite step
     setCreatedGroupId(group.id);
     setCreatedGroupName(name);
@@ -780,7 +786,14 @@ export default function CreateGroupPage() {
       </div>
 
       <div>
-        <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">소개</Label>
+        <div className="flex items-center justify-between">
+          <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">소개</Label>
+          <NutDescriptionSuggest
+            name={formName}
+            category={category}
+            onAccept={(text) => setFormDescription(text)}
+          />
+        </div>
         <Textarea
           name="description"
           rows={4}
@@ -980,10 +993,37 @@ export default function CreateGroupPage() {
         <ArrowLeft size={12} /> 너트 탐색
       </Link>
       <h1 className="font-head text-3xl font-extrabold text-nu-ink mb-2">새 너트 만들기</h1>
-      <p className="text-nu-gray text-sm mb-8">새로운 Scene을 시작하세요</p>
-      <div className="bg-nu-white border border-nu-ink/[0.08] p-8">
-        {formSection(false)}
+      <p className="text-nu-gray text-sm mb-6">새로운 Scene을 시작하세요</p>
+
+      {/* Mode toggle — Genesis AI vs 직접 입력 */}
+      <div className="inline-flex items-center gap-0 mb-5 border-2 border-nu-ink/15 bg-nu-white p-1">
+        <button
+          type="button"
+          onClick={() => setMode("genesis")}
+          className={`font-mono-nu text-[11px] font-bold uppercase tracking-widest px-4 py-2 transition-colors ${
+            mode === "genesis" ? "bg-nu-ink text-nu-paper" : "text-nu-gray hover:text-nu-ink"
+          }`}
+        >
+          ✨ Genesis AI
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("manual")}
+          className={`font-mono-nu text-[11px] font-bold uppercase tracking-widest px-4 py-2 transition-colors ${
+            mode === "manual" ? "bg-nu-ink text-nu-paper" : "text-nu-gray hover:text-nu-ink"
+          }`}
+        >
+          📝 직접 입력
+        </button>
       </div>
+
+      {mode === "genesis" ? (
+        <GenesisFlow kind="group" />
+      ) : (
+        <div className="bg-nu-white border border-nu-ink/[0.08] p-8">
+          {formSection(false)}
+        </div>
+      )}
     </div>
   );
 }

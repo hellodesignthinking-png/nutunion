@@ -84,7 +84,7 @@ export function ProjectInsights({
     ] = await Promise.allSettled([
       supabase.from("project_tasks").select("id, status, assigned_to, due_date, created_at").eq("project_id", projectId),
       supabase.from("project_milestones").select("id, status, due_date").eq("project_id", projectId),
-      supabase.from("project_members").select("user_id, profile:profiles!project_members_user_id_fkey(nickname)").eq("project_id", projectId),
+      supabase.from("project_members").select("user_id, crew_id, profile:profiles!project_members_user_id_fkey(nickname)").eq("project_id", projectId),
       supabase.from("project_resources").select("id").eq("project_id", projectId),
       supabase.from("project_finance").select("amount, type").eq("project_id", projectId),
       supabase.from("projects").select("start_date, end_date, total_budget").eq("id", projectId).single(),
@@ -93,11 +93,36 @@ export function ProjectInsights({
 
     const tasks = tasksRes.status === "fulfilled" ? tasksRes.value.data || [] : [];
     const milestones = msRes.status === "fulfilled" ? msRes.value.data || [] : [];
-    const members = membersRes.status === "fulfilled" ? membersRes.value.data || [] : [];
     const resources = resourcesRes.status === "fulfilled" ? resourcesRes.value.data || [] : [];
     const finance = financeRes.status === "fulfilled" ? financeRes.value.data || [] : [];
     const project = projectRes.status === "fulfilled" ? projectRes.value.data : null;
     const updates = updatesRes.status === "fulfilled" ? updatesRes.value.data || [] : [];
+
+    // 멤버: 직접 등록 + crew(너트) 멤버 포함
+    let members: any[] = [];
+    if (membersRes.status === "fulfilled" && membersRes.value.data) {
+      const pmData = membersRes.value.data as any[];
+      members = pmData.filter((m: any) => m.user_id && m.profile);
+      const crewIds = pmData.filter((m: any) => m.crew_id).map((m: any) => m.crew_id);
+      if (crewIds.length > 0) {
+        try {
+          const { data: gmData } = await supabase
+            .from("group_members")
+            .select("user_id, profiles!group_members_user_id_fkey(nickname)")
+            .in("group_id", crewIds)
+            .eq("status", "active");
+          if (gmData) {
+            const existingIds = new Set(members.map((m: any) => m.user_id));
+            for (const gm of gmData as any[]) {
+              if (gm.user_id && gm.profiles && !existingIds.has(gm.user_id)) {
+                members.push({ user_id: gm.user_id, profile: gm.profiles });
+                existingIds.add(gm.user_id);
+              }
+            }
+          }
+        } catch { /* 무시 */ }
+      }
+    }
 
     const now = new Date();
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);

@@ -4,9 +4,12 @@ import { rateLimit } from "@/lib/rate-limit";
 
 export const maxDuration = 60;
 
+import { aiError } from "@/lib/ai/error";
+
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = "gemini-2.5-flash";
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const GEMINI_HEADERS = { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY ?? "" };
 
 const SYSTEM_PROMPT = `당신은 NutUnion 커뮤니티 플랫폼의 AI 기획 어시스턴트입니다.
 사용자가 만들려는 소모임(너트)의 이름과 소개를 바탕으로 운영 계획을 제안합니다.
@@ -73,7 +76,7 @@ export async function POST(request: NextRequest) {
       try {
         response = await fetch(GEMINI_URL, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: GEMINI_HEADERS,
           body: JSON.stringify(geminiBody),
         });
         if (response.ok) break;
@@ -83,14 +86,14 @@ export async function POST(request: NextRequest) {
           continue;
         }
         break;
-      } catch (fetchErr: any) {
-        lastError = fetchErr.message || "Network error";
+      } catch (fetchErr: unknown) {
+        lastError = fetchErr instanceof Error ? fetchErr.message : "Network error";
         await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
       }
     }
 
     if (!response || !response.ok) {
-      return NextResponse.json({ error: `AI 오류: ${lastError}` }, { status: 502 });
+      return aiError("ai_unavailable", "ai/group-plan", { internal: lastError });
     }
 
     const data = await response.json();
@@ -130,8 +133,8 @@ export async function POST(request: NextRequest) {
     };
 
     return NextResponse.json(normalized);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Group plan AI error:", error);
-    return NextResponse.json({ error: error.message || "AI 기획 생성 중 오류" }, { status: 500 });
+    return aiError("server_error", "ai/group-plan", { internal: error });
   }
 }

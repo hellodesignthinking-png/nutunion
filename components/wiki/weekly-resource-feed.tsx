@@ -91,6 +91,7 @@ function detectResourceType(url: string): string {
 
 export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userId: string }) {
   const [resources, setResources] = useState<Resource[]>([]);
+  const [analyzedIds, setAnalyzedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [url, setUrl] = useState("");
@@ -131,6 +132,17 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
     } finally {
       setLoading(false);
     }
+
+    // 분석된 자료 ID 로드 — 별도 (failure graceful)
+    try {
+      const supabase = createClient();
+      const { data: inputs } = await supabase
+        .from("wiki_synthesis_inputs")
+        .select("source_id")
+        .eq("group_id", groupId)
+        .eq("source_type", "resource");
+      setAnalyzedIds(new Set(((inputs as { source_id: string }[] | null) ?? []).map((r) => r.source_id)));
+    } catch { /* 065 미적용 */ }
   }, [groupId, selectedWeek]);
 
   useEffect(() => { loadResources(); }, [loadResources]);
@@ -174,8 +186,9 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
       toast.success("리소스가 등록되었습니다");
       setUrl(""); setTitle(""); setDescription(""); setShowForm(false);
       loadResources();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+    const __e = e as { message?: string; code?: number; name?: string };
+      toast.error(__e.message);
     } finally {
       setSubmitting(false);
     }
@@ -195,8 +208,9 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
       }
       setResources(prev => prev.filter(r => r.id !== id));
       toast.success("삭제되었습니다");
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+    const __e = e as { message?: string; code?: number; name?: string };
+      toast.error(__e.message);
     }
   }
 
@@ -212,8 +226,9 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
       const { summary } = await res.json();
       setResources(prev => prev.map(r => r.id === id ? { ...r, auto_summary: summary } : r));
       toast.success("AI 요약이 생성되었습니다");
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+    const __e = e as { message?: string; code?: number; name?: string };
+      toast.error(__e.message);
     } finally {
       setSummarizingId(null);
     }
@@ -300,8 +315,9 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
       }
       toast.success(`"${file.file_name}" 추가됨`);
       loadResources();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+    const __e = e as { message?: string; code?: number; name?: string };
+      toast.error(__e.message);
     } finally {
       setImportingIds(prev => {
         const next = new Set(prev);
@@ -325,33 +341,35 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
       let resourceType = "link";
 
       if (uploadFile) {
-        // Upload to Google Drive
-        const formData = new FormData();
-        formData.append("file", uploadFile);
-        formData.append("targetType", "group");
-        formData.append("targetId", groupId);
-
-        const driveRes = await fetch("/api/google/drive/upload", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!driveRes.ok) {
-          const err = await driveRes.json();
-          throw new Error(err.error || "업로드 실패");
-        }
-
-        const driveData = await driveRes.json();
-        fileUrl = driveData.file.webViewLink;
-        fileName = fileName || driveData.file.name;
-        resourceType = "drive";
-
-        // Detect more specific type from mimeType
-        const mime = driveData.file.mimeType || "";
+        // [Phase 3b] R2 canonical — 브라우저에서 R2 로 직접 PUT.
+        const { uploadFile: r2Upload } = await import("@/lib/storage/upload-client");
+        const up = await r2Upload(uploadFile, { prefix: "resources", scopeId: groupId });
+        fileUrl = up.url;
+        fileName = fileName || up.name;
+        const mime = up.mime || "";
         if (mime.includes("pdf")) resourceType = "pdf";
         else if (mime.includes("document") || mime.includes("word")) resourceType = "docs";
         else if (mime.includes("spreadsheet") || mime.includes("excel")) resourceType = "sheet";
         else if (mime.includes("presentation") || mime.includes("slide")) resourceType = "slide";
+        else if (mime.startsWith("image/")) resourceType = "link";
+        else resourceType = "link";
+
+        // 자료실 등록 (file_attachments)
+        try {
+          const supabase = createClient();
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            await supabase.from("file_attachments").insert({
+              target_type: "group",
+              target_id: groupId,
+              uploaded_by: user.id,
+              file_name: up.name,
+              file_url: up.url,
+              file_size: up.size,
+              file_type: up.mime,
+            });
+          }
+        } catch { /* 자료실 등록은 best-effort */ }
       } else {
         // URL-based upload — wiki_weekly_resources only (GET merges file_attachments separately)
         fileUrl = uploadUrl.trim();
@@ -381,8 +399,9 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
       setUploadTitle("");
       setShowUpload(false);
       loadResources();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+    const __e = e as { message?: string; code?: number; name?: string };
+      toast.error(__e.message);
     } finally {
       setUploadSubmitting(false);
     }
@@ -430,8 +449,9 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
       ));
       setLinkingId(null);
       toast.success("탭 페이지에 연결되었습니다");
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+    const __e = e as { message?: string; code?: number; name?: string };
+      toast.error(__e.message);
     }
   }
 
@@ -675,15 +695,32 @@ export function WeeklyResourceFeed({ groupId, userId }: { groupId: string; userI
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <a
-                              href={r.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm font-bold text-nu-ink hover:text-nu-blue transition-colors no-underline flex items-center gap-1"
-                            >
-                              <span className="truncate">{r.title}</span>
-                              <ExternalLink size={11} className="shrink-0 text-nu-muted" />
-                            </a>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <a
+                                href={r.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm font-bold text-nu-ink hover:text-nu-blue transition-colors no-underline flex items-center gap-1"
+                              >
+                                <span className="truncate">{r.title}</span>
+                                <ExternalLink size={11} className="shrink-0 text-nu-muted" />
+                              </a>
+                              {analyzedIds.has(r.id) ? (
+                                <span
+                                  className="font-mono-nu text-[9px] uppercase tracking-widest bg-green-100 text-green-700 border border-green-300 px-1.5 py-0.5 inline-flex items-center gap-0.5"
+                                  title="이미 AI 탭 분석에 사용됨 — 다음 분석에서 제외"
+                                >
+                                  ✓ 분석됨
+                                </span>
+                              ) : (
+                                <span
+                                  className="font-mono-nu text-[9px] uppercase tracking-widest bg-nu-pink/10 text-nu-pink border border-nu-pink/30 px-1.5 py-0.5"
+                                  title="다음 AI 분석 때 사용 예정"
+                                >
+                                  신규
+                                </span>
+                              )}
+                            </div>
                             {r.description && (
                               <p className="text-xs text-nu-muted mt-0.5 line-clamp-1">{r.description}</p>
                             )}

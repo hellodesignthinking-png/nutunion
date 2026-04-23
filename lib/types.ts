@@ -253,6 +253,8 @@ export interface Meeting {
   organizer_id: string | null;
   next_topic: string | null;
   summary: string | null;
+  google_doc_url?: string | null;
+  google_doc_id?: string | null;
   created_at: string;
   organizer?: Profile;
   agendas?: MeetingAgenda[];

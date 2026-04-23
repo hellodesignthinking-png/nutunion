@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { GenerativeArt } from "@/components/art/generative-art";
 
 const catColors: Record<string, { bg: string; bar: string; halftone: string }> = {
   space: { bg: "bg-nu-blue", bar: "bg-nu-blue", halftone: "halftone-blue" },
@@ -73,19 +74,23 @@ export function GroupsPreview({ groups }: { groups?: GroupItem[] }) {
         {data.map((g, i) => {
           const color = catColors[g.cat] || catColors.platform;
           const pct = g.max > 0 ? Math.round((g.m / g.max) * 100) : 0;
-          const imgMap: Record<string, string> = { space: "/space.png", culture: "/culture.png", platform: "/network.png", vibe: "/vibe.png" };
-          const imgSrc = imgMap[g.cat] || "/network.png";
+          const validCat = (["space","culture","platform","vibe"].includes(g.cat) ? g.cat : "platform") as "space"|"culture"|"platform"|"vibe";
           return (
             <Link
               key={g.id || i}
               href={g.id ? `/groups/${g.id}` : "/groups"}
               className="group-card bg-nu-white p-0 flex flex-col no-underline relative overflow-hidden group"
             >
-              {/* Image Header */}
+              {/* Generative Art Header — 고유 seed 기반 결정적 SVG */}
               <div className="h-32 border-b-[3px] border-nu-ink relative overflow-hidden bg-nu-paper shrink-0">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={imgSrc} alt="" className="absolute inset-0 w-full h-full object-cover mix-blend-multiply opacity-60 group-hover:scale-105 transition-transform duration-500" />
-                <div className={`absolute inset-0 ${color.bg} mix-blend-color opacity-20 pointer-events-none`} />
+                <GenerativeArt
+                  seed={g.id || `landing-${g.cat}-${i}`}
+                  category={validCat}
+                  variant="card"
+                  className="absolute inset-0 w-full h-full transition-transform duration-500 group-hover:scale-105"
+                  title={`${g.name} visual`}
+                />
+                <div className={`absolute inset-0 ${color.bg} mix-blend-color opacity-10 pointer-events-none`} />
               </div>
               
               <div className="p-5 flex flex-col flex-1 relative">

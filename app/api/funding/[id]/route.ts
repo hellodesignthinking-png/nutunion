@@ -55,13 +55,14 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       .eq("project_id", before.project_id as string);
     const { data: project } = await supabase
       .from("projects")
-      .select("host_id, title")
+      .select("created_by, title")
       .eq("id", before.project_id as string)
       .maybeSingle();
 
     const userIds = new Set<string>();
     if (before.submitter_id) userIds.add(before.submitter_id as string);
-    if (project?.host_id) userIds.add(project.host_id as string);
+    const createdBy = (project as { created_by?: string } | null)?.created_by;
+    if (createdBy) userIds.add(createdBy);
     for (const m of (members as { user_id: string }[] | null) ?? []) userIds.add(m.user_id);
 
     if (userIds.size > 0) {

@@ -85,53 +85,21 @@ export function AdminProjectList({ projects }: { projects: ProjectItem[] }) {
   async function handleDelete(projectId: string, title: string) {
     if (!confirm(`"${title}" 프로젝트를 완전히 삭제하시겠습니까?\n\n모든 마일스톤, 태스크, 회의, 자료, 멤버 데이터가 영구 삭제됩니다.\n이 작업은 되돌릴 수 없습니다.`)) return;
 
-    const supabase = createClient();
-
-    // Delete meeting notes for project meetings
+    // 서버 라우트(service_role) 로 위임 — migration 084 이후 FK/RLS 제약 우회.
+    // 기존 관리자용 직접 DELETE 는 project_financial_records 등 누락 테이블·정책 충돌로 500 반환.
     try {
-      const { data: meetings } = await supabase.from("meetings").select("id").eq("project_id", projectId);
-      const meetingIds = (meetings || []).map((m: any) => m.id);
-      if (meetingIds.length > 0) {
-        await supabase.from("meeting_notes").delete().in("meeting_id", meetingIds);
-        await supabase.from("meeting_agendas").delete().in("meeting_id", meetingIds);
+      const res = await fetch(`/api/projects/${projectId}/delete`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error("삭제 실패: " + (data.error || res.statusText));
+        if (data.cleanup) console.warn("[admin delete cleanup]", data.cleanup);
+        return;
       }
-    } catch { /* tables may not exist */ }
-
-    // Delete related tables — each in try/catch for resilience
-    const tablesToClean = [
-      "project_tasks",
-      "project_resources",
-      "project_milestones",
-      "project_updates",
-      "project_action_items",
-      "project_applications",
-      "project_members",
-      "project_financial_records",
-    ];
-
-    for (const table of tablesToClean) {
-      try {
-        await supabase.from(table).delete().eq("project_id", projectId);
-      } catch { /* table may not exist */ }
+      toast.success("프로젝트가 완전히 삭제되었습니다");
+      router.refresh();
+    } catch (err: any) {
+      toast.error("삭제 실패: " + (err?.message || "네트워크 오류"));
     }
-
-    // Delete project meetings
-    try {
-      await supabase.from("meetings").delete().eq("project_id", projectId);
-    } catch { /* project_id column may not exist on meetings */ }
-
-    // Finally delete the project
-    const { error } = await supabase
-      .from("projects")
-      .delete()
-      .eq("id", projectId);
-
-    if (error) {
-      toast.error("삭제 실패: " + error.message);
-      return;
-    }
-    toast.success("프로젝트가 완전히 삭제되었습니다");
-    router.refresh();
   }
 
   function formatDate(dateStr: string | null) {

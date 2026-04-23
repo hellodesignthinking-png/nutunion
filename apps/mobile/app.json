@@ -48,6 +48,12 @@
         }
       ]
     ],
+    "updates": {
+      "url": "https://u.expo.dev/nutunion-app"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "experiments": { "typedRoutes": true }
   }
 }

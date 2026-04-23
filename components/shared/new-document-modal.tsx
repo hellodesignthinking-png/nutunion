@@ -361,8 +361,9 @@ export function NewDocumentModal({ targetType, targetId, stage, onCreated, onClo
       toast.success(`"${docName.trim()}" 문서가 생성되었습니다`);
       onCreated();
       onClose();
-    } catch (err: any) {
-      toast.error("문서 생성 실패: " + (err.message || "알 수 없는 오류"));
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error("문서 생성 실패: " + (__err.message || "알 수 없는 오류"));
     } finally {
       setCreating(false);
     }

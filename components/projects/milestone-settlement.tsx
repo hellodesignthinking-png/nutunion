@@ -67,11 +67,32 @@ export function MilestoneSettlement({
       let memData: any[] = [];
       const memRes = await supabase
         .from("project_members")
-        .select("user_id, role, reward_ratio, profile:profiles!project_members_user_id_fkey(id, nickname, avatar_url)")
-        .eq("project_id", projectId)
-        .not("user_id", "is", null);
+        .select("user_id, role, crew_id, reward_ratio, profile:profiles!project_members_user_id_fkey(id, nickname, avatar_url)")
+        .eq("project_id", projectId);
       if (!memRes.error && memRes.data) {
-        memData = memRes.data;
+        // 직접 user_id가 있는 멤버
+        memData = memRes.data.filter((m: any) => m.user_id && m.profile);
+
+        // crew_id가 있는 항목 → 해당 너트(그룹)의 모든 멤버를 가져옴
+        const crewIds = (memRes.data as any[]).filter((m: any) => m.crew_id).map((m: any) => m.crew_id);
+        if (crewIds.length > 0) {
+          try {
+            const { data: gmData } = await supabase
+              .from("group_members")
+              .select("user_id, profiles!group_members_user_id_fkey(id, nickname, avatar_url)")
+              .in("group_id", crewIds)
+              .eq("status", "active");
+            if (gmData) {
+              const existingIds = new Set(memData.map((m: any) => m.user_id));
+              for (const gm of gmData as any[]) {
+                if (gm.user_id && gm.profiles && !existingIds.has(gm.user_id)) {
+                  memData.push({ user_id: gm.user_id, role: "member", reward_ratio: 0, profile: gm.profiles });
+                  existingIds.add(gm.user_id);
+                }
+              }
+            }
+          } catch { /* 무시 */ }
+        }
       } else {
         const { data: basicMem } = await supabase.from("project_members").select("user_id, role").eq("project_id", projectId).not("user_id", "is", null);
         memData = (basicMem || []).map((m: any) => ({ ...m, reward_ratio: 0, profile: { id: m.user_id, nickname: "멤버" } }));

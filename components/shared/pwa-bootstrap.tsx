@@ -27,14 +27,82 @@ export function PwaBootstrap() {
   const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [show, setShow] = useState(false);
 
-  // SW 등록
+  // SW 등록 + 강제 업데이트 체크 + 자동 복구
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!("serviceWorker" in navigator)) return;
     if (process.env.NODE_ENV !== "production") return;
 
-    const reg = navigator.serviceWorker.register("/sw.js", { scope: "/" });
-    reg.catch((err) => console.warn("[PWA] SW 등록 실패:", err));
+    let cancelled = false;
+
+    (async () => {
+      try {
+        // 1) 등록
+        const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+
+        // 2) 매 포커스 시 + 5분 주기로 SW 업데이트 체크 (구 SW 빠른 교체)
+        const check = () => reg.update().catch(() => {});
+        check();
+        const interval = window.setInterval(check, 5 * 60 * 1000);
+        window.addEventListener("focus", check);
+        window.addEventListener("online", check);
+
+        // 3) 새 SW 설치되면 즉시 skipWaiting + 페이지 리로드 (한번만)
+        let reloaded = false;
+        reg.addEventListener("updatefound", () => {
+          const nw = reg.installing;
+          if (!nw) return;
+          nw.addEventListener("statechange", () => {
+            if (nw.state === "installed" && navigator.serviceWorker.controller) {
+              nw.postMessage({ type: "SKIP_WAITING" });
+            }
+          });
+        });
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (reloaded || cancelled) return;
+          reloaded = true;
+          // P2-6: 채팅 중이거나 입력값 있는 폼이면 즉시 리로드 X → 다음 네비게이션에 적용
+          const onChatPage =
+            typeof window !== "undefined" && window.location.pathname.startsWith("/chat");
+          const hasDraft =
+            typeof document !== "undefined" &&
+            Array.from(document.querySelectorAll("textarea, input")).some((el) => {
+              const v = (el as HTMLInputElement).value;
+              return v && v.trim().length > 0;
+            });
+          if (onChatPage || hasDraft) {
+            // 유저가 타이핑 중 — 조용히 다음 기회에 적용 (reload 생략)
+            console.info("[PWA] SW updated (deferred reload — draft preserved)");
+            return;
+          }
+          window.location.reload();
+        });
+
+        // 4) 자가 복구 — 유저가 "/offline" 에 떠있는데 실제로 온라인이면 홈으로 자동 이동
+        if (window.location.pathname === "/offline" && navigator.onLine) {
+          // 캐시가 낡았을 가능성 → 안전하게 모든 캐시 삭제 후 홈으로
+          try {
+            if ("caches" in window) {
+              const names = await caches.keys();
+              await Promise.all(names.map((n) => caches.delete(n)));
+            }
+          } catch {}
+          window.location.replace("/?sw_recover=1");
+        }
+
+        return () => {
+          window.clearInterval(interval);
+          window.removeEventListener("focus", check);
+          window.removeEventListener("online", check);
+        };
+      } catch (err) {
+        console.warn("[PWA] SW 등록 실패:", err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // 설치 프롬프트 캐치

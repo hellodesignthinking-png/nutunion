@@ -85,13 +85,13 @@ export function Hero({ content }: HeroProps) {
           <Link href="/signup" className="font-mono-nu text-[13px] font-bold tracking-[0.1em] uppercase px-7 py-4 bg-nu-ink text-nu-paper border-[3px] border-nu-ink hover:bg-nu-pink hover:border-nu-pink transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[-4px_4px_0_#0D0D0D] no-underline inline-flex items-center gap-2">
             {ctaPrimary} <span aria-hidden="true">&rarr;</span>
           </Link>
-          <a href="#scenes" className="font-mono-nu text-[13px] font-bold tracking-[0.1em] uppercase px-7 py-4 bg-transparent text-nu-ink border-[3px] border-nu-ink hover:bg-nu-yellow hover:border-nu-yellow transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[-4px_4px_0_#0D0D0D] no-underline">
+          <a href="/#scenes" className="font-mono-nu text-[13px] font-bold tracking-[0.1em] uppercase px-7 py-4 bg-transparent text-nu-ink border-[3px] border-nu-ink hover:bg-nu-yellow hover:border-nu-yellow transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[-4px_4px_0_#0D0D0D] no-underline">
             {ctaSecondary}
           </a>
         </div>
 
         <div className="reveal-item mt-6">
-          <a href="#about" className="font-serif-nu text-sm italic text-nu-gray hover:text-nu-pink transition-colors no-underline inline-flex items-center gap-2">
+          <a href="/#about" className="font-serif-nu text-sm italic text-nu-gray hover:text-nu-pink transition-colors no-underline inline-flex items-center gap-2">
             너트유니온에 대해 더 알아보기
             <span aria-hidden="true" className="text-xs">&darr;</span>
           </a>

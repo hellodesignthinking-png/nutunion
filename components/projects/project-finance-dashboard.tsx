@@ -92,10 +92,21 @@ export function ProjectFinanceDashboard({
         .eq("project_id", projectId)
         .order("recorded_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        // RLS 차단 / 테이블 없음 등은 silent — 빈 상태로 렌더 (토스트 스팸 방지)
+        const msg = error.message || "";
+        if (msg.includes("permission") || msg.includes("does not exist") || msg.includes("relation") || msg.includes("policy")) {
+          console.warn("[project-finance] graceful load fail:", msg);
+          setTransactions([]);
+          return;
+        }
+        throw error;
+      }
       setTransactions(data || []);
-    } catch (err: any) {
-      toast.error(err.message || "재무 거래 로드 실패");
+    } catch (err: unknown) {
+      const __err = err as { message?: string };
+      console.warn("[project-finance]", __err.message);
+      setTransactions([]);
     } finally {
       setLoading(false);
     }
@@ -200,8 +211,9 @@ export function ProjectFinanceDashboard({
       });
       setShowAddForm(false);
       toast.success("거래가 추가되었습니다");
-    } catch (err: any) {
-      toast.error(err.message || "거래 추가 실패");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "거래 추가 실패");
     } finally {
       setSubmitting(false);
     }

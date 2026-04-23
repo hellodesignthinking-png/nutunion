@@ -153,8 +153,9 @@ export function AdminProposalList({ proposals: initialProposals, pmCandidates }:
       }
 
       router.refresh();
-    } catch (err: any) {
-      toast.error(err.message || "처리에 실패했습니다");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "처리에 실패했습니다");
     } finally {
       setActionLoading(null);
     }

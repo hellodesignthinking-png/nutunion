@@ -1,8 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AdminNavClient } from "./admin-nav-client";
-import { AppSidebar, AppSidebarGutter } from "@/components/shared/app-sidebar";
-import { AppBottomTabs } from "@/components/shared/app-bottom-tabs";
 
 export default async function AdminLayout({
   children,
@@ -25,12 +23,15 @@ export default async function AdminLayout({
   if (profileError || !profile || profile.role !== "admin") redirect("/dashboard");
 
   const navItems = [
-    { label: "대시보드", href: "/admin" },
-    { label: "콘텐츠", href: "/admin/content" },
-    { label: "미디어", href: "/admin/media" },
+    { label: "Overview", href: "/admin/overview" },
+    { label: "Analytics", href: "/admin/analytics" },
+    { label: "Integrations", href: "/admin/integrations" },
+    { label: "Drive 백필", href: "/admin/drive-backfill" },
     { label: "회원", href: "/admin/users" },
     { label: "너트", href: "/admin/groups" },
     { label: "볼트", href: "/admin/projects" },
+    { label: "Threads", href: "/admin/threads" },
+    { label: "콘텐츠", href: "/admin/content" },
     { label: "의뢰", href: "/admin/proposals" },
   ];
 
@@ -38,12 +39,9 @@ export default async function AdminLayout({
 
   return (
     <div className="min-h-screen bg-nu-paper flex flex-col">
+      {/* Admin 전용 탑 네비 — Overview / Analytics / Integrations / 회원 / 너트 / 볼트 등 */}
       <AdminNavClient navItems={navItems} adminName={adminName} />
-      <AppSidebar isStaff={true} isAdmin={true} />
-      <AppSidebarGutter>
-        <div className="flex-1 pt-[60px] pb-[64px] md:pb-0">{children}</div>
-      </AppSidebarGutter>
-      <AppBottomTabs />
+      <div className="flex-1 pt-[60px]">{children}</div>
     </div>
   );
 }

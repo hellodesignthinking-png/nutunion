@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { GroupSubNav } from "@/components/groups/group-sub-nav";
+import { ChatDockPanel } from "@/components/chat/chat-dock-panel-client";
 
 export default async function GroupLayout({
   children,
@@ -68,6 +69,8 @@ export default async function GroupLayout({
         isManager={isManager}
       />
       {children}
+      {/* 너트 모든 하위 페이지 공통 — 우측 채팅 도킹 패널 */}
+      <ChatDockPanel groupId={groupId} />
     </>
   );
 }

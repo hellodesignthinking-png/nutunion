@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
+import { GenerativeArt } from "@/components/art/generative-art";
 import {
   Calendar,
   Users,
@@ -22,12 +23,16 @@ import {
   UserPlus,
   ExternalLink,
   Link2,
+  MessageSquare,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { GroupActions } from "@/components/groups/group-actions";
 import { GroupSearch } from "@/components/groups/group-search";
+import { GroupStatusPanel } from "@/components/groups/group-status-panel";
+import { DriveR2MigrationBanner } from "@/components/shared/drive-r2-migration-banner";
 import { OnboardingChecklist } from "@/components/groups/onboarding-checklist";
 import { getCategory } from "@/lib/constants";
+import { ThreadBetaSection } from "@/components/threads/thread-beta-section";
 
 // Lazy-load heavy below-fold components
 const CrewActivityFeed = dynamic(() => import("@/components/crews/crew-activity-feed").then(m => m.CrewActivityFeed));
@@ -48,9 +53,24 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const supabase = await createClient();
   const { data: group } = await supabase.from("groups").select("name, description").eq("id", id).single();
+  const title = group ? `${group.name} — nutunion` : "너트 — nutunion";
+  const description = (group?.description || "nutunion 너트 · Protocol Collective").slice(0, 160);
+  const ogUrl = `/api/og/group/${id}`;
   return {
-    title: group ? `${group.name} — nutunion` : "너트 — nutunion",
-    description: group?.description || "nutunion 너트",
+    title,
+    description,
+    openGraph: {
+      title: group?.name || "너트",
+      description,
+      images: [{ url: ogUrl, width: 1200, height: 630 }],
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: group?.name || "너트",
+      description,
+      images: [ogUrl],
+    },
   };
 }
 
@@ -63,9 +83,14 @@ const catColors: Record<string, { bg: string; text: string; border: string; ligh
 
 /** Relative date formatter for upcoming events within 7 days */
 function formatRelativeDate(date: Date): string {
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const targetStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  // KST 기준 날짜 비교 — 서버(UTC)에서도 한국 날짜 기준
+  const kstOffsetMs = 9 * 60 * 60 * 1000;
+  const toKstDay = (d: Date): Date => {
+    const shifted = new Date(d.getTime() + kstOffsetMs);
+    return new Date(Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate()));
+  };
+  const todayStart = toKstDay(new Date());
+  const targetStart = toKstDay(date);
   const diffDays = Math.round((targetStart.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24));
 
   if (diffDays === 0) return "오늘";
@@ -73,32 +98,32 @@ function formatRelativeDate(date: Date): string {
   if (diffDays === 2) return "모레";
   if (diffDays <= 7) {
     const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
-    return `이번 주 ${dayNames[date.getDay()]}요일`;
+    // KST 기준 요일
+    const kstDayIdx = new Date(date.getTime() + kstOffsetMs).getUTCDay();
+    return `이번 주 ${dayNames[kstDayIdx]}요일`;
   }
-  return date.toLocaleDateString("ko", { month: "long", day: "numeric" });
+  return date.toLocaleDateString("ko", { month: "long", day: "numeric", timeZone: "Asia/Seoul" });
 }
 
 export default async function GroupDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
+  // 비로그인 허용 — SEO 친화 공개 뷰
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
-  // ── 데이터 조회 (병렬) ──────────────────────────────────
   let group: any = null;
   let userMembership: any = null;
 
   try {
+    // 1차: 최소 필드 (확실히 존재하는 컬럼) — 이게 실패하면 그룹 자체가 없는 것
     const [groupRes, membershipRes] = await Promise.all([
       supabase.from("groups")
-        .select("id, name, description, category, image_url, host_id, max_members, is_active, kakao_chat_url, google_drive_url, created_at, host:profiles!groups_host_id_fkey(id, nickname, avatar_url)")
+        .select("id, name, description, category, host_id, max_members, is_active, created_at")
         .eq("id", id)
         .single(),
-      supabase.from("group_members")
-        .select("status, role")
-        .eq("group_id", id)
-        .eq("user_id", user.id)
-        .maybeSingle(),
+      user
+        ? supabase.from("group_members").select("status, role").eq("group_id", id).eq("user_id", user.id).maybeSingle()
+        : Promise.resolve({ data: null }),
     ]);
 
     const { data: groupData, error: groupError } = groupRes;
@@ -109,8 +134,27 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
       notFound();
     }
 
-    group = groupData;
+    group = groupData as any;
     userMembership = membershipData;
+
+    // 2차: 선택적 필드 — 실패해도 페이지 계속 렌더
+    try {
+      const { data: extra } = await supabase.from("groups")
+        .select("image_url, kakao_chat_url, google_drive_url, google_drive_folder_id")
+        .eq("id", id)
+        .maybeSingle();
+      if (extra) Object.assign(group, extra);
+    } catch { /* 일부 컬럼 누락 — graceful */ }
+
+    // 3차: 호스트 프로필 — 실패해도 페이지 계속
+    try {
+      const { data: host } = await supabase
+        .from("profiles")
+        .select("id, nickname, avatar_url")
+        .eq("id", group.host_id)
+        .maybeSingle();
+      if (host) group.host = host;
+    } catch { /* graceful */ }
   } catch (err: any) {
     // If notFound() was thrown it will propagate correctly; re-throw
     if (err?.digest?.startsWith("NEXT_NOT_FOUND")) throw err;
@@ -120,7 +164,20 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
 
   if (!group) notFound();
 
-  const isHost        = group.host_id === user.id;
+  // Genesis AI 로 생성된 공간인지 확인
+  let isGenesis = false;
+  try {
+    const { data: gp } = await supabase
+      .from("genesis_plans")
+      .select("id")
+      .eq("target_kind", "group")
+      .eq("target_id", id)
+      .limit(1)
+      .maybeSingle();
+    isGenesis = !!gp;
+  } catch { /* migration 104 미적용 */ }
+
+  const isHost        = !!user && group.host_id === user.id;
   const isManager     = isHost || userMembership?.role === "moderator";
   const isMember      = isHost || userMembership?.status === "active";
   const membershipStatus = userMembership?.status as "active" | "pending" | "waitlist" | null;
@@ -133,73 +190,83 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
 
   return (
     <>
-      {/* ── Hero Banner ──────────────────────────────── */}
-      <div className={`relative border-b-[3px] border-nu-ink ${colors.light} overflow-hidden min-h-[320px] flex items-center`}>
-        {/* Background Image/Pattern */}
+      {/* ── Compact Hero with Generative Cover ──────────── */}
+      <div className={`relative border-b-[3px] border-nu-ink ${colors.light} overflow-hidden`}>
         {group.image_url ? (
           <div className="absolute inset-0 z-0">
-            <img
-              src={group.image_url}
-              alt=""
-              className="w-full h-full object-cover"
-            />
-            <div className={`absolute inset-0 bg-gradient-to-r ${colors.light} via-nu-paper/90 to-nu-paper/40 mix-blend-normal`} />
-            <div className="absolute inset-0 bg-nu-paper/20 backdrop-blur-[2px]" />
+            <img src={group.image_url} alt="" className="w-full h-full object-cover" />
+            <div className={`absolute inset-0 bg-gradient-to-r ${colors.light} via-nu-paper/90 to-nu-paper/40`} />
+            <div className="absolute inset-0 bg-nu-paper/30 backdrop-blur-[1px]" />
           </div>
         ) : (
-          <>
-            <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: "radial-gradient(circle, #0d0d0d 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
-            <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-nu-pink/5 rounded-full blur-3xl" />
-            <div className="absolute -left-20 -top-20 w-80 h-80 bg-nu-blue/5 rounded-full blur-3xl" />
-          </>
+          <div className="absolute inset-0 z-0 opacity-40 pointer-events-none">
+            <GenerativeArt
+              seed={group.id}
+              category={(["space","culture","platform","vibe"].includes(group.category) ? group.category : "culture") as any}
+              variant="hero"
+              className="w-full h-full"
+              title={`${group.name} visual`}
+            />
+            <div className={`absolute inset-0 bg-gradient-to-r ${colors.light} via-nu-paper/85 to-nu-paper/40`} />
+          </div>
         )}
 
-        <div className="max-w-6xl mx-auto px-8 py-10 relative z-10 w-full">
-          <div className="flex items-center gap-1 font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest mb-6">
+        <div className="max-w-6xl mx-auto px-6 md:px-8 py-5 relative z-10 w-full">
+          <div className="flex items-center gap-1 font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest mb-2">
             <Link href="/groups" className="hover:text-nu-ink transition-colors no-underline">너트</Link>
-            <ChevronRight size={12} />
+            <ChevronRight size={10} />
             <span className="text-nu-ink">{group.name}</span>
           </div>
 
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-6">
-                <span className={`inline-block font-mono-nu text-[11px] font-bold uppercase tracking-[0.15em] px-3 py-1 text-white ${colors.bg} -rotate-1 shadow-lg shadow-black/10`}>
+          <div className="flex items-start md:items-center justify-between gap-3 flex-wrap">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <h1 className="font-head text-[22px] md:text-[26px] font-extrabold text-nu-ink tracking-tight m-0">
+                  {group.name}
+                </h1>
+                <span className={`inline-block font-mono-nu text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 text-white ${colors.bg}`}>
                   {group.category}
                 </span>
-                {/* Category pill from constants */}
                 {categoryMeta && (
-                  <span className={`inline-block font-mono-nu text-[11px] font-bold uppercase tracking-[0.12em] px-2.5 py-1 border-[2px] ${categoryMeta.border} ${categoryMeta.text} ${categoryMeta.light}`}>
+                  <span className={`inline-block font-mono-nu text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 border-[1.5px] ${categoryMeta.border} ${categoryMeta.text} ${categoryMeta.light}`}>
                     {categoryMeta.label}
                   </span>
                 )}
+                {isGenesis && (
+                  <Link
+                    href={`/groups/${id}/genesis`}
+                    className="inline-flex items-center gap-1 font-mono-nu text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 border-[1.5px] border-nu-ink bg-nu-ink text-nu-paper no-underline hover:bg-nu-pink hover:border-nu-pink"
+                    title="Genesis AI 로 생성된 공간"
+                  >
+                    ✨ Genesis AI
+                  </Link>
+                )}
               </div>
-              <h1 className="font-head text-5xl font-extrabold text-nu-ink tracking-tight mb-4 drop-shadow-sm">
-                {group.name}
-              </h1>
-              <p className="text-nu-graphite max-w-xl leading-relaxed mb-6 text-sm font-medium">
-                {group.description}
-              </p>
-              <div className="flex flex-wrap items-center gap-6 font-mono-nu text-[13px]">
-                 <span className="flex items-center gap-2 text-nu-muted">
-                   <span className="w-1.5 h-1.5 rounded-full bg-nu-pink animate-pulse" />
-                   호스트: <span className="text-nu-ink font-bold">{groupData.host?.nickname || "—"}</span>
-                 </span>
-                 <Suspense fallback={<span className="text-nu-muted">...</span>}>
-                   <HeroQuickStats id={id} />
-                 </Suspense>
+              {group.description && (
+                <p className="text-nu-graphite leading-relaxed text-[12px] mb-2 line-clamp-2 max-w-3xl">
+                  {group.description}
+                </p>
+              )}
+              <div className="flex flex-wrap items-center gap-3 font-mono-nu text-[11px]">
+                <span className="flex items-center gap-1 text-nu-muted">
+                  <span className="w-1.5 h-1.5 rounded-full bg-nu-pink animate-pulse" />
+                  호스트 <span className="text-nu-ink font-bold">{groupData.host?.nickname || "—"}</span>
+                </span>
+                <Suspense fallback={<span className="text-nu-muted">...</span>}>
+                  <HeroQuickStats id={id} />
+                </Suspense>
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 shrink-0 items-end">
+            <div className="flex gap-2 shrink-0 flex-wrap">
               {(isHost || isManager) && (
-                <Link href={`/groups/${id}/settings`} className="p-3 bg-nu-paper border-[2px] border-nu-ink/20 text-nu-graphite no-underline hover:bg-nu-ink hover:text-nu-paper transition-all hover:-translate-y-0.5 inline-flex items-center">
-                  <Settings size={18} />
+                <Link href={`/groups/${id}/settings`} className="h-9 px-3 bg-nu-paper border-[2px] border-nu-ink/20 text-nu-graphite no-underline hover:bg-nu-ink hover:text-nu-paper inline-flex items-center">
+                  <Settings size={15} />
                 </Link>
               )}
               {!isHost && !isManager && (
-                <Suspense fallback={<div className="w-32 h-10 bg-black/5" />}>
-                   <GroupJoinAction id={id} groupName={group.name} hostId={group.host_id} userId={user.id} maxMembers={group.max_members} membershipStatus={membershipStatus} />
+                <Suspense fallback={<div className="w-28 h-9 bg-black/5" />}>
+                  <GroupJoinAction id={id} groupName={group.name} hostId={group.host_id} userId={user?.id ?? ""} maxMembers={group.max_members} membershipStatus={membershipStatus} />
                 </Suspense>
               )}
             </div>
@@ -211,21 +278,29 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
         </div>
       </div>
 
+      {/* ── Drive → R2 migration nudge (admin/host only) ─── */}
+      <div className="max-w-6xl mx-auto px-8 pt-4">
+        <Suspense fallback={null}>
+          <DriveR2MigrationBanner scope="group" id={id} driveFolderId={group.google_drive_folder_id} hostId={group.host_id} />
+        </Suspense>
+      </div>
+
       {/* ── Quick Actions Bar (members only) ─────────── */}
       {isMember && membershipStatus !== "pending" && membershipStatus !== "waitlist" && (
         <div className="max-w-6xl mx-auto px-8 pt-8">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { href: `/groups/${id}/meetings/create`, icon: <Plus size={14} />, label: "미팅 만들기" },
-              { href: `/groups/${id}/wiki`, icon: <FileText size={14} />, label: "탭 작성" },
-              { href: `/groups/${id}/resources`, icon: <Upload size={14} />, label: "자료 올리기" },
+              { href: `/groups/${id}/meetings/create`, icon: <Plus size={14} />, label: "미팅 만들기", color: "hover:border-nu-blue/40 hover:text-nu-blue" },
+              { href: `/groups/${id}/wiki`, icon: <FileText size={14} />, label: "위키 작성", color: "hover:border-nu-pink/40 hover:text-nu-pink" },
+              { href: `/groups/${id}/resources`, icon: <Upload size={14} />, label: "자료 올리기", color: "hover:border-nu-amber/40 hover:text-nu-amber" },
+              { href: `/groups/${id}/meetings`, icon: <BookOpen size={14} />, label: "미팅 기록", color: "hover:border-nu-ink/40 hover:text-nu-ink" },
             ].map((action) => (
               <Link
                 key={action.label}
                 href={action.href}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-nu-white border-[2px] border-nu-ink/10 hover:border-nu-pink/40 hover:-translate-y-0.5 transition-all no-underline group"
+                className={`flex items-center justify-center gap-2 px-4 py-3 border-[2px] hover:-translate-y-0.5 transition-all no-underline group shadow-[2px_2px_0_0_rgba(13,13,13,0.1)] hover:shadow-[3px_3px_0_0_rgba(13,13,13,0.15)] bg-nu-white border-nu-ink/10 ${action.color}`}
               >
-                <span className="text-nu-muted group-hover:text-nu-pink transition-colors">{action.icon}</span>
+                <span className="text-nu-muted group-hover:text-current transition-colors">{action.icon}</span>
                 <span className="font-mono-nu text-[13px] font-bold uppercase tracking-widest text-nu-graphite group-hover:text-nu-ink transition-colors">
                   {action.label}
                 </span>
@@ -235,46 +310,94 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
         </div>
       )}
 
-      {/* ── Main Content ────────────────────────────── */}
-      <div className="max-w-6xl mx-auto px-8 py-10 pb-24">
-        {(isMember || isHost) && (
-          <div className="mb-8">
-            <GroupSearch groupId={id} />
-          </div>
-        )}
+      {/* ── Main Content (Reader Mode) ──────────────────────── */}
+      <div className="reader-shell pb-24">
+        <div className="max-w-[1040px] mx-auto px-4 md:px-6 py-8">
+          {/* 비로그인 공개 안내 배너 — SEO 진입 유저용 */}
+          {!user && (
+            <div className="mb-6 border-l-[3px] border-[color:var(--liquid-primary)] bg-[color:var(--neutral-0)] border border-[color:var(--neutral-100)] p-4 rounded-[var(--ds-radius-lg)]">
+              <p className="font-mono-nu text-[10px] uppercase tracking-[0.3em] text-[color:var(--liquid-primary)] font-bold mb-1">
+                Preview · Nut
+              </p>
+              <h2 className="text-[16px] font-semibold text-[color:var(--neutral-900)] mb-1">
+                이 너트의 활동·멤버·공지를 보시려면 로그인이 필요해요
+              </h2>
+              <p className="text-[13px] text-[color:var(--neutral-500)] leading-relaxed mb-3">
+                너트는 참여한 와셔만 내부 피드·일정·자료를 열람할 수 있어요. 아래 <strong>[가입하기]</strong> 를 눌러 합류해보세요.
+              </p>
+              <div className="flex gap-2">
+                <Link
+                  href={`/login?redirectTo=/groups/${id}`}
+                  className="inline-flex items-center gap-1 px-3 py-2 bg-[color:var(--neutral-900)] text-[color:var(--neutral-0)] rounded-[var(--ds-radius-md)] text-[13px] font-medium no-underline hover:bg-[color:var(--liquid-primary)] transition-colors"
+                >
+                  로그인하고 참여 →
+                </Link>
+                <Link
+                  href="/groups"
+                  className="inline-flex items-center gap-1 px-3 py-2 border border-[color:var(--neutral-200)] rounded-[var(--ds-radius-md)] text-[13px] text-[color:var(--neutral-700)] no-underline hover:bg-[color:var(--neutral-50)]"
+                >
+                  다른 너트 둘러보기
+                </Link>
+              </div>
+            </div>
+          )}
 
-        <Suspense fallback={null}>
-          <GroupAnnouncements groupId={id} />
-        </Suspense>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
-            {/* Daily Digest */}
-            <DailyDigest groupId={id} />
-
-            <Suspense fallback={<div className="p-12 bg-black/5 animate-pulse" />}>
-              <GroupUpcomingSection id={id} colors={colors} isHost={isHost} isMember={isMember} userId={user.id} />
+          {/* 진행 현황 + 이슈 + 내 기여도 */}
+          {(isMember || isHost) && (
+            <Suspense fallback={<div className="h-32 bg-black/5 animate-pulse mb-6" />}>
+              <GroupStatusPanel groupId={id} userId={user?.id ?? ""} />
             </Suspense>
+          )}
 
-            <Suspense fallback={<div className="p-12 bg-black/5 animate-pulse" />}>
-              <ActivitySection id={id} userId={user.id} isMember={isMember} isHost={isHost} />
-            </Suspense>
-          </div>
+          {(isMember || isHost) && (
+            <div className="mb-6">
+              <GroupSearch groupId={id} />
+            </div>
+          )}
 
-          <div className="space-y-6">
-            {/* Growth Widget */}
-            {(isMember || isHost) && (
-              <GroupGrowthWidget groupId={id} />
-            )}
-            <Suspense fallback={<div className="h-64 bg-black/5 animate-pulse" />}>
-              <GroupSidebarSections id={id} colors={colors} isHost={isHost} isMember={isMember} group={groupData} userId={user.id} />
-            </Suspense>
+          <Suspense fallback={null}>
+            <GroupAnnouncements groupId={id} />
+          </Suspense>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
+            <div className="lg:col-span-2 space-y-8">
+              <DailyDigest groupId={id} />
+
+              <Suspense fallback={<div className="p-12 bg-black/5 animate-pulse" />}>
+                <GroupUpcomingSection id={id} colors={colors} isHost={isHost} isMember={isMember} userId={user?.id ?? ""} />
+              </Suspense>
+
+              <Suspense fallback={<div className="p-12 bg-black/5 animate-pulse" />}>
+                <ActivitySection id={id} userId={user?.id ?? ""} isMember={isMember} isHost={isHost} />
+              </Suspense>
+            </div>
+
+            <div className="space-y-6">
+              {(isMember || isHost) && (
+                <GroupGrowthWidget groupId={id} />
+              )}
+              <Suspense fallback={<div className="h-64 bg-black/5 animate-pulse" />}>
+                <GroupSidebarSections id={id} colors={colors} isHost={isHost} isMember={isMember} group={groupData} userId={user?.id ?? ""} />
+              </Suspense>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Related Groups Recommendation */}
       <RelatedGroups groupId={id} category={group.category} />
+
+      {/* 🧪 Thread Beta — Module Lattice 실험 영역 */}
+      {user?.id && (
+        <div className="max-w-[1200px] mx-auto px-4 md:px-6 pb-8">
+          <ThreadBetaSection
+            targetType="nut"
+            targetId={id}
+            currentUserId={user.id}
+            canManage={isHost || isManager}
+          />
+        </div>
+      )}
     </>
   );
 }
@@ -438,15 +561,18 @@ async function GroupUpcomingSection({ id, colors, isHost, isMember, userId }: an
               const date = new Date(item.start_at);
               const isEvent = item.itemType === "event";
               const relativeLabel = formatRelativeDate(date);
+              // KST 기준 일/월 — 서버(UTC) 환경에서도 올바른 한국 날짜 표시
+              const kstDay = new Intl.DateTimeFormat("ko-KR", { day: "numeric", timeZone: "Asia/Seoul" }).format(date).replace(/\D/g, "");
+              const kstMonth = new Intl.DateTimeFormat("ko-KR", { month: "short", timeZone: "Asia/Seoul" }).format(date);
               return (
                 <div key={`${item.itemType}-${item.id}`} className="bg-nu-white border-[2px] border-nu-ink/[0.08] hover:border-nu-pink/40 transition-all group">
                   <Link href={isEvent ? `/groups/${id}/events/${item.id}` : `/groups/${id}/meetings/${item.id}`} className="p-5 flex items-center gap-4 no-underline">
                     <div className={`w-14 h-14 flex flex-col items-center justify-center shrink-0 ${isEvent ? "bg-nu-pink/10" : "bg-nu-blue/10"}`}>
                       <span className={`font-head text-lg font-extrabold leading-none ${isEvent ? "text-nu-pink" : "text-nu-blue"}`}>
-                        {date.getDate()}
+                        {kstDay}
                       </span>
                       <span className={`font-mono-nu text-[11px] uppercase ${isEvent ? "text-nu-pink/70" : "text-nu-blue/70"}`}>
-                        {date.toLocaleDateString("ko", { month: "short" })}
+                        {kstMonth}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -491,7 +617,7 @@ async function GroupUpcomingSection({ id, colors, isHost, isMember, userId }: an
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-head text-sm font-bold text-nu-ink group-hover:text-nu-amber transition-colors mb-1">{m.title}</p>
-                    <p className="font-mono-nu text-[12px] text-nu-muted">{new Date(m.scheduled_at).toLocaleDateString("ko", { year: "numeric", month: "long", day: "numeric" })}</p>
+                    <p className="font-mono-nu text-[12px] text-nu-muted">{new Date(m.scheduled_at).toLocaleDateString("ko", { year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Seoul" })}</p>
                   </div>
                 </div>
               </Link>
@@ -532,9 +658,8 @@ async function GroupSidebarSections({ id, colors, isHost, isMember, group, userI
   // Set of user IDs with recent activity (approximate online status)
   const recentlyActiveUserIds = new Set((recentPosts || []).map((p: any) => p.author_id));
 
-  const hasKakao = !!group.kakao_chat_url;
   const hasDrive = !!group.google_drive_url;
-  const hasWorkspaceLinks = hasKakao || hasDrive;
+  const hasWorkspaceLinks = hasDrive;
 
   const MEMBERS_DISPLAY_LIMIT = 12;
   const displayMembers = members?.slice(0, MEMBERS_DISPLAY_LIMIT) || [];
@@ -558,27 +683,12 @@ async function GroupSidebarSections({ id, colors, isHost, isMember, group, userI
       {/* ── Communication & Knowledge ─────────────── */}
       <div className="bg-nu-white border-[2px] border-nu-ink/[0.08] p-5">
         <h2 className="font-head text-sm font-bold text-nu-ink mb-4 flex items-center gap-2">
-          <MessageCircle size={16} className="text-nu-pink" /> Communication & Knowledge
+          <MessageCircle size={16} className="text-nu-pink" /> 커뮤니케이션 & 자료
         </h2>
 
         {/* Prominent workspace links */}
         {hasWorkspaceLinks && (
           <div className="flex flex-col gap-2 mb-4">
-            {hasKakao && (
-              <a
-                href={group.kakao_chat_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 px-4 py-3 border-[2px] border-[#FEE500]/60 bg-[#FEE500]/10 hover:bg-[#FEE500]/20 transition-colors no-underline group"
-              >
-                <span className="w-8 h-8 bg-[#FEE500] flex items-center justify-center font-head text-xs font-extrabold text-[#3C1E1E]">K</span>
-                <div className="flex-1 min-w-0">
-                  <p className="font-mono-nu text-[13px] font-bold uppercase tracking-widest text-nu-ink">카카오톡 채팅</p>
-                  <p className="font-mono-nu text-[11px] text-nu-muted truncate">{group.kakao_chat_url}</p>
-                </div>
-                <ExternalLink size={14} className="text-nu-muted shrink-0" />
-              </a>
-            )}
             {hasDrive && (
               <a
                 href={group.google_drive_url}
@@ -608,7 +718,7 @@ async function GroupSidebarSections({ id, colors, isHost, isMember, group, userI
           </Link>
         )}
 
-        <WorkspaceLinks workspaceType="crew" workspaceId={id} canEdit={isHost} kakaoUrl={group.kakao_chat_url} driveUrl={group.google_drive_url} />
+        <WorkspaceLinks workspaceType="crew" workspaceId={id} canEdit={isHost} driveUrl={group.google_drive_url} />
       </div>
 
       {/* ── Members Section ───────────────────────── */}
@@ -663,10 +773,10 @@ async function GroupSidebarSections({ id, colors, isHost, isMember, group, userI
         </div>
         {hasMoreMembers && (
           <Link
-            href={`/groups/${id}/settings`}
+            href={`/groups/${id}/members`}
             className="block mt-2 py-2.5 text-center font-mono-nu text-[13px] font-bold uppercase tracking-widest text-nu-muted hover:text-nu-ink border-[2px] border-dashed border-nu-ink/10 hover:border-nu-ink/30 transition-all no-underline"
           >
-            전체 보기 ({totalMembers}명) <ChevronRight size={12} className="inline" />
+            전체 멤버 보기 ({totalMembers}명) <ChevronRight size={12} className="inline" />
           </Link>
         )}
       </div>

@@ -83,14 +83,14 @@ export async function GET(req: NextRequest) {
       .eq("user_id", user.id)
       .eq("status", "active");
 
-    const groupIds = (memberships || []).map((m: any) => m.group_id);
+    const groupIds = ((memberships ?? []) as { group_id: string }[]).map((m) => m.group_id);
 
     // Also include groups where user is host
     const { data: hostedGroups } = await supabase
       .from("groups")
       .select("id, name")
       .eq("host_id", user.id);
-    const hostedIds = (hostedGroups || []).map((g: any) => g.id);
+    const hostedIds = ((hostedGroups ?? []) as { id: string }[]).map((g) => g.id);
 
     const allGroupIds = [...new Set([...groupIds, ...hostedIds])];
 
@@ -148,8 +148,8 @@ export async function GET(req: NextRequest) {
       .select("id, title")
       .eq("created_by", user.id);
 
-    const projectMemberIds = (projectMembers || []).map((p: any) => p.project_id);
-    const createdProjectIds = (createdProjects || []).map((p: any) => p.id);
+    const projectMemberIds = ((projectMembers ?? []) as { project_id: string }[]).map((p) => p.project_id);
+    const createdProjectIds = ((createdProjects ?? []) as { id: string }[]).map((p) => p.id);
     const allProjectIds = [...new Set([...projectMemberIds, ...createdProjectIds])];
 
     if (allProjectIds.length > 0) {

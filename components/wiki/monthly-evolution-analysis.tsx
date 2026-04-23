@@ -224,8 +224,9 @@ export function MonthlyEvolutionAnalysis({ groupId, isHost = false }: { groupId:
       });
 
       toast.success("실 데이터 기반 월간 지식 진화 분석이 완료되었습니다!");
-    } catch (err: any) {
-      toast.error(err.message || "분석 중 오류가 발생했습니다.");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "분석 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);
     }

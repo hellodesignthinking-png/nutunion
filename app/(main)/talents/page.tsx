@@ -17,7 +17,8 @@ import { toast } from "sonner";
 import { PageHero } from "@/components/shared/page-hero";
 import { RecruitingBoltsBanner } from "@/components/talents/recruiting-bolts-banner";
 
-const tierConfig: Record<string, { label: string; className: string; icon: any }> = {
+type TierIcon = React.ComponentType<{ size?: number | string; className?: string }>;
+const tierConfig: Record<string, { label: string; className: string; icon: TierIcon }> = {
   bronze: { label: "브론즈", className: "bg-amber-100 text-amber-700 border-amber-200", icon: Award },
   silver: { label: "실버",  className: "bg-slate-100 text-slate-600 border-slate-200", icon: Star },
   gold:   { label: "골드",  className: "bg-yellow-100 text-yellow-700 border-yellow-200", icon: Star },
@@ -338,10 +339,11 @@ export default function TalentSearchPage() {
 
   return (
     <div className="bg-nu-paper min-h-screen pb-20">
-      <PageHero 
+      <PageHero
+        compact
         category="Talent"
-        title="Talent Hunter"
-        description="너트유니온의 데이터로 검증된 와셔를 찾아보세요. 강성, 리더십 경험, 역량 배지 등 실무 데이터 기반의 팀 빌딩을 지원합니다."
+        title="와셔 (Washer)"
+        description="데이터로 검증된 와셔를 찾아보세요. 역량 배지 + 동료 보증 기반의 팀 빌딩."
       />
 
       <div className="max-w-7xl mx-auto px-8 py-12">
@@ -378,7 +380,7 @@ export default function TalentSearchPage() {
           <div className="flex gap-2">
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              onChange={(e) => setSortBy(e.target.value as "activity" | "competency" | "endorsements")}
               className="flex-1 h-12 border border-nu-ink/10 bg-nu-cream/10 px-3 text-sm focus:outline-none font-mono-nu text-[12px] uppercase tracking-widest"
             >
               <option value="activity">최신 활동순</option>

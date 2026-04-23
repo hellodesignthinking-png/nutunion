@@ -71,6 +71,32 @@ export function GroupActions({
       is_read: false,
     });
 
+    // 너트 채팅방에도 시스템 메시지 (호스트가 바로 승인/거절 가능)
+    try {
+      const { data: me } = await supabase
+        .from("profiles")
+        .select("nickname")
+        .eq("id", userId)
+        .maybeSingle();
+      const nick = (me as any)?.nickname || "신청자";
+      const { encodeAction } = await import("@/lib/chat/chat-actions");
+      const content = encodeAction(
+        {
+          type: "join_request",
+          group_id: groupId,
+          applicant_id: userId,
+          applicant_nick: nick,
+          host_id: hostId,
+        },
+        `${nick}님이 ${groupName} 너트 가입을 신청했습니다`,
+      );
+      await fetch("/api/chat/system-message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ group_id: groupId, content, ensure_room: true }),
+      });
+    } catch {}
+
     toast.success("가입 신청이 완료되었습니다. 관리자 승인을 기다려주세요.");
     router.refresh();
     setLoading(false);

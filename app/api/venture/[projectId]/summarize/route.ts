@@ -7,7 +7,9 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const MODEL = "anthropic/claude-sonnet-4.5";
+import { NU_AI_MODEL, NU_AI_MODEL_LABEL } from "@/lib/ai/model";
+const MODEL = NU_AI_MODEL;
+const MODEL_LABEL = NU_AI_MODEL_LABEL;
 
 /** 공용 AI 요약 엔드포인트 — kind 로 분기 */
 const RequestSchema = z.object({

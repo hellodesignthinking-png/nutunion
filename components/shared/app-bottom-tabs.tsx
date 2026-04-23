@@ -8,6 +8,7 @@ import {
   Rocket,
   BookOpen,
   Bell,
+  MessageSquare,
   User as UserIcon,
 } from "lucide-react";
 
@@ -24,9 +25,9 @@ import {
 
 const TABS = [
   { label: "홈", href: "/dashboard", icon: LayoutDashboard },
+  { label: "채팅", href: "/chat", icon: MessageSquare },
   { label: "너트", href: "/groups", icon: Users },
   { label: "볼트", href: "/projects", icon: Rocket },
-  { label: "탭", href: "/wiki", icon: BookOpen },
   { label: "알림", href: "/notifications", icon: Bell },
 ];
 

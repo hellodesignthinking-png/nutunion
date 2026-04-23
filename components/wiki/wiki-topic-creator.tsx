@@ -30,8 +30,9 @@ export function WikiTopicCreator({ groupId }: { groupId: string }) {
       setOpen(false);
       // Refresh to show new topic
       router.refresh();
-    } catch (err: any) {
-      toast.error(err.message || "생성에 실패했습니다");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "생성에 실패했습니다");
     } finally {
       setSaving(false);
     }

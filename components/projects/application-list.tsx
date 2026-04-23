@@ -182,8 +182,9 @@ export default function ApplicationList({
       setRejectingId(null);
       setRejectionReason("");
       fetchApplications();
-    } catch (err: any) {
-      toast.error(err.message || "처리 실패");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "처리 실패");
     } finally {
       setProcessing(null);
     }

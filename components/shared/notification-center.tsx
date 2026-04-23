@@ -147,8 +147,9 @@ export function NotificationCenter() {
   useEffect(() => {
     if (!userId) return;
 
+    const uniq = Math.random().toString(36).slice(2, 8);
     const channel = supabase
-      .channel(`notifications:user_id=eq.${userId}`)
+      .channel(`notifications-${userId}-${uniq}`)
       .on(
         "postgres_changes",
         {

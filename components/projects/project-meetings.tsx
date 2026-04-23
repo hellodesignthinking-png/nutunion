@@ -542,6 +542,11 @@ function MeetingCard({
   const cfg = statusConfig[meeting.status] || statusConfig.upcoming;
   const date = new Date(meeting.scheduled_at);
 
+  // "upcoming" but scheduled end time has already passed → treat as overdue/past
+  const overdueUpcoming =
+    meeting.status === "upcoming" &&
+    date.getTime() + (meeting.duration_min || 60) * 60000 < Date.now();
+
   // Date box colors by status
   const dateBoxClass =
     meeting.status === "in_progress"
@@ -550,11 +555,13 @@ function MeetingCard({
         ? "bg-green-50 border-green-200"
         : meeting.status === "cancelled"
           ? "bg-nu-cream/40 border-nu-ink/[0.08]"
-          : "bg-nu-blue/10 border-nu-blue/20";
+          : overdueUpcoming
+            ? "bg-nu-ink/5 border-nu-ink/[0.08]"
+            : "bg-nu-blue/10 border-nu-blue/20";
 
   return (
     <div
-      className={`bg-nu-white border-[2px] border-nu-ink/[0.08] overflow-hidden border-l-[4px] ${cfg.borderColor}`}
+      className={`bg-nu-white border-[2px] border-nu-ink/[0.08] overflow-hidden border-l-[4px] ${overdueUpcoming ? "border-l-nu-ink/20 opacity-75" : cfg.borderColor}`}
     >
       {/* Header */}
       <button
@@ -564,7 +571,7 @@ function MeetingCard({
         <div
           className={`w-14 h-14 flex flex-col items-center justify-center shrink-0 border ${dateBoxClass}`}
         >
-          <span className="font-head text-lg font-extrabold text-nu-ink leading-none">
+          <span className={`font-head text-lg font-extrabold leading-none ${overdueUpcoming ? "text-nu-muted" : "text-nu-ink"}`}>
             {date.getDate()}
           </span>
           <span className="font-mono-nu text-[10px] uppercase text-nu-muted">
@@ -574,7 +581,7 @@ function MeetingCard({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
-            <p className="font-head text-sm font-bold text-nu-ink truncate">
+            <p className={`font-head text-sm font-bold truncate ${overdueUpcoming ? "text-nu-muted" : "text-nu-ink"}`}>
               {meeting.title}
             </p>
             <span

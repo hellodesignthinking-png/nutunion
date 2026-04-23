@@ -15,6 +15,11 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "**.googleusercontent.com",
       },
+      {
+        protocol: "https",
+        hostname: "i.ytimg.com",
+        pathname: "/vi/**",
+      },
     ],
   },
 
@@ -60,10 +65,11 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy",          value: "strict-origin-when-cross-origin" },
           // HSTS — HTTPS 강제 (1년, 서브도메인 포함, preload 가능)
           { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains; preload" },
-          // 기능 권한 — 불필요 센서 접근 차단
+          // 기능 권한 — 회의 녹음을 위해 microphone=self 허용, 나머지는 차단
+          // camera=self 도 허용 (향후 영상 녹화/아바타 기능 대비)
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), accelerometer=(), gyroscope=()",
+            value: "camera=(self), microphone=(self), geolocation=(), payment=(), usb=(), magnetometer=(), accelerometer=(), gyroscope=()",
           },
           // DNS prefetch 허용 (성능)
           { key: "X-DNS-Prefetch-Control",   value: "on" },
@@ -80,12 +86,28 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "no-store, max-age=0" },
         ],
       },
+      // Service Worker — 절대 캐싱하지 말고 매번 새로 받기 (구 SW 교체 즉시 반영)
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
     ];
   },
 
   // ── 리다이렉트 (Legacy 대응) ───────────────────────────────────
   async redirects() {
     return [
+      // www → apex 영구 리다이렉트 (SEO canonical)
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.nutunion.co.kr" }],
+        destination: "https://nutunion.co.kr/:path*",
+        permanent: true,
+      },
+      // Legacy
       {
         source: "/crews",
         destination: "/groups",
@@ -103,12 +125,15 @@ const nextConfig: NextConfig = {
   compress: true,
   poweredByHeader: false,
 
-  // ── 번들 분석 (선택적) ────────────────────────────────────────
+  // ── 번들 분석 + 패키지 최적화 ────────────────────────────────
   experimental: {
     optimizePackageImports: [
       "lucide-react",
       "@supabase/supabase-js",
+      "date-fns",
     ],
+    // Next 16: PPR 은 cacheComponents 로 통합됨 — 점진 활성화는 별도 refactor 필요.
+    // 현재는 force-dynamic 유지. 인덱스/컬럼 최소화/쿼리 병렬화만으로 큰 체감.
   },
 
   // ── 서버 에러 로깅 ────────────────────────────────────────────

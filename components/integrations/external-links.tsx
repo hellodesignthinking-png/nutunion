@@ -29,20 +29,7 @@ export function ExternalLinks({ kakaoUrl, driveUrl, chatUrl, label = "연동" }:
             <ExternalLink size={10} className="text-nu-muted ml-auto" />
           </a>
         )}
-        {kakaoUrl && (
-          <a
-            href={kakaoUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2.5 text-sm text-nu-graphite no-underline hover:text-[#FEE500] transition-colors py-1"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" className="shrink-0">
-              <path d="M12 3C6.48 3 2 6.48 2 10.5c0 2.58 1.68 4.85 4.22 6.13-.14.5-.9 3.23-.93 3.44 0 0-.02.16.08.22.1.06.22.01.22.01.29-.04 3.37-2.2 3.9-2.57.82.12 1.66.18 2.51.18 5.52 0 10-3.48 10-7.5S17.52 3 12 3z" fill="#191919"/>
-            </svg>
-            <span>카카오톡 오픈채팅</span>
-            <ExternalLink size={10} className="text-nu-muted ml-auto" />
-          </a>
-        )}
+        {/* 카카오톡 오픈채팅 제거 (2026-04) — 내장 채팅으로 통일 */}
         {driveUrl && (
           <a
             href={driveUrl}

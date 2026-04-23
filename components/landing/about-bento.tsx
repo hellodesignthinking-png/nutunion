@@ -1,6 +1,7 @@
 "use client";
 
 import { useRevealOnScroll } from "@/lib/hooks/use-reveal-on-scroll";
+import { GenerativeArt } from "@/components/art/generative-art";
 
 interface AboutBentoProps {
   content?: Record<string, string>;
@@ -11,7 +12,11 @@ export function AboutBento({ content }: AboutBentoProps) {
 
   const c = (key: string, fallback: string) => content?.[key] || fallback;
 
-  const cells = [
+  const cells: Array<{
+    bg: string; label: string; title?: string; body?: string; huge?: string;
+    wide: boolean; halftone: string; image?: string; art?: "space" | "culture" | "platform" | "vibe";
+    artSeed?: string;
+  }> = [
     {
       bg: "bg-nu-ink text-nu-paper",
       label: c("cell_1_label", "NUTUNION"),
@@ -19,11 +24,13 @@ export function AboutBento({ content }: AboutBentoProps) {
       body: c("cell_1_body", "작은 결집이 단단한 변화를 만듭니다. 너트유니온은 시티체인저들의 자율적 연합체입니다."),
       wide: false,
       halftone: "halftone-paper",
+      art: "platform",
+      artSeed: "bento-nutunion",
     },
     {
       bg: "bg-nu-pink text-nu-paper",
-      label: c("cell_2_label", "ACTIVE NUTS"),
-      huge: c("cell_2_number", "152+"),
+      label: c("cell_2_label", "EDITION 001"),
+      huge: c("cell_2_number", "v0.1"),
       wide: false,
       halftone: "halftone-paper",
     },
@@ -42,7 +49,8 @@ export function AboutBento({ content }: AboutBentoProps) {
       body: "탭은 활동과 학습의 기록이 쌓이는 탭 아카이브입니다. 경험이 지식이 됩니다.",
       wide: true,
       halftone: "halftone-ink",
-      image: "/bento.png",
+      art: "culture",
+      artSeed: "bento-tap",
     },
     {
       bg: "bg-nu-blue text-nu-paper",
@@ -75,11 +83,18 @@ export function AboutBento({ content }: AboutBentoProps) {
             {/* Halftone corner decoration */}
             <div className={`absolute bottom-0 right-0 w-28 h-28 ${cell.halftone} opacity-[0.05]`} aria-hidden="true" />
 
-            {cell.image && (
-              <>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={cell.image} alt="" className="absolute inset-0 w-full h-full object-cover mix-blend-multiply opacity-25 pointer-events-none" aria-hidden="true" />
-              </>
+            {cell.art && (
+              <div
+                className="absolute inset-0 mix-blend-multiply opacity-25 pointer-events-none"
+                aria-hidden="true"
+              >
+                <GenerativeArt
+                  seed={cell.artSeed || `bento-${i}`}
+                  category={cell.art}
+                  variant="hero"
+                  className="w-full h-full"
+                />
+              </div>
             )}
 
             <div className="relative z-10">

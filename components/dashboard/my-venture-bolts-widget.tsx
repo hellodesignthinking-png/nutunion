@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { VentureStageBadge } from "@/components/venture/venture-stage-badge";
 import { STAGES } from "@/lib/venture/types";
+import { getServerLocale, t } from "@/lib/i18n";
 
 interface Bolt {
   id: string;
@@ -35,7 +36,8 @@ export async function MyVentureBoltsWidget({ userId }: { userId: string }) {
     .limit(6);
 
   const bolts = ((projects as Bolt[] | null) ?? []).filter(Boolean);
-  if (bolts.length === 0) return <EmptyState />;
+  const locale = await getServerLocale();
+  if (bolts.length === 0) return <EmptyState locale={locale} />;
 
   // 각 볼트의 내 기여 건수 (최근 7일)
   const since = new Date();
@@ -121,21 +123,23 @@ export async function MyVentureBoltsWidget({ userId }: { userId: string }) {
   );
 }
 
-function EmptyState() {
+function EmptyState({ locale = "ko" as "ko" | "en" }: { locale?: "ko" | "en" } = {}) {
+  const emptyMsg = locale === "en"
+    ? "You are not a member of any active Venture bolt."
+    : "아직 참여 중인 Venture 볼트가 없습니다.";
+  const cta = locale === "en" ? "Browse bolts" : "볼트 탐색하기";
   return (
     <div className="border-[2px] border-dashed border-nu-ink/30 bg-nu-paper p-5 text-center">
       <div className="text-[32px] mb-1">🚀</div>
       <div className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-graphite mb-1">
         My Ventures
       </div>
-      <p className="text-[12px] text-nu-graphite mb-3">
-        아직 참여 중인 Venture 볼트가 없습니다.
-      </p>
+      <p className="text-[12px] text-nu-graphite mb-3">{emptyMsg}</p>
       <Link
         href="/projects"
         className="inline-block h-8 px-3 border-[2px] border-nu-ink bg-nu-paper text-nu-ink font-mono-nu text-[10px] uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper"
       >
-        볼트 탐색하기
+        {cta}
       </Link>
     </div>
   );

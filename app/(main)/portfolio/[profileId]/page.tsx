@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { EndorsementPanel } from "@/components/shared/endorsement-panel";
+import { StiffnessBreakdown } from "@/components/shared/stiffness-breakdown";
+import { ReviewTagsSummary } from "@/components/portfolio/review-tags-summary";
 
 const DIMS = ["기획", "성실", "정리", "실행", "전문", "협업"];
 
@@ -68,14 +70,54 @@ export default function PublicPortfolioPage() {
   const [endorseCounts, setEndorseCounts] = useState<number[]>([0,0,0,0,0,0]);
   const [loading, setLoading] = useState(true);
   const [badges, setBadges] = useState<string[]>([]);
-  const [portfolios, setPortfolios] = useState<any[]>([]);
-  const [timelineItems, setTimelineItems] = useState<any[]>([]);
+  type PortfolioRow = {
+    id: string;
+    user_id: string;
+    title: string;
+    description?: string | null;
+    started_at?: string | null;
+    ended_at?: string | null;
+    image_url?: string | null;
+    source?: string;
+    tags?: string[] | null;
+    external_link?: string | null;
+  };
+  type TimelineItem = { type: "portfolio" | "project" | "meeting" | "group"; date: string | null; title: string; description: string; source: string; sourceColor: string; icon: typeof Briefcase };
+
+  const [portfolios, setPortfolios] = useState<PortfolioRow[]>([]);
+  const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
 
   useEffect(() => {
     async function load() {
       const supabase = createClient();
 
-      const { data: prof } = await supabase.from("profiles").select("id, nickname, avatar_url, bio, grade, interests, created_at, updated_at").eq("id", profileId).single();
+      // Graceful fallback — 일부 컬럼이 없는 DB 환경 대응
+      const richCols = "id, nickname, avatar_url, bio, grade, interests, specialty, skill_tags, external_links, slogan, availability, link_notion, link_github, link_drive, link_website, link_instagram, link_facebook, created_at, updated_at";
+      const safeCols = "id, nickname, avatar_url, bio, grade, specialty, skill_tags, created_at";
+      let prof: any = null;
+      {
+        const richRes = await supabase.from("profiles").select(richCols).eq("id", profileId).maybeSingle();
+        if (richRes.data) {
+          prof = richRes.data;
+        } else {
+          // 컬럼 누락 등으로 실패 시 최소 컬럼으로 재시도
+          const safeRes = await supabase.from("profiles").select(safeCols).eq("id", profileId).maybeSingle();
+          prof = safeRes.data;
+          if (richRes.error) console.warn("[portfolio] rich select failed, fell back:", richRes.error.message);
+        }
+      }
+
+      // external_links + 개별 link_* 컬럼 merge
+      if (prof) {
+        const merged: Record<string, string> = { ...(prof.external_links || {}) };
+        if (prof.link_github    && !merged.github)    merged.github    = prof.link_github;
+        if (prof.link_notion    && !merged.notion)    merged.notion    = prof.link_notion;
+        if (prof.link_website   && !merged.web)       merged.web       = prof.link_website;
+        if (prof.link_drive     && !merged.drive)     merged.drive     = prof.link_drive;
+        if (prof.link_instagram && !merged.instagram) merged.instagram = prof.link_instagram;
+        if (prof.link_facebook  && !merged.facebook)  merged.facebook  = prof.link_facebook;
+        prof.external_links = merged;
+      }
       if (!prof) { setLoading(false); return; }
       setProfile(prof);
 
@@ -128,7 +170,7 @@ export default function PublicPortfolioPage() {
           .eq("user_id", profileId)
           .in("source", ["self", "nutunion"])
           .order("started_at", { ascending: false, nullsFirst: false });
-        setPortfolios(portfolioData || []);
+        setPortfolios((portfolioData as PortfolioRow[] | null) || []);
       } catch (e) {
         setPortfolios([]);
       }
@@ -141,14 +183,14 @@ export default function PublicPortfolioPage() {
           .select("dimension")
           .eq("target_user_id", profileId);
         if (endorseData) {
-          const counts = dims.map(d => endorseData.filter((e: any) => e.dimension === d).length);
+          const counts = dims.map(d => (endorseData as { dimension: string }[]).filter((e) => e.dimension === d).length);
           setEndorseCounts(counts);
         }
       } catch { /* endorsements table may not exist */ }
 
       // Load career timeline items
       try {
-        const timelineData: any[] = [];
+        const timelineData: TimelineItem[] = [];
 
         // Portfolio items
         const { data: portfolioItems } = await supabase
@@ -160,11 +202,11 @@ export default function PublicPortfolioPage() {
 
         if (portfolioItems) {
           timelineData.push(
-            ...portfolioItems.map((p: any) => ({
+            ...(portfolioItems as PortfolioRow[]).map((p): TimelineItem => ({
               type: "portfolio",
-              date: p.started_at,
+              date: p.started_at ?? null,
               title: p.title,
-              description: p.description,
+              description: p.description ?? "",
               source: p.source === "nutunion" ? "Verified by NutUnion" : "Self",
               sourceColor: p.source === "nutunion" ? "blue" : "gray",
               icon: Briefcase,
@@ -180,11 +222,11 @@ export default function PublicPortfolioPage() {
 
         if (projectMembers) {
           timelineData.push(
-            ...projectMembers
-              .filter((pm: any) => pm.projects)
-              .map((pm: any) => ({
+            ...(projectMembers as unknown as Array<{ projects?: { id: string; title: string; status: string; started_at?: string | null } | null }>)
+              .filter((pm): pm is { projects: NonNullable<typeof pm.projects> } => !!pm.projects)
+              .map((pm): TimelineItem => ({
                 type: "project",
-                date: pm.projects.started_at,
+                date: pm.projects.started_at ?? null,
                 title: pm.projects.title,
                 description: `Project · ${pm.projects.status}`,
                 source: "NutUnion",
@@ -202,7 +244,7 @@ export default function PublicPortfolioPage() {
 
         if (meetings) {
           timelineData.push(
-            ...meetings.map((m: any) => ({
+            ...(meetings as Array<{ id: string; title: string; created_at: string }>).map((m): TimelineItem => ({
               type: "meeting",
               date: m.created_at,
               title: m.title,
@@ -223,9 +265,9 @@ export default function PublicPortfolioPage() {
 
         if (groupMembers) {
           timelineData.push(
-            ...groupMembers
-              .filter((gm: any) => gm.groups)
-              .map((gm: any) => ({
+            ...(groupMembers as unknown as Array<{ groups?: { id: string; name: string } | null; created_at: string }>)
+              .filter((gm): gm is { groups: NonNullable<typeof gm.groups>; created_at: string } => !!gm.groups)
+              .map((gm): TimelineItem => ({
                 type: "group",
                 date: gm.created_at,
                 title: gm.groups.name,
@@ -265,7 +307,7 @@ export default function PublicPortfolioPage() {
     window.print();
   };
 
-  const formatDate = (dateStr: string | null) => {
+  const formatDate = (dateStr: string | null | undefined) => {
     if (!dateStr) return "";
     return new Date(dateStr).toLocaleDateString("ko-KR", { year: "numeric", month: "short" });
   };
@@ -346,11 +388,52 @@ export default function PublicPortfolioPage() {
               <div className="w-20 h-20 rounded-full bg-nu-pink text-white flex items-center justify-center font-head text-3xl font-bold border-4 border-nu-paper/20">
                 {(profile.nickname || "U").charAt(0).toUpperCase()}
               </div>
-              <div>
-                <h1 className="font-head text-3xl font-extrabold">{profile.nickname}</h1>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="font-head text-3xl font-extrabold">{profile.nickname}</h1>
+                  {profile.availability && (
+                    <span className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 ${
+                      profile.availability === "looking" ? "bg-green-500/20 text-green-300 border border-green-400/40"
+                      : profile.availability === "focused" ? "bg-nu-pink/20 text-nu-pink border border-nu-pink/40"
+                      : "bg-nu-paper/10 text-nu-paper/60 border border-nu-paper/20"
+                    }`}>
+                      {profile.availability === "looking" ? "🔍 찾는 중" : profile.availability === "focused" ? "🔥 집중 중" : "👀 관망"}
+                    </span>
+                  )}
+                </div>
+                {profile.slogan && <p className="text-nu-amber text-sm mt-0.5 font-mono-nu">&ldquo;{profile.slogan}&rdquo;</p>}
                 <p className="text-nu-paper/60 text-sm mt-1">{profile.bio || "넛유니온 인증 활동가"}</p>
+                {/* 외부 링크 */}
+                {profile.external_links && Object.keys(profile.external_links).length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {Object.entries(profile.external_links as Record<string, string>).map(([k, url]) => {
+                      if (!url) return null;
+                      const label = k === "github" ? "GitHub" : k === "behance" ? "Behance" : k === "notion" ? "Notion" : k === "linkedin" ? "LinkedIn" : k === "web" ? "Web" : k;
+                      return (
+                        <a key={k} href={url} target="_blank" rel="noopener noreferrer"
+                          className="font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 bg-nu-paper/10 border border-nu-paper/20 text-nu-paper hover:bg-nu-paper hover:text-nu-ink transition-colors no-underline inline-flex items-center gap-1">
+                          {label} <ExternalLink size={9} />
+                        </a>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
+
+            {/* 스킬 태그 */}
+            {profile.skill_tags && profile.skill_tags.length > 0 && (
+              <div className="mb-5">
+                <div className="font-mono-nu text-[10px] uppercase tracking-[0.25em] text-nu-paper/50 mb-1.5">Skills</div>
+                <div className="flex flex-wrap gap-1">
+                  {(profile.skill_tags as string[]).map((tag) => (
+                    <span key={tag} className="font-mono-nu text-[11px] px-2 py-1 bg-nu-pink/15 border border-nu-pink/30 text-nu-paper">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Badges */}
             <div className="flex flex-wrap gap-2 mb-6">
@@ -382,6 +465,16 @@ export default function PublicPortfolioPage() {
 
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-8 py-12">
+        {/* Stiffness (공개 지표) */}
+        <div className="mb-8">
+          <StiffnessBreakdown userId={profileId} />
+        </div>
+
+        {/* 동료 리뷰 집계 */}
+        <div className="mb-8">
+          <ReviewTagsSummary targetUserId={profileId} />
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Radar Chart */}
           <div className="bg-nu-white border-[2px] border-nu-ink/[0.08] p-6">

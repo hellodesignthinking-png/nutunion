@@ -5,8 +5,10 @@ import {
   FolderOpen, FileText, Upload, Loader2, ExternalLink,
   Search, ChevronRight, ArrowLeft, RefreshCw, Plus,
   Image as ImageIcon, Film, Music, Table2, Presentation,
+  Eye, Edit3,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ResourcePreviewModal } from "@/components/shared/resource-preview-modal";
 
 interface DriveFile {
   id: string;
@@ -74,6 +76,7 @@ export function DriveResourcePanel({
   const [breadcrumb, setBreadcrumb] = useState<{ id: string; name: string }[]>([]);
   const [search, setSearch] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [previewFile, setPreviewFile] = useState<DriveFile | null>(null);
 
   const activeFolderId = currentFolder || folderId;
 
@@ -133,24 +136,33 @@ export function DriveResourcePanel({
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !activeFolderId) return;
+    if (!file) return;
     setUploading(true);
     try {
-      const form = new FormData();
-      form.append("file", file);
-      form.append("folderId", activeFolderId);
-      form.append("targetType", context === "nut" ? "group" : "project");
-      form.append("targetId", targetId);
-      const res = await fetch("/api/google/drive/upload", { method: "POST", body: form });
-      if (res.ok) {
-        toast.success(`"${file.name}" 업로드 완료`);
-        loadFiles(activeFolderId);
-      } else {
-        const data = await res.json();
-        toast.error(data.error || "업로드 실패");
-      }
-    } catch {
-      toast.error("업로드 중 오류 발생");
+      // [Drive migration] R2 직접 업로드 (Vercel 4.5MB 바디 제한 우회)
+      const { uploadFile } = await import("@/lib/storage/upload-client");
+      const up = await uploadFile(file, { prefix: "resources", scopeId: targetId });
+
+      // DB 등록
+      const endpoint = context === "nut" ? "/api/resources/group" : "/api/resources/project";
+      await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          group_id: context === "nut" ? targetId : undefined,
+          project_id: context === "nut" ? undefined : targetId,
+          file_name: up.name,
+          file_url: up.url,
+          file_size: up.size,
+          file_type: up.mime,
+          storage_type: up.storage,
+          storage_key: up.key,
+        }),
+      });
+      toast.success(`"${file.name}" 서버 업로드 완료`);
+      loadFiles(activeFolderId || undefined);
+    } catch (err: any) {
+      toast.error(err?.message || "업로드 중 오류 발생");
     }
     setUploading(false);
     e.target.value = "";
@@ -282,14 +294,18 @@ export function DriveResourcePanel({
           {files.filter(f => f.mimeType !== "application/vnd.google-apps.folder").map(f => {
             const { icon: Icon, color } = getFileIcon(f.mimeType);
             return (
-              <a key={f.id} href={f.webViewLink || "#"} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-3 px-3 py-2.5 bg-nu-white border border-nu-ink/[0.06] hover:border-indigo-200 transition-colors no-underline group">
+              <div key={f.id}
+                className="flex items-center gap-3 px-3 py-2.5 bg-nu-white border border-nu-ink/[0.06] hover:border-indigo-200 transition-colors group">
                 {f.thumbnailLink ? (
                   <img src={f.thumbnailLink} alt="" className="w-8 h-8 object-cover border border-nu-ink/5 shrink-0" />
                 ) : (
                   <Icon size={16} className={`${color} shrink-0`} />
                 )}
-                <div className="flex-1 min-w-0">
+                <button
+                  onClick={() => setPreviewFile(f)}
+                  className="flex-1 min-w-0 text-left bg-transparent border-none cursor-pointer p-0"
+                  title="미리보기"
+                >
                   <p className="text-xs font-medium text-nu-ink truncate group-hover:text-indigo-600 transition-colors">{f.name}</p>
                   <div className="flex items-center gap-2 mt-0.5">
                     {f.owners?.[0]?.displayName && (
@@ -302,12 +318,37 @@ export function DriveResourcePanel({
                     )}
                     {f.size && <span className="text-[11px] text-nu-muted">{formatBytes(f.size)}</span>}
                   </div>
-                </div>
-                <ExternalLink size={10} className="text-nu-muted/30 group-hover:text-indigo-400 shrink-0" />
-              </a>
+                </button>
+                <button
+                  onClick={() => setPreviewFile(f)}
+                  title="미리보기"
+                  className="p-1.5 text-nu-muted hover:text-indigo-600 hover:bg-indigo-50 transition-colors shrink-0 bg-transparent border-none cursor-pointer"
+                >
+                  <Eye size={12} />
+                </button>
+                {f.webViewLink && (
+                  <a
+                    href={f.webViewLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Drive에서 열기/수정"
+                    className="p-1.5 text-nu-muted hover:text-indigo-600 hover:bg-indigo-50 transition-colors shrink-0 no-underline"
+                  >
+                    <Edit3 size={12} />
+                  </a>
+                )}
+              </div>
             );
           })}
         </div>
+      )}
+      {previewFile && (
+        <ResourcePreviewModal
+          isOpen={!!previewFile}
+          onClose={() => setPreviewFile(null)}
+          url={previewFile.webViewLink || ""}
+          name={previewFile.name}
+        />
       )}
     </div>
   );

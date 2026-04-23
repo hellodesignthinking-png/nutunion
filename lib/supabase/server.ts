@@ -1,5 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+// import type { Database } from "./database.types";
+// ↑ 실제 `npm run types:supabase` 실행 후 아래 제네릭을 <Database> 로 교체.
 
 export async function createClient() {
   const cookieStore = await cookies();

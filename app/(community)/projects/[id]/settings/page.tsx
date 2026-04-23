@@ -88,7 +88,7 @@ export default function ProjectSettingsPage() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [kakaoUrl, setKakaoUrl]   = useState("");
+  // kakaoUrl 제거 — 내장 채팅으로 통일 (2026-04)
   const [recruiting, setRecruiting] = useState(false);
   const [neededRoles, setNeededRoles] = useState<string[]>([]);
   const [recruitingNote, setRecruitingNote] = useState<string | null>(null);
@@ -166,7 +166,7 @@ export default function ProjectSettingsPage() {
     setEndDate(project.end_date || "");
     setImageUrl(project.image_url);
     setImagePreview(project.image_url);
-    setKakaoUrl(project.kakao_chat_url || project.tool_kakao || "");
+    // kakao url — no longer loaded
     setRecruiting(!!project.recruiting);
     setNeededRoles(Array.isArray(project.needed_roles) ? project.needed_roles : []);
     setRecruitingNote(project.recruiting_note ?? null);
@@ -331,16 +331,10 @@ export default function ProjectSettingsPage() {
       let finalImageUrl = imageUrl;
 
       if (imageFile) {
-        const ext = imageFile.name.split(".").pop();
-        const path = `projects/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error: uploadError } = await supabase.storage
-          .from("media")
-          .upload(path, imageFile);
-        if (uploadError) throw uploadError;
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("media").getPublicUrl(path);
-        finalImageUrl = publicUrl;
+        // [Phase 3b] R2 canonical — avatars prefix.
+        const { uploadFile } = await import("@/lib/storage/upload-client");
+        const up = await uploadFile(imageFile, { prefix: "avatars", scopeId: projectId });
+        finalImageUrl = up.url;
       }
 
       // Core fields (always exist)
@@ -354,7 +348,7 @@ export default function ProjectSettingsPage() {
           start_date: startDate || null,
           end_date: endDate || null,
           image_url: finalImageUrl,
-          kakao_chat_url: kakaoUrl.trim() || null,
+          // kakao_chat_url: deprecated
           google_drive_url: driveUrl.trim() || null,
         })
         .eq("id", projectId);
@@ -366,7 +360,7 @@ export default function ProjectSettingsPage() {
         tool_slack: slackUrl.trim() || null,
         tool_notion: notionUrl.trim() || null,
         tool_drive: driveUrl.trim() || null,
-        tool_kakao: kakaoUrl.trim() || null,
+        // tool_kakao: deprecated
         total_budget: totalBudget ? parseInt(totalBudget) : null,
         budget_currency: budgetCurrency || "KRW",
         milestone_dashboard_url: dashUrl.trim() || null,
@@ -474,6 +468,7 @@ export default function ProjectSettingsPage() {
       return;
     }
 
+    // 1) 너트 연결 row 추가 (crew_id row — 너트 자체를 참여로 표시)
     const { data: newMember, error } = await supabase
       .from("project_members")
       .insert({
@@ -491,9 +486,61 @@ export default function ProjectSettingsPage() {
       return;
     }
 
+    // 2) 너트의 모든 active 멤버를 볼트에 bulk 등록
+    //    - 이미 개별 참여 중인 user 는 제외 (user_id unique 보장)
+    //    - RLS 가 차단할 수도 있으나 실패는 조용히 집계
+    let addedCount = 0;
+    let skippedCount = 0;
+    try {
+      const { data: crewMembers } = await supabase
+        .from("group_members")
+        .select("user_id")
+        .eq("group_id", selectedCrewId)
+        .eq("status", "active");
+
+      const existingUserIds = new Set(
+        members.filter((m) => m.user_id).map((m) => m.user_id as string),
+      );
+      const toInsert = ((crewMembers as any[]) || [])
+        .map((m) => m.user_id)
+        .filter((uid) => uid && !existingUserIds.has(uid))
+        .map((uid) => ({
+          project_id: projectId,
+          user_id: uid,
+          role: "member",
+          crew_id: selectedCrewId, // 출처 너트 기록
+        }));
+
+      if (toInsert.length > 0) {
+        const { data: inserted, error: bulkErr } = await supabase
+          .from("project_members")
+          .upsert(toInsert, { onConflict: "project_id,user_id", ignoreDuplicates: true })
+          .select(
+            "*, profile:profiles!project_members_user_id_fkey(id, nickname, avatar_url), crew:groups!project_members_crew_id_fkey(id, name, category)"
+          );
+        if (bulkErr) {
+          console.warn("[bulk add crew members]", bulkErr);
+          toast.warning(`너트 연결은 완료 · 멤버 자동 등록 실패: ${bulkErr.message}`);
+        } else {
+          addedCount = inserted?.length || 0;
+          skippedCount = toInsert.length - addedCount;
+          if (inserted && inserted.length > 0) {
+            setMembers((prev) => [...prev, ...(inserted as any[])]);
+          }
+        }
+      }
+    } catch (err: any) {
+      console.warn("[bulk add crew members]", err);
+      toast.warning("너트 연결은 완료 · 멤버 자동 등록 중 오류");
+    }
+
     setMembers((prev) => [...prev, newMember]);
     setSelectedCrewId("");
-    toast.success("너트가 추가되었습니다");
+    if (addedCount > 0) {
+      toast.success(`너트 추가 완료 · ${addedCount}명 일괄 등록${skippedCount > 0 ? ` (이미 참여 ${skippedCount}명 제외)` : ""}`);
+    } else {
+      toast.success("너트가 추가되었습니다");
+    }
   }
 
   async function handleSnapshot() {
@@ -554,37 +601,22 @@ Generated at: ${new Date().toLocaleString()}
       )
     )
       return;
-    const supabase = createClient();
 
-    // Delete in order: tasks, milestones, updates, members, project
-    await supabase
-      .from("project_tasks")
-      .delete()
-      .eq("project_id", projectId);
-    await supabase
-      .from("project_milestones")
-      .delete()
-      .eq("project_id", projectId);
-    await supabase
-      .from("project_updates")
-      .delete()
-      .eq("project_id", projectId);
-    await supabase
-      .from("project_members")
-      .delete()
-      .eq("project_id", projectId);
-
-    const { error } = await supabase
-      .from("projects")
-      .delete()
-      .eq("id", projectId);
-
-    if (error) {
-      toast.error(error.message);
-      return;
+    // 서버 라우트 사용 — service_role 로 모든 자식 테이블 정리 후 projects 삭제.
+    // (직접 클라이언트 DELETE 는 RLS/FK restrict 로 500 가능 — migration 084 이후)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/delete`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "삭제 실패");
+        if (data.cleanup) console.warn("[delete cleanup]", data.cleanup);
+        return;
+      }
+      toast.success("볼트가 삭제되었습니다");
+      router.push("/projects");
+    } catch (err: any) {
+      toast.error(err.message || "삭제 실패");
     }
-    toast.success("볼트가 삭제되었습니다");
-    router.push("/projects");
   }
 
   if (loading) {
@@ -759,10 +791,6 @@ Generated at: ${new Date().toLocaleString()}
             <div>
               <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray block mb-1.5">Google Drive URL</label>
               <input value={driveUrl} onChange={(e) => setDriveUrl(e.target.value)} placeholder="https://drive.google.com/..." className="w-full border border-nu-ink/15 bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-nu-pink" />
-            </div>
-            <div>
-              <label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray block mb-1.5">카카오톡 오픈채팅 URL</label>
-              <input value={kakaoUrl} onChange={(e) => setKakaoUrl(e.target.value)} placeholder="https://open.kakao.com/o/..." className="w-full border border-nu-ink/15 bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-nu-pink" />
             </div>
           </div>
         </div>

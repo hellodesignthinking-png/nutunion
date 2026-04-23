@@ -48,8 +48,9 @@ export function AskWiki({ groupId }: { groupId: string }) {
 
       const data = await res.json();
       setMessages(prev => [...prev, { role: "assistant", content: data.answer }]);
-    } catch (e: any) {
-      setMessages(prev => [...prev, { role: "assistant", content: `죄송합니다. ${e.message}` }]);
+    } catch (e: unknown) {
+    const __e = e as { message?: string; code?: number; name?: string };
+      setMessages(prev => [...prev, { role: "assistant", content: `죄송합니다. ${__e.message}` }]);
     } finally {
       setLoading(false);
     }

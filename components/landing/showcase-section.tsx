@@ -2,16 +2,17 @@
 
 import { useRevealOnScroll } from "@/lib/hooks/use-reveal-on-scroll";
 
+// Edition 001 · Closed Beta — 실수치만 표시. 과장 금지.
 const showcases = [
   {
     label: "NETWORK",
     num: "01",
-    title: "152개 너트가 만드는 Scene",
-    desc: "서울, 제주, 부산 — 전국의 크리에이터들이 각자의 도시에서 Scene을 만들고, nutunion 프로토콜로 연결됩니다.",
+    title: "작은 시작, 단단한 결합",
+    desc: "지금은 Closed Beta입니다. 작은 씬에서 실험한 프로토콜이 검증되면 전국 도시 챕터로 확장합니다. 우리는 숫자를 부풀리지 않아요.",
     stats: [
-      { num: "152+", label: "Active Crews" },
-      { num: "2.4K", label: "Members" },
-      { num: "38", label: "Cities" },
+      { num: "Edition 001", label: "Phase" },
+      { num: "Closed", label: "Access" },
+      { num: "Protocol v0.1", label: "Stage" },
     ],
     accentColor: "#FF48B0",
     halftone: "halftone-pink",
@@ -21,10 +22,10 @@ const showcases = [
     label: "SCHEDULE",
     num: "02",
     title: "일정, 예약, 그리고 협업",
-    desc: "너트 캘린더, 공간 예약, 이벤트 관리까지. nutunion은 Scene을 만드는 과정 전체를 지원합니다. 반복 일정, 대기자 관리, 자동 알림으로 운영 부담을 최소화합니다.",
+    desc: "너트 캘린더, 공간 예약, 이벤트 관리까지. 반복 일정, 대기자 관리, 자동 알림으로 운영 부담을 최소화합니다. 숫자는 씬이 커지며 함께 자랍니다.",
     stats: [
-      { num: "890+", label: "Events / Month" },
-      { num: "95%", label: "참석률" },
+      { num: "QR / NFC", label: "Check-in" },
+      { num: "Google Cal", label: "Sync" },
       { num: "24/7", label: "자동 운영" },
     ],
     accentColor: "#0055FF",

@@ -44,81 +44,75 @@ export function DriveUploader({ onUploaded, targetType, targetId, stage, sharedF
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    // If no shared folder and user not connected, redirect to auth
-    if (!sharedFolder && !connected) {
-      toast.error("Google 계정을 먼저 연결해주세요");
-      window.location.href = "/api/auth/google?returnTo=" + encodeURIComponent(window.location.pathname + window.location.search);
-      return;
-    }
+    // R2 업로드는 Google 연결 불필요 — 체크 생략
 
     setUploading(true);
     let successCount = 0;
+
+    // [Drive migration Phase 3a/3b] 업로드 백엔드: Google Drive → Cloudflare R2 로 전환.
+    // 기존에 /api/google/drive/upload 로 FormData 를 보내던 코드가 Vercel 4.5MB 바디 제한으로
+    // 큰 파일에서 413 을 뱉었음. 이제는 클라에서 R2 에 직접 PUT (presigned URL) 후 DB 에 메타만 저장.
+    const { uploadFile } = await import("@/lib/storage/upload-client");
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       setUploadProgress(`${i + 1}/${files.length}: ${file.name}`);
 
-      if (file.size > 50 * 1024 * 1024) {
-        toast.error(`"${file.name}" — 50MB 초과. 건너뜁니다.`);
+      // 200MB 까지 허용 (R2 presign 한도)
+      if (file.size > 200 * 1024 * 1024) {
+        toast.error(`"${file.name}" — 200MB 초과. 건너뜁니다.`);
         continue;
       }
 
       try {
-        const formData = new FormData();
-        formData.append("file", file);
-        if (targetType && targetId) {
-          formData.append("targetType", targetType);
-          formData.append("targetId", targetId);
-          if (stage) formData.append("stage", stage);
-        }
-        // Pass explicit folderId if we have a shared folder but no targetType/targetId
-        if (sharedFolder && (!targetType || !targetId)) {
-          formData.append("folderId", sharedFolder.id);
-        }
-
-        const res = await fetch("/api/google/drive/upload", {
-          method: "POST",
-          body: formData,
+        const up = await uploadFile(file, {
+          prefix: "resources",
+          scopeId: targetId || undefined,
         });
 
-        const data = await res.json();
-
-        if (!res.ok) {
-          if (
-            data.code === "SCOPE_INSUFFICIENT" ||
-            data.code === "NOT_CONNECTED" ||
-            data.code === "TOKEN_EXPIRED"
-          ) {
-            if (sharedFolder) {
-              // Host's token issue
-              toast.error("공유 폴더 오류: 호스트가 Google 계정을 재연결해야 합니다.");
-            } else {
-              setConnected(false);
-              setShowReauthDialog(true);
-            }
-            break;
-          }
-          throw new Error(data.error || "업로드 실패");
+        // targetType/targetId 있으면 자동으로 DB 에 등록
+        if (targetType && targetId) {
+          try {
+            const endpoint =
+              targetType === "group"
+                ? "/api/resources/group"
+                : "/api/resources/project";
+            await fetch(endpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                group_id: targetType === "group" ? targetId : undefined,
+                project_id: targetType === "project" ? targetId : undefined,
+                file_name: up.name,
+                file_url: up.url,
+                file_size: up.size,
+                file_type: up.mime,
+                storage_type: up.storage,
+                storage_key: up.key,
+                stage: stage || undefined,
+              }),
+            });
+          } catch { /* DB 등록 실패해도 업로드 자체는 성공 — onUploaded 에서 caller 가 처리 */ }
         }
 
         onUploaded({
-          name: data.file.name,
-          url: data.file.webViewLink,
-          mimeType: data.file.mimeType,
+          name: up.name,
+          url: up.url,
+          mimeType: up.mime,
         });
 
         successCount++;
-      } catch (err: any) {
-        toast.error(`"${file.name}" 업로드 실패: ${err.message}`);
+      } catch (err: unknown) {
+        const __err = err as { message?: string; code?: number; name?: string };
+        toast.error(`"${file.name}" 업로드 실패: ${__err.message}`);
       }
     }
 
     if (successCount > 0) {
-      const dest = sharedFolder ? "공유 폴더" : "Google Drive";
       toast.success(
         successCount === 1
-          ? `${dest}에 파일이 업로드되었습니다`
-          : `${successCount}개 파일이 ${dest}에 업로드되었습니다`
+          ? `파일이 서버에 업로드되었습니다`
+          : `${successCount}개 파일이 서버에 업로드되었습니다`
       );
     }
 

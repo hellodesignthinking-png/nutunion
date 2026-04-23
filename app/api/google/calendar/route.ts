@@ -2,6 +2,8 @@ import { google } from "googleapis";
 import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 
+import { asGoogleErr } from "@/lib/google/error-helpers";
+
 // GET: 일정 목록 조회
 export async function GET(req: NextRequest) {
   const userId = await getCurrentUserId();
@@ -44,8 +46,9 @@ export async function GET(req: NextRequest) {
     }));
 
     return NextResponse.json({ events, totalEvents: events.length });
-  } catch (err: any) {
-    if (err.message === "GOOGLE_NOT_CONNECTED") {
+  } catch (err: unknown) {
+    const e = asGoogleErr(err);
+    if (e.message === "GOOGLE_NOT_CONNECTED") {
       return NextResponse.json({ error: "Google 계정이 연결되지 않았습니다.", code: "NOT_CONNECTED" }, { status: 403 });
     }
     console.error("Calendar API error:", err);
@@ -95,8 +98,9 @@ export async function POST(req: NextRequest) {
       start: event.data.start,
       end: event.data.end,
     });
-  } catch (err: any) {
-    if (err.message === "GOOGLE_NOT_CONNECTED") {
+  } catch (err: unknown) {
+    const e = asGoogleErr(err);
+    if (e.message === "GOOGLE_NOT_CONNECTED") {
       return NextResponse.json({ error: "Google 계정이 연결되지 않았습니다.", code: "NOT_CONNECTED" }, { status: 403 });
     }
     console.error("Calendar create error:", err);

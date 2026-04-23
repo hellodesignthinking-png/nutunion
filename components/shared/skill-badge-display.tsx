@@ -141,7 +141,7 @@ export function SkillBadgeDisplay({
           }
         });
         setJustAwarded(recent);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Failed to load badges:", err);
         toast.error("배지 로드 실패");
       } finally {

@@ -133,8 +133,9 @@ export function ProjectActivityFeed({
       setContent("");
       setSelectedMilestone("");
       toast.success("글이 게시되었습니다");
-    } catch (err: any) {
-      toast.error(err.message || "게시 실패");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "게시 실패");
     } finally {
       setPosting(false);
     }

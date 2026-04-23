@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Loader2,
+  Info,
 } from "lucide-react";
 import type { ProjectMilestone, ProjectTask } from "@/lib/types";
 
@@ -31,7 +32,7 @@ interface ChartData {
   estimatedCompletionDate: Date | null;
 }
 
-type BurndownTask = ProjectTask & { updated_at?: string; marked_done_at?: string };
+type BurndownTask = ProjectTask & { updated_at?: string; marked_done_at?: string; completed_at?: string | null };
 
 export function ProjectBurndownChart({
   projectId,
@@ -61,28 +62,29 @@ export function ProjectBurndownChart({
           return;
         }
 
-        // Fetch milestones
+        // Fetch milestones (completed_at 컬럼은 migration 083 이후 존재 — 없으면 graceful fallback)
         let milestones: any[] = [];
+        const taskCols = `id, status, created_at, completed_at`;
         const { data: fullMilestones, error: fErr } = await supabase
           .from("project_milestones")
-          .select(`id, title, due_date, tasks:project_tasks(id, status, created_at)`)
+          .select(`id, title, due_date, tasks:project_tasks(${taskCols})`)
           .eq("project_id", projectId)
           .order("due_date", { ascending: true });
-        
+
         if (fErr) {
-          // Fallback if join fails
+          // completed_at 이 없는 환경 또는 join 실패 → 기본 컬럼만
           const { data: basicMs, error: msErr } = await supabase
             .from("project_milestones")
             .select("id, title, due_date")
             .eq("project_id", projectId)
             .order("due_date", { ascending: true });
           if (msErr) throw msErr;
-          
+
           const { data: basicTasks } = await supabase
             .from("project_tasks")
             .select("id, milestone_id, status, created_at")
             .eq("project_id", projectId);
-            
+
           milestones = (basicMs || []).map((m: any) => ({
             ...m,
             tasks: (basicTasks || []).filter((t: any) => t.milestone_id === m.id)
@@ -114,9 +116,12 @@ export function ProjectBurndownChart({
         const startDate = new Date(
           project.start_date || project.created_at
         );
-        const rawDeadline = new Date(
-          milestones[milestones.length - 1].due_date || new Date()
-        );
+        // 마지막 마일스톤의 due_date 우선, 없으면 due_date가 있는 것 중 최대값, 그도 없으면 시작+30일
+        const dueDates = milestones.map((m: any) => m.due_date).filter(Boolean);
+        const latestDueDate = dueDates.length > 0
+          ? new Date(dueDates.sort().at(-1))
+          : new Date(startDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const rawDeadline = latestDueDate;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         // Extend timeline to whichever is later: deadline or today
@@ -129,13 +134,9 @@ export function ProjectBurndownChart({
         const doneCompletionDates = new Map<string, Date>();
 
         doneTasks.forEach((task) => {
-          // Use updated_at if present, otherwise use a heuristic (halfway between creation and today)
-          const completedAt = task.updated_at
-            ? new Date(task.updated_at)
-            : new Date(Math.max(
-                new Date(task.created_at).getTime(),
-                today.getTime() - (1000 * 60 * 60 * 24) // assume completed yesterday if no date
-              ));
+          // 우선순위: completed_at (정확) > updated_at > created_at (생성과 동시 완료 가정)
+          const raw = task.completed_at || task.updated_at || task.created_at;
+          const completedAt = new Date(raw);
           completedAt.setHours(0, 0, 0, 0);
           doneCompletionDates.set(task.id, completedAt);
         });
@@ -273,10 +274,23 @@ export function ProjectBurndownChart({
 
   if (error) {
     return (
-      <div className="bg-nu-white border-2 border-nu-ink/[0.08] p-8">
-        <div className="flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-nu-red mt-0.5 flex-shrink-0" />
-          <p className="text-sm text-nu-gray">{error}</p>
+      <div className="bg-nu-white border-2 border-nu-ink/[0.08] p-6">
+        <div className="flex items-center gap-2 mb-2">
+          <TrendingDown className="w-3.5 h-3.5 text-nu-pink" />
+          <h2 className="text-[11px] font-black uppercase tracking-widest text-nu-ink">
+            번다운 차트 · Burndown
+          </h2>
+        </div>
+        <div className="flex items-start gap-2 p-3 bg-nu-cream/40 border-l-[3px] border-nu-pink/40">
+          <Info size={13} className="text-nu-pink mt-0.5 shrink-0" />
+          <div className="text-[12px] text-nu-graphite leading-[1.6]">
+            <p className="font-bold text-nu-ink mb-1">{error}</p>
+            <p>
+              마일스톤과 그 안의 <strong>태스크(할 일)</strong>를 추가하면, 시간에 따른 진도가 여기에 그려져요.
+              <br />
+              이상적 속도(파란 점선) vs 실제 완료 속도(분홍 실선) 를 비교할 수 있어요.
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -342,20 +356,19 @@ export function ProjectBurndownChart({
     return padding + graphHeight - position * graphHeight;
   };
 
-  // Generate paths
+  // Generate paths — polyline "points" is space-separated x,y pairs (NOT SVG path M/L syntax)
+  const safePoint = (x: number, y: number) =>
+    Number.isFinite(x) && Number.isFinite(y) ? `${x},${y}` : null;
+
   const idealPath = idealLine
-    .map(
-      (p) =>
-        `${scaleX(p.timestamp)},${scaleY(p.remainingTasks)}`
-    )
-    .join(" L ");
+    .map((p) => safePoint(scaleX(p.timestamp), scaleY(p.remainingTasks)))
+    .filter((s): s is string => s !== null)
+    .join(" ");
 
   const actualPath = actualLine
-    .map(
-      (p) =>
-        `${scaleX(p.timestamp)},${scaleY(p.remainingTasks)}`
-    )
-    .join(" L ");
+    .map((p) => safePoint(scaleX(p.timestamp), scaleY(p.remainingTasks)))
+    .filter((s): s is string => s !== null)
+    .join(" ");
 
   // Generate grid lines and labels
   const dayCount = Math.ceil(
@@ -389,9 +402,23 @@ export function ProjectBurndownChart({
     <div className="bg-nu-white border-2 border-nu-ink/[0.08] p-8">
       {/* Header */}
       <div className="mb-8">
-        <h2 className="text-[11px] font-black uppercase tracking-widest text-nu-ink mb-6">
-          번다운 차트
-        </h2>
+        <div className="flex items-center gap-2 mb-2">
+          <TrendingDown className="w-3.5 h-3.5 text-nu-pink" />
+          <h2 className="text-[11px] font-black uppercase tracking-widest text-nu-ink">
+            번다운 차트 · Burndown
+          </h2>
+        </div>
+        {/* 설명 — "뭘 의미하는지" 명시 */}
+        <div className="flex items-start gap-2 mb-6 p-3 bg-nu-cream/40 border-l-[3px] border-nu-pink/40">
+          <Info size={13} className="text-nu-pink mt-0.5 shrink-0" />
+          <p className="text-[12px] text-nu-graphite leading-[1.6]">
+            마감일까지 <strong className="text-nu-ink">남은 태스크 수</strong>가 시간에 따라 어떻게 줄어드는지를 보여줍니다.
+            <br />
+            <span className="text-nu-pink font-bold">분홍 실선 (실제)</span>이
+            <span className="text-nu-blue font-bold"> 파란 점선 (이상적 속도)</span> 아래면 순조로움,
+            위면 지연 중입니다.
+          </p>
+        </div>
 
         {/* Summary Stats */}
         <div className="grid grid-cols-2 gap-4 mb-8">
@@ -474,8 +501,30 @@ export function ProjectBurndownChart({
         ) : null}
       </div>
 
+      {/* 범례 (차트 밖으로) */}
+      <div className="flex flex-wrap items-center gap-4 mb-3 text-[11px] font-mono-nu">
+        <div className="flex items-center gap-2">
+          <svg width="24" height="3" className="shrink-0">
+            <line x1="0" y1="1.5" x2="24" y2="1.5" stroke="#FF48B0" strokeWidth="2.5" />
+          </svg>
+          <span className="text-nu-pink font-bold">실제 진도</span>
+          <span className="text-nu-muted">(남은 태스크)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <svg width="24" height="3" className="shrink-0">
+            <line x1="0" y1="1.5" x2="24" y2="1.5" stroke="#0055FF" strokeWidth="2" strokeDasharray="4,4" opacity="0.6" />
+          </svg>
+          <span className="text-nu-blue font-bold">이상적 속도</span>
+          <span className="text-nu-muted">(마감까지 균등 소진)</span>
+        </div>
+      </div>
+
       {/* Chart */}
-      <div className="overflow-x-auto mb-6">
+      <div className="overflow-x-auto mb-2 relative">
+        {/* Y축 레이블 */}
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 -rotate-90 origin-center text-[9px] font-mono-nu uppercase tracking-widest text-nu-muted pointer-events-none" style={{ marginLeft: "-8px" }}>
+          남은 태스크
+        </div>
         <svg
           viewBox={`0 0 ${chartWidth} ${chartHeight}`}
           className="min-w-full bg-white"
@@ -573,57 +622,16 @@ export function ProjectBurndownChart({
             strokeLinejoin="round"
           />
 
-          {/* Legend */}
-          <g>
-            {/* Ideal line legend */}
-            <line
-              x1={chartWidth - 140}
-              y1={15}
-              x2={chartWidth - 120}
-              y2={15}
-              stroke="#0055FF"
-              strokeWidth="2"
-              strokeDasharray="4,4"
-              opacity="0.6"
-            />
-            <text
-              x={chartWidth - 110}
-              y={20}
-              fontSize="9"
-              fontWeight="700"
-              fontFamily="var(--font-mono-nu)"
-              fill="#0055FF"
-            >
-              이상적 진도
-            </text>
-
-            {/* Actual line legend */}
-            <line
-              x1={chartWidth - 140}
-              y1={35}
-              x2={chartWidth - 120}
-              y2={35}
-              stroke="#FF48B0"
-              strokeWidth="2.5"
-            />
-            <text
-              x={chartWidth - 110}
-              y={40}
-              fontSize="9"
-              fontWeight="700"
-              fontFamily="var(--font-mono-nu)"
-              fill="#FF48B0"
-            >
-              실제 진도
-            </text>
-          </g>
         </svg>
       </div>
 
-      {/* Footer labels */}
+      {/* X축 레이블 + 시작/마감 */}
+      <div className="text-center text-[9px] font-mono-nu uppercase tracking-widest text-nu-muted mb-1">
+        날짜
+      </div>
       <div className="flex justify-between text-[11px] font-mono-nu text-nu-gray">
-        <span>{formatDate(startDate)}</span>
-        <span>{formatDate(deadline)}</span>
+        <span>시작 · {formatDate(startDate)}</span>
+        <span>마감 · {formatDate(deadline)}</span>
       </div>
     </div>
   );

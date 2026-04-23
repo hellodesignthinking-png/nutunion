@@ -52,9 +52,10 @@ export function Nav() {
         };
         await fetchNotifCount();
 
-        // Realtime 구독으로 알림 수 갱신
+        // Realtime 구독 — 중복 등록 방지 위해 랜덤 suffix
+        const uniq = Math.random().toString(36).slice(2, 8);
         const channel = supabase
-          .channel(`nav-notifs-${u.id}`)
+          .channel(`nav-notifs-${u.id}-${uniq}`)
           .on("postgres_changes", {
             event: "*",
             schema: "public",

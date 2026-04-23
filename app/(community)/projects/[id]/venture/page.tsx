@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getVentureOverview } from "@/lib/venture/queries";
 import { STAGES } from "@/lib/venture/types";
@@ -11,6 +11,12 @@ import { VentureSuggestIdeas } from "@/components/venture/venture-suggest-ideas"
 import { VentureAISummary } from "@/components/venture/venture-ai-summary";
 import { VentureTimeline } from "@/components/venture/venture-timeline";
 import { VentureContributionHeatmap } from "@/components/venture/venture-contribution-heatmap";
+import { VentureTagCloud } from "@/components/venture/venture-tag-cloud";
+import { VentureSourceLibrary } from "@/components/venture/venture-source-library";
+import { VentureTimelineDiamond } from "@/components/venture/venture-timeline-diamond";
+import { VenturePrototypeGallery } from "@/components/venture/venture-prototype-gallery";
+import { VentureArchive } from "@/components/venture/venture-archive";
+import { VentureSynthesizeProblemsPanel, VentureSynthesizeIdeasPanel } from "@/components/venture/venture-synthesize-panel";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Venture Builder" };
@@ -25,12 +31,71 @@ export default async function VenturePage({ params }: PageProps) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect(`/login?redirectTo=/projects/${id}/venture`);
 
-  const { data: project } = await supabase
+  // 먼저 기본 컬럼만 조회 (venture_mode/venture_stage 가 없는 DB 에서도 동작)
+  const { data: projectBase, error: projectErr } = await supabase
     .from("projects")
-    .select("id, title, description, venture_mode, venture_stage, host_id")
+    .select("id, title, description, created_by, created_at")
     .eq("id", id)
     .maybeSingle();
-  if (!project) notFound();
+
+  // 404 대신 진단 페이지 렌더 (사용자에게 원인 표시)
+  if (projectErr || !projectBase) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
+        <Link href="/projects" className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-graphite hover:text-nu-ink no-underline">
+          ← 볼트 목록
+        </Link>
+        <div className="mt-6 border-[2.5px] border-orange-500 bg-orange-50 p-6">
+          <div className="font-mono-nu text-[10px] uppercase tracking-[0.3em] text-orange-700 mb-2">
+            ⚠ Venture Page · Project Load Failed
+          </div>
+          <h1 className="text-[20px] font-bold text-nu-ink mb-2">볼트를 불러오지 못했습니다</h1>
+          <div className="text-[12px] text-nu-graphite leading-relaxed space-y-1 font-mono-nu">
+            <div><span className="text-nu-ink">Project ID:</span> <code>{id}</code></div>
+            <div><span className="text-nu-ink">User ID:</span> <code>{user.id}</code></div>
+            <div><span className="text-nu-ink">Query error:</span> <code>{projectErr?.message ?? "(none)"}</code></div>
+            <div><span className="text-nu-ink">Project row:</span> <code>{projectBase === null ? "null (RLS 차단 또는 ID 없음)" : "found"}</code></div>
+          </div>
+          <p className="text-[12px] text-nu-graphite mt-4 leading-relaxed">
+            가능한 원인:
+          </p>
+          <ul className="text-[12px] text-nu-graphite mt-1 list-disc pl-5 space-y-1">
+            <li>URL 의 project ID 가 DB 에 존재하지 않음</li>
+            <li>RLS 정책이 이 볼트 조회를 차단함 (멤버 아님)</li>
+            <li>세션 쿠키 누락 — 로그아웃 후 재로그인 시도</li>
+          </ul>
+        </div>
+      </div>
+    );
+  }
+
+  // venture 컬럼 별도 조회 — 실패해도 기본값으로 진행 (마이그레이션 미적용 graceful)
+  let ventureMode = false;
+  let ventureStage: string | null = null;
+  let driveFolderId: string | null = null;
+  let driveFolderUrl: string | null = null;
+  try {
+    const { data: vrow } = await supabase
+      .from("projects")
+      .select("venture_mode, venture_stage, google_drive_folder_id, google_drive_url")
+      .eq("id", id)
+      .maybeSingle();
+    if (vrow) {
+      const r = vrow as { venture_mode?: boolean; venture_stage?: string | null; google_drive_folder_id?: string | null; google_drive_url?: string | null };
+      ventureMode = !!r.venture_mode;
+      ventureStage = r.venture_stage ?? null;
+      driveFolderId = r.google_drive_folder_id ?? null;
+      driveFolderUrl = r.google_drive_url ?? null;
+    }
+  } catch {
+    // 컬럼 없음 — venture mode 비활성 상태로 렌더
+  }
+
+  const project = {
+    ...projectBase,
+    venture_mode: ventureMode,
+    venture_stage: ventureStage,
+  } as { id: string; title: string; description: string | null; created_by: string; venture_mode: boolean; venture_stage: string | null };
 
   // 멤버십 / admin 체크
   const [{ data: profile }, { data: pm }] = await Promise.all([
@@ -38,7 +103,7 @@ export default async function VenturePage({ params }: PageProps) {
     supabase.from("project_members").select("user_id, role").eq("project_id", id).eq("user_id", user.id).maybeSingle(),
   ]);
   const isAdminStaff = profile?.role === "admin" || profile?.role === "staff";
-  const isHost = (project.host_id as string) === user.id || pm?.role === "host" || pm?.role === "manager" || pm?.role === "owner";
+  const isHost = (project.created_by as string) === user.id || pm?.role === "host" || pm?.role === "manager" || pm?.role === "owner";
   const isMember = !!pm || isAdminStaff;
 
   if (!isMember) redirect(`/projects/${id}`);
@@ -111,6 +176,26 @@ export default async function VenturePage({ params }: PageProps) {
         </div>
       )}
 
+      {/* Double Diamond + Timeline — 진행 현황 시각화 (상단) */}
+      <div className="mb-6">
+        <VentureTimelineDiamond
+          projectId={id}
+          projectCreatedAt={(projectBase as { created_at?: string }).created_at ?? new Date().toISOString()}
+          currentStage={project.venture_stage as typeof STAGES[number]["id"] | null}
+          counts={{
+            insights: overview.insights.length,
+            problems: overview.problems.length,
+            selectedProblems: overview.problems.filter((p) => p.is_selected).length,
+            ideas: overview.ideas.length,
+            mainIdea: overview.ideas.some((i) => i.is_main),
+            tasks: overview.tasks.length,
+            doneTasks: overview.tasks.filter((t) => t.status === "done").length,
+            feedback: overview.feedback.length,
+            hasPlan: !!overview.currentPlan,
+          }}
+        />
+      </div>
+
       <div className="mb-6 flex items-end justify-between flex-wrap gap-3">
         <div className="min-w-0 flex-1">
           <div className="font-mono-nu text-[10px] uppercase tracking-[0.3em] text-nu-graphite mb-1">
@@ -143,18 +228,32 @@ export default async function VenturePage({ params }: PageProps) {
             enabled={overview.insights.length >= 3}
             disabledReason="인사이트 3건 이상부터 패턴 분석 가능"
           />
+          <VentureTagCloud projectId={id} />
+          <div className="mt-4">
+            <VentureSourceLibrary
+              projectId={id}
+              canEdit={isMember}
+              driveFolderId={driveFolderId}
+              driveFolderUrl={driveFolderUrl}
+            />
+          </div>
         </div>
 
-        <VentureStageSection
-          stageId="define"
-          title="② 정의 — HMW (How Might We)"
-          description="수집된 인사이트에서 해결할 핵심 문제를 하나로 압축합니다."
-          items={overview.problems}
-          projectId={id}
-          kind="problem"
-          locked={!overview.stageProgress[0].complete}
-          lockReason={overview.stageProgress[0].blocker}
-        />
+        <div>
+          <VentureStageSection
+            stageId="define"
+            title="② 정의 — HMW (How Might We)"
+            description="수집된 인사이트와 Source Library 를 종합해 해결할 핵심 문제를 하나로 압축합니다."
+            items={overview.problems}
+            projectId={id}
+            kind="problem"
+            locked={!overview.stageProgress[0].complete}
+            lockReason={overview.stageProgress[0].blocker}
+          />
+          <div className="mt-3">
+            <VentureSynthesizeProblemsPanel projectId={id} canEdit={isHost || isAdminStaff} />
+          </div>
+        </div>
 
         <div>
           <VentureStageSection
@@ -175,6 +274,9 @@ export default async function VenturePage({ params }: PageProps) {
               disabledReason={overview.stageProgress[1].blocker}
             />
           )}
+          <div className="mt-3">
+            <VentureSynthesizeIdeasPanel projectId={id} canEdit={isMember} />
+          </div>
         </div>
 
         <div>
@@ -196,6 +298,13 @@ export default async function VenturePage({ params }: PageProps) {
               disabledReason="피드백 1건 이상부터 분석 가능"
             />
           )}
+          <div className="mt-3">
+            <VenturePrototypeGallery
+              projectId={id}
+              canEdit={isMember}
+              currentStage={project.venture_stage}
+            />
+          </div>
         </div>
 
         <VenturePlanCard
@@ -208,6 +317,9 @@ export default async function VenturePage({ params }: PageProps) {
         <VentureContributionHeatmap projectId={id} />
 
         <VentureTimeline projectId={id} />
+
+        {/* 전체 활동 아카이브 — 시간순 통합 피드 + 참여자 기여 */}
+        <VentureArchive projectId={id} projectTitle={project.title} canManage={isHost || isAdminStaff} />
       </div>
     </div>
   );

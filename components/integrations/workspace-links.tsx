@@ -25,7 +25,7 @@ const linkTypes = [
   { key: "figma", label: "Figma", icon: Link2, color: "text-[#F24E1E]", placeholder: "https://www.figma.com/..." },
   { key: "github", label: "GitHub", icon: Link2, color: "text-nu-ink", placeholder: "https://github.com/..." },
   { key: "miro", label: "Miro", icon: Link2, color: "text-[#FFD02F]", placeholder: "https://miro.com/app/..." },
-  { key: "kakao", label: "카카오톡 오픈채팅", icon: MessageCircle, color: "text-[#FEE500]", placeholder: "https://open.kakao.com/o/..." },
+  // 카카오톡 오픈채팅 제거 (2026-04) — 내장 채팅으로 통일
 ];
 
 interface LinkItem {
@@ -66,8 +66,7 @@ export function WorkspaceLinks({ workspaceType, workspaceId, canEdit, kakaoUrl, 
       url: d.config?.url || d.config?.webhook_url || "",
     }));
 
-    // Add legacy kakao/drive links
-    if (kakaoUrl) items.push({ type: "kakao", label: "카카오톡 오픈채팅", url: kakaoUrl });
+    // Legacy kakao link 제거 — 내장 채팅으로 통일 (2026-04)
     if (driveUrl) items.push({ type: "google_drive", label: "Google Drive", url: driveUrl });
 
     setLinks(items);

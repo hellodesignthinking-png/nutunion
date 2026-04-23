@@ -29,7 +29,8 @@ export async function GET(request: NextRequest) {
         orderBy: "createTime desc",
       });
 
-      const messages = (res.data.messages || []).map((msg: any) => ({
+      type ChatMsg = { name?: string; text?: string; sender?: { displayName?: string; type?: string }; createTime?: string; thread?: { name?: string } };
+      const messages = ((res.data.messages || []) as ChatMsg[]).map((msg) => ({
         id: msg.name,
         text: msg.text || "",
         sender: msg.sender?.displayName || "Unknown",
@@ -45,7 +46,8 @@ export async function GET(request: NextRequest) {
         pageSize: 50,
       });
 
-      const spaces = (res.data.spaces || []).map((space: any) => ({
+      type ChatSpace = { name?: string; displayName?: string; type?: string; spaceType?: string; singleUserBotDm?: boolean };
+      const spaces = ((res.data.spaces || []) as ChatSpace[]).map((space) => ({
         id: space.name,
         displayName: space.displayName || "Untitled Space",
         type: space.type, // ROOM, DM, etc.
@@ -55,13 +57,14 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({ spaces });
     }
-  } catch (error: any) {
-    if (error.message === "GOOGLE_NOT_CONNECTED" || error.message === "GOOGLE_TOKEN_EXPIRED") {
+  } catch (error: unknown) {
+    const errObj = error as { message?: string; code?: number; response?: { data?: { error?: { message?: string; code?: number } } } };
+    if (errObj.message === "GOOGLE_NOT_CONNECTED" || errObj.message === "GOOGLE_TOKEN_EXPIRED") {
       return NextResponse.json({ error: "Google 계정을 연결해주세요" }, { status: 401 });
     }
-    console.error("Google Chat API error:", error);
-    const detail = error?.response?.data?.error?.message || error?.message || "알 수 없는 오류";
-    const code = error?.response?.data?.error?.code || error?.code || 500;
+    console.error("Google Chat API error:", errObj);
+    const detail = errObj?.response?.data?.error?.message || errObj?.message || "알 수 없는 오류";
+    const code = errObj?.response?.data?.error?.code || errObj?.code || 500;
     return NextResponse.json({
       error: "Google Chat API 오류",
       detail,
@@ -91,7 +94,7 @@ export async function POST(request: NextRequest) {
     const oauth2Client = await getGoogleClient(userId);
     const chat = google.chat({ version: "v1", auth: oauth2Client });
 
-    const messageBody: any = { text };
+    const messageBody: { text: string; thread?: { name: string } } = { text };
     if (threadId) {
       messageBody.thread = { name: threadId };
     }
@@ -106,8 +109,9 @@ export async function POST(request: NextRequest) {
       text: res.data.text,
       createTime: res.data.createTime,
     });
-  } catch (error: any) {
-    if (error.message === "GOOGLE_NOT_CONNECTED" || error.message === "GOOGLE_TOKEN_EXPIRED") {
+  } catch (error: unknown) {
+    const errObj = error as { message?: string; code?: number; response?: { data?: { error?: { message?: string; code?: number } } } };
+    if (errObj.message === "GOOGLE_NOT_CONNECTED" || errObj.message === "GOOGLE_TOKEN_EXPIRED") {
       return NextResponse.json({ error: "Google 계정을 연결해주세요" }, { status: 401 });
     }
     console.error("Google Chat send error:", error);

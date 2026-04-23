@@ -14,9 +14,12 @@ import {
 import DOMPurify from "isomorphic-dompurify";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import ReactMarkdown from "react-markdown";
+import dynamic from "next/dynamic";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
+
+// Lazy-load react-markdown — only when wiki content is rendered client-side.
+const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 // ── Types ─────────────────────────────────────────────────────
 interface Section {
   topicId: string;
@@ -427,8 +430,9 @@ export function UnifiedTabView({
       setResearchingGap(null);
       setResearchUrl("");
       setResearchTitle("");
-    } catch (err: any) {
-      toast.error(err.message || "자료 등록 실패");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "자료 등록 실패");
     } finally {
       setSubmittingResource(false);
     }

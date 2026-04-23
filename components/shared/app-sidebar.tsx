@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { APP_LINKS, STAFF_LINKS, ADMIN_LINKS } from "@/lib/nav-links";
 import { useSidebar } from "@/components/shared/sidebar-provider";
+import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
 
 interface Props {
   role?: string;
@@ -145,8 +146,11 @@ export function AppSidebar({ isStaff, isAdmin }: Props) {
           {!collapsed && <span>사이드바 접기</span>}
         </button>
         {!collapsed && (
-          <div className="px-5 pb-3 font-mono-nu text-[9px] uppercase tracking-[0.3em] text-nu-graphite">
-            nutunion
+          <div className="px-5 pb-3 flex items-center justify-between gap-2">
+            <span className="font-mono-nu text-[9px] uppercase tracking-[0.3em] text-nu-graphite">
+              nutunion
+            </span>
+            <LocaleSwitcher />
           </div>
         )}
       </div>

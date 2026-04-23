@@ -129,7 +129,7 @@ export function ProjectKanbanBoard({
         .order("sort_order"),
       supabase
         .from("project_members")
-        .select("user_id, profile:profiles!project_members_user_id_fkey(id, nickname, avatar_url)")
+        .select("user_id, role, crew_id, profile:profiles!project_members_user_id_fkey(id, nickname, avatar_url)")
         .eq("project_id", projectId),
       supabase
         .from("project_milestones")
@@ -141,9 +141,40 @@ export function ProjectKanbanBoard({
     if (tasksRes.status === "fulfilled" && tasksRes.value.data) {
       setTasks(tasksRes.value.data as Task[]);
     }
+
+    // 멤버 목록: 직접 등록된 user + crew(너트)로 연결된 그룹 멤버 포함
+    let allMembers: Member[] = [];
     if (membersRes.status === "fulfilled" && membersRes.value.data) {
-      setMembers(membersRes.value.data as unknown as Member[]);
+      const pmData = membersRes.value.data as any[];
+      // 직접 user_id가 있는 멤버
+      const directMembers: Member[] = pmData
+        .filter((m) => m.user_id && m.profile)
+        .map((m) => ({ user_id: m.user_id, profile: m.profile }));
+      allMembers = [...directMembers];
+
+      // crew_id가 있는 항목 → 해당 너트(그룹)의 모든 멤버를 가져옴
+      const crewIds = pmData.filter((m) => m.crew_id).map((m) => m.crew_id);
+      if (crewIds.length > 0) {
+        try {
+          const { data: groupMembersData } = await supabase
+            .from("group_members")
+            .select("user_id, profiles!group_members_user_id_fkey(id, nickname, avatar_url)")
+            .in("group_id", crewIds)
+            .eq("status", "active");
+          if (groupMembersData) {
+            const existingIds = new Set(allMembers.map((m) => m.user_id));
+            for (const gm of groupMembersData as any[]) {
+              if (gm.user_id && gm.profiles && !existingIds.has(gm.user_id)) {
+                allMembers.push({ user_id: gm.user_id, profile: gm.profiles });
+                existingIds.add(gm.user_id);
+              }
+            }
+          }
+        } catch { /* group_members 조회 실패 시 무시 */ }
+      }
+      setMembers(allMembers);
     }
+
     if (msRes.status === "fulfilled" && msRes.value.data) {
       setMilestones(msRes.value.data);
     }

@@ -1,8 +1,10 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Nav } from "@/components/shared/nav";
 import { AuthNav } from "@/components/shared/auth-nav";
 import { AppSidebar, AppSidebarGutter } from "@/components/shared/app-sidebar";
 import { AppBottomTabs } from "@/components/shared/app-bottom-tabs";
+import { CommandPalette } from "@/components/shared/command-palette";
 import { Footer } from "@/components/landing/footer";
 import type { Profile } from "@/lib/types";
 
@@ -23,6 +25,14 @@ export default async function CommunityLayout({
       .select("*")
       .eq("id", user.id)
       .maybeSingle();
+
+    // 로그인 사용자가 기본 닉네임(user_xxxx) 이면 온보딩으로.
+    const nick = ((data as any)?.nickname || "").trim();
+    const isDefaultNick = !nick || nick === "user" || /^user_[a-f0-9]{4,}$/i.test(nick);
+    if (isDefaultNick) {
+      redirect("/onboarding/nickname");
+    }
+
     profile = (data as Profile | null) ?? {
       id: user.id,
       name: user.user_metadata?.name || "",
@@ -43,6 +53,7 @@ export default async function CommunityLayout({
   return (
     <div className="min-h-screen bg-nu-paper flex flex-col">
       {profile ? <AuthNav profile={profile} /> : <Nav />}
+      {profile && <CommandPalette isAdmin={isAdmin} />}
       {profile && <AppSidebar isStaff={isStaff} isAdmin={isAdmin} />}
       {profile ? (
         <AppSidebarGutter>

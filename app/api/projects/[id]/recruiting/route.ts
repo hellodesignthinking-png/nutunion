@@ -23,12 +23,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   const [{ data: profile }, { data: project }, { data: pm }] = await Promise.all([
     supabase.from("profiles").select("role").eq("id", user.id).maybeSingle(),
-    supabase.from("projects").select("host_id").eq("id", id).maybeSingle(),
+    supabase.from("projects").select("created_by").eq("id", id).maybeSingle(),
     supabase.from("project_members").select("role").eq("project_id", id).eq("user_id", user.id).maybeSingle(),
   ]);
   if (!project) return NextResponse.json({ error: "프로젝트 없음" }, { status: 404 });
   const isAdmin = profile?.role === "admin" || profile?.role === "staff";
-  const isHost = (project.host_id as string) === user.id || pm?.role === "host" || pm?.role === "manager" || pm?.role === "owner";
+  const isHost = (project as { created_by?: string }).created_by === user.id || pm?.role === "host" || pm?.role === "manager" || pm?.role === "owner";
   if (!isAdmin && !isHost) return NextResponse.json({ error: "권한 없음" }, { status: 403 });
 
   const updates: Record<string, unknown> = { recruiting: parsed.data.recruiting };

@@ -188,8 +188,9 @@ export function EndorsementPanel({
 
       // Reload endorsements
       await loadEndorsements();
-    } catch (err: any) {
-      toast.error(err.message || "보증 등록 실패");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "보증 등록 실패");
     } finally {
       setSubmitting(false);
     }

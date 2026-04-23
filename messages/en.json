@@ -1,0 +1,85 @@
+{
+  "common": {
+    "appName": "nutunion",
+    "tagline": "Innovation community — from idea to business via design thinking",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Retry",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "next": "Next",
+    "prev": "Previous",
+    "empty": "No data"
+  },
+  "nav": {
+    "home": "Home",
+    "projects": "Bolts",
+    "wiki": "Wiki",
+    "talent": "Talent",
+    "funding": "Funding",
+    "showcase": "Showcase",
+    "dashboard": "Dashboard",
+    "finance": "Finance",
+    "profile": "Profile",
+    "logout": "Log out",
+    "login": "Log in",
+    "settings": "Settings"
+  },
+  "venture": {
+    "title": "Venture Builder",
+    "subtitle": "Five steps from idea to business",
+    "stages": {
+      "empathize": "Empathize",
+      "define": "Define",
+      "ideate": "Ideate",
+      "prototype": "Prototype",
+      "plan": "Business Plan"
+    },
+    "enable": "Enable Venture Mode",
+    "idleReminder": "This bolt has been idle for {days} days",
+    "tagCloud": "Insight tags ({types} tags · {groups} groups)",
+    "stageLocked": "Complete previous stage first"
+  },
+  "finance": {
+    "title": "Finance",
+    "transactions": "Transactions",
+    "income": "Income",
+    "expense": "Expense",
+    "balance": "Balance",
+    "thisMonth": "This month",
+    "companies": "Companies"
+  },
+  "wiki": {
+    "title": "Wiki",
+    "topics": "Topics",
+    "pages": "Pages",
+    "meetings": "Meetings",
+    "weeklyDigest": "Weekly Digest"
+  },
+  "errors": {
+    "unauthorized": "Login required",
+    "forbidden": "Forbidden",
+    "notFound": "Not found",
+    "rateLimit": "Too many requests. Please try again later",
+    "serverError": "Server error",
+    "aiUnavailable": "AI generation failed. Please try again later"
+  },
+  "forms": {
+    "required": "Required",
+    "title": "Title",
+    "description": "Description",
+    "tags": "Tags",
+    "submit": "Submit",
+    "draft": "Save draft"
+  },
+  "auth": {
+    "login": "Log in",
+    "signup": "Sign up",
+    "email": "Email",
+    "password": "Password"
+  }
+}

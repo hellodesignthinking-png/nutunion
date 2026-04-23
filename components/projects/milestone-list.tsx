@@ -20,6 +20,7 @@ import {
   Trash2,
   ExternalLink,
   Edit3,
+  TrendingDown,
 } from "lucide-react";
 import type { ProjectMilestone, ProjectTask, MilestoneStatus, TaskStatus } from "@/lib/types";
 import { ResourceInteractions } from "@/components/shared/resource-interactions";
@@ -413,8 +414,9 @@ export function MilestoneList({
       toast.success("마일스톤이 추가되었습니다");
       // Refresh server data so Overview, Roadmap see the new milestone
       router.refresh();
-    } catch (err: any) {
-      toast.error(err.message || "마일스톤 추가 실패");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "마일스톤 추가 실패");
     } finally {
       setSavingMs(false);
     }
@@ -458,8 +460,9 @@ export function MilestoneList({
       toast.success("태스크가 추가되었습니다");
       onTaskChange?.();
       router.refresh();
-    } catch (err: any) {
-      toast.error(err.message || "태스크 추가 실패");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "태스크 추가 실패");
     } finally {
       setSavingTask(false);
     }
@@ -572,7 +575,13 @@ export function MilestoneList({
       else if (anyInProgress && milestone.status === "pending") newMsStatus = "in_progress";
 
       if (newMsStatus) {
-        await supabase.from("project_milestones").update({ status: newMsStatus }).eq("id", milestoneId);
+        // Route through server endpoint so `project.milestone_completed`
+        // automation event fires on transition → completed.
+        await fetch(`/api/projects/${projectId}/milestones/${milestoneId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newMsStatus }),
+        });
         setMilestones((prev) =>
           prev.map((ms) => (ms.id === milestoneId ? { ...ms, status: newMsStatus! } : ms))
         );
@@ -661,8 +670,9 @@ export function MilestoneList({
       setShowResourceSelector(null);
       toast.success("자료가 마일스톤에 연결되었습니다");
       fetchMilestoneInteractions(milestoneId);
-    } catch (err: any) {
-      toast.error(err.message || "자료 연결 실패");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "자료 연결 실패");
     } finally {
       setSavingResourceLink(false);
     }
@@ -839,16 +849,17 @@ export function MilestoneList({
             {/* ── Expanded Content ── */}
             {isExpanded && (
               <div className="border-t-2 border-nu-ink/[0.06]">
-                {/* Sub-tabs: 태스크 / 자료 / 댓글 */}
+                {/* Sub-tabs: 태스크 / 번다운 / 자료 / 댓글 */}
                 <div className="flex bg-nu-cream/30 border-b border-nu-ink/[0.06]">
                   {([
                     { key: "tasks" as const, label: `태스크 (${tasks.length})`, icon: CheckCircle2 },
+                    { key: "burndown" as const, label: "번다운", icon: TrendingDown },
                     { key: "links" as const, label: `자료 (${links.length})`, icon: Link2 },
                     { key: "comments" as const, label: `댓글 (${comments.length})`, icon: MessageSquare },
                   ]).map((tab) => (
                     <button
                       key={tab.key}
-                      onClick={() => setActiveSection((prev) => ({ ...prev, [ms.id]: tab.key }))}
+                      onClick={() => setActiveSection((prev) => ({ ...prev, [ms.id]: tab.key as any }))}
                       className={`flex items-center gap-1.5 px-4 py-2.5 font-mono-nu text-[11px] uppercase tracking-widest border-b-2 transition-colors ${
                         section === tab.key
                           ? "border-nu-pink text-nu-pink font-bold"
@@ -1025,6 +1036,123 @@ export function MilestoneList({
                         )}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* ─── Burndown Section ─── */}
+                {(section as string) === "burndown" && (
+                  <div className="px-5 py-4">
+                    {tasks.length === 0 ? (
+                      <div className="flex items-center gap-2 p-4 bg-nu-cream/40 border-l-[3px] border-nu-pink/40">
+                        <TrendingDown size={14} className="text-nu-pink shrink-0" />
+                        <p className="text-[12px] text-nu-graphite">태스크를 추가하면 번다운 차트가 나타납니다.</p>
+                      </div>
+                    ) : (() => {
+                      const total = tasks.length;
+                      const done = tasks.filter(t => t.status === "done").length;
+                      const inProg = tasks.filter(t => t.status === "in_progress").length;
+                      const todo = tasks.filter(t => t.status === "todo").length;
+                      const remaining = total - done;
+                      const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
+                      // 마감일 계산
+                      const dueDate = ms.due_date ? new Date(ms.due_date) : null;
+                      const today = new Date();
+                      const daysLeft = dueDate
+                        ? Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+                        : null;
+                      const isOverdue = daysLeft !== null && daysLeft < 0;
+                      const isOnTime = daysLeft !== null && !isOverdue;
+
+                      // 간이 번다운 SVG 데이터 (태스크 기준)
+                      const w = 320, h = 80, pad = 20;
+                      const idealY1 = pad, idealY2 = h - pad;
+                      const actualY = pad + ((remaining / total) * (h - pad * 2));
+                      const idealProg = dueDate
+                        ? Math.min(1, (today.getTime() - new Date(ms.due_date || ms.created_at || today).getTime()) /
+                          (dueDate.getTime() - new Date(ms.due_date || ms.created_at || today).getTime()))
+                        : 0;
+                      const idealCurX = pad + idealProg * (w - pad * 2);
+
+                      return (
+                        <div className="space-y-4">
+                          {/* 요약 수치 */}
+                          <div className="grid grid-cols-4 gap-2">
+                            {[
+                              { label: "전체", value: total, color: "text-nu-ink" },
+                              { label: "완료", value: done, color: "text-green-600" },
+                              { label: "진행", value: inProg, color: "text-nu-amber" },
+                              { label: "남은", value: remaining, color: "text-nu-pink" },
+                            ].map(s => (
+                              <div key={s.label} className="text-center p-2 bg-nu-cream/40 border border-nu-ink/[0.06]">
+                                <p className={`font-head text-xl font-extrabold ${s.color}`}>{s.value}</p>
+                                <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mt-0.5">{s.label}</p>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* 진행률 바 */}
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">완료율</span>
+                              <span className="font-mono-nu text-[12px] font-bold text-nu-ink">{pct}%</span>
+                            </div>
+                            <div className="h-2.5 bg-nu-cream rounded-full overflow-hidden flex">
+                              <div className="h-full bg-green-600 transition-all" style={{ width: `${(done / total) * 100}%` }} />
+                              <div className="h-full bg-nu-amber transition-all" style={{ width: `${(inProg / total) * 100}%` }} />
+                            </div>
+                            <div className="flex items-center gap-3 mt-1.5">
+                              <span className="flex items-center gap-1 text-[10px] text-nu-muted"><span className="w-2 h-2 bg-green-600 rounded-full" /> 완료 {done}</span>
+                              <span className="flex items-center gap-1 text-[10px] text-nu-muted"><span className="w-2 h-2 bg-nu-amber rounded-full" /> 진행 {inProg}</span>
+                              <span className="flex items-center gap-1 text-[10px] text-nu-muted"><span className="w-2 h-2 bg-nu-cream border border-nu-ink/20 rounded-full" /> 대기 {todo}</span>
+                            </div>
+                          </div>
+
+                          {/* 간이 SVG 번다운 */}
+                          <div className="overflow-x-auto">
+                            <div className="flex items-center gap-2 mb-1">
+                              <TrendingDown size={11} className="text-nu-pink" />
+                              <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">남은 태스크 추이</span>
+                            </div>
+                            <svg viewBox={`0 0 ${w} ${h}`} className="w-full bg-nu-cream/20 border border-nu-ink/[0.06]" style={{ maxHeight: 80 }}>
+                              {/* 이상적 선 */}
+                              <line x1={pad} y1={pad} x2={w - pad} y2={h - pad}
+                                stroke="#0055FF" strokeWidth="1.5" strokeDasharray="4,3" opacity="0.5" />
+                              {/* 현재 실제 지점 */}
+                              <circle cx={pad + pct / 100 * (w - pad * 2)} cy={actualY} r="4" fill="#FF48B0" />
+                              {/* 실제 진행선 (시작 → 현재) */}
+                              <line x1={pad} y1={pad}
+                                x2={pad + pct / 100 * (w - pad * 2)} y2={actualY}
+                                stroke="#FF48B0" strokeWidth="2" strokeLinecap="round" />
+                              {/* 축 */}
+                              <line x1={pad} y1={pad} x2={pad} y2={h - pad} stroke="#0D0D0D" strokeWidth="1.5" opacity="0.4" />
+                              <line x1={pad} y1={h - pad} x2={w - pad} y2={h - pad} stroke="#0D0D0D" strokeWidth="1.5" opacity="0.4" />
+                              {/* 라벨 */}
+                              <text x={pad + 2} y={pad - 4} fontSize="8" fill="#6B6860" fontFamily="monospace">{total}</text>
+                              <text x={pad + 2} y={h - pad + 12} fontSize="8" fill="#6B6860" fontFamily="monospace">0</text>
+                              <text x={pad} y={h - 4} fontSize="7" fill="#6B6860" fontFamily="monospace">시작</text>
+                              <text x={w - pad - 14} y={h - 4} fontSize="7" fill="#6B6860" fontFamily="monospace">{dueDate ? `${dueDate.getMonth() + 1}/${dueDate.getDate()}` : "마감"}</text>
+                            </svg>
+                            <div className="flex items-center gap-4 mt-1.5 text-[9px] font-mono-nu">
+                              <span className="flex items-center gap-1"><svg width="16" height="3"><line x1="0" y1="1.5" x2="16" y2="1.5" stroke="#FF48B0" strokeWidth="2" /></svg><span className="text-nu-pink">실제</span></span>
+                              <span className="flex items-center gap-1"><svg width="16" height="3"><line x1="0" y1="1.5" x2="16" y2="1.5" stroke="#0055FF" strokeWidth="1.5" strokeDasharray="4,3" opacity="0.6" /></svg><span className="text-nu-blue">이상</span></span>
+                            </div>
+                          </div>
+
+                          {/* 마감 현황 */}
+                          {daysLeft !== null && (
+                            <div className={`flex items-center gap-2 px-3 py-2 border-l-[3px] text-[12px] font-mono-nu ${
+                              isOverdue ? "border-red-500 bg-red-50 text-red-700" : "border-green-500 bg-green-50 text-green-700"
+                            }`}>
+                              <Calendar size={12} className="shrink-0" />
+                              {isOverdue
+                                ? `마감일 ${Math.abs(daysLeft)}일 초과 — 빠른 처리가 필요합니다`
+                                : `마감까지 ${daysLeft}일 남음 · 남은 태스크 ${remaining}개`}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
 

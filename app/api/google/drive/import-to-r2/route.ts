@@ -1,0 +1,153 @@
+// [Phase 4] POST /api/google/drive/import-to-r2
+// Body: { driveFileId: string, prefix?: "chat"|"resources"|"avatars"|"uploads", scopeId?: string }
+// Flow:
+//   1) auth check
+//   2) fetch Drive metadata (size cap 100MB)
+//   3) download file bytes via drive.files.get alt=media
+//   4) PUT into R2 with key `${prefix||'uploads'}/${userId}/${ts}_${safe}`
+//   5) respond with { url, key, name, size, mime }
+
+import { google } from "googleapis";
+import { NextRequest, NextResponse } from "next/server";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
+import { getR2Client, isR2Configured, getPublicUrl } from "@/lib/storage/r2";
+import { log } from "@/lib/observability/logger";
+
+const MAX_SIZE = 100 * 1024 * 1024; // 100 MB
+
+const ALLOWED_PREFIXES = new Set(["chat", "resources", "avatars", "uploads"]);
+
+export async function POST(req: NextRequest) {
+  const span = log.span("drive.import_to_r2");
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    span.end({ status: 401 });
+    return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
+  }
+
+  if (!isR2Configured()) {
+    span.end({ status: 500, reason: "r2_not_configured" });
+    return NextResponse.json(
+      { error: "R2 스토리지가 구성되지 않았습니다" },
+      { status: 500 },
+    );
+  }
+
+  let body: { driveFileId?: string; prefix?: string; scopeId?: string };
+  try {
+    body = await req.json();
+  } catch {
+    span.end({ status: 400 });
+    return NextResponse.json({ error: "잘못된 요청 바디" }, { status: 400 });
+  }
+
+  const { driveFileId } = body;
+  const prefix = body.prefix && ALLOWED_PREFIXES.has(body.prefix) ? body.prefix : "uploads";
+  const scopeId = body.scopeId;
+
+  if (!driveFileId) {
+    span.end({ status: 400 });
+    return NextResponse.json({ error: "driveFileId가 필요합니다" }, { status: 400 });
+  }
+
+  try {
+    const auth = await getGoogleClient(userId);
+    const drive = google.drive({ version: "v3", auth });
+
+    // 1) Metadata
+    const metaRes = await drive.files.get({
+      fileId: driveFileId,
+      fields: "id, name, mimeType, size",
+    });
+    const meta = metaRes.data;
+    const rawName = meta.name || "file";
+    const mime = meta.mimeType || "application/octet-stream";
+    const size = meta.size ? Number(meta.size) : 0;
+
+    // Block Google-native docs (they can't be downloaded as-is without export)
+    if (mime.startsWith("application/vnd.google-apps.")) {
+      span.end({ status: 400, reason: "google_native" });
+      return NextResponse.json(
+        {
+          error:
+            "Google Docs/Sheets/Slides 등 네이티브 문서는 직접 가져올 수 없습니다. PDF/Office 파일을 선택해주세요.",
+          code: "GOOGLE_NATIVE_DOC",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (size && size > MAX_SIZE) {
+      span.end({ status: 413, bytes: size });
+      return NextResponse.json(
+        { error: `파일이 너무 큽니다 (최대 ${MAX_SIZE / 1024 / 1024}MB)` },
+        { status: 413 },
+      );
+    }
+
+    // 2) Download bytes
+    const mediaRes = await drive.files.get(
+      { fileId: driveFileId, alt: "media" },
+      { responseType: "arraybuffer" },
+    );
+    const buf = Buffer.from(mediaRes.data as ArrayBuffer);
+    const bytes = buf.byteLength;
+
+    if (bytes > MAX_SIZE) {
+      span.end({ status: 413, bytes });
+      return NextResponse.json(
+        { error: `파일이 너무 큽니다 (최대 ${MAX_SIZE / 1024 / 1024}MB)` },
+        { status: 413 },
+      );
+    }
+
+    // 3) PUT to R2
+    const safeName = rawName.replace(/[^\w.\-]/g, "_").slice(0, 80);
+    const scopeSeg = scopeId ? `${scopeId.replace(/[^\w.\-]/g, "_")}/` : "";
+    const key = `${prefix}/${userId}/${scopeSeg}${Date.now()}_${safeName}`;
+
+    await getR2Client().send(
+      new PutObjectCommand({
+        Bucket: process.env.R2_BUCKET!,
+        Key: key,
+        Body: buf,
+        ContentType: mime,
+      }),
+    );
+
+    const url = getPublicUrl(key);
+
+    span.end({ bytes, prefix, status: 200 });
+    return NextResponse.json({
+      url,
+      key,
+      storage_key: key,
+      name: rawName,
+      size: bytes,
+      mime,
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg === "GOOGLE_NOT_CONNECTED") {
+      span.end({ status: 401, reason: "not_connected" });
+      return NextResponse.json(
+        { error: "Google 계정이 연결되지 않았습니다", code: "GOOGLE_NOT_CONNECTED" },
+        { status: 401 },
+      );
+    }
+    if (msg === "GOOGLE_TOKEN_EXPIRED") {
+      span.end({ status: 401, reason: "token_expired" });
+      return NextResponse.json(
+        { error: "Google 토큰이 만료되었습니다", code: "GOOGLE_TOKEN_EXPIRED" },
+        { status: 401 },
+      );
+    }
+    span.fail(err);
+    log.error(err, "drive.import_to_r2.failed", { userId, driveFileId });
+    return NextResponse.json(
+      { error: "Drive → R2 가져오기 실패: " + msg },
+      { status: 500 },
+    );
+  }
+}

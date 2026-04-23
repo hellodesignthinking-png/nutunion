@@ -121,8 +121,9 @@ export function ResourceInteractions({
       setCommentCount((p) => p + 1);
       await loadComments();
       toast.success("댓글이 등록되었습니다");
-    } catch (err: any) {
-      toast.error(err.message || "댓글 등록 실패");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "댓글 등록 실패");
     } finally { setPosting(false); }
   }
 

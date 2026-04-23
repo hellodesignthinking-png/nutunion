@@ -44,17 +44,13 @@ function AnimatedNumber({ target, suffix }: { target: number; suffix: string }) 
 }
 
 export function StatsBanner({ stats }: StatsBannerProps) {
-  const hasData = stats && (stats.crews > 0 || stats.members > 0);
-  const data = hasData ? [
-    { num: stats.crews, suffix: "+", label: "Active Crews" },
-    { num: stats.members, suffix: "+", label: "Community Members" },
-    { num: stats.projects, suffix: "", label: "Active Projects" },
-    { num: stats.events, suffix: "+", label: "Events" },
-  ] : [
-    { num: 4, suffix: "", label: "Scene Categories" },
-    { num: 8, suffix: "+", label: "Tool Integrations" },
-    { num: 24, suffix: "/7", label: "Always Open" },
-    { num: 1, suffix: "", label: "Community" },
+  // 항상 실제 DB 값 — 값이 0 이어도 그대로 표시 ("초기 단계" 로 정직하게)
+  const s = stats ?? { crews: 0, members: 0, projects: 0, events: 0 };
+  const data = [
+    { num: s.crews, suffix: "", label: "Active Nuts" },
+    { num: s.members, suffix: "", label: "Members" },
+    { num: s.projects, suffix: "", label: "Active Bolts" },
+    { num: s.events, suffix: "", label: "Events" },
   ];
 
   return (
@@ -65,6 +61,21 @@ export function StatsBanner({ stats }: StatsBannerProps) {
       {/* Overprint stripes */}
       <div className="absolute top-0 left-[10%] w-[30%] h-full bg-nu-pink/[0.04] mix-blend-screen -skew-x-12" aria-hidden="true" />
       <div className="absolute top-0 right-[15%] w-[25%] h-full bg-nu-blue/[0.03] mix-blend-screen skew-x-12" aria-hidden="true" />
+
+      {/* EDITION 001 · BETA 라벨 — 실수치와 괴리 없는 포지셔닝 */}
+      <div className="relative max-w-6xl mx-auto mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1 font-mono-nu text-[10px] uppercase tracking-[0.3em] bg-nu-pink text-nu-paper px-2 py-1 font-bold">
+            ● LIVE · EDITION 001
+          </span>
+          <span className="font-mono-nu text-[10px] uppercase tracking-[0.3em] text-nu-paper/50">
+            Closed Beta
+          </span>
+        </div>
+        <span className="font-mono-nu text-[10px] uppercase tracking-[0.25em] text-nu-paper/40 hidden sm:block">
+          실제 누적 수치 · No fake numbers
+        </span>
+      </div>
 
       <div className="max-w-6xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-0 relative">
         {data.map((s, i) => (

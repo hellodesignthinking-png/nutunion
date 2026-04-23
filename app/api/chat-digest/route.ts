@@ -12,7 +12,9 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const MODEL = "anthropic/claude-sonnet-4.5";
+import { NU_AI_MODEL, NU_AI_MODEL_LABEL } from "@/lib/ai/model";
+const MODEL = NU_AI_MODEL;
+const MODEL_LABEL = NU_AI_MODEL_LABEL;
 const MAX_CHAT_LENGTH = 60_000; // 글자수
 
 const RequestSchema = z.object({

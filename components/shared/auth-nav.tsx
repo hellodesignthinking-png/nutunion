@@ -12,6 +12,8 @@ import {
 import { Bell, LogOut, User, Shield, Menu, Settings, Briefcase, DollarSign } from "lucide-react";
 import { getGrade } from "@/lib/constants";
 import { GlobalSearch } from "@/components/shared/global-search";
+import { NotificationBell } from "@/components/notifications/notification-bell";
+import { LeaderPendingBadge } from "@/components/shared/leader-pending-badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 // 단일 소스 — lib/nav-links.ts (Nav 와 공유)
@@ -38,8 +40,9 @@ export function AuthNav({ profile }: { profile: Profile }) {
     };
     fetchCount();
 
+    const uniq = Math.random().toString(36).slice(2, 8);
     const channel = supabase
-      .channel(`auth-nav-notifs-${profile.id}`)
+      .channel(`auth-nav-notifs-${profile.id}-${uniq}`)
       .on("postgres_changes", {
         event: "*",
         schema: "public",
@@ -121,7 +124,10 @@ export function AuthNav({ profile }: { profile: Profile }) {
       {/* Right side */}
       <div className="hidden md:flex gap-2 items-center">
         <GlobalSearch />
-        <Link href="/notifications" prefetch={true} className="relative p-2 text-nu-graphite hover:text-nu-ink transition-colors" aria-label="알림">
+        <LeaderPendingBadge />
+        <NotificationBell />
+        {/* Mobile fallback: 직접 링크 (드롭다운은 하단 탭바 쪽) */}
+        <Link href="/notifications" prefetch={true} className="md:hidden relative p-2 text-nu-graphite hover:text-nu-ink transition-colors" aria-label="알림">
           <Bell size={18} />
           {notifCount > 0 && (
             <span className="absolute top-1 right-1 w-4 h-4 bg-nu-pink text-white text-[10px] font-bold rounded-full flex items-center justify-center">

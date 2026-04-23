@@ -4,9 +4,12 @@ import { rateLimit } from "@/lib/rate-limit";
 
 export const maxDuration = 60;
 
+import { aiError } from "@/lib/ai/error";
+
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = "gemini-2.5-flash";
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const GEMINI_HEADERS = { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY ?? "" };
 
 /**
  * Weekly Digest API
@@ -264,7 +267,7 @@ export async function POST(request: NextRequest) {
       try {
         response = await fetch(GEMINI_URL, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: GEMINI_HEADERS,
           body: JSON.stringify(geminiBody),
         });
         if (response.ok) break;
@@ -274,8 +277,8 @@ export async function POST(request: NextRequest) {
           continue;
         }
         break;
-      } catch (fetchErr: any) {
-        lastError = fetchErr.message || "Network error";
+      } catch (fetchErr: unknown) {
+        lastError = fetchErr instanceof Error ? fetchErr.message : "Network error";
         await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
       }
     }
@@ -283,7 +286,7 @@ export async function POST(request: NextRequest) {
     if (!response || !response.ok) {
       const errorText = response ? await response.text() : lastError;
       console.error("Gemini API error after retries:", errorText);
-      return NextResponse.json({ error: `Gemini API 오류: ${lastError}` }, { status: 502 });
+      return aiError("ai_unavailable", "ai/weekly-digest", { internal: lastError });
     }
 
     const data = await response.json();
@@ -328,11 +331,7 @@ export async function POST(request: NextRequest) {
     };
 
     return NextResponse.json(normalized);
-  } catch (error: any) {
-    console.error("Weekly digest error:", error);
-    return NextResponse.json(
-      { error: error.message || "주간 다이제스트 생성 중 오류가 발생했습니다" },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return aiError("server_error", "ai/weekly-digest", { internal: error });
   }
 }

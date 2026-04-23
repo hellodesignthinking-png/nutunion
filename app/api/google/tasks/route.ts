@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
         showHidden: false,
       });
 
-      const items = (res.data.items || []).map((t: any) => ({
+      const items = ((res.data.items || []) as Array<{ id?: string; title?: string; notes?: string; status?: string; due?: string; completed?: string; updated?: string; parent?: string; position?: string; links?: unknown[] }>).map((t) => ({
         id: t.id,
         title: t.title || "",
         notes: t.notes || "",
@@ -46,28 +46,29 @@ export async function GET(request: NextRequest) {
     } else {
       // List task lists
       const res = await tasks.tasklists.list({ maxResults: 20 });
-      const lists = (res.data.items || []).map((l: any) => ({
+      const lists = ((res.data.items || []) as Array<{ id?: string; title?: string; updated?: string }>).map((l) => ({
         id: l.id,
         title: l.title || "My Tasks",
         updated: l.updated,
       }));
       return NextResponse.json({ taskLists: lists });
     }
-  } catch (error: any) {
-    const msg = error?.message ?? "";
-    const detail = error?.response?.data?.error?.message || msg || "Unknown";
-    // 인증 실패 / 토큰 만료 / 스코프 부족 / 네트워크는 401 로 정규화 (클라이언트가 재연결 UI 노출)
+  } catch (error: unknown) {
+    const errObj = error as { message?: string; code?: number; response?: { data?: { error?: { message?: string } } } };
+    const msg = errObj?.message ?? "";
+    const detail = errObj?.response?.data?.error?.message || msg || "Unknown";
     const isAuthIssue =
       msg === "GOOGLE_NOT_CONNECTED" ||
       msg === "GOOGLE_TOKEN_EXPIRED" ||
       msg === "GOOGLE_TOKEN_REFRESH_FAILED" ||
-      error?.code === 401 ||
+      errObj?.code === 401 ||
       /invalid_grant|token|unauthorized|scope/i.test(detail);
     if (isAuthIssue) {
-      return NextResponse.json({ error: "Google 계정을 다시 연결해주세요", detail, reconnect: true }, { status: 401 });
+      return NextResponse.json({ error: "Google 계정을 다시 연결해주세요", detail, reconnect: true, tasks: [], taskLists: [] }, { status: 200 });
     }
     console.error("Google Tasks API error:", detail);
-    return NextResponse.json({ error: "Google Tasks API 오류", detail }, { status: 500 });
+    // API 에러를 200 + 빈 목록으로 반환 — 대시보드 위젯 폭발 방지
+    return NextResponse.json({ error: "Google Tasks API 오류", detail, tasks: [], taskLists: [] }, { status: 200 });
   }
 }
 
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
     const oauth2Client = await getGoogleClient(userId);
     const tasks = google.tasks({ version: "v1", auth: oauth2Client });
 
-    const taskBody: any = { title, status: "needsAction" };
+    const taskBody: { title: string; status: string; notes?: string; due?: string } = { title, status: "needsAction" };
     if (notes) taskBody.notes = notes;
     if (due) taskBody.due = new Date(due).toISOString();
 
@@ -101,11 +102,15 @@ export async function POST(request: NextRequest) {
       status: res.data.status,
       due: res.data.due,
     });
-  } catch (error: any) {
-    if (error.message === "GOOGLE_NOT_CONNECTED" || error.message === "GOOGLE_TOKEN_EXPIRED") {
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : "";
+    const errResp = (error as { response?: { data?: { error?: { message?: string } } }; code?: number })?.response?.data?.error?.message;
+    const errCode = (error as { code?: number })?.code;
+    if (errMsg === "GOOGLE_NOT_CONNECTED" || errMsg === "GOOGLE_TOKEN_EXPIRED") {
       return NextResponse.json({ error: "Google 계정을 연결해주세요" }, { status: 401 });
     }
-    const detail = error?.response?.data?.error?.message || error?.message || "Unknown";
+    const detail = errResp || errMsg || "Unknown";
+    void errCode;
     console.error("Google Tasks create error:", detail);
     return NextResponse.json({ error: "할일 생성 실패", detail }, { status: 500 });
   }
@@ -126,7 +131,7 @@ export async function PATCH(request: NextRequest) {
     const oauth2Client = await getGoogleClient(userId);
     const tasks = google.tasks({ version: "v1", auth: oauth2Client });
 
-    const updates: any = {};
+    const updates: { title?: string; notes?: string; status?: string; due?: string | null } = {};
     if (title !== undefined) updates.title = title;
     if (notes !== undefined) updates.notes = notes;
     if (status !== undefined) updates.status = status;
@@ -144,11 +149,15 @@ export async function PATCH(request: NextRequest) {
       status: res.data.status,
       due: res.data.due,
     });
-  } catch (error: any) {
-    if (error.message === "GOOGLE_NOT_CONNECTED" || error.message === "GOOGLE_TOKEN_EXPIRED") {
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : "";
+    const errResp = (error as { response?: { data?: { error?: { message?: string } } }; code?: number })?.response?.data?.error?.message;
+    const errCode = (error as { code?: number })?.code;
+    if (errMsg === "GOOGLE_NOT_CONNECTED" || errMsg === "GOOGLE_TOKEN_EXPIRED") {
       return NextResponse.json({ error: "Google 계정을 연결해주세요" }, { status: 401 });
     }
-    const detail = error?.response?.data?.error?.message || error?.message || "Unknown";
+    const detail = errResp || errMsg || "Unknown";
+    void errCode;
     console.error("Google Tasks update error:", detail);
     return NextResponse.json({ error: "할일 수정 실패", detail }, { status: 500 });
   }

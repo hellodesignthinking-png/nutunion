@@ -146,8 +146,9 @@ export function WeeklyDigestEngine({
       setResult(data);
       setPhase("reviewing");
       toast.success("🧠 주간 다이제스트가 생성되었습니다!");
-    } catch (err: any) {
-      toast.error(err.message || "다이제스트 생성 중 오류가 발생했습니다");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "다이제스트 생성 중 오류가 발생했습니다");
       setPhase("idle");
     }
   }
@@ -308,8 +309,9 @@ export function WeeklyDigestEngine({
       toast.success("다이제스트가 탭에 저장되었습니다!");
       onDigestSaved?.(result.nextMeetingContext);
       setPhase("saved");
-    } catch (err: any) {
-      toast.error(err.message || "저장에 실패했습니다");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "저장에 실패했습니다");
       setPhase("reviewing");
     } finally {
       setSaving(false);

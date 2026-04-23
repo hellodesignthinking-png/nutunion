@@ -318,8 +318,9 @@ export function WikiSyncPanel({ meetingId, groupId, meetingContent }: WikiSyncPa
       setSynced(true);
       setPhase("done");
       toast.success(`탭에 성공적으로 반영되었습니다! (${createdPageIds.length}개 페이지 생성)`);
-    } catch (err: any) {
-      toast.error(err.message || "반영 중 오류가 발생했습니다.");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "반영 중 오류가 발생했습니다.");
       setPhase("reviewing");
     } finally {
       setSyncing(false);

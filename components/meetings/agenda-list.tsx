@@ -13,6 +13,7 @@ import {
 import { toast } from "sonner";
 import { DrivePicker } from "@/components/integrations/drive-picker";
 import { DriveUploader } from "@/components/integrations/drive-uploader";
+import { DriveImportButton } from "@/components/shared/drive-import-button";
 
 interface AgendaResource {
   name: string;
@@ -109,27 +110,56 @@ export function AgendaList({ meetingId, groupId, projectId, canEdit, members }: 
     }
     setSaving(true);
     const supabase = createClient();
-    const { error } = await supabase.from("meeting_agendas").insert({
+
+    // 1차 시도 — resources JSONB 포함
+    const basePayload = {
       meeting_id: meetingId,
       topic: topic.trim(),
       description: description.trim() || null,
       duration_min: durationMin,
       sort_order: agendas.length,
-      resources: newResources,
-    });
+    } as const;
+
+    let { data: inserted, error } = await supabase
+      .from("meeting_agendas")
+      .insert({ ...basePayload, resources: newResources })
+      .select("id")
+      .maybeSingle();
+
+    // resources 컬럼 없는 구버전 스키마 → fallback
+    if (error && (error.code === "PGRST204" || /resources/i.test(error.message))) {
+      const retry = await supabase
+        .from("meeting_agendas")
+        .insert(basePayload)
+        .select("id")
+        .maybeSingle();
+      inserted = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
-      toast.error("안건 추가에 실패했습니다");
+      console.error("[meeting_agendas.insert]", error);
+      toast.error(`안건 추가 실패: ${error.message}`);
+      setSaving(false);
+      return;
+    }
+
+    // insert 성공 but select 못 읽는 RLS 이슈 방어
+    if (!inserted) {
+      toast.warning(
+        "저장됐지만 즉시 조회되지 않아요. 페이지 새로고침 시 반영됩니다.",
+      );
     } else {
       toast.success("안건이 추가되었습니다");
-      setTopic("");
-      setDescription("");
-      setDurationMin(10);
-      setNewResources([]);
-      setShowForm(false);
-      setShowResourcePanel(false);
-      await loadAgendas();
     }
+
+    setTopic("");
+    setDescription("");
+    setDurationMin(10);
+    setNewResources([]);
+    setShowForm(false);
+    setShowResourcePanel(false);
+    await loadAgendas();
     setSaving(false);
   }
 
@@ -266,6 +296,20 @@ export function AgendaList({ meetingId, groupId, projectId, canEdit, members }: 
             targetId={contextId}
             onUploaded={(file) => {
               const resource: AgendaResource = { name: file.name, url: file.url };
+              if (target === "new") {
+                setNewResources((prev) => [...prev, resource]);
+              } else {
+                setEditResources((prev) => [...prev, resource]);
+              }
+            }}
+          />
+
+          {/* [Phase 4] Google Drive → R2 import */}
+          <DriveImportButton
+            prefix="resources"
+            scopeId={contextId}
+            onImported={(fi) => {
+              const resource: AgendaResource = { name: fi.name, url: fi.url };
               if (target === "new") {
                 setNewResources((prev) => [...prev, resource]);
               } else {

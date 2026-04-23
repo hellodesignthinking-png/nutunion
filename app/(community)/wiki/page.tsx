@@ -113,9 +113,10 @@ export default async function CommunityWikiPage({
   return (
     <>
       <PageHero
+        compact
         category="Community Wiki"
-        title="탭 아카이브"
-        description="모든 너트에서 만들어진 지식의 나사산"
+        title="탭 (Tab)"
+        description="모든 너트에서 만들어진 지식의 나사산. 주제별로 모인 통합 지식 아카이브."
       />
 
       <div className="max-w-7xl mx-auto px-6 md:px-8 py-10">

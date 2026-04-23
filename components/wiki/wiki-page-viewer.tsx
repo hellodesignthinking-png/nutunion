@@ -275,7 +275,7 @@ export function WikiPageViewer({ page, groupId, versions, contributions }: WikiP
         setActiveReactions(next);
         setReactionCounts(prev => ({ ...prev, [r]: (prev[r] || 0) + 1 }));
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error("리액션 저장 실패");
     } finally {
       setLoadingReaction(false);

@@ -198,8 +198,9 @@ export default function IntegrationSettings({
       toast.success("연동이 추가되었습니다");
       resetForm();
       fetchIntegrations();
-    } catch (err: any) {
-      toast.error(err.message || "연동 추가 실패");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "연동 추가 실패");
     } finally {
       setSaving(false);
     }
@@ -221,8 +222,9 @@ export default function IntegrationSettings({
         integration.is_active ? "연동이 비활성화되었습니다" : "연동이 활성화되었습니다"
       );
       fetchIntegrations();
-    } catch (err: any) {
-      toast.error(err.message || "상태 변경 실패");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "상태 변경 실패");
     } finally {
       setToggling(null);
     }
@@ -244,8 +246,9 @@ export default function IntegrationSettings({
 
       toast.success("연동이 삭제되었습니다");
       fetchIntegrations();
-    } catch (err: any) {
-      toast.error(err.message || "삭제 실패");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "삭제 실패");
     } finally {
       setDeleting(null);
     }
@@ -293,7 +296,8 @@ export default function IntegrationSettings({
       });
 
       toast.success("테스트 메시지가 전송되었습니다");
-    } catch (err: any) {
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
       // Log the failure
       const supabase = createClient();
       await supabase.from("integration_logs").insert({
@@ -301,10 +305,10 @@ export default function IntegrationSettings({
         event_type: "test",
         payload: {},
         status: "error",
-        error_message: err.message,
+        error_message: __err.message,
       });
 
-      toast.error("테스트 실패: " + err.message);
+      toast.error("테스트 실패: " + __err.message);
     } finally {
       setTesting(null);
     }

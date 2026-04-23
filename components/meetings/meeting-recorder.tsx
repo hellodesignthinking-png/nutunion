@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useImperativeHandle, forwardRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import {
@@ -25,6 +25,19 @@ interface MeetingRecorderProps {
   canEdit: boolean;
   /** After recording+transcription, call this to switch to AI notes tab */
   onTranscriptionComplete?: () => void;
+  /** Notifies parent whenever a recording is ready/cleared — lets parent "conclude with recording" */
+  onAudioReady?: (blob: Blob | null, mime: string | null) => void;
+  /** 볼트 탭 컨텍스트 — 설정 시 meetings 테이블 대신 project_resources / bolt_taps 에 저장 */
+  projectId?: string;
+}
+
+export interface MeetingRecorderHandle {
+  /** If actively recording, stop and wait for the blob to be assembled. Returns blob+mime or null. */
+  stopAndGetBlob: () => Promise<{ blob: Blob; mime: string } | null>;
+  /** True if a recording is in progress. */
+  isRecording: () => boolean;
+  /** Currently captured blob, if any. */
+  getCurrentBlob: () => { blob: Blob; mime: string } | null;
 }
 
 type RecordingState = "idle" | "recording" | "paused" | "processing" | "done";
@@ -78,13 +91,17 @@ function fileToBase64(file: File | Blob): Promise<string> {
 }
 
 /* ─── Main Component ─── */
-export function MeetingRecorder({
+export const MeetingRecorder = forwardRef<MeetingRecorderHandle, MeetingRecorderProps>(function MeetingRecorder({
   meetingId,
   meetingTitle,
   meetingStatus,
   canEdit,
   onTranscriptionComplete,
-}: MeetingRecorderProps) {
+  onAudioReady,
+  projectId,
+}, ref) {
+  // bolt-tap-* 형태의 가짜 meetingId 감지 — meetings 테이블 조회 건너뜀
+  const isBoltTapMode = meetingId.startsWith("bolt-tap-") || !!projectId;
   const [state, setState] = useState<RecordingState>("idle");
   const [elapsed, setElapsed] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -97,6 +114,7 @@ export function MeetingRecorder({
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const pendingStopResolveRef = useRef<((val: { blob: Blob; mime: string } | null) => void) | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -171,6 +189,29 @@ export function MeetingRecorder({
   // ── Start recording ────────────────────────────────────────────────
   async function handleStart() {
     try {
+      // 1) 보안 컨텍스트 체크 — getUserMedia 는 HTTPS/localhost 에서만 작동
+      if (typeof window !== "undefined" && !window.isSecureContext) {
+        toast.error("HTTPS 환경에서만 녹음이 가능합니다", {
+          description: "localhost 또는 https:// 도메인에서 접속해주세요.",
+        });
+        return;
+      }
+
+      // 2) 사전 권한 상태 조회 (가능한 브라우저 한정)
+      try {
+        const perm = await (navigator as any).permissions?.query?.({ name: "microphone" as PermissionName });
+        if (perm?.state === "denied") {
+          toast.error("마이크 접근이 '차단됨' 상태입니다", {
+            description:
+              "주소창의 자물쇠 아이콘 → 사이트 설정 → 마이크를 '허용'으로 바꾼 뒤 페이지를 새로고침하세요.",
+            duration: 8000,
+          });
+          return;
+        }
+      } catch {
+        /* 권한 API 미지원 브라우저 — 바로 getUserMedia 시도 */
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
 
@@ -202,6 +243,15 @@ export function MeetingRecorder({
         setAudioBlob(blob);
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
+
+        // Notify parent that a blob is ready
+        try { onAudioReady?.(blob, normalizeMimeType(mimeType)); } catch { /* noop */ }
+
+        // Resolve any pending stopAndGetBlob awaiters
+        if (pendingStopResolveRef.current) {
+          pendingStopResolveRef.current({ blob, mime: normalizeMimeType(mimeType) });
+          pendingStopResolveRef.current = null;
+        }
 
         // Stop all tracks
         stream.getTracks().forEach((t) => t.stop());
@@ -296,7 +346,7 @@ export function MeetingRecorder({
     if (!audioBlob) return;
 
     setState("processing");
-    setProcessingStep("임시 클라우드에 녹음 파일 저장 중...");
+    setProcessingStep("서버에 녹음 파일 저장 중...");
 
     try {
       const supabase = createClient();
@@ -307,82 +357,78 @@ export function MeetingRecorder({
 
       const normalizedMimeType = normalizeMimeType(audioBlob.type);
       const ext = getAudioExtension(normalizedMimeType);
-      const fileName = `meetings/${meetingId}/recording_${Date.now()}.${ext}`;
+      const displayName = `recording_${Date.now()}.${ext}`;
 
-      // Vercel 4.5MB 제한 우회를 위해 Supabase 임시 저장소 활용
-      // 주의: Supabase 'media' 버킷이 이미지/비디오 확장자만 허용하도록 설정되어 있어,
-      // 브라우저 녹음 파일(audio/webm, audio/mp4 등)을 임시로 허용된 컨테이너(video) 타입으로 위장하여 업로드합니다.
-      let supabaseContentType = normalizedMimeType;
-      if (normalizedMimeType.includes("webm")) supabaseContentType = "video/webm";
-      else if (normalizedMimeType.includes("mp4") || normalizedMimeType.includes("m4a")) supabaseContentType = "video/mp4";
-      else if (normalizedMimeType.includes("ogg")) supabaseContentType = "video/mp4"; // fallback
+      // [Drive migration Phase 3a] content now stored on R2.
+      // Blob → File 로 감싸서 uploadFile 에 전달 (R2 우선, 실패 시 Supabase fallback).
+      const audioFile = new File([audioBlob], displayName, { type: normalizedMimeType });
+      const { uploadFile } = await import("@/lib/storage/upload-client");
+      const up = await uploadFile(audioFile, { prefix: "resources", scopeId: meetingId });
+      const publicUrl = up.url;
+      const fileName = up.key;
 
-      // Blob의 자체 type 속성을 덮어씌우기 위해 새로운 Blob 생성
-      const fakeVideoBlob = new Blob([audioBlob], { type: supabaseContentType });
-
-      // 1. Upload to Supabase temporary storage (to bypass Vercel 4.5MB payload limit)
-      const { error: uploadError } = await supabase.storage
-        .from("media")
-        .upload(fileName, fakeVideoBlob, { contentType: supabaseContentType });
-
-      if (uploadError) throw new Error("Supabase Storage 업로드 실패: " + uploadError.message);
-
-      const { data: { publicUrl } } = supabase.storage.from("media").getPublicUrl(fileName);
-
-      const { data: mtg, error: meetingError } = await supabase
-        .from("meetings")
-        .select("group_id, project_id")
-        .eq("id", meetingId)
-        .single();
-      if (meetingError) throw new Error("회의 정보를 불러오지 못했습니다");
-
-      let uploadData;
-      try {
-        setProcessingStep("Google Drive 이관 시도 중...");
-        const formData = new FormData();
-        formData.append("fileUrl", publicUrl);
-        formData.append("fileName", fileName.split("/").pop() || "recording.webm");
-        formData.append("mimeType", normalizedMimeType);
-        formData.append("requireSharedFolder", "true");
-
-        if (mtg?.project_id) {
-          formData.append("targetType", "project");
-          formData.append("targetId", mtg.project_id);
-          formData.append("stage", "evidence");
-        } else if (mtg?.group_id) {
-          formData.append("targetType", "group");
-          formData.append("targetId", mtg.group_id);
-          formData.append("stage", "meeting");
-        } else {
-          throw new Error("연결된 너트/볼트 정보가 없습니다");
+      // 볼트 탭 모드: meetings 테이블 조회 없이 project_resources 에 직접 저장
+      if (isBoltTapMode && projectId) {
+        const prPayload: any = {
+          project_id: projectId,
+          name: displayName,
+          url: publicUrl,
+          type: "audio",
+          stage: "evidence",
+          uploaded_by: user.id,
+          storage_type: up.storage,
+          storage_key: up.key,
+        };
+        let { error: prErr } = await supabase.from("project_resources").insert(prPayload);
+        if (prErr && /storage_type|storage_key/.test(prErr.message)) {
+          delete prPayload.storage_type;
+          delete prPayload.storage_key;
+          await supabase.from("project_resources").insert(prPayload);
         }
+      } else if (!isBoltTapMode) {
+        const { data: mtg, error: meetingError } = await supabase
+          .from("meetings")
+          .select("group_id, project_id")
+          .eq("id", meetingId)
+          .single();
+        if (meetingError) throw new Error("회의 정보를 불러오지 못했습니다");
 
-        const uploadRes = await fetch("/api/google/drive/upload", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!uploadRes.ok) {
-          const uploadErr = await uploadRes.json().catch(() => ({}));
-          throw new Error(uploadErr.error || "Google Drive 업로드 실패");
-        }
-        uploadData = await uploadRes.json();
-      } catch (err: any) {
-        // If Google Drive fails (e.g. no shared folder), we catch it and continue!
-        console.warn("Drive upload skipped/failed:", err.message);
-        toast.warning("Drive 업로드 건너뜀 (내부 저장만 완료): " + err.message);
-        
-        // Save Supabase link directly to resources/attachments so it's not lost
+        // [Drive migration Phase 3a] Google Drive 이관 단계 제거 — R2 가 canonical.
         if (mtg?.group_id) {
-          await supabase.from("file_attachments").insert({
+          const faPayload: any = {
             target_type: "group",
             target_id: mtg.group_id,
             uploaded_by: user.id,
-            file_name: fileName.split("/").pop(),
+            file_name: displayName,
             file_url: publicUrl,
             file_size: audioBlob.size,
-            file_type: "supabase-link",
-          });
+            file_type: normalizedMimeType,
+            storage_type: up.storage,
+            storage_key: up.key,
+          };
+          let { error: faErr } = await supabase.from("file_attachments").insert(faPayload);
+          if (faErr && /storage_type|storage_key/.test(faErr.message)) {
+            delete faPayload.storage_type;
+            delete faPayload.storage_key;
+            await supabase.from("file_attachments").insert(faPayload);
+          }
+        } else if (mtg?.project_id) {
+          const prPayload: any = {
+            project_id: mtg.project_id,
+            name: displayName,
+            url: publicUrl,
+            type: "audio",
+            stage: "evidence",
+            uploaded_by: user.id,
+            storage_type: up.storage,
+            storage_key: up.key,
+          };
+          let { error: prErr } = await supabase.from("project_resources").insert(prPayload);
+          if (prErr && /storage_type|storage_key/.test(prErr.message)) {
+            delete prPayload.storage_type;
+            delete prPayload.storage_key;
+            await supabase.from("project_resources").insert(prPayload);
+          }
         }
       }
 
@@ -407,13 +453,25 @@ export function MeetingRecorder({
       const result = await res.json();
 
       if (result.summary) {
-        await supabase
-          .from("meetings")
-          .update({ summary: result.summary })
-          .eq("id", meetingId);
+        if (isBoltTapMode && projectId) {
+          // 볼트 탭 모드: bolt_taps 에 저장
+          await supabase
+            .from("bolt_taps")
+            .update({
+              content_md: result.summary,
+              last_edited_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("project_id", projectId);
+        } else {
+          await supabase
+            .from("meetings")
+            .update({ summary: result.summary })
+            .eq("id", meetingId);
+        }
       }
 
-      if (result.discussions?.length || result.decisions?.length) {
+      if (!isBoltTapMode && (result.discussions?.length || result.decisions?.length)) {
         const notes: { meeting_id: string; content: string; type: string; created_by: string }[] = [];
         result.discussions?.forEach((d: string) => notes.push({ meeting_id: meetingId, content: d, type: "note", created_by: user.id }));
         result.decisions?.forEach((d: string) => notes.push({ meeting_id: meetingId, content: d, type: "decision", created_by: user.id }));
@@ -423,17 +481,13 @@ export function MeetingRecorder({
         }
       }
 
-      // Cleanup supabase storage if it made it to Drive successfully
-      if (uploadData?.success) {
-        await supabase.storage.from("media").remove([fileName]).catch(() => {});
-      }
+      // [Drive migration Phase 3a] R2 가 canonical — 별도 cleanup 없음.
+      void fileName; // referenced just to keep key available for future debugging
 
       setState("done");
       setProcessingStep("");
       toast.success("회의록이 성공적으로 완성되었습니다!", {
-        description: uploadData?.file?.webViewLink
-          ? "Google Drive에 녹음이 보관되고 AI 분석이 완료되었습니다."
-          : "파일이 내부 저장소에 안전하게 보관되었습니다.",
+        description: "녹음이 서버에 보관되고 AI 분석이 완료되었습니다.",
       });
       onTranscriptionComplete?.();
     } catch (err: unknown) {
@@ -511,10 +565,21 @@ export function MeetingRecorder({
             data: { user },
           } = await supabase.auth.getUser();
           if (result.summary && user) {
-            await supabase
-              .from("meetings")
-              .update({ summary: result.summary })
-              .eq("id", meetingId);
+            if (isBoltTapMode && projectId) {
+              await supabase
+                .from("bolt_taps")
+                .update({
+                  content_md: result.summary,
+                  last_edited_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("project_id", projectId);
+            } else {
+              await supabase
+                .from("meetings")
+                .update({ summary: result.summary })
+                .eq("id", meetingId);
+            }
           }
           toast.success("Drive 녹음 파일에서 회의록이 생성되었습니다!");
           onTranscriptionComplete?.();
@@ -540,7 +605,52 @@ export function MeetingRecorder({
     setAudioUrl(null);
     setElapsed(0);
     setState("idle");
+    try { onAudioReady?.(null, null); } catch { /* noop */ }
   }
+
+  // Expose imperative API to parent (stop + retrieve blob in one call)
+  useImperativeHandle(ref, () => ({
+    isRecording: () => {
+      const r = mediaRecorderRef.current;
+      return !!r && (r.state === "recording" || r.state === "paused");
+    },
+    getCurrentBlob: () => {
+      if (!audioBlob) return null;
+      return { blob: audioBlob, mime: normalizeMimeType(audioBlob.type) };
+    },
+    stopAndGetBlob: () => {
+      const recorder = mediaRecorderRef.current;
+      // No active recording — return current blob (if any)
+      if (!recorder || recorder.state === "inactive") {
+        if (audioBlob) {
+          return Promise.resolve({ blob: audioBlob, mime: normalizeMimeType(audioBlob.type) });
+        }
+        return Promise.resolve(null);
+      }
+      return new Promise((resolve) => {
+        pendingStopResolveRef.current = resolve;
+        try {
+          recorder.stop();
+        } catch {
+          resolve(null);
+          pendingStopResolveRef.current = null;
+          return;
+        }
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+        setState("done");
+        // Safety timeout — if onstop never fires, resolve null after 5s
+        setTimeout(() => {
+          if (pendingStopResolveRef.current === resolve) {
+            pendingStopResolveRef.current = null;
+            resolve(null);
+          }
+        }, 5000);
+      });
+    },
+  }));
 
   // ── Only show when meeting is in_progress or just completed ──────
   if (meetingStatus !== "in_progress" && meetingStatus !== "completed") {
@@ -769,4 +879,4 @@ export function MeetingRecorder({
       )}
     </div>
   );
-}
+});

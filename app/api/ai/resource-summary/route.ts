@@ -4,9 +4,12 @@ import { rateLimit } from "@/lib/rate-limit";
 
 export const maxDuration = 60;
 
+import { aiError } from "@/lib/ai/error";
+
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = "gemini-2.5-flash";
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const GEMINI_HEADERS = { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY ?? "" };
 
 // POST: Generate AI summary for a single resource
 export async function POST(request: NextRequest) {
@@ -81,7 +84,7 @@ ${resource.description ? `설명: ${resource.description}` : ""}
   try {
     const res = await fetch(GEMINI_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: GEMINI_HEADERS,
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: { temperature: 0.2, maxOutputTokens: 256 },
@@ -89,7 +92,7 @@ ${resource.description ? `설명: ${resource.description}` : ""}
     });
 
     if (!res.ok) {
-      return NextResponse.json({ error: "AI 요약 생성 실패" }, { status: 502 });
+      return aiError("ai_unavailable", "ai/resource-summary");
     }
 
     const data = await res.json();
@@ -106,7 +109,7 @@ ${resource.description ? `설명: ${resource.description}` : ""}
     }
 
     return NextResponse.json({ summary });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || "요약 생성 실패" }, { status: 500 });
+  } catch (e: unknown) {
+    return aiError("server_error", "ai/resource-summary", { internal: e });
   }
 }

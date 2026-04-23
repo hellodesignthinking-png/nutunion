@@ -3,6 +3,7 @@ import { generateObject } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
+import { log } from "@/lib/observability/logger";
 import {
   ClosureSchema,
   SYSTEM_PROMPT,
@@ -12,7 +13,9 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const MODEL = "anthropic/claude-sonnet-4.5";
+import { NU_AI_MODEL_PRO, NU_AI_MODEL_PRO_LABEL } from "@/lib/ai/model";
+const MODEL = NU_AI_MODEL_PRO;              // 종합 마감 요약 — 장문 추론 필요
+const MODEL_LABEL = NU_AI_MODEL_PRO_LABEL;
 
 const BodySchema = z.object({
   extra_notes: z.string().trim().max(5000).optional(),
@@ -97,6 +100,15 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
 
     // 수동 저장 모드
     if (mode === "confirm" && manual_summary) {
+      // 자금/보상 스냅샷 — 수동 close 에도 동일하게 생성
+      let financeSnapshot: Record<string, unknown> | null = null;
+      try {
+        const { data: snap } = await supabase.rpc("compute_project_finance_snapshot", { p_project_id: id });
+        if (snap) financeSnapshot = snap as Record<string, unknown>;
+      } catch (err) {
+        console.warn("[close manual] finance snapshot:", err);
+      }
+
       const { error } = await supabase
         .from("projects")
         .update({
@@ -105,11 +117,22 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
           closed_by: user.id,
           closure_summary: manual_summary,
           closure_highlights: manual_highlights ?? null,
-          closure_model: null, // 수동 작성
+          closure_model: null,
+          finance_snapshot: financeSnapshot,
+          rewards_finalized: !!financeSnapshot,
+          rewards_finalized_at: financeSnapshot ? new Date().toISOString() : null,
         })
         .eq("id", id);
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-      return NextResponse.json({ success: true, confirmed: true, manual: true });
+
+      // 완료된 마일스톤 정산 lock
+      try {
+        await supabase.from("project_milestones")
+          .update({ is_settled: true, settled_at: new Date().toISOString() })
+          .eq("project_id", id).eq("status", "completed").eq("is_settled", false);
+      } catch { /* noop */ }
+
+      return NextResponse.json({ success: true, confirmed: true, manual: true, finance_snapshot: !!financeSnapshot });
     }
 
     // 프로젝트 데이터 수집
@@ -181,7 +204,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       object = result.object;
       usage = result.usage;
     } catch (genErr) {
-      console.error("[project-close]", genErr);
+      log.error(genErr, "project.close.ai_failed", { project_id: (project as any)?.id, model: MODEL_LABEL });
       return NextResponse.json(
         { error: "AI 요약 생성 실패. 잠시 후 다시 시도해주세요." },
         { status: 500 }
@@ -205,6 +228,16 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
 
     if (mode === "draft") {
       return NextResponse.json({ success: true, draft: object });
+    }
+
+    // 자금/보상 스냅샷 계산 (RPC — 권한 격리, 정확한 집계)
+    let financeSnapshot: Record<string, unknown> | null = null;
+    try {
+      const { data: snap, error: snapErr } = await supabase.rpc("compute_project_finance_snapshot", { p_project_id: id });
+      if (!snapErr && snap) financeSnapshot = snap as Record<string, unknown>;
+      else if (snapErr) console.warn("[project-close] finance snapshot:", snapErr.message);
+    } catch (err) {
+      console.warn("[project-close] finance snapshot exception:", err);
     }
 
     // confirm — DB 반영
@@ -231,12 +264,26 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
           },
         },
         closure_model: MODEL,
+        finance_snapshot: financeSnapshot,
+        rewards_finalized: !!financeSnapshot,
+        rewards_finalized_at: financeSnapshot ? new Date().toISOString() : null,
       })
       .eq("id", id);
 
     if (upErr) {
-      console.error("[project-close confirm]", upErr);
+      log.error(upErr, "project.close.confirm_failed", { project_id: id });
       return NextResponse.json({ error: upErr.message }, { status: 500 });
+    }
+
+    // 모든 완료된 마일스톤 is_settled = true 로 (정산 lock)
+    try {
+      await supabase.from("project_milestones")
+        .update({ is_settled: true, settled_at: new Date().toISOString() })
+        .eq("project_id", id)
+        .eq("status", "completed")
+        .eq("is_settled", false);
+    } catch (err) {
+      console.warn("[project-close] settle milestones:", err);
     }
 
     // Venture 모드 볼트가 마감되면 자동으로 결재 상신 (admin/staff 보고용)
@@ -259,7 +306,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
 
     return NextResponse.json({ success: true, confirmed: true, draft: object });
   } catch (err) {
-    console.error("[project-close]", err);
+    log.error(err, "project.close.unhandled");
     return NextResponse.json({ error: "서버 오류" }, { status: 500 });
   }
 }

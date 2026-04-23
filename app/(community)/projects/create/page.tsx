@@ -8,6 +8,12 @@ import { seedProjectTemplate } from "@/lib/project-template-seeder";
 import { toast } from "sonner";
 import { Upload, Loader2, ArrowLeft, ChevronRight, Sparkles, Users, Clock, Check, Copy, Share2, UserPlus, Search, CheckCircle2 } from "lucide-react";
 import type { Specialty } from "@/lib/types";
+import { RoleSlotsEditor, type RoleSlot } from "@/components/projects/role-slots-editor";
+import { BoltScopingSuggest } from "@/components/ai/bolt-scoping-suggest";
+import { BoltTypeSelector } from "@/components/bolt/bolt-type-selector";
+import { BoltTypeFields, type TypeFieldsPayload } from "@/components/bolt/bolt-type-fields";
+import type { BoltType } from "@/lib/bolt/types";
+import { GenesisFlow } from "@/components/genesis/GenesisFlow";
 
 /* ── Invite user result ────────────────────────────────────────── */
 interface UserSearchResult {
@@ -217,8 +223,11 @@ interface ProjectTemplateContents {
 
 const PROJECT_TEMPLATE_CONTENTS: Record<string, ProjectTemplateContents> = {
   "local-branding": { milestones: 4, resources: 2 },
-  "platform-mvp": { milestones: 4, resources: 2 },
-  "popup-store": { milestones: 4, resources: 2 },
+  "platform-mvp":   { milestones: 4, resources: 2 },
+  "popup-store":     { milestones: 4, resources: 2 },
+  "consulting-brand":    { milestones: 5, resources: 3 },
+  "consulting-strategy": { milestones: 4, resources: 3 },
+  "consulting-retainer": { milestones: 3, resources: 2 },
 };
 
 const PROJECT_TEMPLATES: Record<string, ProjectTemplateInfo> = {
@@ -276,6 +285,61 @@ const PROJECT_TEMPLATES: Record<string, ProjectTemplateInfo> = {
       "비용 정산 시트",
     ],
   },
+  // ── Torque 컨설팅 템플릿 3종 ──
+  "consulting-brand": {
+    id: "consulting-brand",
+    title: "Brand Consulting",
+    subtitle: "컨설팅 / 브랜드 콘설팅",
+    description:
+      "외부 브랜딩 컨설턴트와 함께 아이덴티티 재정립·시각화·론칭을 진행하는 Torque Bolt 템플릿. 세션 스케줄부터 산출물 관리까지 컨설팅 프로세스의 모든 단계가 자동으로 설치됩니다.",
+    gradient: "from-teal-900 via-teal-700 to-teal-500",
+    accent: "#0d9488",
+    defaultCategory: "culture",
+    duration: "2-3개월",
+    features: [
+      "팀 미팅 + 컨설턴트 세션 이중 트랙",
+      "요청 큐 자동 설치",
+      "산출물 라이브러리 (제안서/보고서)",
+      "리스크 레지스터 + 의사결정 로그",
+      "Consulting Kit (11개 Thread) 자동 설치",
+    ],
+  },
+  "consulting-strategy": {
+    id: "consulting-strategy",
+    title: "Strategy Consulting",
+    subtitle: "컨설팅 / 전략 컨설팅",
+    description:
+      "일회성 전략 컨설팅 프로젝트. 리서치 → 진단 → 제안 → 평가 단계의 명확한 픈널을 제공합니다. 리테이너 계약이 아닌 미로 하나의 컨설팅 업무를 명확한 종료일과 함께 체계적으로 관리합니다.",
+    gradient: "from-teal-800 via-cyan-700 to-blue-600",
+    accent: "#0891b2",
+    defaultCategory: "culture",
+    duration: "1-2개월",
+    features: [
+      "컨설팅 5단계 진행 트래커",
+      "컨설턴트 세션 (Discovery→진단→제안→평가)",
+      "리스크 매트릭스 + 의사결정 로그",
+      "최종 보고서 + 실행 로드맵",
+      "긴급 요청 코스 자동 파악",
+    ],
+  },
+  "consulting-retainer": {
+    id: "consulting-retainer",
+    title: "Retainer Contract",
+    subtitle: "컨설팅 / 리테이너 컨설팅",
+    description:
+      "월 계약 명태로 지속되는 리테이너 컨설팅 볼트. 시간 소진과 월별 안건, 요청 큐 관리, 월간 컴잠 리포트 구조가 자동으로 설정됩니다. 장기 파트너쓭 관리에 최적화되어 있습니다.",
+    gradient: "from-teal-900 via-teal-800 to-emerald-700",
+    accent: "#059669",
+    defaultCategory: "culture",
+    duration: "월 계약 (무기한)",
+    features: [
+      "월 계약 시간 + 시간당 단가 관리",
+      "리테이너 소진률 실시간 미터",
+      "월별 안건 자동 생성 (AI)",
+      "지속적 요청 큐 관리",
+      "리스크 이슬레이션 알림",
+    ],
+  },
 };
 
 export default function ProjectCreatePage() {
@@ -288,14 +352,35 @@ export default function ProjectCreatePage() {
   const [checking, setChecking] = useState(true);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<Specialty>(template?.defaultCategory || "space");
-  const [description, setDescription] = useState(template?.description || "");
+  // 템플릿 description 을 기본값으로 자동 채우지 않음 — 똑같은 복붙 글을 만드는 원인.
+  // 대신 placeholder / 하단 힌트로만 제공.
+  const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [roleSlots, setRoleSlots] = useState<RoleSlot[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  // 볼트 유형 + 유형별 필드 (migration 084 이후)
+  // 컨설팅 템플릿 선택 시 torque 자동 설정
+  const isConsultingTemplate = templateKey?.startsWith("consulting-") ?? false;
+  const [boltType, setBoltType] = useState<BoltType>(
+    isConsultingTemplate ? "torque" : "hex"
+  );
+  const [typeFields, setTypeFields] = useState<TypeFieldsPayload>(
+    isConsultingTemplate
+      ? {
+          engagement_type:
+            templateKey === "consulting-retainer" ? "retainer"
+            : templateKey === "consulting-strategy" ? "one_time"
+            : "hybrid",
+        }
+      : {}
+  );
   // After creation invite step
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
   const [createdProjectTitle, setCreatedProjectTitle] = useState<string>("");
+  // Genesis AI mode toggle (default for non-template)
+  const [mode, setMode] = useState<"genesis" | "manual">(template ? "manual" : "genesis");
 
   useEffect(() => {
     async function checkPermission() {
@@ -356,46 +441,78 @@ export default function ProjectCreatePage() {
 
       let imageUrl: string | null = null;
 
-      // Upload image if selected
+      // Upload image if selected — 통합 업로더 (R2 우선)
       if (imageFile) {
-        const ext = imageFile.name.split(".").pop();
-        const path = `projects/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error: uploadError } = await supabase.storage
-          .from("media")
-          .upload(path, imageFile, {
-            contentType: imageFile.type,
-            upsert: true
-          });
-
-        if (uploadError) {
-          toast.error("이미지 업로드 실패: " + uploadError.message);
+        try {
+          const { uploadFile } = await import("@/lib/storage/upload-client");
+          const up = await uploadFile(imageFile, { prefix: "uploads", scopeId: user.id });
+          imageUrl = up.url;
+        } catch (uploadError: any) {
+          toast.error("이미지 업로드 실패: " + (uploadError?.message || String(uploadError)));
           setLoading(false);
           return;
         }
-
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("media").getPublicUrl(path);
-        imageUrl = publicUrl;
       }
 
-      // Insert project
-      const { data: project, error } = await supabase
-        .from("projects")
-        .insert({
-          title: title.trim(),
-          description: description.trim() || null,
-          category,
-          status: "active",
-          start_date: startDate || null,
-          end_date: endDate || null,
-          image_url: imageUrl,
-          created_by: user.id,
-        })
-        .select("id")
-        .single();
+      // Insert project (role_slots / type 누락 스키마 graceful fallback)
+      const payload: any = {
+        title: title.trim(),
+        description: description.trim() || null,
+        category,
+        status: "active",
+        start_date: startDate || null,
+        end_date: endDate || null,
+        image_url: imageUrl,
+        created_by: user.id,
+        type: boltType,
+      };
+      if (roleSlots.length > 0) payload.role_slots = roleSlots;
 
+      let projectRes = await supabase.from("projects").insert(payload).select("id").single();
+      // migration 084 미적용 환경 (type 컬럼 없음) — type 제거하고 재시도
+      if (projectRes.error && /\btype\b/i.test(projectRes.error.message || "")) {
+        delete payload.type;
+        projectRes = await supabase.from("projects").insert(payload).select("id").single();
+      }
+      if (projectRes.error && /role_slots/.test(projectRes.error.message || "")) {
+        delete payload.role_slots;
+        projectRes = await supabase.from("projects").insert(payload).select("id").single();
+      }
+      const { data: project, error } = projectRes;
       if (error) throw error;
+
+      // 유형별 서브타입 insert (best-effort — 실패해도 볼트는 생성된 상태)
+      if (boltType !== "hex") {
+        const subPayload: any = { project_id: project.id, ...typeFields };
+        const tableMap: Record<BoltType, string | null> = {
+          hex: null,
+          anchor: "project_anchor",
+          carriage: "project_carriage",
+          eye: "project_eye",
+          wing: "project_wing",
+          torque: "project_torque",
+        };
+        const table = tableMap[boltType];
+        if (table) {
+          const { error: subErr } = await supabase.from(table).insert(subPayload);
+          if (subErr) {
+            console.error("[subtype insert]", subErr);
+            toast.error(
+              `볼트는 생성됐지만 ${boltType} 서브타입 정보 저장에 실패했어요: ${subErr.message}`,
+            );
+          }
+        }
+      }
+
+      // Torque 볼트: 생성자를 bolt_memberships에 owner로 자동 등록
+      if (boltType === "torque") {
+        await supabase.from("bolt_memberships").upsert(
+          { project_id: project.id, user_id: user.id, role: "owner" },
+          { onConflict: "project_id,user_id" }
+        ).then(({ error }) => {
+          if (error) console.warn("[bolt_memberships owner]", error);
+        });
+      }
 
       // Add creator as lead member
       await supabase.from("project_members").insert({
@@ -414,11 +531,31 @@ export default function ProjectCreatePage() {
         }
       }
 
+      // Torque 볼트 / 컨설팅 템플릿: Consulting Kit (11개 Thread) 자동 설치
+      if (boltType === "torque" || isConsultingTemplate) {
+        try {
+          const { installConsultingKit } = await import("@/lib/kits/consulting-kit");
+          const kitResult = await installConsultingKit(supabase, project.id);
+          if (kitResult.installed > 0) {
+            toast.success(`🎓 Consulting Kit ${kitResult.installed}개 Thread 설치 완료`);
+          }
+        } catch (kitErr) {
+          console.warn("[consulting-kit] 설치 실패 (볼트는 정상 생성):", kitErr);
+        }
+      }
+
       toast.success(
         template
           ? `${template.title} 템플릿으로 볼트가 생성되었습니다!`
+          : boltType === "torque"
+          ? "🎓 Torque 볼트가 생성되었습니다!"
           : "볼트가 생성되었습니다!"
       );
+
+      // [Drive migration Phase A] 자동 Google Drive 폴더 생성 비활성화 — 신규 볼트 자료는 Cloudflare R2 에 저장됩니다
+      toast.info("자료는 Cloudflare R2 에 저장됩니다");
+
+
       // Go to invite step
       setCreatedProjectId(project.id);
       setCreatedProjectTitle(title.trim());
@@ -565,11 +702,21 @@ export default function ProjectCreatePage() {
                     <textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      placeholder="볼트에 대해 소개해주세요"
+                      placeholder={`이 볼트가 해결하는 고유한 문제 / 차별점을 1~2문장으로 설명해주세요.\n(예: "강남 소상공인 10명과 함께 로컬 브랜드 가이드를 만드는 8주 프로젝트")`}
                       rows={4}
-                      defaultValue={template.description}
                       className="w-full px-4 py-3 border border-nu-ink/15 bg-transparent text-sm focus:outline-none focus:border-nu-pink transition-colors resize-none"
                     />
+                    <div className="mt-1 flex items-center justify-between text-[11px] text-nu-muted">
+                      <span>{description.trim().length}자 · 최소 40자 권장</span>
+                      <button
+                        type="button"
+                        onClick={() => setDescription(template.description)}
+                        className="text-nu-pink hover:underline font-mono-nu text-[10px] uppercase tracking-widest"
+                        title="템플릿 기본 설명으로 채우기 (직접 수정 권장)"
+                      >
+                        템플릿 예시 불러오기 ↓
+                      </button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -741,11 +888,98 @@ export default function ProjectCreatePage() {
       <h1 className="font-head text-3xl font-extrabold text-nu-ink mb-2">
         새 볼트 만들기
       </h1>
-      <p className="text-nu-gray text-sm mb-8">
+      <p className="text-nu-gray text-sm mb-6">
         너트들이 함께할 볼트를 시작하세요
       </p>
 
+      {/* ── 템플릿 빠른 선택 섹션 ── */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-graphite font-bold flex items-center gap-1.5">
+            <Sparkles size={11} /> 템플릿으로 시작하기
+          </h2>
+          <span className="font-mono-nu text-[10px] text-nu-muted">6개 템플릿 · 직접 설정보다 빠름</span>
+        </div>
+
+        {/* 일반 템플릿 */}
+        <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">일반 볼트</p>
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          {["local-branding","platform-mvp","popup-store"].map(key => {
+            const t = PROJECT_TEMPLATES[key];
+            return (
+              <a
+                key={key}
+                href={`/projects/create?template=${key}`}
+                className={`relative overflow-hidden p-3 text-left transition-all hover:scale-[1.02] hover:shadow-md no-underline block border border-white/10`}
+                style={{ background: `linear-gradient(135deg, ${t.gradient.replace("from-","").replace("via-","").replace("to-","")})` }}
+              >
+                <div className="absolute inset-0 opacity-90" style={{ background: `linear-gradient(135deg, #0f172a, #1e293b)` }} />
+                <div className="relative z-10">
+                  <p className="font-mono-nu text-[9px] uppercase tracking-widest text-white/50 mb-1">{t.duration}</p>
+                  <p className="font-head text-[13px] font-extrabold text-white leading-tight">{t.title}</p>
+                  <p className="font-mono-nu text-[10px] text-white/50 mt-1">{t.features.length}개 기능</p>
+                </div>
+              </a>
+            );
+          })}
+        </div>
+
+        {/* 컨설팅 템플릿 */}
+        <p className="font-mono-nu text-[10px] uppercase tracking-widest text-teal-700 mb-2 flex items-center gap-1">
+          🎓 Torque 컨설팅 볼트
+        </p>
+        <div className="grid grid-cols-3 gap-2 mb-2">
+          {["consulting-brand","consulting-strategy","consulting-retainer"].map(key => {
+            const t = PROJECT_TEMPLATES[key];
+            return (
+              <a
+                key={key}
+                href={`/projects/create?template=${key}`}
+                className="relative overflow-hidden p-3 text-left transition-all hover:scale-[1.02] hover:shadow-md no-underline block"
+                style={{ background: "linear-gradient(135deg, #0f2520, #0d3330)" }}
+              >
+                <div className="absolute top-0 right-0 w-0 h-0 border-t-[20px] border-r-[20px] border-teal-500/40 border-b-transparent border-l-transparent" />
+                <div className="relative z-10">
+                  <p className="font-mono-nu text-[9px] uppercase tracking-widest text-teal-400 mb-1">{t.duration}</p>
+                  <p className="font-head text-[13px] font-extrabold text-white leading-tight">{t.title}</p>
+                  <p className="font-mono-nu text-[10px] text-teal-300/60 mt-1">Kit {t.features.length}개 자동 설치</p>
+                </div>
+              </a>
+            );
+          })}
+        </div>
+        <div className="border-b-[2px] border-nu-ink/[0.06] pb-6 mb-6" />
+      </div>
+
+      {/* Mode toggle — Genesis AI vs 직접 입력 */}
+      <div className="inline-flex items-center gap-0 mb-5 border-2 border-nu-ink/15 bg-nu-white p-1">
+        <button
+          type="button"
+          onClick={() => setMode("genesis")}
+          className={`font-mono-nu text-[11px] font-bold uppercase tracking-widest px-4 py-2 transition-colors ${
+            mode === "genesis" ? "bg-nu-ink text-nu-paper" : "text-nu-gray hover:text-nu-ink"
+          }`}
+        >
+          ✨ Genesis AI
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("manual")}
+          className={`font-mono-nu text-[11px] font-bold uppercase tracking-widest px-4 py-2 transition-colors ${
+            mode === "manual" ? "bg-nu-ink text-nu-paper" : "text-nu-gray hover:text-nu-ink"
+          }`}
+        >
+          📝 직접 입력
+        </button>
+      </div>
+
+      {mode === "genesis" ? (
+        <GenesisFlow kind="project" />
+      ) : (
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Bolt Type Selector — 6가지 유형 중 선택 */}
+        <BoltTypeSelector value={boltType} onChange={setBoltType} />
+
         {/* Title */}
         <div>
           <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
@@ -760,6 +994,9 @@ export default function ProjectCreatePage() {
             required
           />
         </div>
+
+        {/* Bolt Type Fields — 유형별 전용 필드 */}
+        <BoltTypeFields type={boltType} value={typeFields} onChange={setTypeFields} />
 
         {/* Category */}
         <div>
@@ -819,6 +1056,25 @@ export default function ProjectCreatePage() {
           </div>
         </div>
 
+        {/* AI Scoping 제안 */}
+        <div className="border-t border-nu-ink/[0.08] pt-6">
+          <BoltScopingSuggest
+            title={title}
+            description={description}
+            category={category}
+            onAccept={(slots, milestonesText) => {
+              setRoleSlots(slots);
+              // 마일스톤 텍스트를 description 하단에 추가 (편집 가능)
+              setDescription((prev) => prev.trim() ? `${prev}\n\n--- AI 제안 마일스톤 ---\n${milestonesText}` : milestonesText);
+            }}
+          />
+        </div>
+
+        {/* Role Slots */}
+        <div>
+          <RoleSlotsEditor value={roleSlots} onChange={setRoleSlots} />
+        </div>
+
         {/* Image upload */}
         <div>
           <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
@@ -875,6 +1131,7 @@ export default function ProjectCreatePage() {
           )}
         </button>
       </form>
+      )}
     </div>
   );
 }

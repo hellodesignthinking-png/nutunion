@@ -299,8 +299,9 @@ export function WikiPageEditor({
 
         onSave?.({ id: pageId, title, content, version: newVersion });
       }
-    } catch (err: any) {
-      toast.error(err.message || "저장에 실패했습니다");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "저장에 실패했습니다");
     } finally {
       setSaving(false);
     }

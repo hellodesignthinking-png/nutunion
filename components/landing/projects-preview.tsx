@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Users, ArrowRight } from "lucide-react";
+import { GenerativeArt } from "@/components/art/generative-art";
 
 const catColors: Record<string, string> = {
   space: "bg-nu-blue",
@@ -63,9 +64,15 @@ export function ProjectsPreview({ projects }: { projects?: ProjectItem[] }) {
               {/* Halftone decoration */}
               <div className="absolute top-0 right-0 w-28 h-28 halftone-pink opacity-[0.04] rotate-12 z-10" aria-hidden="true" />
               
-              {/* Abstract background graphic */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={i % 2 === 0 ? "/network.png" : "/space.png"} alt="" className="absolute -bottom-1/2 -right-1/4 w-full h-full object-cover mix-blend-color-dodge opacity-20 pointer-events-none transition-transform duration-700 group-hover:scale-110 z-0 grayscale" aria-hidden="true" />
+              {/* Abstract generative background */}
+              <div className="absolute inset-0 opacity-20 pointer-events-none transition-transform duration-700 group-hover:scale-110 z-0" aria-hidden="true">
+                <GenerativeArt
+                  seed={p.id || `proj-${i}`}
+                  category={(i % 2 === 0 ? "platform" : "space") as any}
+                  variant="card"
+                  className="w-full h-full"
+                />
+              </div>
 
               {/* Issue number */}
               <span className="absolute top-3 right-4 font-head text-[56px] font-extrabold text-nu-paper/[0.03] leading-none select-none" aria-hidden="true">

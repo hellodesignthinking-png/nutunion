@@ -8,7 +8,8 @@ import { toast } from "sonner";
 import {
   Plus, Search, Edit3, GitBranch, FileText,
   BookOpen, Trash2, ChevronRight, Settings,
-  Loader2, Save, X, AlertTriangle, Globe, Lock, Copy, ExternalLink
+  Loader2, Save, X, AlertTriangle, Globe, Lock, Copy, ExternalLink,
+  Play as Youtube, Newspaper, FileType as FileType2, Link as LinkIcon, FolderOpen, Image as FileImage, Link2
 } from "lucide-react";
 import { WikiPageEditor } from "@/components/wiki/wiki-page-editor";
 
@@ -25,6 +26,18 @@ interface WikiPage {
   author?: { nickname: string };
 }
 
+interface TopicResource {
+  id: string;
+  title: string;
+  url: string;
+  resource_type: string;
+  auto_summary: string | null;
+  created_at: string;
+  contributor_nickname: string | null;
+  linked_page_title: string | null;
+  linked_wiki_page_id: string | null;
+}
+
 interface TopicDetailClientProps {
   groupId: string;
   topicId: string;
@@ -34,7 +47,22 @@ interface TopicDetailClientProps {
   isHost: boolean;
   isPublic?: boolean;
   publicSlug?: string | null;
+  linkedResources?: TopicResource[];
+  groupResources?: TopicResource[];
 }
+
+const RESOURCE_TYPE_META: Record<string, { label: string; icon: any; color: string; bg: string }> = {
+  youtube:  { label: "YouTube", icon: Youtube,     color: "text-red-600",    bg: "bg-red-50" },
+  article:  { label: "기사",    icon: Newspaper,   color: "text-amber-700",  bg: "bg-amber-50" },
+  pdf:      { label: "PDF",     icon: FileType2,   color: "text-rose-700",   bg: "bg-rose-50" },
+  drive:    { label: "드라이브", icon: FolderOpen, color: "text-blue-600",   bg: "bg-blue-50" },
+  docs:     { label: "문서",    icon: FileText,    color: "text-blue-700",   bg: "bg-blue-50" },
+  sheet:    { label: "시트",    icon: FileText,    color: "text-green-700",  bg: "bg-green-50" },
+  slide:    { label: "슬라이드", icon: FileImage,  color: "text-orange-700", bg: "bg-orange-50" },
+  notion:   { label: "Notion",  icon: FileText,    color: "text-nu-ink",     bg: "bg-nu-cream" },
+  link:     { label: "링크",    icon: LinkIcon,    color: "text-nu-graphite", bg: "bg-nu-cream" },
+  other:    { label: "자료",    icon: Link2,       color: "text-nu-graphite", bg: "bg-nu-cream" },
+};
 
 export function TopicDetailClient({
   groupId,
@@ -45,6 +73,8 @@ export function TopicDetailClient({
   isHost,
   isPublic: initialIsPublic = false,
   publicSlug: initialSlug = null,
+  linkedResources = [],
+  groupResources = [],
 }: TopicDetailClientProps) {
   const router = useRouter();
   const [pages, setPages] = useState<WikiPage[]>(initialPages);
@@ -66,6 +96,22 @@ export function TopicDetailClient({
   // Delete confirmations
   const [deletingTopicConfirm, setDeletingTopicConfirm] = useState(false);
   const [deletingPageId, setDeletingPageId] = useState<string | null>(null);
+
+  // Resource section
+  const [resourceTab, setResourceTab] = useState<"linked" | "group" | "all">("linked");
+  const [resourceTypeFilter, setResourceTypeFilter] = useState<string>("all");
+
+  const allResources = [...linkedResources, ...groupResources];
+  const resourceSource =
+    resourceTab === "linked" ? linkedResources :
+    resourceTab === "group" ? groupResources : allResources;
+  const filteredResources = resourceTypeFilter === "all"
+    ? resourceSource
+    : resourceSource.filter((r) => r.resource_type === resourceTypeFilter);
+  const resourceTypeCounts = resourceSource.reduce<Record<string, number>>((acc, r) => {
+    acc[r.resource_type] = (acc[r.resource_type] || 0) + 1;
+    return acc;
+  }, {});
 
   const filteredPages = pages
     .filter(p =>
@@ -92,8 +138,9 @@ export function TopicDetailClient({
       toast.success("주제가 수정되었습니다");
       setEditingTopic(false);
       router.refresh();
-    } catch (err: any) {
-      toast.error(err.message || "수정 실패");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "수정 실패");
     } finally {
       setSavingTopic(false);
     }
@@ -109,8 +156,9 @@ export function TopicDetailClient({
       if (error) throw error;
       toast.success("주제가 삭제되었습니다");
       router.push(`/groups/${groupId}/wiki`);
-    } catch (err: any) {
-      toast.error(err.message || "삭제 실패");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "삭제 실패");
     }
   };
 
@@ -127,8 +175,9 @@ export function TopicDetailClient({
       setPages(prev => prev.filter(p => p.id !== pageId));
       setDeletingPageId(null);
       toast.success("문서가 삭제되었습니다");
-    } catch (err: any) {
-      toast.error(err.message || "삭제 실패");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "삭제 실패");
     }
   };
 
@@ -158,8 +207,9 @@ export function TopicDetailClient({
         setPublishSlug(data.slug);
         toast.success("탭이 공개되었습니다!");
       }
-    } catch (e: any) {
-      toast.error(e.message || "공개 설정 실패");
+    } catch (e: unknown) {
+    const __e = e as { message?: string; code?: number; name?: string };
+      toast.error(__e.message || "공개 설정 실패");
     } finally {
       setPublishing(false);
     }
@@ -428,6 +478,130 @@ export function TopicDetailClient({
           ))
         )}
       </div>
+
+      {/* ── 관련 자료 (자료실/YouTube/기사/PDF 등) ── */}
+      {(linkedResources.length > 0 || groupResources.length > 0) && (
+        <div className="pt-10 border-t-[2px] border-nu-ink/10">
+          <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+            <h2 className="font-head text-lg font-extrabold text-nu-ink flex items-center gap-2">
+              <FolderOpen size={18} className="text-nu-blue" />
+              관련 자료
+              <span className="font-mono-nu text-[11px] text-nu-muted font-normal">
+                ({linkedResources.length} 링크됨 · {groupResources.length} 그룹)
+              </span>
+            </h2>
+            <Link
+              href={`/groups/${groupId}/resources`}
+              className="font-mono-nu text-[11px] text-nu-blue hover:text-nu-pink uppercase tracking-widest flex items-center gap-1 no-underline"
+            >
+              자료실로 이동 <ExternalLink size={11} />
+            </Link>
+          </div>
+
+          {/* Tabs: linked / group / all */}
+          <div className="flex items-center gap-1 bg-white border-[2px] border-nu-ink/15 p-1 mb-3 w-fit">
+            {([
+              { k: "linked", label: `이 주제 (${linkedResources.length})` },
+              { k: "group",  label: `그룹 자료실 (${groupResources.length})` },
+              { k: "all",    label: `전체 (${allResources.length})` },
+            ] as const).map((t) => (
+              <button
+                key={t.k}
+                onClick={() => { setResourceTab(t.k); setResourceTypeFilter("all"); }}
+                className={`px-3 py-1.5 font-mono-nu text-[11px] font-bold uppercase tracking-widest transition-all ${
+                  resourceTab === t.k ? "bg-nu-ink text-white" : "text-nu-muted hover:text-nu-ink"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Type filter chips */}
+          {Object.keys(resourceTypeCounts).length > 1 && (
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              <button
+                onClick={() => setResourceTypeFilter("all")}
+                className={`px-3 py-1 font-mono-nu text-[10px] uppercase tracking-widest border-[2px] transition-colors ${
+                  resourceTypeFilter === "all"
+                    ? "border-nu-ink bg-nu-ink text-white"
+                    : "border-nu-ink/15 text-nu-muted hover:border-nu-ink"
+                }`}
+              >
+                전체 {resourceSource.length}
+              </button>
+              {Object.entries(resourceTypeCounts).map(([type, count]) => {
+                const meta = RESOURCE_TYPE_META[type] || RESOURCE_TYPE_META.other;
+                const Icon = meta.icon;
+                const active = resourceTypeFilter === type;
+                return (
+                  <button
+                    key={type}
+                    onClick={() => setResourceTypeFilter(type)}
+                    className={`px-3 py-1 font-mono-nu text-[10px] uppercase tracking-widest border-[2px] transition-colors inline-flex items-center gap-1 ${
+                      active ? `border-nu-ink ${meta.bg} ${meta.color}` : "border-nu-ink/15 text-nu-muted hover:border-nu-ink"
+                    }`}
+                  >
+                    <Icon size={10} /> {meta.label} {count}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {filteredResources.length === 0 ? (
+            <div className="border-[2px] border-dashed border-nu-ink/15 p-8 text-center bg-white/50">
+              <Link2 size={24} className="mx-auto mb-2 text-nu-ink/15" />
+              <p className="text-nu-muted text-xs">조건에 맞는 자료가 없습니다</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {filteredResources.map((r) => {
+                const meta = RESOURCE_TYPE_META[r.resource_type] || RESOURCE_TYPE_META.other;
+                const Icon = meta.icon;
+                return (
+                  <a
+                    key={r.id}
+                    href={r.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group bg-white border-[2px] border-nu-ink/[0.08] hover:border-nu-pink/40 transition-all p-4 no-underline flex items-start gap-3"
+                  >
+                    <div className={`w-10 h-10 shrink-0 flex items-center justify-center ${meta.bg} ${meta.color}`}>
+                      <Icon size={18} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className={`font-mono-nu text-[9px] uppercase tracking-widest px-1.5 py-0.5 ${meta.bg} ${meta.color}`}>
+                          {meta.label}
+                        </span>
+                        {r.linked_page_title && (
+                          <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted truncate">
+                            ↳ {r.linked_page_title}
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="font-head text-sm font-bold text-nu-ink group-hover:text-nu-pink transition-colors line-clamp-2 mb-1">
+                        {r.title}
+                      </h4>
+                      {r.auto_summary && (
+                        <p className="text-[11px] text-nu-muted line-clamp-2 leading-relaxed mb-1">
+                          {r.auto_summary}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
+                        {r.contributor_nickname && <span>by {r.contributor_nickname}</span>}
+                        <span>{new Date(r.created_at).toLocaleDateString("ko")}</span>
+                      </div>
+                    </div>
+                    <ExternalLink size={14} className="text-nu-ink/20 group-hover:text-nu-pink shrink-0" />
+                  </a>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

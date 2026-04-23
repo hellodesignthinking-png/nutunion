@@ -7,7 +7,9 @@ import { PlanContentSchema, SYSTEM, buildPlanPrompt } from "@/lib/venture/plan-p
 export const runtime = "nodejs";
 export const maxDuration = 90;
 
-const MODEL = "anthropic/claude-sonnet-4.5";
+import { NU_AI_MODEL, NU_AI_MODEL_LABEL } from "@/lib/ai/model";
+const MODEL = NU_AI_MODEL;
+const MODEL_LABEL = NU_AI_MODEL_LABEL;
 
 /**
  * POST /api/venture/[projectId]/plan

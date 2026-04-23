@@ -2,6 +2,8 @@ import { google } from "googleapis";
 import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 
+import { asGoogleErr } from "@/lib/google/error-helpers";
+
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
@@ -35,7 +37,8 @@ export async function GET(req: NextRequest) {
         "Cache-Control": "public, max-age=3600",
       },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const e = asGoogleErr(err);
     console.error("Drive render error:", err);
     return new NextResponse(
       "Failed to load the HTML file from Google Drive. Please ensure the file is accessible.",

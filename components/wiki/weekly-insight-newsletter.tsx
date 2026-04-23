@@ -234,8 +234,9 @@ export function WeeklyInsightNewsletter({ groupId, isHost = false }: { groupId: 
 
       toast.success("실 데이터 기반 주간 인사이트가 생성되었습니다!");
       setPublished(false); // Reset publish state for new digest
-    } catch (err: any) {
-      toast.error(err.message || "생성 중 오류가 발생했습니다");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "생성 중 오류가 발생했습니다");
     } finally {
       setGenerating(false);
     }
@@ -259,8 +260,9 @@ export function WeeklyInsightNewsletter({ groupId, isHost = false }: { groupId: 
       if (error) throw error;
       setPublished(true);
       toast.success("뉴스레터가 발행되었습니다!");
-    } catch (err: any) {
-      toast.error(err.message || "발행에 실패했습니다");
+    } catch (err: unknown) {
+    const __err = err as { message?: string; code?: number; name?: string };
+      toast.error(__err.message || "발행에 실패했습니다");
     } finally {
       setPublishing(false);
     }
