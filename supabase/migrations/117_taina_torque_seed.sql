@@ -1,13 +1,6 @@
 -- ============================================================
 -- Seeding: Taina의 실제 사업 5개 Torque Bolt 초기 데이터
 -- 실행 전: 116_torque_bolt_consulting.sql 마이그레이션 완료 필요
---
--- 사용법:
---   1. Supabase SQL 에디터에서 실행
---   2. 또는 supabase db push 후 수동 삽입
---
--- 주의: created_by 는 실제 Taina 계정 UUID로 교체하세요.
---       아래 DO 블록이 자동으로 첫 번째 admin 계정을 찾습니다.
 -- ============================================================
 
 DO $$
@@ -19,7 +12,6 @@ DECLARE
   p4_id       uuid := gen_random_uuid();  -- 양평 타운하우스 개발
   p5_id       uuid := gen_random_uuid();  -- Antenna 법인 거버넌스
 BEGIN
-  -- Taina 계정 찾기 (admin 또는 첫 번째 유저)
   SELECT id INTO taina_id
   FROM profiles
   WHERE role = 'admin'
@@ -37,10 +29,7 @@ BEGIN
 
   RAISE NOTICE '사용자 ID: %', taina_id;
 
-  -- ─────────────────────────────────────────────────────────
-  -- 1. FlagtaleCafe 브랜드 리뉴얼 컨설팅
-  --    유형: 리테이너 / 외부 브랜딩 컨설턴트
-  -- ─────────────────────────────────────────────────────────
+  -- 1. FlagtaleCafe 브랜드 리뉴얼
   INSERT INTO projects (
     id, title, description, type, status, category,
     start_date, created_by, created_at, updated_at
@@ -72,14 +61,12 @@ BEGIN
   VALUES (p1_id, taina_id, 'lead')
   ON CONFLICT (project_id, user_id) DO NOTHING;
 
-  -- 리스크 등록
   INSERT INTO consulting_risks (project_id, title, category, likelihood, impact, mitigation_status, identified_by)
   VALUES
     (p1_id, '3지점 동시 공사로 인한 브랜드 개편 지연', 'operational', 3, 4, 'identified', taina_id),
     (p1_id, '기존 단골 고객의 리브랜딩 거부감', 'market', 2, 3, 'analyzing', taina_id)
   ON CONFLICT DO NOTHING;
 
-  -- 의사결정 로그
   INSERT INTO consulting_decisions (project_id, title, context, decision, status, decided_at)
   VALUES (
     p1_id,
@@ -91,17 +78,13 @@ BEGIN
   )
   ON CONFLICT DO NOTHING;
 
-  -- 요청 큐
   INSERT INTO consulting_requests (project_id, title, body, requester_id, request_type, priority, status, estimated_hours, actual_hours)
   VALUES
     (p1_id, '경쟁사 카페 브랜딩 분석 요약본', '강남·홍대·성수 지역 프리미엄 카페 5곳의 브랜딩 전략 분석 요청', taina_id, 'analysis', 'high', 'in_progress', 6, 3),
     (p1_id, '3지점 공간 컨셉 가이드라인', '각 지점 특성을 살리면서 브랜드 통일성을 유지하는 공간 컨셉 방향성', taina_id, 'deliverable', 'normal', 'submitted', 8, 0)
   ON CONFLICT DO NOTHING;
 
-  -- ─────────────────────────────────────────────────────────
-  -- 2. ZeroSite 사회적기업 인증 컨설팅
-  --    유형: 일회성 / 사회적기업 전문 컨설턴트
-  -- ─────────────────────────────────────────────────────────
+  -- 2. ZeroSite 사회적기업 인증
   INSERT INTO projects (
     id, title, description, type, status, category,
     start_date, end_date, created_by, created_at, updated_at
@@ -138,10 +121,7 @@ BEGIN
     (p2_id, '정부 인증 심사 일정 지연', 'external', 2, 3, 'accepted', taina_id)
   ON CONFLICT DO NOTHING;
 
-  -- ─────────────────────────────────────────────────────────
-  -- 3. SecondWind 러닝 앱 시장 진입 자문
-  --    유형: 하이브리드 / 러닝업계 베테랑 컨설턴트
-  -- ─────────────────────────────────────────────────────────
+  -- 3. SecondWind 시장 진입 자문
   INSERT INTO projects (
     id, title, description, type, status, category,
     start_date, created_by, created_at, updated_at
@@ -179,10 +159,7 @@ BEGIN
     (p3_id, '베타 테스터 모집 전략 조언', '초기 200명 베타 유저 확보 방안 (러닝 커뮤니티 접근법)', taina_id, 'advice', 'normal', 'submitted', 3, 0)
   ON CONFLICT DO NOTHING;
 
-  -- ─────────────────────────────────────────────────────────
   -- 4. 양평 타운하우스 개발 자문
-  --    유형: 일회성 / 부동산 개발 전문가
-  -- ─────────────────────────────────────────────────────────
   INSERT INTO projects (
     id, title, description, type, status, category,
     start_date, end_date, created_by, created_at, updated_at
@@ -231,10 +208,7 @@ BEGIN
   )
   ON CONFLICT DO NOTHING;
 
-  -- ─────────────────────────────────────────────────────────
-  -- 5. Antenna 새 법인 거버넌스 컨설팅
-  --    유형: 리테이너 / 법무 + 재무 컨설턴트
-  -- ─────────────────────────────────────────────────────────
+  -- 5. Antenna 법인 거버넌스 재편
   INSERT INTO projects (
     id, title, description, type, status, category,
     start_date, created_by, created_at, updated_at
@@ -289,7 +263,6 @@ END $$;
 
 -- ─────────────────────────────────────────────────────────
 -- 보조 테이블: consulting_deliverables (산출물 라이브러리)
--- 116 마이그레이션에 포함 안 된 경우 여기서 생성
 -- ─────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS consulting_deliverables (
   id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -316,7 +289,10 @@ CREATE INDEX IF NOT EXISTS idx_consulting_deliverables_project
   ON consulting_deliverables(project_id);
 
 ALTER TABLE consulting_deliverables ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "consulting_deliverables_member"
+
+-- CREATE POLICY IF NOT EXISTS 는 PostgreSQL 미지원 → DROP 후 재생성
+DROP POLICY IF EXISTS "consulting_deliverables_member" ON consulting_deliverables;
+CREATE POLICY "consulting_deliverables_member"
   ON consulting_deliverables FOR ALL
   USING (
     project_id IN (
@@ -358,34 +334,36 @@ CREATE INDEX IF NOT EXISTS idx_project_meetings_torque_track   ON project_meetin
 
 ALTER TABLE project_meetings_torque ENABLE ROW LEVEL SECURITY;
 
--- team 트랙: 팀/오너만 (shared_with_consultant=true인 경우 컨설턴트도)
-CREATE POLICY IF NOT EXISTS "meetings_torque_team_select"
+DROP POLICY IF EXISTS "meetings_torque_team_select" ON project_meetings_torque;
+CREATE POLICY "meetings_torque_team_select"
   ON project_meetings_torque FOR SELECT
   USING (
-    track = 'consultant'  -- 컨설턴트 세션은 전원 공개
+    track = 'consultant'
     OR (
       track = 'team' AND (
-        shared_with_consultant = false AND (
+        (shared_with_consultant = false AND (
           project_id IN (SELECT project_id FROM bolt_memberships WHERE user_id = auth.uid() AND role IN ('owner','team'))
           OR project_id IN (SELECT id FROM projects WHERE created_by = auth.uid())
-        )
+        ))
         OR
-        shared_with_consultant = true AND (
+        (shared_with_consultant = true AND (
           project_id IN (SELECT project_id FROM bolt_memberships WHERE user_id = auth.uid())
           OR project_id IN (SELECT id FROM projects WHERE created_by = auth.uid())
-        )
+        ))
       )
     )
   );
 
-CREATE POLICY IF NOT EXISTS "meetings_torque_insert"
+DROP POLICY IF EXISTS "meetings_torque_insert" ON project_meetings_torque;
+CREATE POLICY "meetings_torque_insert"
   ON project_meetings_torque FOR INSERT
   WITH CHECK (
     project_id IN (SELECT project_id FROM bolt_memberships WHERE user_id = auth.uid())
     OR project_id IN (SELECT id FROM projects WHERE created_by = auth.uid())
   );
 
-CREATE POLICY IF NOT EXISTS "meetings_torque_update"
+DROP POLICY IF EXISTS "meetings_torque_update" ON project_meetings_torque;
+CREATE POLICY "meetings_torque_update"
   ON project_meetings_torque FOR UPDATE
   USING (
     created_by = auth.uid()
