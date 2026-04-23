@@ -50,7 +50,7 @@ import { TorqueView } from "@/components/bolt/torque/TorqueView";
 import { BoltCalendar } from "@/components/bolt/bolt-calendar";
 import { ConsultingAddonManager } from "@/components/bolt/consulting-addon-manager";
 
-// 기본 탭 6개 — insights·modules는 overview Quick Actions에서 접근
+// 기본 탭 — insights·modules는 overview Quick Actions에서 접근
 const baseTabs = [
   { key: "overview",   label: "개요",     icon: Target },
   { key: "kanban",     label: "칸반",     icon: Columns3 },
@@ -65,17 +65,17 @@ const baseTabs = [
   { key: "modules",    label: "모듈",     icon: Puzzle,    hidden: true },
 ];
 
-const roleLabels: Record<string, string> = {
-  lead: "리드",
-  member: "와셔",
-  observer: "옵저버",
+const roleConfig: Record<string, { label: string; className: string }> = {
+  lead:     { label: "리드",    className: "bg-nu-pink text-white" },
+  member:   { label: "와셔",    className: "bg-nu-ink/10 text-nu-graphite" },
+  observer: { label: "옵저버",  className: "bg-nu-cream text-nu-muted border border-nu-ink/10" },
 };
 
 const catColors: Record<string, string> = {
-  space: "bg-nu-blue",
-  culture: "bg-nu-amber",
+  space:    "bg-nu-blue",
+  culture:  "bg-nu-amber",
   platform: "bg-nu-ink",
-  vibe: "bg-nu-pink",
+  vibe:     "bg-nu-pink",
 };
 
 const msStatusColors: Record<string, string> = {
@@ -165,15 +165,15 @@ export function TabsInner({
 
   // Build tabs — hidden 탭은 탭바에 표시 안 함
   const tabCounts: Record<string, number | null> = {
-    overview: null,
-    kanban: liveTotalTasks || null,
+    overview:   null,
+    kanban:     liveTotalTasks || null,
     milestones: milestones?.length || null,
-    meetings: events?.length || null,
-    resources: null,
-    finance: null,
-    activity: updates?.length || null,
-    insights: null,
-    modules: null,
+    meetings:   null,   // 실시간 로딩 — ProjectMeetings 에서 관리
+    resources:  null,
+    finance:    null,
+    activity:   updates?.length || null,
+    insights:   null,
+    modules:    null,
   };
   const tabs = baseTabs
     .filter((t) => !(t as any).hidden)
@@ -194,7 +194,7 @@ export function TabsInner({
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`font-mono-nu text-[13px] uppercase tracking-widest px-5 py-3.5 border-b-[3px] transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 ${
+            className={`font-mono-nu text-[13px] uppercase tracking-widest px-4 py-3.5 border-b-[3px] transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 ${
               activeTab === tab.key
                 ? "border-nu-pink text-nu-ink font-black bg-nu-pink/[0.04]"
                 : "border-transparent text-nu-muted hover:text-nu-graphite"
@@ -216,9 +216,10 @@ export function TabsInner({
         {canEdit && (
           <Link
             href={`/projects/${projectId}/settings`}
-            className="font-mono-nu text-[13px] uppercase tracking-widest px-5 py-3.5 border-b-[3px] border-transparent text-nu-muted hover:text-nu-graphite no-underline ml-auto flex items-center gap-2 whitespace-nowrap shrink-0"
+            className="font-mono-nu text-[13px] uppercase tracking-widest px-4 py-3.5 border-b-[3px] border-transparent text-nu-muted hover:text-nu-graphite no-underline ml-auto flex items-center gap-2 whitespace-nowrap shrink-0"
+            title="볼트 설정"
           >
-            설정
+            ⚙️
           </Link>
         )}
       </div>
@@ -449,22 +450,24 @@ export function TabsInner({
             {/* ── Quick Actions ── */}
             <div className="bg-nu-ink text-nu-paper p-5">
               <h3 className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-paper/50 mb-3">Quick Actions</h3>
-              <div className="grid grid-cols-3 gap-1">
+              <div className="grid grid-cols-4 gap-1">
                 {[
                   { label: "칸반",    tab: "kanban",     emoji: "📋" },
-                  { label: "마일스톤", tab: "milestones", emoji: "🏁" },
                   { label: "회의록",  tab: "meetings",   emoji: "📝" },
                   { label: "자료실",  tab: "resources",  emoji: "📁" },
                   { label: "인사이트", tab: "insights",  emoji: "📊" },
+                  { label: "자금",    tab: "finance",    emoji: "💰" },
+                  { label: "활동",    tab: "activity",   emoji: "⚡" },
                   { label: "모듈",    tab: "modules",    emoji: "🧩" },
+                  { label: "마일스톤", tab: "milestones", emoji: "🏁" },
                 ].map(({ label, tab, emoji }) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className="flex flex-col items-center gap-1 py-3 bg-nu-paper/[0.06] hover:bg-nu-paper/[0.14] transition-colors"
+                    className="flex flex-col items-center gap-1 py-2.5 bg-nu-paper/[0.06] hover:bg-nu-paper/[0.14] transition-colors"
                   >
-                    <span className="text-[18px] leading-none">{emoji}</span>
-                    <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-paper/70">{label}</span>
+                    <span className="text-[16px] leading-none">{emoji}</span>
+                    <span className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-paper/70">{label}</span>
                   </button>
                 ))}
               </div>
@@ -566,25 +569,32 @@ export function TabsInner({
               <h3 className="font-head text-base font-extrabold flex items-center gap-2 mb-4">
                 <Users size={16} /> 와셔 ({userMembers.length})
               </h3>
-              <div className="space-y-3">
-                {userMembers.map((m: any) => (
-                  <div key={m.id} className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-nu-cream flex items-center justify-center font-head text-xs font-bold text-nu-ink shrink-0">
-                      {(m.profile?.nickname || "U").charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{m.profile?.nickname}</p>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[11px] text-nu-muted">{roleLabels[m.role] || m.role}</span>
-                        {m._from_nut && m.crew?.name && (
-                          <span className="inline-flex items-center gap-0.5 font-mono-nu text-[9px] uppercase tracking-widest px-1.5 py-0.5 bg-nu-amber/10 text-nu-amber border border-nu-amber/20 shrink-0">
-                            🥜 {m.crew.name}
+              <div className="space-y-2.5">
+                {userMembers.map((m: any) => {
+                  const rc = roleConfig[m.role] || { label: m.role, className: "bg-nu-ink/5 text-nu-graphite" };
+                  return (
+                    <div key={m.id} className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-head text-xs font-bold shrink-0 ${
+                        m.role === "lead" ? "bg-nu-pink text-white" : "bg-nu-cream text-nu-ink"
+                      }`}>
+                        {(m.profile?.nickname || "U").charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{m.profile?.nickname}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`font-mono-nu text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded-sm ${rc.className}`}>
+                            {rc.label}
                           </span>
-                        )}
+                          {m._from_nut && m.crew?.name && (
+                            <span className="inline-flex items-center gap-0.5 font-mono-nu text-[9px] uppercase tracking-widest px-1.5 py-0.5 bg-nu-amber/10 text-nu-amber border border-nu-amber/20 shrink-0">
+                              🥜 {m.crew.name}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {userMembers.length === 0 && <p className="text-nu-gray text-xs">와셔가 없습니다</p>}
               </div>
             </div>
@@ -817,7 +827,7 @@ function ProjectRewardsTab({ project, members, canEdit }: any) {
                          {(m.profile?.nickname || "U").charAt(0).toUpperCase()}
                        </div>
                        <span className="text-sm font-bold text-nu-ink">{m.profile?.nickname}</span>
-                       <span className="font-mono-nu text-[10px] text-nu-muted uppercase">{roleLabels[m.role] || m.role}</span>
+                       <span className="font-mono-nu text-[10px] text-nu-muted uppercase">{roleConfig[m.role]?.label || m.role}</span>
                      </div>
                      <span className="font-mono-nu text-sm font-bold text-green-600">{ratio}%</span>
                    </div>
