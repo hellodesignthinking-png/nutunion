@@ -500,7 +500,30 @@ export function TabsInner({
           {/* Sidebar */}
           <div className="space-y-6">
 
-            {/* ── My Tasks Widget (Logged-in User's Tasks) ── */}
+            {/* ── 빠른 액션 패널 ── */}
+            <div className="bg-nu-ink text-nu-paper p-5">
+              <h3 className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-paper/60 mb-3">Quick Actions</h3>
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  { label: "칸반 보드",  tab: "kanban",    emoji: "📋" },
+                  { label: "마일스톤",   tab: "milestones", emoji: "🏁" },
+                  { label: "회의록",    tab: "meetings",   emoji: "📝" },
+                  { label: "자료실",    tab: "resources",  emoji: "📁" },
+                  { label: "인사이트",  tab: "insights",   emoji: "📊" },
+                  { label: "모듈",      tab: "modules",    emoji: "🧩" },
+                ].map(({ label, tab, emoji }) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className="text-left px-3 py-2.5 bg-nu-paper/[0.06] hover:bg-nu-paper/[0.14] transition-colors border border-nu-paper/[0.08]"
+                  >
+                    <span className="block text-[16px] mb-0.5">{emoji}</span>
+                    <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-paper/80">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="bg-nu-pink/5 border-[2px] border-nu-pink/20 p-5">
               <h3 className="font-head text-base font-extrabold flex items-center gap-2 mb-3 text-nu-pink">
                 <CheckSquare size={16} /> 내 할 일 ({myTasks.length})

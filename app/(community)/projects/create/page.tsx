@@ -132,9 +132,6 @@ function ProjectInvitePanel({
           <button onClick={nativeShare} className="flex items-center gap-1.5 font-mono-nu text-[11px] uppercase tracking-widest px-3 py-2 border border-nu-ink/15 hover:bg-nu-paper transition-colors text-nu-gray">
             <Share2 size={12} /> 공유
           </button>
-          <button onClick={nativeShare} className="flex items-center gap-1.5 font-mono-nu text-[11px] uppercase tracking-widest px-3 py-2 border border-[#FEE500]/50 bg-[#FEE500]/10 hover:bg-[#FEE500]/20 transition-colors text-nu-ink">
-            💬 카카오톡
-          </button>
           <button onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText + " " + shareUrl)}`, "_blank")} className="flex items-center gap-1.5 font-mono-nu text-[11px] uppercase tracking-widest px-3 py-2 border border-[#1DA1F2]/30 bg-[#1DA1F2]/10 hover:bg-[#1DA1F2]/20 transition-colors text-nu-ink">
             𝕏 트위터
           </button>
