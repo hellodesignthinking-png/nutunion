@@ -60,31 +60,35 @@ interface ProjectMemberRow {
 
 const statusConfig: Record<
   string,
-  { label: string; color: string; bg: string; borderColor: string }
+  { label: string; color: string; bg: string; borderColor: string; badge: string }
 > = {
   upcoming: {
     label: "예정",
     color: "text-nu-blue",
     bg: "bg-nu-blue/10",
     borderColor: "border-l-nu-blue",
+    badge: "bg-nu-blue/10 text-nu-blue border-nu-blue/20",
   },
   in_progress: {
     label: "진행 중",
     color: "text-nu-amber",
     bg: "bg-nu-amber/10",
     borderColor: "border-l-nu-amber",
+    badge: "bg-nu-amber/10 text-nu-amber border-nu-amber/20",
   },
   completed: {
     label: "완료",
-    color: "text-green-600",
-    bg: "bg-green-50",
-    borderColor: "border-l-green-500",
+    color: "text-nu-pink",
+    bg: "bg-nu-pink/10",
+    borderColor: "border-l-nu-pink",
+    badge: "bg-nu-pink/10 text-nu-pink border-nu-pink/20",
   },
   cancelled: {
     label: "취소",
     color: "text-nu-muted",
     bg: "bg-nu-cream/30",
     borderColor: "border-l-nu-gray",
+    badge: "bg-nu-cream text-nu-muted border-nu-ink/10",
   },
 };
 
@@ -277,15 +281,16 @@ export function ProjectMeetings({
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* 헤더 — 너트와 동일한 스타일 */}
+      <div className="flex items-start justify-between mb-6">
         <div>
-          <h2 className="font-head text-xl font-extrabold text-nu-ink flex items-center gap-2">
-            <FileText size={20} /> 회의록
-          </h2>
-          <p className="font-mono-nu text-[12px] text-nu-muted uppercase tracking-widest mt-1">
-            {meetings.length} meetings · {upcomingMeetings.length} upcoming
-          </p>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="px-2 py-0.5 bg-nu-ink text-nu-paper font-mono-nu text-[11px] font-black uppercase tracking-[0.2em]">Meeting_Log</div>
+            <div className="px-2 py-0.5 bg-nu-pink/10 text-nu-pink font-mono-nu text-[11px] font-black uppercase tracking-[0.2em] flex items-center gap-1">
+              <Sparkles size={8} /> {meetings.length}종
+            </div>
+          </div>
+          <p className="text-nu-gray text-sm">예정 {upcomingMeetings.length}개 &middot; 완료 {pastMeetings.length}개</p>
         </div>
         {canEdit && (
           <Button
@@ -293,13 +298,9 @@ export function ProjectMeetings({
             className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[12px] uppercase tracking-widest"
           >
             {showForm ? (
-              <>
-                <X size={12} /> 취소
-              </>
+              <><X size={12} /> 취소</>
             ) : (
-              <>
-                <Plus size={12} /> 새 회의
-              </>
+              <><Plus size={12} /> 새 회의</>
             )}
           </Button>
         )}

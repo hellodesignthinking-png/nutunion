@@ -654,7 +654,7 @@ export function ProjectResourceHub({
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <div className="px-2 py-0.5 bg-nu-blue text-nu-paper font-mono-nu text-[11px] font-black uppercase tracking-[0.2em]">Resource_Hub</div>
+                <div className="px-2 py-0.5 bg-nu-blue text-nu-paper font-mono-nu text-[11px] font-black uppercase tracking-[0.2em]">Knowledge_Atlas</div>
                 <div className="px-2 py-0.5 bg-green-50 text-green-600 font-mono-nu text-[11px] font-black uppercase tracking-[0.2em] flex items-center gap-1">
                   <HardDrive size={8} /> Zero_Storage
                 </div>
