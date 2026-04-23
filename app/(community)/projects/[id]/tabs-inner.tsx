@@ -29,6 +29,7 @@ import {
   Loader2,
   Columns3,
   BarChart3,
+  Puzzle,
 } from "lucide-react";
 import { MilestoneList } from "@/components/projects/milestone-list";
 import { ProjectActivityFeed } from "@/components/projects/project-activity-feed";
@@ -50,17 +51,19 @@ import { EyeDashboard } from "@/components/bolt/eye/eye-dashboard";
 import { WingDashboard } from "@/components/bolt/wing/wing-dashboard";
 import { TorqueView } from "@/components/bolt/torque/TorqueView";
 import { BoltCalendar } from "@/components/bolt/bolt-calendar";
+import { ConsultingAddonManager } from "@/components/bolt/consulting-addon-manager";
 
 const baseTabs = [
-  { key: "overview", label: "개요", icon: Target },
-  { key: "kanban", label: "칸반 보드", icon: Columns3 },
-  { key: "milestones", label: "마일스톤", icon: Layers },
-  { key: "calendar", label: "캘린더", icon: Calendar },
-  { key: "insights", label: "인사이트", icon: BarChart3 },
-  { key: "meetings", label: "회의록", icon: FileText },
-  { key: "resources", label: "자료실", icon: FolderOpen },
-  { key: "finance", label: "자금·보상", icon: Wallet },
-  { key: "activity", label: "활동", icon: Activity },
+  { key: "overview",    label: "개요",     icon: Target },
+  { key: "kanban",      label: "칸반 보드", icon: Columns3 },
+  { key: "milestones", label: "마일스톤",  icon: Layers },
+  { key: "calendar",   label: "캘린더",   icon: Calendar },
+  { key: "insights",   label: "인사이트",  icon: BarChart3 },
+  { key: "meetings",   label: "회의록",   icon: FileText },
+  { key: "resources",  label: "자료실",   icon: FolderOpen },
+  { key: "finance",    label: "자금·보상", icon: Wallet },
+  { key: "modules",    label: "모듈",     icon: Puzzle },
+  { key: "activity",   label: "활동",     icon: Activity },
 ];
 
 const roleLabels: Record<string, string> = {
@@ -289,7 +292,17 @@ export function TabsInner({
           <TorqueView
             projectId={projectId}
             projectTitle={project?.title || "컨설팅"}
-            torqueMeta={null}  // 서버에서 조회 필요 — 현재는 클라이언트 직접 조회
+            torqueMeta={null}
+          />
+        </div>
+      )}
+
+      {/* 모듈 탭 — 모든 볼트 유형에서 접근 가능 */}
+      {activeTab === "modules" && (
+        <div className="max-w-5xl mx-auto py-6">
+          <ConsultingAddonManager
+            projectId={projectId}
+            canEdit={canEdit}
           />
         </div>
       )}
