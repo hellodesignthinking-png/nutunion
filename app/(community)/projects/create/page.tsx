@@ -401,8 +401,8 @@ export default function ProjectCreatePage() {
   // After creation invite step
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
   const [createdProjectTitle, setCreatedProjectTitle] = useState<string>("");
-  // Genesis AI mode toggle (default for non-template)
-  const [mode, setMode] = useState<"genesis" | "manual">(template ? "manual" : "genesis");
+  // Genesis AI mode toggle — 3탭: genesis / template / manual
+  const [mode, setMode] = useState<"genesis" | "template" | "manual">(template ? "manual" : "genesis");
 
   useEffect(() => {
     async function checkPermission() {
@@ -912,272 +912,297 @@ export default function ProjectCreatePage() {
     );
   }
 
-  /* ── Default (no template) creation UI ───────────────────── */
+  /* ── Default (no template) creation UI — 3탭 통합 구조 ───── */
   return (
-    <div className="max-w-2xl mx-auto px-8 py-12">
-      <h1 className="font-head text-3xl font-extrabold text-nu-ink mb-2">
-        새 볼트 만들기
-      </h1>
-      <p className="text-nu-gray text-sm mb-6">
-        너트들이 함께할 볼트를 시작하세요
-      </p>
-
-      {/* ── 템플릿 빠른 선택 섹션 ── */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-graphite font-bold flex items-center gap-1.5">
-            <Sparkles size={11} /> 템플릿으로 시작하기
-          </h2>
-          <span className="font-mono-nu text-[10px] text-nu-muted">6개 템플릿 · 직접 설정보다 빠름</span>
+    <div className="min-h-screen bg-nu-paper">
+      {/* ── Hero ── */}
+      <div className="bg-nu-ink text-nu-paper py-14 px-8">
+        <div className="max-w-2xl mx-auto text-center">
+          <div className="inline-flex items-center gap-2 font-mono-nu text-[10px] uppercase tracking-[0.3em] text-nu-paper/40 mb-6">
+            <Sparkles size={10} />
+            GENESIS AI · BOLT CREATOR
+          </div>
+          <h1 className="font-head text-[36px] sm:text-[48px] font-black text-nu-paper leading-[1.05] mb-4">
+            어떤 볼트를<br />만들고 싶으세요?
+          </h1>
+          <p className="text-nu-paper/50 text-[14px] leading-relaxed">
+            한 줄이면 충분합니다.<br />
+            AI 가 로드맵·위키·팀원까지 자동 설계합니다.
+          </p>
         </div>
-
-        {/* 일반 템플릿 */}
-        <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">일반 볼트</p>
-        <div className="grid grid-cols-3 gap-2 mb-4">
-          {["local-branding","platform-mvp","popup-store"].map(key => {
-            const t = PROJECT_TEMPLATES[key];
-            return (
-              <a
-                key={key}
-                href={`/projects/create?template=${key}`}
-                className={`relative overflow-hidden p-3 text-left transition-all hover:scale-[1.02] hover:shadow-md no-underline block border border-white/10`}
-                style={{ background: `linear-gradient(135deg, ${t.gradient.replace("from-","").replace("via-","").replace("to-","")})` }}
-              >
-                <div className="absolute inset-0 opacity-90" style={{ background: `linear-gradient(135deg, #0f172a, #1e293b)` }} />
-                <div className="relative z-10">
-                  <p className="font-mono-nu text-[9px] uppercase tracking-widest text-white/50 mb-1">{t.duration}</p>
-                  <p className="font-head text-[13px] font-extrabold text-white leading-tight">{t.title}</p>
-                  <p className="font-mono-nu text-[10px] text-white/50 mt-1">{t.features.length}개 기능</p>
-                </div>
-              </a>
-            );
-          })}
-        </div>
-
-        {/* 컨설팅 템플릿 */}
-        <p className="font-mono-nu text-[10px] uppercase tracking-widest text-teal-700 mb-2 flex items-center gap-1">
-          🎓 Torque 컨설팅 볼트
-        </p>
-        <div className="grid grid-cols-3 gap-2 mb-2">
-          {["consulting-brand","consulting-strategy","consulting-retainer"].map(key => {
-            const t = PROJECT_TEMPLATES[key];
-            return (
-              <a
-                key={key}
-                href={`/projects/create?template=${key}`}
-                className="relative overflow-hidden p-3 text-left transition-all hover:scale-[1.02] hover:shadow-md no-underline block"
-                style={{ background: "linear-gradient(135deg, #0f2520, #0d3330)" }}
-              >
-                <div className="absolute top-0 right-0 w-0 h-0 border-t-[20px] border-r-[20px] border-teal-500/40 border-b-transparent border-l-transparent" />
-                <div className="relative z-10">
-                  <p className="font-mono-nu text-[9px] uppercase tracking-widest text-teal-400 mb-1">{t.duration}</p>
-                  <p className="font-head text-[13px] font-extrabold text-white leading-tight">{t.title}</p>
-                  <p className="font-mono-nu text-[10px] text-teal-300/60 mt-1">Kit {t.features.length}개 자동 설치</p>
-                </div>
-              </a>
-            );
-          })}
-        </div>
-        <div className="border-b-[2px] border-nu-ink/[0.06] pb-6 mb-6" />
       </div>
 
-      {/* Mode toggle — Genesis AI vs 직접 입력 */}
-      <div className="inline-flex items-center gap-0 mb-5 border-2 border-nu-ink/15 bg-nu-white p-1">
-        <button
-          type="button"
-          onClick={() => setMode("genesis")}
-          className={`font-mono-nu text-[11px] font-bold uppercase tracking-widest px-4 py-2 transition-colors ${
-            mode === "genesis" ? "bg-nu-ink text-nu-paper" : "text-nu-gray hover:text-nu-ink"
-          }`}
-        >
-          ✨ Genesis AI
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("manual")}
-          className={`font-mono-nu text-[11px] font-bold uppercase tracking-widest px-4 py-2 transition-colors ${
-            mode === "manual" ? "bg-nu-ink text-nu-paper" : "text-nu-gray hover:text-nu-ink"
-          }`}
-        >
-          📝 직접 입력
-        </button>
+      {/* ── 3탭 네비게이션 ── */}
+      <div className="border-b-[2px] border-nu-ink/[0.08] bg-nu-white sticky top-0 z-10">
+        <div className="max-w-2xl mx-auto px-8 flex gap-0">
+          {([
+            { key: "genesis"  as const, label: "✨ AI 설계",     desc: "한 줄 입력" },
+            { key: "template" as const, label: "📋 템플릿 선택", desc: "6종 즉시 시작" },
+            { key: "manual"   as const, label: "✏️ 직접 입력",   desc: "세부 설정" },
+          ]).map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setMode(tab.key)}
+              className={`font-mono-nu text-[12px] uppercase tracking-widest px-5 py-4 border-b-[3px] transition-colors whitespace-nowrap ${
+                mode === tab.key
+                  ? "border-nu-pink text-nu-ink font-black"
+                  : "border-transparent text-nu-muted hover:text-nu-graphite"
+              }`}
+            >
+              {tab.label}
+              <span className="hidden sm:inline font-normal text-nu-muted ml-1 text-[10px] normal-case tracking-normal">
+                · {tab.desc}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      {mode === "genesis" ? (
-        <GenesisFlow kind="project" />
-      ) : (
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Bolt Type Selector — 6가지 유형 중 선택 */}
-        <BoltTypeSelector value={boltType} onChange={handleBoltTypeChange} />
+      <div className="max-w-2xl mx-auto px-8 py-10">
 
-        {/* Torque 선택 시 컨설팅 안내 배너 */}
-        {boltType === "torque" && (
-          <div className="p-4 bg-teal-50 border-[2px] border-teal-300 space-y-2">
-            <p className="font-mono-nu text-[11px] uppercase tracking-widest text-teal-700 font-bold flex items-center gap-1.5">
-              🎓 컨설팅형 볼트 (Torque) 안내
-            </p>
-            <ul className="text-[12px] text-teal-800 space-y-1 leading-relaxed">
-              <li>• 팀 미팅 + 컨설턴트 세션 <strong>이중 트랙</strong>이 자동 설치됩니다</li>
-              <li>• 요청 큐, 산출물 라이브러리, 리스크 레지스터 등 <strong>11개 Thread</strong> 자동 구성</li>
-              <li>• 생성 후 멤버 관리에서 <strong>컨설턴트를 초대</strong>할 수 있습니다</li>
-              <li>• 리테이너 계약 시 월 계약 시간과 단가를 입력하면 <strong>소진율</strong>을 실시간 추적합니다</li>
-            </ul>
+        {/* ── 탭 1: GENESIS AI ── */}
+        {mode === "genesis" && (
+          <GenesisFlow kind="project" />
+        )}
+
+        {/* ── 탭 2: 템플릿 선택 ── */}
+        {mode === "template" && (
+          <div className="space-y-8">
+            {/* 일반 볼트 템플릿 */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted font-bold">일반 볼트</span>
+                <span className="font-mono-nu text-[9px] text-nu-muted/60">· 브랜딩 / 개발 / 팝업</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {["local-branding","platform-mvp","popup-store"].map(key => {
+                  const t = PROJECT_TEMPLATES[key];
+                  return (
+                    <a
+                      key={key}
+                      href={`/projects/create?template=${key}`}
+                      className="group relative overflow-hidden p-5 no-underline block border-[2px] border-nu-ink/[0.08] hover:border-nu-ink/30 bg-nu-white transition-all hover:shadow-md"
+                    >
+                      <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${t.gradient}`} />
+                      <p className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-2">{t.duration}</p>
+                      <p className="font-head text-[15px] font-extrabold text-nu-ink mb-1 group-hover:text-nu-pink transition-colors">{t.title}</p>
+                      <p className="text-[11px] text-nu-muted leading-relaxed mb-3 line-clamp-2">{t.description}</p>
+                      <div className="space-y-1">
+                        {t.features.slice(0,3).map((f, i) => (
+                          <div key={i} className="flex items-center gap-1.5">
+                            <div className="w-3 h-3 flex items-center justify-center bg-nu-cream border border-nu-ink/10">
+                              <Check size={8} className="text-nu-graphite" />
+                            </div>
+                            <span className="text-[11px] text-nu-muted">{f}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-4 font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink flex items-center gap-1">
+                        이 템플릿으로 시작 <ChevronRight size={10} />
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 컨설팅 볼트 템플릿 */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="font-mono-nu text-[10px] uppercase tracking-widest text-teal-600 font-bold">🎓 Torque 컨설팅 볼트</span>
+                <span className="font-mono-nu text-[9px] text-nu-muted/60">· 11개 Thread 자동 설치</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {["consulting-brand","consulting-strategy","consulting-retainer"].map(key => {
+                  const t = PROJECT_TEMPLATES[key];
+                  return (
+                    <a
+                      key={key}
+                      href={`/projects/create?template=${key}`}
+                      className="group relative overflow-hidden p-5 no-underline block border-[2px] border-teal-200 hover:border-teal-400 bg-teal-50/50 transition-all hover:shadow-md"
+                    >
+                      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-500 to-emerald-400" />
+                      <p className="font-mono-nu text-[9px] uppercase tracking-widest text-teal-500 mb-2">{t.duration}</p>
+                      <p className="font-head text-[15px] font-extrabold text-nu-ink mb-1 group-hover:text-teal-700 transition-colors">{t.title}</p>
+                      <p className="text-[11px] text-nu-muted leading-relaxed mb-3 line-clamp-2">{t.description}</p>
+                      <div className="space-y-1">
+                        {t.features.slice(0,3).map((f, i) => (
+                          <div key={i} className="flex items-center gap-1.5">
+                            <div className="w-3 h-3 flex items-center justify-center bg-teal-100 border border-teal-200">
+                              <Check size={8} className="text-teal-600" />
+                            </div>
+                            <span className="text-[11px] text-nu-muted">{f}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-4 font-mono-nu text-[10px] uppercase tracking-widest text-teal-600 flex items-center gap-1">
+                        이 템플릿으로 시작 <ChevronRight size={10} />
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="text-center pt-4 border-t border-nu-ink/[0.06]">
+              <p className="text-[12px] text-nu-muted mb-3">템플릿 없이 처음부터 만들고 싶다면?</p>
+              <button
+                onClick={() => setMode("manual")}
+                className="font-mono-nu text-[11px] uppercase tracking-widest px-5 py-2.5 border-[2px] border-nu-ink/20 hover:border-nu-ink text-nu-graphite hover:text-nu-ink transition-colors"
+              >
+                직접 입력하기 →
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Title */}
-        <div>
-          <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
-            볼트 제목 *
-          </label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="볼트 이름을 입력하세요"
-            className="w-full px-4 py-3 bg-nu-white border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink transition-colors"
-            required
-          />
-        </div>
+        {/* ── 탭 3: 직접 입력 ── */}
+        {mode === "manual" && (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Bolt Type Selector */}
+            <BoltTypeSelector value={boltType} onChange={handleBoltTypeChange} />
 
-        {/* Bolt Type Fields — 유형별 전용 필드 (Torque 시 컨설팅 계약 정보) */}
-        <BoltTypeFields type={boltType} value={typeFields} onChange={setTypeFields} />
-
-
-        {/* Category */}
-        <div>
-          <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
-            카테고리 *
-          </label>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value as Specialty)}
-            className="w-full px-4 py-3 bg-nu-white border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink transition-colors"
-          >
-            {categories.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Description */}
-        <div>
-          <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
-            설명
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="볼트에 대한 설명을 입력하세요"
-            rows={4}
-            className="w-full px-4 py-3 bg-nu-white border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink transition-colors resize-none"
-          />
-        </div>
-
-        {/* Dates */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
-              시작일
-            </label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-4 py-3 bg-nu-white border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink transition-colors"
-            />
-          </div>
-          <div>
-            <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
-              종료일
-            </label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-4 py-3 bg-nu-white border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink transition-colors"
-            />
-          </div>
-        </div>
-
-        {/* AI Scoping 제안 */}
-        <div className="border-t border-nu-ink/[0.08] pt-6">
-          <BoltScopingSuggest
-            title={title}
-            description={description}
-            category={category}
-            onAccept={(slots, milestonesText) => {
-              setRoleSlots(slots);
-              // 마일스톤 텍스트를 description 하단에 추가 (편집 가능)
-              setDescription((prev) => prev.trim() ? `${prev}\n\n--- AI 제안 마일스톤 ---\n${milestonesText}` : milestonesText);
-            }}
-          />
-        </div>
-
-        {/* Role Slots */}
-        <div>
-          <RoleSlotsEditor value={roleSlots} onChange={setRoleSlots} />
-        </div>
-
-        {/* Image upload */}
-        <div>
-          <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
-            커버 이미지
-          </label>
-          <div className="border border-dashed border-nu-ink/20 p-6 text-center">
-            {imagePreview ? (
-              <div className="relative">
-                <img
-                  src={imagePreview}
-                  alt="미리보기"
-                  className="max-h-48 mx-auto object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setImageFile(null);
-                    setImagePreview(null);
-                  }}
-                  className="mt-2 font-mono-nu text-[12px] text-nu-red uppercase tracking-widest"
-                >
-                  삭제
-                </button>
+            {/* Torque 안내 배너 */}
+            {boltType === "torque" && (
+              <div className="p-4 bg-teal-50 border-[2px] border-teal-300 space-y-2">
+                <p className="font-mono-nu text-[11px] uppercase tracking-widest text-teal-700 font-bold flex items-center gap-1.5">
+                  🎓 컨설팅형 볼트 (Torque)
+                </p>
+                <ul className="text-[12px] text-teal-800 space-y-1 leading-relaxed">
+                  <li>• 팀 미팅 + 컨설턴트 세션 <strong>이중 트랙</strong> 자동 설치</li>
+                  <li>• 요청 큐, 산출물, 리스크 레지스터 등 <strong>11개 Thread</strong></li>
+                  <li>• 또는 위의 <button type="button" onClick={() => setMode("template" as any)} className="underline text-teal-700 font-bold">컨설팅 템플릿</button>을 선택하면 더 빠릅니다</li>
+                </ul>
               </div>
-            ) : (
-              <label className="cursor-pointer flex flex-col items-center gap-2">
-                <Upload size={24} className="text-nu-muted" />
-                <span className="text-sm text-nu-gray">
-                  클릭하여 이미지 업로드
-                </span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-              </label>
             )}
-          </div>
-        </div>
 
-        {/* Submit */}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full font-mono-nu text-[13px] font-bold uppercase tracking-[0.1em] py-4 bg-nu-pink text-nu-paper hover:bg-nu-pink/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-        >
-          {loading ? (
-            <>
-              <Loader2 size={14} className="animate-spin" /> 생성 중...
-            </>
-          ) : (
-            "볼트 만들기"
-          )}
-        </button>
-      </form>
-      )}
+            {/* Title */}
+            <div>
+              <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
+                볼트 제목 *
+              </label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="볼트 이름을 입력하세요"
+                className="w-full px-4 py-3 bg-nu-white border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink transition-colors"
+                required
+              />
+            </div>
+
+            {/* Bolt Type Fields */}
+            <BoltTypeFields type={boltType} value={typeFields} onChange={setTypeFields} />
+
+            {/* Category */}
+            <div>
+              <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
+                카테고리 *
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {categories.map((cat) => (
+                  <button
+                    key={cat.value}
+                    type="button"
+                    onClick={() => setCategory(cat.value)}
+                    className={`py-3 font-mono-nu text-[12px] font-bold uppercase tracking-widest border-[2px] transition-colors ${
+                      category === cat.value
+                        ? "bg-nu-ink text-nu-paper border-nu-ink"
+                        : "border-nu-ink/15 text-nu-muted hover:border-nu-ink/40 hover:text-nu-graphite"
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
+                볼트 소개
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="볼트에서 무엇을 하나요? 목적, 결과물, 참여 조건 등을 자유롭게 적어주세요."
+                rows={3}
+                className="w-full px-4 py-3 bg-nu-white border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink transition-colors resize-none"
+              />
+            </div>
+
+            {/* Dates */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">시작일</label>
+                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full px-4 py-3 bg-nu-white border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink transition-colors" />
+              </div>
+              <div>
+                <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">종료일</label>
+                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full px-4 py-3 bg-nu-white border border-nu-ink/[0.12] text-sm focus:outline-none focus:border-nu-pink transition-colors" />
+              </div>
+            </div>
+
+            {/* Role Slots */}
+            <div>
+              <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
+                모집 포지션
+              </label>
+              <RoleSlotsEditor value={roleSlots} onChange={setRoleSlots} />
+            </div>
+
+            {/* AI Scoping */}
+            {title.trim().length > 3 && (
+              <BoltScopingSuggest
+                title={title}
+                description={description}
+                category={category}
+                onAccept={(slots, milestonesText) => {
+                  setRoleSlots(slots);
+                  setDescription(prev => prev.trim() ? `${prev}\n\n--- AI 제안 마일스톤 ---\n${milestonesText}` : milestonesText);
+                }}
+              />
+            )}
+
+            {/* Image Upload */}
+            <div>
+              <label className="block font-mono-nu text-[12px] uppercase tracking-widest text-nu-muted mb-2">
+                대표 이미지 (선택)
+              </label>
+              <div className="border-[2px] border-dashed border-nu-ink/15 p-6 text-center">
+                {imagePreview ? (
+                  <div>
+                    <img src={imagePreview} alt="preview" className="max-h-40 mx-auto object-cover mb-2" />
+                    <button type="button" onClick={() => { setImageFile(null); setImagePreview(null); }}
+                      className="font-mono-nu text-[12px] text-red-500 uppercase tracking-widest">삭제</button>
+                  </div>
+                ) : (
+                  <label className="cursor-pointer flex flex-col items-center gap-2">
+                    <Upload size={24} className="text-nu-muted" />
+                    <span className="text-sm text-nu-gray">클릭하여 이미지 업로드</span>
+                    <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                  </label>
+                )}
+              </div>
+            </div>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full font-mono-nu text-[13px] font-bold uppercase tracking-[0.1em] py-4 bg-nu-pink text-nu-paper hover:bg-nu-pink/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <><Loader2 size={14} className="animate-spin" /> 생성 중...</>
+              ) : (
+                "볼트 만들기"
+              )}
+            </button>
+          </form>
+        )}
+      </div>
     </div>
   );
 }
