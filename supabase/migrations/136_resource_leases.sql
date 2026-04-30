@@ -6,6 +6,8 @@
 -- 인데 Supabase JS 클라이언트는 connection 을 재사용하지 않으므로 row 기반 lease 로 대체.
 --
 -- TTL 만료된 lock 은 자동으로 새 호출자가 가져가므로 누락된 release 도 안전.
+--
+-- 멱등 — `create or replace` 와 `if not exists` 만 사용. 여러 번 실행해도 안전.
 
 create table if not exists public.resource_leases (
   lock_key      text primary key,
@@ -22,6 +24,10 @@ comment on table public.resource_leases is
 -- 호출자가 lock 을 잡으면 true, 다른 사용자가 점유 중이면 false.
 -- 같은 사용자가 다시 호출하면 acquired_at 만 갱신(연장).
 -- TTL 초과 lock 은 자동으로 새 호출자에게 양도.
+--
+-- 구현 노트: record 타입 변수 대신 스칼라 변수만 사용 — 일부 Postgres 환경에서
+-- record 기반 SELECT INTO 가 'relation does not exist' 로 잘못 파싱되는 경우가
+-- 보고됨. 한 번의 INSERT ON CONFLICT 로 fast path 처리, 충돌 시 1행 조회.
 create or replace function public.try_acquire_lease(
   p_key text,
   p_user uuid,
@@ -32,44 +38,59 @@ security definer
 set search_path = public
 as $$
 declare
-  v_existing record;
+  v_acquired_by  uuid;
+  v_acquired_at  timestamptz;
+  v_rows         int;
 begin
   if p_key is null or p_user is null then
     return false;
   end if;
 
-  select acquired_by, acquired_at into v_existing
-  from public.resource_leases
-  where lock_key = p_key;
+  -- 1) Fast path — 행이 없으면 새로 INSERT.
+  insert into public.resource_leases (lock_key, acquired_by, acquired_at)
+  values (p_key, p_user, now())
+  on conflict (lock_key) do nothing;
+  get diagnostics v_rows = row_count;
+  if v_rows > 0 then
+    return true;
+  end if;
 
+  -- 2) 충돌 — 기존 행 조회.
+  select acquired_by, acquired_at
+    into v_acquired_by, v_acquired_at
+    from public.resource_leases
+    where lock_key = p_key;
+
+  -- 동시에 다른 인스턴스가 release 했다면 not found 가능 → 재시도.
   if not found then
     insert into public.resource_leases (lock_key, acquired_by, acquired_at)
     values (p_key, p_user, now())
     on conflict (lock_key) do nothing;
-    -- 동시에 두 호출자가 not-found → insert 한 경우 한쪽만 통과
-    perform 1 from public.resource_leases
-      where lock_key = p_key and acquired_by = p_user;
-    return found;
+    get diagnostics v_rows = row_count;
+    return v_rows > 0;
   end if;
 
-  -- TTL 만료
-  if v_existing.acquired_at < now() - make_interval(secs => p_ttl_seconds) then
+  -- 3) TTL 만료 → 새 owner 가 양도받음. 조건부 update 로 race 안전.
+  if v_acquired_at < now() - make_interval(secs => p_ttl_seconds) then
     update public.resource_leases
-      set acquired_by = p_user, acquired_at = now()
+      set acquired_by = p_user,
+          acquired_at = now()
       where lock_key = p_key
         and acquired_at < now() - make_interval(secs => p_ttl_seconds);
-    -- 다시 조건이 거짓이 됐을 수 있음 (race)
-    return found;
+    get diagnostics v_rows = row_count;
+    return v_rows > 0;
   end if;
 
-  -- 같은 사용자 재호출 → 연장
-  if v_existing.acquired_by = p_user then
+  -- 4) 같은 사용자 재호출 → 갱신.
+  if v_acquired_by = p_user then
     update public.resource_leases
       set acquired_at = now()
-      where lock_key = p_key;
+      where lock_key = p_key
+        and acquired_by = p_user;
     return true;
   end if;
 
+  -- 5) 다른 사용자가 활성 점유 중.
   return false;
 end;
 $$;
@@ -87,19 +108,21 @@ $$;
 
 grant execute on function public.release_lease(text, uuid) to authenticated, service_role;
 
--- 청소 — 24시간 넘은 좀비 lock 정리는 cron 에서 별도 호출
+-- 청소 — 좀비 lock 정리는 cron 에서 별도 호출 (선택)
 create or replace function public.cleanup_stale_leases(p_max_age_minutes int default 60)
 returns int
-language sql
+language plpgsql
 security definer
 set search_path = public
 as $$
-  with deleted as (
-    delete from public.resource_leases
-      where acquired_at < now() - make_interval(mins => p_max_age_minutes)
-      returning 1
-  )
-  select count(*)::int from deleted;
+declare
+  v_deleted int;
+begin
+  delete from public.resource_leases
+    where acquired_at < now() - make_interval(mins => p_max_age_minutes);
+  get diagnostics v_deleted = row_count;
+  return v_deleted;
+end;
 $$;
 
 grant execute on function public.cleanup_stale_leases(int) to service_role;
