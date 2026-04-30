@@ -1,15 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkInstallationMembership, checkRowMembership } from "@/lib/threads/membership";
 
 // GET /api/threads/data?installation_id=&limit=&before=
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
   const url = new URL(req.url);
   const installation_id = url.searchParams.get("installation_id");
   const limit = url.searchParams.get("limit");
   const before = url.searchParams.get("before");
   if (!installation_id) {
     return NextResponse.json({ error: "missing_installation_id" }, { status: 400 });
+  }
+
+  // Membership gate — RLS on thread_data filters rows by installation membership for nut/bolt,
+  // but we want a clear 403 instead of an empty array when an outsider guesses an installation_id.
+  const m = await checkInstallationMembership(supabase, installation_id, user.id);
+  if (!m.ok) {
+    if (m.error === "migration_115_missing") {
+      return NextResponse.json({ rows: [], warning: "migration_115_missing" });
+    }
+    return NextResponse.json({ error: m.error }, { status: m.status });
   }
 
   let q = supabase
@@ -43,6 +57,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "missing_fields" }, { status: 400 });
   }
 
+  const m = await checkInstallationMembership(supabase, installation_id, user.id);
+  if (!m.ok) return NextResponse.json({ error: m.error }, { status: m.status });
+
   const { data: row, error } = await supabase
     .from("thread_data")
     .insert({ installation_id, data, created_by: user.id })
@@ -70,6 +87,9 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "missing_fields" }, { status: 400 });
   }
 
+  const m = await checkRowMembership(supabase, id, user.id);
+  if (!m.ok) return NextResponse.json({ error: m.error }, { status: m.status });
+
   const { data: row, error } = await supabase
     .from("thread_data")
     .update({ data, updated_at: new Date().toISOString() })
@@ -88,6 +108,10 @@ export async function DELETE(req: NextRequest) {
 
   const body = await req.json().catch(() => null);
   if (!body?.id) return NextResponse.json({ error: "missing_id" }, { status: 400 });
+
+  const m = await checkRowMembership(supabase, body.id, user.id);
+  if (!m.ok) return NextResponse.json({ error: m.error }, { status: m.status });
+
   const { error } = await supabase.from("thread_data").delete().eq("id", body.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });

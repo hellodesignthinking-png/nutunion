@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateTextForUser } from "@/lib/ai/vault";
+import { checkInstallationMembership } from "@/lib/threads/membership";
 
 type Action = "summarize" | "extract_actions" | "recommend" | "freeform" | "cross_thread_alert";
 
@@ -50,19 +51,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "feature_disabled", reply: `${requiredFeature} 기능이 비활성화되어 있습니다.` }, { status: 403 });
   }
 
-  // Lookup installation
-  const { data: inst, error: instErr } = await supabase
-    .from("thread_installations")
-    .select("id, target_type, target_id")
-    .eq("id", installation_id)
-    .maybeSingle();
-  if (instErr) {
-    if (/relation .* does not exist/i.test(instErr.message) || (instErr as any).code === "42P01") {
-      return NextResponse.json({ error: "migration_115_missing" }, { status: 503 });
-    }
-    return NextResponse.json({ error: instErr.message }, { status: 500 });
-  }
-  if (!inst) return NextResponse.json({ error: "installation_not_found" }, { status: 404 });
+  // Membership gate — caller must belong to the target nut/bolt before we gather sibling
+  // Threads' data into the AI prompt. Without this, anyone who knows an installation_id can
+  // exfiltrate the last 7 days of every Thread on that nut/bolt through the LLM context.
+  const m = await checkInstallationMembership(supabase, installation_id, user.id);
+  if (!m.ok) return NextResponse.json({ error: m.error }, { status: m.status });
+  const inst = m.installation;
 
   // Gather context: sibling installations + recent thread_data
   const { data: siblings } = await supabase

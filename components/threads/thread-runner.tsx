@@ -31,8 +31,15 @@ function CodeThreadIframe({
 
   useEffect(() => {
     function onMsg(e: MessageEvent) {
+      // Only accept messages from our own iframe child. Without this, any other iframe or
+      // popup window on the page can fake thread-height to balloon the layout, or fake a
+      // thread-ready to capture the next thread-init payload.
+      if (!ref.current?.contentWindow || e.source !== ref.current.contentWindow) return;
       if (!e.data || typeof e.data !== "object") return;
-      if (e.data.type === "thread-ready" && ref.current?.contentWindow) {
+      if (e.data.type === "thread-ready") {
+        // The iframe runs sandbox=allow-scripts (no allow-same-origin) so its origin is
+        // opaque ("null"). targetOrigin must therefore be "*" — but because we just verified
+        // e.source above, only the legitimate iframe receives this message.
         ref.current.contentWindow.postMessage(
           {
             type: "thread-init",

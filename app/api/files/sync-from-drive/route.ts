@@ -21,6 +21,7 @@ import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { getR2Client, isR2Configured } from "@/lib/storage/r2";
 import { createClient } from "@/lib/supabase/server";
 import { log } from "@/lib/observability/logger";
+import { tryAcquireLease, releaseLease } from "@/lib/locks/lease";
 
 const VERSION_LIMIT = 5;
 
@@ -147,6 +148,19 @@ export async function POST(req: NextRequest) {
 
   // body.force=true 면 변경 검사 건너뛰기 (사용자가 명시적으로 강제)
   const force: boolean = body?.force === true;
+
+  // 분산 lock — 같은 자료실 행에 대해 사용자/cron 이 동시에 sync 하면 R2 PUT 이 중복되고
+  // 백업 _versions 도 두 벌이 만들어진다. lease 로 직렬화해서 낭비를 차단.
+  // 마이그레이션 136 미적용 환경에선 graceful degrade — lock 없이 그대로 진행.
+  const lockKey = `drive_sync:${linkTable}:${linkId}`;
+  const lease = await tryAcquireLease(supabase, lockKey, userId, 90);
+  if (!lease.acquired) {
+    span.end({ status: 423, reason: "locked" });
+    return NextResponse.json(
+      { error: "다른 동기화가 진행 중입니다 — 잠시 후 다시 시도해 주세요", code: "SYNC_IN_PROGRESS" },
+      { status: 423 },
+    );
+  }
 
   try {
     const auth = await getGoogleClient(userId);
@@ -372,5 +386,7 @@ export async function POST(req: NextRequest) {
     log.error(e, "files.sync_from_drive.failed", { user_id: userId });
     span.end({ status: 500 });
     return NextResponse.json({ error: e.message || "동기화 실패" }, { status: 500 });
+  } finally {
+    await releaseLease(supabase, lockKey, userId);
   }
 }

@@ -111,22 +111,40 @@ export async function POST(req: NextRequest) {
 
   text = text.trim();
   if (!text) return NextResponse.json({ error: "추출된 텍스트가 비었어요" }, { status: 422 });
-  if (text.length > MAX_INPUT_CHARS) text = text.slice(0, MAX_INPUT_CHARS);
+  const originalChars = text.length;
+  const truncated = originalChars > MAX_INPUT_CHARS;
+  if (truncated) text = text.slice(0, MAX_INPUT_CHARS);
 
-  // AI 호출
-  try {
-    const ai = await generateObjectForUser(auth.user.id, SummarySchema, {
+  // AI 호출 + 일시 오류 1회 재시도 (네트워크/429 등 transient 실패 흡수)
+  const aiCall = async () =>
+    generateObjectForUser(auth.user.id, SummarySchema, {
       system: SYSTEM,
       prompt: `# 파일명: ${fileName}\n\n# 본문\n${text}\n\n위 본문을 분석해 summary 3줄 + qa 3개를 만들어줘.`,
       maxOutputTokens: 1500,
       tier: "fast",
     });
 
+  try {
+    let ai: Awaited<ReturnType<typeof aiCall>>;
+    try {
+      ai = await aiCall();
+    } catch (firstErr: any) {
+      // transient → 600ms 후 1회 재시도. 영구 오류(스키마/권한)는 첫 시도와 동일하게 catch 됨.
+      const msg = firstErr?.message || "";
+      const transient = /timeout|network|fetch|ECONN|429|503|temporar/i.test(msg);
+      if (!transient) throw firstErr;
+      log.warn("files.summarize.retry", { reason: msg.slice(0, 200) });
+      await new Promise((r) => setTimeout(r, 600));
+      ai = await aiCall();
+    }
+
     const obj = (ai.object || {}) as { summary?: string[]; qa?: Array<{ q: string; a: string }> };
     const aiSummary = {
       summary: Array.isArray(obj.summary) ? obj.summary : [],
       qa: Array.isArray(obj.qa) ? obj.qa : [],
       model_used: ai.model_used,
+      // 입력이 잘렸으면 클라이언트 UI 가 "본문 일부만 요약" 배지를 띄울 수 있게 표시.
+      ...(truncated ? { truncated_input: true, original_chars: originalChars } : {}),
     };
 
     await supabase
@@ -141,10 +159,16 @@ export async function POST(req: NextRequest) {
       user_id: auth.user.id,
       ext,
       chars: text.length,
+      original_chars: originalChars,
+      truncated,
       model: ai.model_used,
     });
 
-    return NextResponse.json({ ai_summary: aiSummary, cached: false });
+    return NextResponse.json({
+      ai_summary: aiSummary,
+      cached: false,
+      ...(truncated ? { truncated_input: true, original_chars: originalChars } : {}),
+    });
   } catch (e: any) {
     log.error(e, "files.summarize.ai_failed");
     return NextResponse.json({ error: e?.message || "AI 요약 실패" }, { status: 502 });

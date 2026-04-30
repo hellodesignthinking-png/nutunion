@@ -588,9 +588,14 @@ export default function GroupFinancePage() {
                             setReceiptUploading(true);
                             try {
                               const { uploadFile } = await import("@/lib/storage/upload-client");
-                              const up = await uploadFile(file, { prefix: "uploads", scopeId: groupId });
+                              const { compressImageIfNeeded } = await import("@/lib/storage/image-compress");
+                              const prepared = await compressImageIfNeeded(file);
+                              const up = await uploadFile(prepared, { prefix: "uploads", scopeId: groupId });
                               setFormData((prev) => ({ ...prev, receiptUrl: up.url }));
-                              toast.success(`영수증 업로드 완료 · ${up.storage.toUpperCase()}`);
+                              const sizeNote = prepared !== file
+                                ? ` · ${(file.size / 1024 / 1024).toFixed(1)}MB → ${(prepared.size / 1024 / 1024).toFixed(1)}MB`
+                                : "";
+                              toast.success(`영수증 업로드 완료 · ${up.storage.toUpperCase()}${sizeNote}`);
                             } catch (err: any) {
                               toast.error(err?.message || "영수증 업로드 실패");
                             } finally {

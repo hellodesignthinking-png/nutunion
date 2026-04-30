@@ -24,7 +24,7 @@ const REACT_VERSION = "18.3.1";
 
 export async function compileTsxToHtml(
   source: string,
-  opts: { installationId?: string } = {},
+  opts: { installationId?: string; parentOrigin?: string } = {},
 ): Promise<string> {
   // esbuild transforms TSX -> JS; it does NOT run user code.
   const { code } = await transform(source, {
@@ -61,6 +61,10 @@ try { window.ThreadComponent = ThreadComponent; } catch (e) {}
 `;
 
   const installationIdJson = JSON.stringify(opts.installationId || null);
+  // Parent origin must be passed in by the route handler — when sandbox=allow-scripts (no
+  // allow-same-origin) the iframe has an opaque origin and cannot reliably read window.parent's
+  // origin itself, so we inject it server-side and use it as the postMessage target.
+  const parentOriginJson = JSON.stringify(opts.parentOrigin || "");
 
   return `<!DOCTYPE html>
 <html lang="ko">
@@ -84,9 +88,17 @@ window.__INSTALLATION_ID__ = ${installationIdJson};
 window.__INSTALLATION_PROPS__ = null;
 window.__CURRENT_USER_ID__ = null;
 window.__CAN_EDIT__ = false;
+window.__PARENT_ORIGIN__ = ${parentOriginJson};
 
 // Listen for parent postMessage to receive installation props
 window.addEventListener('message', function(e) {
+  // Only accept messages that came from our actual parent window. Without this, any iframe
+  // sibling or popup can forge thread-init and inject impersonated currentUserId/canEdit.
+  if (e.source !== window.parent) return;
+  // Verify origin matches the server-injected expected parent. Empty string (preview/standalone)
+  // means we couldn't determine the parent; in that mode only same-origin parents are allowed
+  // anyway because the iframe is loaded from /api routes.
+  if (window.__PARENT_ORIGIN__ && e.origin !== window.__PARENT_ORIGIN__) return;
   if (e.data && e.data.type === 'thread-init') {
     window.__INSTALLATION_PROPS__ = e.data.installation || null;
     window.__CURRENT_USER_ID__ = e.data.currentUserId || null;
@@ -97,11 +109,18 @@ window.addEventListener('message', function(e) {
   }
 });
 
-function notifyHeight() {
+function postToParent(msg) {
   try {
-    var h = document.documentElement.scrollHeight;
-    window.parent.postMessage({ type: 'thread-height', height: h }, '*');
+    // If we have a known parent origin, target it explicitly so the message isn't delivered
+    // to a different origin if the iframe ends up reparented.
+    var target = window.__PARENT_ORIGIN__ || '*';
+    window.parent.postMessage(msg, target);
   } catch (e) {}
+}
+
+function notifyHeight() {
+  var h = document.documentElement.scrollHeight;
+  postToParent({ type: 'thread-height', height: h });
 }
 
 function mount() {
@@ -136,7 +155,7 @@ window.addEventListener('error', function(ev) {
 });
 
 // Notify parent we're ready to receive props
-try { window.parent.postMessage({ type: 'thread-ready' }, '*'); } catch (e) {}
+postToParent({ type: 'thread-ready' });
 
 // Resize observer
 var ro = new ResizeObserver(function(){ notifyHeight(); });

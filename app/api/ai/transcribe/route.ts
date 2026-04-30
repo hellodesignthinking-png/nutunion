@@ -45,6 +45,20 @@ export async function POST(req: NextRequest) {
   let prompt: string | undefined;
   let fileName = "audio.webm";
 
+  // 사전 크기 체크 — multipart body 가 25MB 를 넘으면 formData() 가 전부 메모리에 올린 뒤
+  // 거절하는 대신, Content-Length 만 보고 즉시 413. Vercel body limit 4.5MB 와 별개로 가드.
+  const contentLength = parseInt(req.headers.get("content-length") || "0", 10);
+  if (contentLength > 0 && contentLength > MAX_BYTES) {
+    return NextResponse.json(
+      {
+        error: `25MB 이하 오디오만 지원해요 (현재 ${(contentLength / 1024 / 1024).toFixed(1)}MB)`,
+        hint: "큰 파일은 R2 에 먼저 업로드한 뒤 { file_url } JSON 모드로 보내세요",
+        code: "PAYLOAD_TOO_LARGE",
+      },
+      { status: 413 },
+    );
+  }
+
   if (ct.includes("multipart/form-data")) {
     const fd = await req.formData();
     const f = fd.get("audio");

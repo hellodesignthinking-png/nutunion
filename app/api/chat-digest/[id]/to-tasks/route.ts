@@ -64,6 +64,23 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return NextResponse.json({ error: "이 볼트의 멤버가 아닙니다" }, { status: 403 });
   }
 
+  // 멱등성 가드 — 같은 digest 가 이미 변환됐으면 그대로 반환. description 에 박아둔
+  // `digest:<id>` 마커로 식별. description 컬럼이 없는 환경(스키마 가벼운 호스팅)에선
+  // 쿼리가 실패하므로 그땐 멱등성 검사 생략 + 후속 insert 가 fallback 으로 작동.
+  const { data: priorRows, error: priorErr } = await supabase
+    .from("project_tasks")
+    .select("id")
+    .eq("project_id", projectId)
+    .ilike("description", `%digest:${digestId}%`);
+  if (!priorErr && priorRows && priorRows.length > 0) {
+    return NextResponse.json({
+      inserted: 0,
+      with_assignee: 0,
+      already: priorRows.length,
+      message: "이미 이 디지스트로 만든 태스크가 있어요",
+    });
+  }
+
   const { data: members } = await supabase
     .from("project_members")
     .select("user_id, profile:profiles(id, nickname)")

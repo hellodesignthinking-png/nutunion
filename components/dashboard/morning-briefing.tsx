@@ -72,6 +72,33 @@ function sanitizeStrategyTip(raw: string): string {
   return parts.slice(0, 2).join(" ").trim() || s;
 }
 
+/**
+ * API 응답이 부분적이거나(예: AI 일시 장애로 폴백) 필수 필드 누락 시 JSX 가 throw 되지
+ * 않도록 안전한 기본값으로 메우기.
+ */
+function normalizeBrief(raw: Partial<Brief> | null | undefined): Brief {
+  return {
+    greeting: raw?.greeting || "",
+    weather: raw?.weather ?? null,
+    schedule_highlights: Array.isArray(raw?.schedule_highlights) ? raw!.schedule_highlights : [],
+    activity_tip: raw?.activity_tip || "",
+    strategy_tip: raw?.strategy_tip || "",
+    text: raw?.text || "",
+    context_summary: {
+      meetings_today: raw?.context_summary?.meetings_today ?? 0,
+      tasks_overdue: raw?.context_summary?.tasks_overdue ?? 0,
+      tasks_today: raw?.context_summary?.tasks_today ?? 0,
+      unread_chats: raw?.context_summary?.unread_chats ?? 0,
+      tasks_no_due: raw?.context_summary?.tasks_no_due ?? 0,
+      upcoming_events: raw?.context_summary?.upcoming_events ?? 0,
+    },
+    raw_items: Array.isArray(raw?.raw_items) ? raw!.raw_items : [],
+    model_used: raw?.model_used ?? null,
+    nickname: raw?.nickname,
+    date: raw?.date,
+  };
+}
+
 function pickWeatherIcon(w: Weather | null) {
   if (!w) return Sun;
   const d = (w.desc || "").toLowerCase();
@@ -104,8 +131,8 @@ export function MorningBriefing() {
     try {
       const res = await fetch("/api/dashboard/morning-briefing", { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as Brief;
-      setBrief(data);
+      const data = (await res.json()) as Partial<Brief>;
+      setBrief(normalizeBrief(data));
     } catch (err: any) {
       setError(err?.message || "브리핑 로드 실패");
     } finally {
@@ -123,8 +150,8 @@ export function MorningBriefing() {
         cache: "no-store",
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as Brief;
-      setBrief(data);
+      const data = (await res.json()) as Partial<Brief>;
+      setBrief(normalizeBrief(data));
     } catch (err: any) {
       setError(err?.message || "브리핑 재생성 실패");
     } finally {

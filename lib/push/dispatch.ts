@@ -2,7 +2,8 @@
 // 서버 전용.
 
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { sendPush, type SubscriptionRow } from "./web-push-client";
+import { sendPush, isVapidConfigured, type SubscriptionRow } from "./web-push-client";
+import { log } from "@/lib/observability/logger";
 
 export interface DispatchPayload {
   title: string;
@@ -24,8 +25,20 @@ export async function dispatchPushToUsers(
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) {
-    console.warn("[dispatch-push] service_role 미설정");
-    return { web_sent: 0, expo_sent: 0, errors: 0 };
+    // 환경변수 미설정 — silent fail 하면 호출측은 발송이 성공한 줄 안다. 명시적 로그.
+    log.warn("push.dispatch.skipped", {
+      reason: "missing_service_role",
+      target_count: userIds.length,
+      hint: "SUPABASE_SERVICE_ROLE_KEY 미설정 — Vercel env 확인 필요",
+    });
+    return { web_sent: 0, expo_sent: 0, errors: userIds.length };
+  }
+  if (!isVapidConfigured()) {
+    log.warn("push.dispatch.web_disabled", {
+      reason: "missing_vapid_keys",
+      target_count: userIds.length,
+      hint: "NEXT_PUBLIC_VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY 미설정 — 웹 푸시는 건너뜀, Expo 만 시도",
+    });
   }
 
   const admin = createAdminClient(url, key, {
@@ -90,7 +103,11 @@ export async function dispatchPushToUsers(
       const body = await res.json().catch(() => null);
       if (!res.ok) {
         errors += expoTokens.length;
-        console.warn("[expo-push]", body);
+        log.warn("push.dispatch.expo_http_error", {
+          status: res.status,
+          body_summary: typeof body === "object" && body !== null ? JSON.stringify(body).slice(0, 300) : String(body).slice(0, 300),
+          target_count: expoTokens.length,
+        });
       } else {
         // Expo 는 배열 tickets 반환 — 각 ticket.status === 'ok' 카운트
         const tickets = (body?.data as { status: string; message?: string; details?: { error?: string } }[] | undefined) ?? [];
@@ -109,8 +126,22 @@ export async function dispatchPushToUsers(
       }
     } catch (err) {
       errors += expoTokens.length;
-      console.warn("[expo-push] fetch err", err);
+      log.warn("push.dispatch.expo_fetch_failed", {
+        error_message: err instanceof Error ? err.message : String(err),
+        target_count: expoTokens.length,
+      });
     }
+  }
+
+  if (errors > 0) {
+    log.warn("push.dispatch.partial_failure", {
+      web_sent: webSent,
+      expo_sent: expoSent,
+      errors,
+      target_count: userIds.length,
+    });
+  } else {
+    log.info("push.dispatch.ok", { web_sent: webSent, expo_sent: expoSent, target_count: userIds.length });
   }
 
   return { web_sent: webSent, expo_sent: expoSent, errors };

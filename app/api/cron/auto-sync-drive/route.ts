@@ -27,6 +27,11 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getR2Client, isR2Configured } from "@/lib/storage/r2";
 import { getGoogleClient } from "@/lib/google/auth";
 import { log } from "@/lib/observability/logger";
+import { tryAcquireLease, releaseLease } from "@/lib/locks/lease";
+
+// 잡 단위 lock 식별자 — 어떤 사용자도 아닌 cron 자신을 식별. lease 행의 acquired_by 컬럼이
+// uuid 라 zero-uuid 를 쓰고, key 로 cron 종류를 구분한다.
+const CRON_OWNER_UUID = "00000000-0000-0000-0000-000000000000";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300; // 5 min
@@ -74,10 +79,27 @@ export async function GET(req: NextRequest) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
+  // 잡 단위 lock — 두 cron 인스턴스가 동시에 fire 하면 같은 20행을 둘 다 처리해서 R2 PUT 이
+  // 중복된다. TTL 은 cron 주기(1분)보다 약간 길게(4분) 설정 — 정상 종료 시 finally 에서 풀고,
+  // 비정상 종료 시 TTL 로 자연 만료되어 다음 회차가 받는다.
+  const jobLockKey = "cron:auto_sync_drive";
+  const jobLease = await tryAcquireLease(supabase, jobLockKey, CRON_OWNER_UUID, 240);
+  if (!jobLease.acquired) {
+    log.info("cron.auto_sync_drive.skipped", { reason: "another_instance_running" });
+    return NextResponse.json({ ok: true, skipped: true, reason: "another_instance_running" });
+  }
+
   const now = new Date();
   const activeSince = new Date(now.getTime() - ACTIVE_WINDOW_DAYS * 86400_000).toISOString();
   const recentSyncSince = new Date(now.getTime() - RECENT_SYNC_DAYS * 86400_000).toISOString();
 
+  let checked = 0;
+  let synced = 0;
+  let unchanged = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+
+  try {
   // 활성 사본 — 최근 14일 안에 생성됐거나 7일 안에 sync 됨
   const { data: edits, error: editsErr } = await supabase
     .from("file_drive_edits")
@@ -91,14 +113,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: editsErr.message }, { status: 500 });
   }
 
-  let checked = 0;
-  let synced = 0;
-  let unchanged = 0;
-  let skipped = 0;
-  const errors: string[] = [];
-
   for (const e of edits || []) {
     checked++;
+    // 행 단위 lock — 같은 row 를 동시에 사용자 수동 sync(/api/files/sync-from-drive) 가
+    // 처리 중일 수 있다. 짧은 TTL(60초) 로 잡고, 점유 중이면 다음 행으로.
+    const rowLockKey = `drive_sync:${e.resource_table}:${e.resource_id}`;
+    const rowLease = await tryAcquireLease(supabase, rowLockKey, e.user_id, 60);
+    if (!rowLease.acquired) {
+      skipped++;
+      continue;
+    }
     try {
       // 1) 자료실 행에서 storage_key 조회
       const { data: row } = await supabase
@@ -206,6 +230,8 @@ export async function GET(req: NextRequest) {
         edit_id: e.id,
         error_message: err?.message,
       });
+    } finally {
+      await releaseLease(supabase, rowLockKey, e.user_id);
     }
   }
 
@@ -219,4 +245,7 @@ export async function GET(req: NextRequest) {
     errors_count: errors.length,
     errors: errors.slice(0, 5),
   });
+  } finally {
+    await releaseLease(supabase, jobLockKey, CRON_OWNER_UUID);
+  }
 }

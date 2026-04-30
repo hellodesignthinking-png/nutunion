@@ -56,7 +56,15 @@ export async function GET(req: NextRequest) {
 
     let html: string;
     try {
-      html = await compileTsxToHtml(source, { installationId });
+      // Inject the requesting page origin so the sandbox iframe knows which window is its
+      // legitimate parent. If absent (direct hit), fall back to our own origin.
+      const referer = req.headers.get("referer");
+      let parentOrigin = "";
+      if (referer) {
+        try { parentOrigin = new URL(referer).origin; } catch { /* ignore */ }
+      }
+      if (!parentOrigin) parentOrigin = req.nextUrl.origin;
+      html = await compileTsxToHtml(source, { installationId, parentOrigin });
     } catch (e: any) {
       return htmlResponse(
         `<h1>Compile error</h1><pre style="white-space:pre-wrap">${(e?.message || String(e)).replace(/[<>&]/g, (c: string) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c] || c))}</pre>`,

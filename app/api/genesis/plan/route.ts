@@ -7,9 +7,12 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { createHash } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import { generateObjectForUser, generateTextForUser } from "@/lib/ai/vault";
 import { log } from "@/lib/observability/logger";
+import { tryAcquireLease, releaseLease } from "@/lib/locks/lease";
+import { rateLimit } from "@/lib/rate-limit";
 
 export const maxDuration = 60;
 
@@ -112,8 +115,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "의도는 500자 이내로 작성" }, { status: 400 });
     }
 
+    // 사용자별 rate limit — Genesis 호출은 토큰 4000+ 짜리 비싼 작업. 분당 5회로 제한.
+    // in-memory(per-instance) 라 완벽하진 않지만 같은 인스턴스로 spam 들어올 때 1차 방어.
+    const rl = rateLimit(`genesis:${user.id}`, 5, 60_000);
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: "분당 호출 한도를 초과했어요 — 잠시 후 다시 시도해주세요", code: "RATE_LIMITED" },
+        { status: 429 },
+      );
+    }
+
+    // In-flight idempotency — 같은 사용자가 같은 (intent, kind) 로 더블클릭하거나 네트워크 retry 시
+    // 같은 AI 호출이 중복으로 발사되는 것을 막는다. 클라이언트가 X-Idempotency-Key 헤더를
+    // 명시하면 그 값을, 없으면 의도 해시를 키로 사용. lease TTL 60초 — 한 번의 생성보다 길게.
+    const explicitKey = request.headers.get("x-idempotency-key")?.trim() || "";
+    const intentHash = createHash("sha256").update(`${kind}:${intent}`).digest("hex").slice(0, 16);
+    const idempotencyKey = explicitKey || intentHash;
+    const leaseKey = `genesis:${user.id}:${idempotencyKey}`;
+    const lease = await tryAcquireLease(supabase, leaseKey, user.id, 60);
+    if (!lease.acquired) {
+      return NextResponse.json(
+        {
+          error: "같은 의도로 생성이 진행 중입니다 — 잠시 후 결과 확인 후 다시 시도해주세요",
+          code: "GENESIS_IN_FLIGHT",
+        },
+        { status: 409 },
+      );
+    }
+
     const userPrompt = `## ${kind === "group" ? "너트(소모임)" : "볼트(프로젝트)"} 의도\n${intent}\n\n위 의도의 도메인을 추론하고 그에 맞는 실행 로드맵을 만들어주세요.\n- 공간 타입: ${kind}\n- phases 는 2~6 단계 (단순한 목표는 3-4, 복잡한 프로젝트는 5-6)\n- 각 phase 는 도메인 용어 그대로 (예: 영상 도메인이면 "촬영", "편집" 같은 단어 사용)\n- 각 phase 마다 1~4개 위키 페이지 초안\n- suggested_roles 는 그 도메인의 실제 직무명 (최대 5명)\n- first_tasks 는 오늘 바로 착수 가능한 3~8개 구체 과제\n- resources_folders 는 그 도메인 자료실 폴더 구성`;
 
+    try {
     const attempts: Array<{ stage: string; error: string }> = [];
 
     // 1차 시도: generateObject (zod 자동 검증)
@@ -200,6 +232,9 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ plan, model_used: modelUsed, attempts });
+    } finally {
+      await releaseLease(supabase, leaseKey, user.id);
+    }
   } catch (err: any) {
     log.error(err, "genesis.plan.failed");
     // 마지막 안전망 — outer catch 에서도 템플릿 반환 (사용자가 막히지 않도록)

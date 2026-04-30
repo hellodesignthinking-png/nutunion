@@ -95,6 +95,20 @@ export async function GET(req: NextRequest) {
     return new NextResponse("forbidden host", { status: 403 });
   }
 
+  // 권한 게이트 — 호출자가 임의의 R2/Supabase URL을 넣어 다른 그룹의 파일을 가져가는 것을
+  // 막는다. 자료실 행과 매칭되는지 RLS를 거쳐 확인 — 1행이라도 보이면 사용자가 권한 보유.
+  // 캐시버스터(?v=N)는 file-preview-panel에서 url에 붙이지만 DB row의 url은 원본이므로
+  // 쿼리스트링을 떼고 비교한다.
+  const baseUrl = `${target.origin}${target.pathname}`;
+  const [{ data: faRow }, { data: prRow }] = await Promise.all([
+    supabase.from("file_attachments").select("id").eq("url", baseUrl).maybeSingle(),
+    supabase.from("project_resources").select("id").eq("url", baseUrl).maybeSingle(),
+  ]);
+  if (!faRow && !prRow) {
+    // 자료실 행이 아예 없거나(예: 외부 라이브러리/외부 R2 객체) RLS가 가로막은 경우 둘 다 거부.
+    return new NextResponse("forbidden", { status: 403 });
+  }
+
   let upstream: Response;
   try {
     upstream = await fetch(target.toString(), { redirect: "follow" });

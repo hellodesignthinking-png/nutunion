@@ -65,9 +65,10 @@ export default function CreateEventPage() {
       if (recurrenceEndType === "count" && recurrenceCount > 0) {
         rule += `;COUNT=${recurrenceCount}`;
       } else if (recurrenceEndType === "until" && recurrenceUntil) {
-        // RFC 5545 UNTIL — UTC YYYYMMDDTHHMMSSZ 형식
-        const u = new Date(`${recurrenceUntil}T23:59:59+09:00`);
-        const z = u.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+        // RFC 5545 UNTIL — UTC YYYYMMDDTHHMMSSZ 형식. 사용자 선택 타임존의 23:59 를
+        // UTC 로 변환해야 KST 외 사용자에게도 정확. +09:00 하드코딩 제거.
+        const utcIso = localToZonedISO(recurrenceUntil, "23:59", timezone);
+        const z = utcIso.replace(/[-:]/g, "").replace(/\.\d{3}/, "");
         rule += `;UNTIL=${z}`;
       }
       recurrenceRule = `RRULE:${rule}`;

@@ -39,12 +39,26 @@ export interface SubscriptionRow {
   auth_key: string;
 }
 
+/** VAPID 설정 가능 여부 — 호출측에서 사전 체크 후 일괄 폴백할 수 있도록 노출. */
+export function isVapidConfigured(): boolean {
+  return Boolean(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
+}
+
 /** 단일 구독에 푸시 발송. 404/410 = 만료된 구독 (호출측에서 DB 삭제) */
 export async function sendPush(
   sub: SubscriptionRow,
   payload: PushPayload
 ): Promise<{ ok: true } | { ok: false; expired: boolean; error: string }> {
-  configure();
+  try {
+    configure();
+  } catch (err) {
+    // VAPID 미설정 → 만료가 아닌 명시적 설정 오류로 반환. 호출측 카운터가 errors 로 계상.
+    return {
+      ok: false,
+      expired: false,
+      error: err instanceof Error ? err.message : "VAPID not configured",
+    };
+  }
   try {
     await webpush.sendNotification(
       {
