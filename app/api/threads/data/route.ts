@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { checkInstallationMembership, checkRowMembership } from "@/lib/threads/membership";
+import { log } from "@/lib/observability/logger";
 
 // GET /api/threads/data?installation_id=&limit=&before=
 export async function GET(req: NextRequest) {
@@ -22,6 +23,9 @@ export async function GET(req: NextRequest) {
   if (!m.ok) {
     if (m.error === "migration_115_missing") {
       return NextResponse.json({ rows: [], warning: "migration_115_missing" });
+    }
+    if (m.status === 403) {
+      log.warn("threads.data.forbidden", { user_id: user.id, installation_id, op: "GET" });
     }
     return NextResponse.json({ error: m.error }, { status: m.status });
   }
@@ -58,7 +62,12 @@ export async function POST(req: NextRequest) {
   }
 
   const m = await checkInstallationMembership(supabase, installation_id, user.id);
-  if (!m.ok) return NextResponse.json({ error: m.error }, { status: m.status });
+  if (!m.ok) {
+    if (m.status === 403) {
+      log.warn("threads.data.forbidden", { user_id: user.id, installation_id, op: "POST" });
+    }
+    return NextResponse.json({ error: m.error }, { status: m.status });
+  }
 
   const { data: row, error } = await supabase
     .from("thread_data")
@@ -88,7 +97,12 @@ export async function PATCH(req: NextRequest) {
   }
 
   const m = await checkRowMembership(supabase, id, user.id);
-  if (!m.ok) return NextResponse.json({ error: m.error }, { status: m.status });
+  if (!m.ok) {
+    if (m.status === 403) {
+      log.warn("threads.data.forbidden", { user_id: user.id, row_id: id, op: "PATCH" });
+    }
+    return NextResponse.json({ error: m.error }, { status: m.status });
+  }
 
   const { data: row, error } = await supabase
     .from("thread_data")
@@ -110,7 +124,12 @@ export async function DELETE(req: NextRequest) {
   if (!body?.id) return NextResponse.json({ error: "missing_id" }, { status: 400 });
 
   const m = await checkRowMembership(supabase, body.id, user.id);
-  if (!m.ok) return NextResponse.json({ error: m.error }, { status: m.status });
+  if (!m.ok) {
+    if (m.status === 403) {
+      log.warn("threads.data.forbidden", { user_id: user.id, row_id: body.id, op: "DELETE" });
+    }
+    return NextResponse.json({ error: m.error }, { status: m.status });
+  }
 
   const { error } = await supabase.from("thread_data").delete().eq("id", body.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

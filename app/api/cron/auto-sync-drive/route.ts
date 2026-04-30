@@ -22,7 +22,7 @@
 
 import { google } from "googleapis";
 import { NextRequest, NextResponse } from "next/server";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { tryAdminClient } from "@/lib/supabase/admin";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getR2Client, isR2Configured } from "@/lib/storage/r2";
 import { getGoogleClient } from "@/lib/google/auth";
@@ -66,18 +66,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!serviceKey || !url) {
-    return NextResponse.json({ error: "Supabase admin not configured" }, { status: 500 });
-  }
   if (!isR2Configured()) {
     return NextResponse.json({ error: "R2 not configured" }, { status: 500 });
   }
-
-  const supabase = createServiceClient(url, serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  const supabase = tryAdminClient();
+  if (!supabase) {
+    return NextResponse.json({ error: "Supabase admin not configured" }, { status: 500 });
+  }
 
   // 잡 단위 lock — 두 cron 인스턴스가 동시에 fire 하면 같은 20행을 둘 다 처리해서 R2 PUT 이
   // 중복된다. TTL 은 cron 주기(1분)보다 약간 길게(4분) 설정 — 정상 종료 시 finally 에서 풀고,

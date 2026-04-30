@@ -13,7 +13,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { tryAdminClient } from "@/lib/supabase/admin";
 import { log } from "@/lib/observability/logger";
 
 export const runtime = "nodejs";
@@ -28,15 +28,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
+  const supabase = tryAdminClient();
+  if (!supabase) {
     return NextResponse.json({ error: "Supabase admin not configured" }, { status: 500 });
   }
-
-  const supabase = createServiceClient(url, key, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
 
   const t0 = Date.now();
   const { data, error } = await supabase.rpc("cleanup_stale_leases", {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateTextForUser } from "@/lib/ai/vault";
 import { checkInstallationMembership } from "@/lib/threads/membership";
+import { log } from "@/lib/observability/logger";
 
 type Action = "summarize" | "extract_actions" | "recommend" | "freeform" | "cross_thread_alert";
 
@@ -55,7 +56,12 @@ export async function POST(req: NextRequest) {
   // Threads' data into the AI prompt. Without this, anyone who knows an installation_id can
   // exfiltrate the last 7 days of every Thread on that nut/bolt through the LLM context.
   const m = await checkInstallationMembership(supabase, installation_id, user.id);
-  if (!m.ok) return NextResponse.json({ error: m.error }, { status: m.status });
+  if (!m.ok) {
+    if (m.status === 403) {
+      log.warn("threads.copilot.forbidden", { user_id: user.id, installation_id, action });
+    }
+    return NextResponse.json({ error: m.error }, { status: m.status });
+  }
   const inst = m.installation;
 
   // Gather context: sibling installations + recent thread_data
@@ -149,6 +155,7 @@ export async function POST(req: NextRequest) {
       requires_confirm: action !== "freeform" && action !== "summarize" && action !== "cross_thread_alert",
     });
   } catch (e: any) {
+    log.error(e, "threads.copilot.ai_failed", { user_id: user.id, installation_id, action });
     return NextResponse.json({ error: `ai_failed: ${e?.message || e}` }, { status: 500 });
   }
 }

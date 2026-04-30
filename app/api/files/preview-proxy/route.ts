@@ -20,6 +20,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { log } from "@/lib/observability/logger";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -106,6 +107,10 @@ export async function GET(req: NextRequest) {
   ]);
   if (!faRow && !prRow) {
     // 자료실 행이 아예 없거나(예: 외부 라이브러리/외부 R2 객체) RLS가 가로막은 경우 둘 다 거부.
+    log.warn("files.preview_proxy.forbidden", {
+      user_id: auth.user.id,
+      host: target.hostname,
+    });
     return new NextResponse("forbidden", { status: 403 });
   }
 

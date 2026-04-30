@@ -52,6 +52,21 @@ function loadHljs(): Promise<Hljs> {
 }
 import { createClient } from "@/lib/supabase/client";
 import { ImageAnnotator } from "./image-annotator";
+import {
+  type FileKind,
+  toGdriveEmbed,
+  toYoutubeEmbed,
+  detectKind,
+  guessMime,
+  LANG_MAP,
+  detectLang,
+  isTextEditableFile as _isTextEditableFile,
+} from "@/lib/file-preview/detect-kind";
+import { relTime, prettySize } from "@/lib/file-preview/format";
+import { ExternalCard } from "./file-preview/external-card";
+
+// Re-export for back-compat (외부 caller 들이 file-preview-panel 에서 import 중)
+export { _isTextEditableFile as isTextEditableFile };
 // PDF 주석은 pdfjs/pdf-lib 가 무거워서 lazy load
 const PdfAnnotator = (() => {
   let cache: any = null;
@@ -72,62 +87,7 @@ const PdfAnnotator = (() => {
   };
 })();
 
-type FileKind =
-  | "pdf"
-  | "image"
-  | "video"
-  | "audio"
-  | "text"
-  | "html"
-  | "office"
-  | "hwp"
-  | "youtube"
-  | "gdrive"
-  | "vimeo"
-  | "loom"
-  | "figma"
-  | "tweet"
-  | "spotify"
-  | "soundcloud"
-  | "gist"
-  | "codepen"
-  | "tiktok"
-  | "instagram"
-  | "miro"
-  | "slideshare"
-  | "notion"
-  | "github"
-  | "other";
-
-/** Google Docs/Sheets/Slides/Drawing URL 을 임베드 가능한 /preview URL 로 변환.
- *  편집(`/edit`) URL → 미리보기(`/preview`) URL — 인증 없는 iframe 임베드 가능. */
-function toGdriveEmbed(url: string): string | null {
-  // docs.google.com/document/d/{ID}/edit → /preview
-  // docs.google.com/spreadsheets/d/{ID}/edit → /preview
-  // docs.google.com/presentation/d/{ID}/edit → /preview
-  // docs.google.com/drawings/d/{ID}/edit → /preview
-  const m = url.match(/docs\.google\.com\/(document|spreadsheets|presentation|drawings)\/d\/([\w-]+)/);
-  if (m) {
-    return `https://docs.google.com/${m[1]}/d/${m[2]}/preview`;
-  }
-  // drive.google.com/file/d/{ID}/view → /preview
-  const f = url.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
-  if (f) {
-    return `https://drive.google.com/file/d/${f[1]}/preview`;
-  }
-  return null;
-}
-
-/** YouTube 채널/플레이리스트는 embed 불가 — 영상 URL 만 embed 변환 가능. */
-function toYoutubeEmbed(url: string): string | null {
-  const watch = url.match(/youtube\.com\/watch\?[^#]*v=([^&#]+)/);
-  if (watch) return `https://www.youtube.com/embed/${watch[1]}`;
-  const short = url.match(/youtu\.be\/([^?#]+)/);
-  if (short) return `https://www.youtube.com/embed/${short[1]}`;
-  const shorts = url.match(/youtube\.com\/shorts\/([^?#]+)/);
-  if (shorts) return `https://www.youtube.com/embed/${shorts[1]}`;
-  return null;
-}
+// FileKind / toGdriveEmbed / toYoutubeEmbed → @/lib/file-preview/detect-kind 로 이동.
 
 export interface FilePreviewPanelProps {
   open: boolean;
@@ -146,132 +106,8 @@ export interface FilePreviewPanelProps {
   onUpdated?: (f: { url?: string; name?: string }) => void;
 }
 
-function detectKind(url: string, mime?: string | null): FileKind {
-  const lowerUrl = (url || "").toLowerCase();
-  if (
-    lowerUrl.includes("youtube.com/watch") ||
-    lowerUrl.includes("youtu.be/") ||
-    lowerUrl.includes("youtube.com/@") ||
-    lowerUrl.includes("youtube.com/channel/") ||
-    lowerUrl.includes("youtube.com/c/") ||
-    lowerUrl.includes("youtube.com/shorts/") ||
-    lowerUrl.includes("youtube.com/playlist")
-  ) {
-    return "youtube";
-  }
-  // Google Docs/Sheets/Slides/Drawing/Drive 파일 → /preview iframe 임베드
-  if (
-    lowerUrl.includes("docs.google.com/document/") ||
-    lowerUrl.includes("docs.google.com/spreadsheets/") ||
-    lowerUrl.includes("docs.google.com/presentation/") ||
-    lowerUrl.includes("docs.google.com/drawings/") ||
-    lowerUrl.includes("drive.google.com/file/d/")
-  ) {
-    return "gdrive";
-  }
-  // Vimeo — embed via player.vimeo.com
-  if (lowerUrl.includes("vimeo.com/") && !lowerUrl.includes("player.vimeo.com")) return "vimeo";
-  if (lowerUrl.includes("player.vimeo.com/video/")) return "vimeo";
-  // Loom — /share/{ID} → /embed/{ID}
-  if (lowerUrl.includes("loom.com/share/") || lowerUrl.includes("loom.com/embed/")) return "loom";
-  // Figma — file/proto/design URLs embeddable via figma.com/embed
-  if (
-    lowerUrl.includes("figma.com/file/") ||
-    lowerUrl.includes("figma.com/proto/") ||
-    lowerUrl.includes("figma.com/design/") ||
-    lowerUrl.includes("figma.com/board/")
-  ) {
-    return "figma";
-  }
-  // Twitter / X status — twitframe.com embed
-  if (/^https?:\/\/(www\.)?(twitter|x)\.com\/[^/]+\/status\/\d+/.test(url)) return "tweet";
-  // Spotify — open.spotify.com/{type}/{id} → embed
-  if (lowerUrl.includes("open.spotify.com/")) return "spotify";
-  // Notion — public pages typically block iframes; show OG card
-  if (lowerUrl.includes("notion.so/") || lowerUrl.includes("notion.site/")) return "notion";
-  // SoundCloud — w.soundcloud.com/player iframe
-  if (lowerUrl.includes("soundcloud.com/")) return "soundcloud";
-  // GitHub Gist — raw text fetch (script-only embed 대안)
-  if (lowerUrl.includes("gist.github.com/")) return "gist";
-  // CodePen — pen embed
-  if (lowerUrl.includes("codepen.io/") && (lowerUrl.includes("/pen/") || lowerUrl.includes("/embed/"))) return "codepen";
-  // TikTok — embed
-  if (lowerUrl.includes("tiktok.com/") && (lowerUrl.includes("/video/") || lowerUrl.includes("/@"))) return "tiktok";
-  // Instagram — embed
-  if (lowerUrl.match(/instagram\.com\/(p|reel|tv)\//)) return "instagram";
-  // Miro board — embed
-  if (lowerUrl.includes("miro.com/app/board/")) return "miro";
-  // SlideShare — embed
-  if (lowerUrl.includes("slideshare.net/")) return "slideshare";
-  // GitHub blob/repo (gist 제외) — link card
-  if (lowerUrl.includes("github.com/")) return "github";
-  const cleanUrl = url.split("?")[0];
-  const ext = cleanUrl.split(".").pop()?.toLowerCase() || "";
-  const m = (mime || "").toLowerCase();
-  if (m.includes("pdf") || ext === "pdf") return "pdf";
-  if (ext === "html" || ext === "htm" || m === "text/html") return "html";
-  if (m.startsWith("image/") || ["png", "jpg", "jpeg", "webp", "gif", "svg", "avif"].includes(ext)) return "image";
-  if (m.startsWith("video/") || ["mp4", "webm", "mov", "m4v"].includes(ext)) return "video";
-  if (m.startsWith("audio/") || ["mp3", "wav", "m4a", "ogg", "aac", "flac"].includes(ext)) return "audio";
-  const textExts = [
-    "md", "markdown", "txt", "json", "yml", "yaml", "csv", "tsv", "log",
-    "xml", "html", "htm", "css", "js", "jsx", "ts", "tsx", "py", "go",
-    "rs", "java", "rb", "sh", "sql", "env", "toml", "ini",
-  ];
-  if (m.startsWith("text/") || textExts.includes(ext)) return "text";
-  if (["doc", "docx", "xls", "xlsx", "ppt", "pptx"].includes(ext)) return "office";
-  if (["hwp", "hwpx"].includes(ext) || m === "application/x-hwp" || m === "application/haansofthwp" || m === "application/vnd.hancom.hwp") return "hwp";
-  return "other";
-}
-
-function guessMime(name: string, fallback?: string | null): string {
-  const ext = name.split(".").pop()?.toLowerCase() || "";
-  const map: Record<string, string> = {
-    md: "text/markdown", markdown: "text/markdown",
-    txt: "text/plain", log: "text/plain",
-    json: "application/json",
-    yml: "application/yaml", yaml: "application/yaml",
-    csv: "text/csv", tsv: "text/tab-separated-values",
-    xml: "application/xml",
-    html: "text/html", htm: "text/html",
-    css: "text/css",
-    js: "application/javascript", jsx: "text/jsx",
-    ts: "application/typescript", tsx: "text/tsx",
-    py: "text/x-python", go: "text/x-go", rs: "text/x-rust",
-    java: "text/x-java", rb: "text/x-ruby", sh: "text/x-sh",
-    sql: "application/sql", env: "text/plain",
-    toml: "application/toml", ini: "text/plain",
-  };
-  return map[ext] || fallback || "text/plain";
-}
-
-const LANG_MAP: Record<string, string> = {
-  ts: "typescript", tsx: "typescript",
-  js: "javascript", jsx: "javascript",
-  py: "python", go: "go", rs: "rust",
-  java: "java", rb: "ruby", php: "php",
-  sh: "bash", sql: "sql",
-  json: "json", yaml: "yaml", yml: "yaml",
-  html: "html", htm: "html", css: "css",
-  md: "markdown", markdown: "markdown",
-  xml: "xml", toml: "ini", ini: "ini",
-  csv: "plaintext", tsv: "plaintext", txt: "plaintext", log: "plaintext",
-};
-
-function detectLang(name: string): string {
-  const ext = name.split(".").pop()?.toLowerCase() || "";
-  return LANG_MAP[ext] || "plaintext";
-}
-
-function relTime(iso: string): string {
-  const d = new Date(iso);
-  const diff = (Date.now() - d.getTime()) / 1000;
-  if (diff < 60) return "방금";
-  if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
-  if (diff < 86400 * 7) return `${Math.floor(diff / 86400)}일 전`;
-  return d.toLocaleDateString("ko");
-}
+// detectKind / guessMime / LANG_MAP / detectLang → @/lib/file-preview/detect-kind
+// relTime / prettySize → @/lib/file-preview/format
 
 interface FileComment {
   id: string;
@@ -280,13 +116,6 @@ interface FileComment {
   content: string;
   created_at: string;
   author?: { nickname?: string | null; avatar_url?: string | null } | null;
-}
-
-function prettySize(bytes?: number | null): string {
-  if (!bytes) return "";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
 function iconFor(kind: FileKind) {
@@ -1851,92 +1680,5 @@ export function FilePreviewPanel({
   );
 }
 
-/** Reusable card for non-embeddable URLs (notion, github, other, fallback).
- *  Shows OG metadata (title, description, image) when available — otherwise
- *  the file name + icon + open/download buttons. */
-function ExternalCard({
-  url,
-  name,
-  icon,
-  label,
-  og,
-  ogLoading,
-  note,
-  showDownload,
-}: {
-  url: string;
-  name: string;
-  icon: string;
-  label: string;
-  og?: { title?: string; description?: string; image?: string; site_name?: string } | null;
-  ogLoading?: boolean;
-  note?: string;
-  showDownload?: boolean;
-}) {
-  let host = "";
-  try { host = new URL(url).hostname.replace(/^www\./, ""); } catch {}
-  const favicon = host ? `https://www.google.com/s2/favicons?domain=${host}&sz=64` : "";
-  const title = og?.title || name;
-  const desc = og?.description;
-  const image = og?.image;
-  return (
-    <div className="w-full h-full flex flex-col items-center justify-center p-6 gap-4 text-center bg-nu-cream/10 overflow-auto">
-      <div className="w-full max-w-md border-[3px] border-nu-ink bg-nu-paper shadow-[4px_4px_0_0_#0D0F14] overflow-hidden">
-        {image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" className="w-full aspect-video object-cover border-b-[3px] border-nu-ink" />
-        ) : (
-          <div className="w-full aspect-video bg-nu-cream/40 border-b-[3px] border-nu-ink flex items-center justify-center text-5xl">
-            {icon}
-          </div>
-        )}
-        <div className="p-4 text-left">
-          <div className="flex items-center gap-2 mb-2">
-            {favicon ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={favicon} alt="" className="w-4 h-4" />
-            ) : null}
-            <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">
-              {og?.site_name || label} {host ? `· ${host}` : ""}
-            </span>
-          </div>
-          <p className="font-head text-sm font-black text-nu-ink line-clamp-2 break-words">{title}</p>
-          {ogLoading && !desc && (
-            <p className="text-[11px] text-nu-muted mt-1">메타 정보 불러오는 중…</p>
-          )}
-          {desc && (
-            <p className="text-[12px] text-nu-muted mt-2 line-clamp-3 break-words leading-snug">{desc}</p>
-          )}
-          {note && (
-            <p className="text-[11px] text-nu-muted mt-3 italic">{note}</p>
-          )}
-        </div>
-      </div>
-      <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-4 py-2 border-[2px] border-nu-ink bg-nu-ink text-nu-paper no-underline hover:bg-nu-pink transition-all flex items-center gap-2"
-        >
-          <ExternalLink size={12} /> 새 탭에서 열기
-        </a>
-        {showDownload && (
-          <a
-            href={url}
-            download={name}
-            className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-4 py-2 border-[2px] border-nu-ink text-nu-ink no-underline hover:bg-nu-ink hover:text-nu-paper transition-all flex items-center gap-2"
-          >
-            <Download size={12} /> 다운로드
-          </a>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/** Helper: 해당 파일이 텍스트 편집 가능한지 판단 (리스트 UI 에서 ✏️ 뱃지용) */
-export function isTextEditableFile(name: string, mime?: string | null, storage_type?: string | null): boolean {
-  if (storage_type !== "r2") return false;
-  return detectKind(name, mime) === "text";
-}
+// ExternalCard → ./file-preview/external-card
+// isTextEditableFile → @/lib/file-preview/detect-kind (re-export 위에서 처리)
