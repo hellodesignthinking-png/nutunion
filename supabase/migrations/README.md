@@ -173,3 +173,64 @@ where tablename in ('task_issue_links','file_comments','yjs_documents')
 -- 인덱스: drop index if exists idx_<name>;
 -- 정책: 이전 버전 정책으로 drop+create. 참고는 마이그레이션 119/120/124/108/115 원본.
 ```
+
+---
+
+# 130~137 — 자료실/Drive/Threads 후속 (2026-04 ~ 2026-05)
+
+모두 **additive + idempotent**. SQL Editor 에서 **번호 순서대로** 실행 권장.
+graceful degrade — 미적용 시 lock·요약·버전 등 부가 기능만 비활성, 주요 기능은 동작.
+
+## 적용 순서
+
+| # | 파일 | 효과 | 미적용시 |
+|---|---|---|---|
+| 1 | `130_drive_edit_link.sql`        | Drive 편집 사본 컬럼 (file_attachments/project_resources) | "Drive 에서 편집" 버튼 비활성 |
+| 2 | `131_file_drive_edits.sql`       | 멤버별 Drive 사본 추적 테이블 | 130 폴백으로 동작하나 멤버별 분리 안됨 |
+| 3 | `132_file_versions.sql`          | R2 sync-back 직전 백업 테이블 | 버전 백업 비활성 (sync 자체는 동작) |
+| 4 | `133_folder_path.sql`            | 자료실 폴더 컬럼 | 폴더 이동 503 |
+| 5 | `134_file_ai_summary.sql`        | AI 자동 요약 jsonb 컬럼 | AI 요약 503 |
+| 6 | `135_file_versions_rls_tighten.sql` | file_versions SELECT 멤버 한정 (132 보강) | 모든 인증 사용자가 버전 메타 조회 가능 (누수) |
+| 7 | `136_resource_leases.sql`        | TTL 기반 분산 lock 테이블 + RPC (try_acquire_lease/release_lease/cleanup_stale_leases) | sync/cron lock 비활성 — 동시 실행 가능 (낭비, 데이터 손실은 없음) |
+| 8 | **`137_file_attachments_rls_tighten.sql`** | **file_attachments SELECT 를 멤버 한정으로 닫음 (005 의 USING(true) 누수 차단)** | **🔴 모든 인증 사용자가 모든 그룹 파일 메타 조회 가능 — 즉시 적용 권장** |
+
+## 신규 환경변수
+
+| 변수 | 용도 | 미설정시 |
+|---|---|---|
+| `OPENAI_API_KEY` | Whisper STT (`/api/ai/transcribe`) | STT 503 |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | 웹 푸시 (마이그 056_push_subscriptions 함께 필요) | 웹 푸시 비활성, 알림은 in-app 만 |
+
+## 신규 npm 의존성
+
+`pdfjs-dist`, `pdf-lib` (PDF 시각 주석)
+
+## 검증
+
+```sql
+-- 137 적용 후: file_attachments 정책에 USING(true) 가 사라졌는지
+select policyname, qual
+from pg_policies
+where tablename = 'file_attachments' and cmd = 'SELECT';
+-- → policyname = 'files_select_member' 1행만, qual 에 'true' 단독 없음
+
+-- 136 적용 후: lease RPC 동작
+select public.try_acquire_lease('test', '00000000-0000-0000-0000-000000000001', 60);  -- true
+select public.try_acquire_lease('test', '00000000-0000-0000-0000-000000000002', 60);  -- false
+select public.release_lease('test', '00000000-0000-0000-0000-000000000001');
+
+-- 신규 컬럼 존재 확인
+select column_name from information_schema.columns
+where table_name in ('file_attachments','project_resources')
+  and column_name in ('drive_edit_file_id','drive_edit_user_id','drive_edit_synced_at',
+                      'folder_path','ai_summary','ai_summary_generated_at')
+order by table_name, column_name;
+```
+
+## 운영 cron 추가 (선택)
+
+`/api/cron/cleanup-leases` — 좀비 lock 청소 (1일 1회):
+```json
+{ "path": "/api/cron/cleanup-leases", "schedule": "0 4 * * *" }
+```
+서버 라우트는 `cleanup_stale_leases(60)` RPC 호출.
