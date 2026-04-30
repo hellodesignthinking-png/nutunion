@@ -24,6 +24,7 @@ import {
   CornerUpLeft,
 } from "lucide-react";
 import { MsgBubble, type Msg } from "./msg-bubble";
+import { ThreadPanel } from "./thread-panel";
 import { ChatErrorBoundary } from "./chat-error-boundary";
 import { ChatHeader } from "./chat-header";
 import { ChatInputBar } from "./chat-input-bar";
@@ -70,6 +71,7 @@ function ChatRoomViewInner({ roomId, onBack, onMessage, embedded = false, fullHe
   const [totalMembers, setTotalMembers] = useState(0);
   const [dragOver, setDragOver] = useState(false);
   const [replyTo, setReplyTo] = useState<Msg | null>(null);
+  const [threadParentId, setThreadParentId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
@@ -806,6 +808,7 @@ function ChatRoomViewInner({ roomId, onBack, onMessage, embedded = false, fullHe
                 onReact={(emoji) => toggleReaction(m.id, emoji)}
                 onDelete={() => deleteMessage(m.id)}
                 onStartEdit={() => startEditing(m)}
+                onOpenThread={() => setThreadParentId(m.id)}
                 roomGroupId={roomInfo?.group_id || null}
                 roomProjectId={roomInfo?.project_id || null}
               />
@@ -881,6 +884,13 @@ function ChatRoomViewInner({ roomId, onBack, onMessage, embedded = false, fullHe
         groupId={roomInfo?.group_id || null}
         projectId={roomInfo?.project_id || null}
       />
+      {threadParentId && (
+        <ThreadPanel
+          parentMessageId={threadParentId}
+          meId={meId}
+          onClose={() => setThreadParentId(null)}
+        />
+      )}
     </div>
   );
 }

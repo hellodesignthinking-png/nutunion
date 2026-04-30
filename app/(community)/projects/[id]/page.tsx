@@ -6,6 +6,8 @@ import { Suspense } from "react";
 import { Settings, Calendar, UserPlus, Clock, CheckCircle2, AlertCircle, TrendingUp, Users, Zap } from "lucide-react";
 import { TabsInner } from "./tabs-inner";
 import { ProjectStatusPanel } from "@/components/projects/project-status-panel";
+import { StatusPanelCollapsible } from "@/components/projects/status-panel-collapsible";
+import { ShareButton } from "@/components/shared/share-dialog";
 import { RoleSlotsDisplay } from "@/components/projects/role-slots-editor";
 import { DuplicateDescriptionHint } from "@/components/projects/duplicate-description-hint";
 import { DriveR2MigrationBanner } from "@/components/shared/drive-r2-migration-banner";
@@ -32,14 +34,17 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     }
     const description = (project.description || "nutunion 볼트 · Protocol Collective").slice(0, 160);
     const ogUrl = `/api/og/project/${id}`;
+    const canonical = `https://nutunion.co.kr/projects/${id}`;
     return {
       title: `${project.title} — nutunion`,
       description,
+      alternates: { canonical },
       openGraph: {
         title: project.title,
         description,
         images: [{ url: ogUrl, width: 1200, height: 630 }],
         type: "website",
+        url: canonical,
       },
       twitter: {
         card: "summary_large_image",
@@ -92,25 +97,20 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   // safeCols: type/parent_bolt_id 가 아직 없는 환경(migration 084 미실행) 대비 — 최소 컬럼
   const safeCols = "id, title, description, status, category, image_url, start_date, end_date, created_at, created_by, creator:profiles!projects_created_by_fkey(id, nickname, avatar_url)";
 
-  const [projectRich, profileRes, applicationRes, milestoneCountRes, memberCountRes, isMemberRes, pendingAppsRes] = await Promise.all([
+  const [projectRich, profileRes, applicationRes, milestoneCountRes, memberCountRes, isMemberRes, pendingAppsRes, devPlanRes, genesisPlanRes] = await Promise.all([
     supabase.from("projects").select(richCols).eq("id", id).maybeSingle(),
-    user ? supabase.from("profiles").select("role").eq("id", user.id).single() : Promise.resolve({ data: null }),
+    user ? supabase.from("profiles").select("role").eq("id", user.id).maybeSingle() : Promise.resolve({ data: null }),
     user ? supabase.from("project_applications").select("status").eq("project_id", id).eq("applicant_id", user.id).maybeSingle() : Promise.resolve({ data: null }),
     supabase.from("project_milestones").select("id, status").eq("project_id", id),
     supabase.from("project_members").select("id", { count: "exact", head: true }).eq("project_id", id),
     user ? supabase.from("project_members").select("id").eq("project_id", id).eq("user_id", user.id).maybeSingle() : Promise.resolve({ data: null }),
     user ? supabase.from("project_applications").select("id", { count: "exact", head: true }).eq("project_id", id).eq("status", "pending") : Promise.resolve({ count: 0 }),
+    Promise.resolve(supabase.from("projects").select("dev_plan").eq("id", id).maybeSingle()).catch(() => ({ data: null as any })),
+    Promise.resolve(supabase.from("genesis_plans").select("id").eq("target_kind", "project").eq("target_id", id).limit(1).maybeSingle()).catch(() => ({ data: null as any })),
   ]);
 
   let project: any = projectRich.data;
-  // migration 109 미적용이면 column 부재 → silent 시도
-  let hasDevPlan = false;
-  try {
-    const devRes = await supabase.from("projects").select("dev_plan").eq("id", id).maybeSingle();
-    hasDevPlan = !!(devRes.data as any)?.dev_plan;
-  } catch {
-    hasDevPlan = false;
-  }
+  const hasDevPlan = !!(devPlanRes.data as any)?.dev_plan;
   if (projectRich.error || !project) {
     // 일부 컬럼이 없는 스키마에서도 동작하도록 최소 컬럼 fallback
     const safeRes = await supabase.from("projects").select(safeCols).eq("id", id).maybeSingle();
@@ -137,18 +137,8 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const memberCount = memberCountRes.count || 0;
   const pendingAppsCount = (pendingAppsRes as { count?: number }).count || 0;
 
-  // Genesis AI 로 생성된 공간인지 확인
-  let isGenesis = false;
-  try {
-    const { data: gp } = await supabase
-      .from("genesis_plans")
-      .select("id")
-      .eq("target_kind", "project")
-      .eq("target_id", id)
-      .limit(1)
-      .maybeSingle();
-    isGenesis = !!gp;
-  } catch { /* migration 104 미적용 */ }
+  // Genesis AI 로 생성된 공간인지 확인 — 위 Promise.all 에서 병렬 조회
+  const isGenesis = !!genesisPlanRes.data;
 
   const statusCfg = statusConfig[project.status] || statusConfig.draft;
 
@@ -218,7 +208,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             )}
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex overflow-x-auto sm:flex-wrap gap-2 [&>*]:shrink-0 [&::-webkit-scrollbar]:hidden">
             {!isAdmin && applicationStatus === "pending" && (
               <div className="flex items-center gap-2">
                 <span className="font-mono-nu text-[13px] font-bold uppercase tracking-widest px-5 py-2.5 bg-amber-500 text-white inline-flex items-center gap-2">
@@ -246,18 +236,15 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 <UserPlus size={14} /> {user ? "볼트 참여하기" : "로그인하고 참여"}
               </Link>
             )}
-            <Link href={`/projects/${id}/tap`} className="h-10 px-4 border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper inline-flex items-center gap-2 transition-colors">
-              📚 Tap
-            </Link>
-            {(isMember || isAdmin) && (
-              <Link href={`/projects/${id}?tab=meetings`} className="h-10 px-4 border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper inline-flex items-center gap-2 transition-colors">
-                📝 회의록
-              </Link>
-            )}
-            {(isMember || isAdmin) && (
-              <Link href={`/projects/${id}/venture`} className="h-10 px-4 border-[2.5px] border-nu-pink bg-nu-paper text-nu-pink font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-nu-pink hover:text-nu-paper inline-flex items-center gap-2 transition-colors">
-                🚀 Venture
-              </Link>
+            {/* 메뉴 통일 (2026-04) — 탭 전환은 아래 탭바 한 곳에서만.
+                여기는 신청/승인/마감 등 상태 기반 액션만 표시. */}
+            {(isAdmin || (user && project.created_by === user.id)) && (
+              <ShareButton
+                title={project.title}
+                description={project.description?.slice(0, 120) || "nutunion 볼트 — 함께 만드는 프로젝트"}
+                url={`https://nutunion.co.kr/projects/${id}`}
+                kind="볼트"
+              />
             )}
             {isAdmin && (
               <Link
@@ -274,16 +261,6 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             )}
             {isAdmin && project.status !== "completed" && (
               <CloseProjectModal projectId={id} projectTitle={project.title} />
-            )}
-            {hasDevPlan && (
-              <Link href={`/projects/${id}/dev-plan`} className="h-10 px-4 border-[2.5px] border-nu-ink bg-nu-pink text-nu-paper font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-nu-ink inline-flex items-center gap-2 transition-colors">
-                🚀 개발 로드맵 보기
-              </Link>
-            )}
-            {isAdmin && (
-              <Link href={`/projects/${id}/settings`} className="h-10 px-4 border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper inline-flex items-center gap-2 transition-colors">
-                <Settings size={14} /> 볼트 설정
-              </Link>
             )}
           </div>
         </div>
@@ -375,7 +352,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         <div className="reader-shell mx-auto px-4 md:px-8 pb-24">
           <div className="max-w-6xl mx-auto pt-4">
             <Suspense fallback={<div className="h-32 bg-black/5 animate-pulse mb-6" />}>
-              <ProjectStatusPanel projectId={id} userId={user.id} />
+              <StatusPanelCollapsible projectId={id}>
+                <Suspense fallback={<div className="h-32 bg-black/5 animate-pulse" />}>
+                  <ProjectStatusPanel projectId={id} userId={user.id} />
+                </Suspense>
+              </StatusPanelCollapsible>
             </Suspense>
           </div>
 
@@ -411,7 +392,7 @@ async function ProjectTabsWrapper({ id, userId, isAdmin, project }: any) {
   const supabase = await createClient();
 
   // 모든 쿼리를 병렬 — 이전에는 sequential 로 4번 round-trip
-  const [msRichRes, memRes, updRes, evtRes] = await Promise.all([
+  const [msRichRes, memRes, updRes, evtRes, archivedMeetingsRes] = await Promise.all([
     supabase
       .from("project_milestones")
       .select("*, tasks:project_tasks(*, assignee:profiles!project_tasks_assigned_to_fkey(id, nickname, avatar_url))")
@@ -434,6 +415,26 @@ async function ProjectTabsWrapper({ id, userId, isAdmin, project }: any) {
       .eq("project_id", id)
       .order("start_at")
       .limit(10),
+    (async () => {
+      // Archived meetings for the meetings tab timeline. Backward-compat:
+      // fall back to the legacy column set if migration 129 hasn't run.
+      const now = new Date().toISOString();
+      const rich = await supabase
+        .from("meetings")
+        .select("id, title, scheduled_at, status, summary, next_topic, next_topics, ai_result, google_doc_url")
+        .eq("project_id", id)
+        .or(`status.eq.completed,scheduled_at.lt.${now}`)
+        .order("scheduled_at", { ascending: false })
+        .limit(10);
+      if (!rich.error) return rich;
+      return supabase
+        .from("meetings")
+        .select("id, title, scheduled_at, status, summary, next_topic, google_doc_url")
+        .eq("project_id", id)
+        .or(`status.eq.completed,scheduled_at.lt.${now}`)
+        .order("scheduled_at", { ascending: false })
+        .limit(10);
+    })(),
   ]);
 
   // 조인 실패 fallback 은 개별 엔티티 단위로 — 병렬 실행 유지
@@ -456,6 +457,7 @@ async function ProjectTabsWrapper({ id, userId, isAdmin, project }: any) {
   }
 
   const events = evtRes.data ?? [];
+  const archivedMeetings = (archivedMeetingsRes as any)?.data ?? [];
 
   const membersList = members || [];
   const directUserMembers = membersList.filter((m: any) => m.user_id && m.profile);
@@ -511,24 +513,30 @@ async function ProjectTabsWrapper({ id, userId, isAdmin, project }: any) {
 
   return (
     <>
-      <TabsInner
-        projectId={id}
-        milestonesData={JSON.stringify(milestones)}
-        updatesData={JSON.stringify(updates)}
-        eventsData={JSON.stringify(events)}
-        userMembersData={JSON.stringify(userMembers)}
-        crewMembersData={JSON.stringify(crewMembers)}
-        projectData={JSON.stringify(project)}
-        myTasksData={JSON.stringify(myTasks)}
-        userId={userId}
-        canEdit={canEdit}
-        isMember={isMember}
-        taskStats={taskStats}
-        totalTasks={totalTasks}
-        progressPct={progressPct}
-      />
-      {/* 🧪 Thread Beta — Module Lattice 실험 영역 */}
-      {userId && (
+      {/* TabsInner uses useSearchParams → must be wrapped in <Suspense> to avoid
+          React #419 (CSR bailout) on prerender / streaming. */}
+      <Suspense fallback={<div className="max-w-[1200px] mx-auto px-4 md:px-6 h-32 bg-black/5 animate-pulse" />}>
+        <TabsInner
+          projectId={id}
+          milestonesData={JSON.stringify(milestones)}
+          updatesData={JSON.stringify(updates)}
+          eventsData={JSON.stringify(events)}
+          archivedMeetingsData={JSON.stringify(archivedMeetings)}
+          userMembersData={JSON.stringify(userMembers)}
+          crewMembersData={JSON.stringify(crewMembers)}
+          projectData={JSON.stringify(project)}
+          myTasksData={JSON.stringify(myTasks)}
+          userId={userId}
+          canEdit={canEdit}
+          isMember={isMember}
+          taskStats={taskStats}
+          totalTasks={totalTasks}
+          progressPct={progressPct}
+        />
+      </Suspense>
+      {/* 🧪 Thread Beta — 메뉴 통일 (2026-04) 후 lead 전용으로 노출.
+          일반 멤버에게는 혼란만 유발했던 영역. lead는 [설정] 탭의 모듈 안내에서도 접근 가능. */}
+      {userId && isLead && (
         <div className="max-w-[1200px] mx-auto px-4 md:px-6 pb-8">
           <ThreadBetaSection
             targetType="bolt"

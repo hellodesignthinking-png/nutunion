@@ -58,11 +58,15 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="approvals"
+        name="ai"
         options={{
-          title: "결재",
-          tabBarIcon: ({ color, size }) => <Feather name="check-square" size={size} color={color} />,
+          title: "AI",
+          tabBarIcon: ({ color, size }) => <Feather name="message-circle" size={size} color={color} />,
         }}
+      />
+      <Tabs.Screen
+        name="approvals"
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="profile"

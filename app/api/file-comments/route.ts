@@ -6,6 +6,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { parseAndNotifyMentions } from "@/lib/notifications/mentions";
 import { log } from "@/lib/observability/logger";
 
 export const dynamic = "force-dynamic";
@@ -81,5 +83,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   log.info("file_comments.inserted", { id: (data as any)?.id, file_table: body.file_table });
-  return NextResponse.json({ item: data });
+
+  // @ 멘션 알림 디스패치 — 본인 닉네임 + 멘션 매칭 → in-app/email/push 발송
+  let mentions: { matched: string[]; notified: string[] } | null = null;
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (url && key) {
+      const svc = createServiceClient(url, key, { auth: { persistSession: false } });
+      const { data: meProfile } = await svc.from("profiles").select("nickname").eq("id", auth.user.id).maybeSingle();
+      const link = body.file_table === "file_attachments"
+        ? `/?focus=${body.file_id}#comment-${(data as any)?.id || ""}`
+        : `/?focus=${body.file_id}`;
+      mentions = await parseAndNotifyMentions({
+        text: payload.content,
+        authorId: auth.user.id,
+        authorNickname: meProfile?.nickname || null,
+        contextLabel: "자료실 댓글",
+        linkUrl: link,
+        serviceClient: svc,
+        metadata: { file_id: body.file_id, file_table: body.file_table, comment_id: (data as any)?.id },
+      });
+    }
+  } catch (e: any) {
+    log.warn("file_comments.mention_dispatch_failed", { error_message: e?.message });
+  }
+
+  return NextResponse.json({ item: data, mentions });
 }

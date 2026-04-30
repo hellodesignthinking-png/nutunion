@@ -74,14 +74,18 @@ export function EventActions({
           .eq("event_id", eventId)
           .eq("user_id", waitlisted[0].user_id);
 
-        // Create notification for promoted user
-        await supabase.from("notifications").insert({
-          user_id: waitlisted[0].user_id,
-          type: "waitlist_promoted",
-          title: "참석 확정!",
-          body: "대기 중이던 일정에 자리가 생겨 참석이 확정되었습니다.",
-          metadata: { event_id: eventId },
-        });
+        // Create notification for promoted user (fire-and-forget)
+        fetch("/api/notifications/dispatch", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            userId: waitlisted[0].user_id,
+            title: "참석 확정!",
+            body: "대기 중이던 일정에 자리가 생겨 참석이 확정되었습니다.",
+            metadata: { event_id: eventId, type: "waitlist_promoted" },
+            category: "schedule",
+          }),
+        }).catch((e) => console.warn("notify failed", e));
       }
     }
 

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { MeetingNote, NoteType, Profile } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { AudioTranscribe } from "@/components/shared/audio-transcribe";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -228,19 +229,29 @@ function NoteSection({
           onChange={(e) => setContent(e.target.value)}
           placeholder={
             type === "note"
-              ? "노트를 작성하세요..."
+              ? "노트를 작성하세요... (또는 🎙️ 녹음으로 받아쓰기)"
               : "결정 사항을 기록하세요..."
           }
           rows={2}
           className="border-nu-ink/15 bg-transparent resize-none"
         />
-        <Button
-          onClick={handleAdd}
-          disabled={saving}
-          className="self-start bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[12px] uppercase tracking-widest"
-        >
-          <Plus size={12} /> {saving ? "추가 중..." : `${label} 추가`}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            onClick={handleAdd}
+            disabled={saving}
+            className="bg-nu-ink text-nu-paper hover:bg-nu-pink font-mono-nu text-[12px] uppercase tracking-widest"
+          >
+            <Plus size={12} /> {saving ? "추가 중..." : `${label} 추가`}
+          </Button>
+          {type === "note" && (
+            <AudioTranscribe
+              onText={(text) => {
+                setContent((prev) => (prev ? prev + "\n" + text : text));
+              }}
+              prompt="회의 노트, 인명, 전문용어를 정확히 받아쓰기"
+            />
+          )}
+        </div>
       </div>
     </div>
   );

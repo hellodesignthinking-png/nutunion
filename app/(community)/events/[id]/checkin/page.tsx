@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Calendar, CheckCircle2, AlertTriangle, Loader2, ArrowRight } from "lucide-react";
@@ -11,6 +11,14 @@ import { createClient } from "@/lib/supabase/client";
  * QR 스캐너가 이 URL 로 열어서, 로그인 후 자동 체크인.
  */
 export default function EventCheckinPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-nu-paper" />}>
+      <EventCheckinInner />
+    </Suspense>
+  );
+}
+
+function EventCheckinInner() {
   const params = useParams();
   const eventId = params.id as string;
   const sp = useSearchParams();

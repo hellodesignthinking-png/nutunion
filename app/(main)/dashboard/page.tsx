@@ -6,6 +6,7 @@ import { Plus, Zap } from "lucide-react";
 import { getGrade, GRADE_CONFIG } from "@/lib/constants";
 import { OnboardingCoach } from "@/components/dashboard/onboarding-coach";
 import { DashboardTabs } from "@/components/dashboard/dashboard-tabs";
+import { MorningBriefing } from "@/components/dashboard/morning-briefing";
 
 export const dynamic = "force-dynamic";
 
@@ -110,6 +111,13 @@ export default async function DashboardPage() {
           </Link>
         </div>
       </div>
+
+      {/* ── AI Morning Briefing ─────────────────────────────── */}
+      {profile?.onboarded_at && (
+        <div className="mb-5">
+          <MorningBriefing />
+        </div>
+      )}
 
       {/* ── 온보딩 ──────────────────────────────────────────── */}
       {!profile?.onboarded_at && (

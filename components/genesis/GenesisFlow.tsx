@@ -220,12 +220,12 @@ export function GenesisFlow({ kind }: { kind: "group" | "project" }) {
       }
       const projectId = provData.project_id || provData.target_id;
 
-      // 2) Attach dev plan to the new project
+      // 2) Attach already-generated dev plan to the new project (skip re-LLM)
       setProvisionStep("개발 로드맵 첨부 중...");
       await fetch("/api/genesis/dev-plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ intent, projectId }),
+        body: JSON.stringify({ projectId, plan: devPlan }),
       });
 
       clearInterval(stepTimer);

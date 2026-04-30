@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { GenreThemeProvider } from "@/components/brand/genre-theme-context";
 import { GlobalSearch } from "@/components/shared/global-search";
 import { PwaBootstrap } from "@/components/shared/pwa-bootstrap";
+import { KakaoSdkLoader } from "@/components/shared/kakao-sdk-loader";
 import { SidebarProvider } from "@/components/shared/sidebar-provider";
 import "./globals.css";
 
@@ -32,6 +33,13 @@ export const metadata: Metadata = {
     siteName: "너트유니온",
     type: "website",
     url: "https://nutunion.co.kr",
+    images: [{ url: "/hero-risograph.png", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "너트유니온 — 너(You)와 너트(Nut)의 연합",
+    description: "너트(Nut) + 볼트(Bolt) = 변화를 만드는 힘. 시티체인저들의 자율적 연합체.",
+    images: ["/hero-risograph.png"],
   },
   alternates: {
     canonical: "https://nutunion.co.kr",
@@ -60,6 +68,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <GlobalSearch />
         <Toaster position="bottom-right" />
         <PwaBootstrap />
+        <KakaoSdkLoader />
         <SpeedInsights />
         <Analytics />
       </body>

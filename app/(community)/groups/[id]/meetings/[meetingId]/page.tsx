@@ -1056,7 +1056,7 @@ export default function MeetingDetailPage() {
               await supabase.from("meetings").update({ next_topic: topic }).eq("id", meetingId);
               setNextTopic(topic);
             }}
-            onAddNote={async (content, type) => {
+            onAddNote={async (content, type, extra) => {
               const supabase = createClient();
               const insertData: any = {
                 meeting_id: meetingId,
@@ -1064,7 +1064,10 @@ export default function MeetingDetailPage() {
                 type,
                 created_by: userId,
               };
-              if (type === "action_item") insertData.status = "pending";
+              if (type === "action_item") {
+                insertData.status = "pending";
+                if (extra?.dueDate) insertData.due_date = extra.dueDate;
+              }
               const { error } = await supabase.from("meeting_notes").insert(insertData);
               if (error) {
                 console.error("meeting_notes insert error:", error);

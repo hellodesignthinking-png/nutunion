@@ -22,7 +22,7 @@ export default async function GroupLayout({
     // Parallelize auth + group query
     const [{ data: { user } }, { data: group }] = await Promise.all([
       supabase.auth.getUser(),
-      supabase.from("groups").select("name, host_id").eq("id", groupId).single(),
+      supabase.from("groups").select("name, host_id").eq("id", groupId).maybeSingle(),
     ]);
 
     if (group) {

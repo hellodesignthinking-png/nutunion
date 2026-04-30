@@ -169,7 +169,16 @@ export function MorningBriefing() {
           <span className="text-sm">브리핑 생성 중…</span>
         </div>
       ) : error ? (
-        <div className="text-sm text-red-600 py-2">{error}</div>
+        <div className="flex items-center justify-between gap-3 py-3">
+          <div className="text-sm text-red-600">{error}</div>
+          <button
+            onClick={load}
+            disabled={loading}
+            className="font-mono-nu text-[11px] uppercase tracking-widest px-3 py-1.5 border-[2px] border-emerald-800 bg-white hover:bg-emerald-800 hover:text-nu-paper disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+          >
+            <RefreshCw size={11} /> 다시 시도
+          </button>
+        </div>
       ) : brief ? (
         <div className="space-y-4">
           {/* Greeting */}

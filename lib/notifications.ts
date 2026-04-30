@@ -1,5 +1,9 @@
-import { createClient } from "@/lib/supabase/server";
+import { dispatchNotification } from "./notifications/dispatch";
 
+/**
+ * Legacy thin wrapper — delegates to dispatchNotification.
+ * Kept for backward compatibility with existing callers.
+ */
 export async function createNotification(params: {
   userId: string;
   type: string;
@@ -10,8 +14,6 @@ export async function createNotification(params: {
   actorId?: string;
   metadata?: Record<string, any>;
 }): Promise<void> {
-  const supabase = await createClient();
-
   const {
     userId,
     type,
@@ -23,21 +25,15 @@ export async function createNotification(params: {
     metadata = {},
   } = params;
 
-  const { error } = await supabase.from("notifications").insert({
-    user_id: userId,
-    type,
+  await dispatchNotification({
+    recipientId: userId,
+    eventType: type,
     title,
-    body: body || null,
-    category,
-    link_url: linkUrl || null,
-    actor_id: actorId || null,
+    body: body || "",
+    linkUrl,
     metadata,
-    is_read: false,
-    created_at: new Date().toISOString(),
+    category,
+    actorId,
+    channels: ["inapp"],
   });
-
-  if (error) {
-    console.error("Failed to create notification:", error);
-    throw error;
-  }
 }

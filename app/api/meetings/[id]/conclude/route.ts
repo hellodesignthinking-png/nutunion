@@ -118,6 +118,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "회의 마감 실패: " + updErr.message }, { status: 500 });
   }
 
+  // Step 2b: persist structured AI output for the archive timeline.
+  // Backward-compatible: if migration 129 hasn't run yet, columns won't exist —
+  // catch and continue so the existing flow never breaks.
+  if (aiResult) {
+    try {
+      const nextTopics = Array.isArray(aiResult?.nextTopics)
+        ? aiResult.nextTopics
+        : Array.isArray(aiResult?.next_topics)
+          ? aiResult.next_topics
+          : [];
+      await writer
+        .from("meetings")
+        .update({ ai_result: aiResult, next_topics: nextTopics } as any)
+        .eq("id", meetingId);
+    } catch (e: any) {
+      console.warn("[conclude] ai_result/next_topics 저장 실패 (마이그레이션 129 미실행?)", e?.message);
+    }
+  }
+
   // Step 3 (optional): create Google Doc
   let google_doc_url: string | null = meeting.google_doc_url || null;
   let google_doc_id: string | null = null;
@@ -188,38 +207,136 @@ function formatAiResultToMarkdown(title: string, r: any): string {
   const lines: string[] = [];
   lines.push(`# 회의록: ${title}`);
   lines.push("");
-  if (r.summary) {
-    lines.push(`## 요약`);
-    lines.push(String(r.summary));
-    lines.push("");
+
+  // ── 개요 (Plaud-style metadata strip)
+  const overview = r.overview ?? null;
+  const attendees: string[] = Array.isArray(overview?.attendees) ? overview.attendees : [];
+  const durationMin: number | null = typeof overview?.durationMin === "number" ? overview.durationMin : null;
+  const date: string | null = typeof overview?.date === "string" ? overview.date : null;
+  const gist: string = (overview?.gist || r.summary || "").toString();
+
+  if (gist || attendees.length || durationMin || date) {
+    lines.push(`## 개요`);
+    const meta: string[] = [];
+    if (date) meta.push(`**일시:** ${date}`);
+    if (durationMin) meta.push(`**길이:** ${durationMin}분`);
+    if (attendees.length) meta.push(`**참석자:** ${attendees.join(", ")}`);
+    if (meta.length) {
+      lines.push(meta.join(" · "));
+      lines.push("");
+    }
+    if (gist) {
+      lines.push(gist);
+      lines.push("");
+    }
   }
-  if (Array.isArray(r.discussions) && r.discussions.length) {
+
+  // ── 주제별 논의
+  const topics = Array.isArray(r.topics) ? r.topics : [];
+  if (topics.length) {
+    lines.push(`## 주제별 논의`);
+    lines.push("");
+    topics.forEach((t: any) => {
+      lines.push(`### ${t.title || "주제"}`);
+      const points: string[] = Array.isArray(t.points) ? t.points : [];
+      points.forEach((p: string) => lines.push(`- ${p}`));
+      const quotes: any[] = Array.isArray(t.quotes) ? t.quotes : [];
+      if (quotes.length) {
+        lines.push("");
+        quotes.forEach((q: any) => {
+          const ts = q.timestamp ? `\`[${q.timestamp}]\` ` : "";
+          lines.push(`> ${ts}**${q.speaker || "화자"}:** ${q.text}`);
+        });
+      }
+      lines.push("");
+    });
+  } else if (Array.isArray(r.discussions) && r.discussions.length) {
+    // 구버전 호환
     lines.push(`## 논의 사항`);
     r.discussions.forEach((d: string) => lines.push(`- ${d}`));
     lines.push("");
   }
+
+  // ── 결정 사항
   if (Array.isArray(r.decisions) && r.decisions.length) {
     lines.push(`## 결정 사항`);
-    r.decisions.forEach((d: string) => lines.push(`- ${d}`));
+    r.decisions.forEach((d: string) => lines.push(`> ✅ ${d}`));
     lines.push("");
   }
+
+  // ── 액션 아이템 (table)
   if (Array.isArray(r.actionItems) && r.actionItems.length) {
     lines.push(`## 액션 아이템`);
+    lines.push("");
+    lines.push(`| 담당자 | 할 일 | 마감 | 우선순위 |`);
+    lines.push(`| --- | --- | --- | --- |`);
     r.actionItems.forEach((a: any) => {
-      const who = a.assignee ? ` (담당: ${a.assignee})` : "";
-      lines.push(`- [ ] ${a.task || a.content || ""}${who}`);
+      const who = a.assignee || "-";
+      const task = (a.task || a.content || "").replace(/\|/g, "\\|");
+      const due = a.dueDate || "-";
+      const pr = a.priority === "high" ? "🔴 높음" : a.priority === "low" ? "🟢 낮음" : "🟡 보통";
+      lines.push(`| ${who} | ${task} | ${due} | ${pr} |`);
     });
     lines.push("");
   }
+
+  // ── 주요 발언
+  const quotes: any[] = Array.isArray(r.quotes) ? r.quotes : [];
+  if (quotes.length) {
+    lines.push(`## 주요 발언`);
+    lines.push("");
+    quotes.forEach((q: any) => {
+      const ts = q.timestamp ? `\`[${q.timestamp}]\` ` : "";
+      lines.push(`> ${ts}**${q.speaker || "화자"}:** ${q.text}`);
+      lines.push("");
+    });
+  }
+
+  // ── 참여자별 요약
+  const speakers: any[] = Array.isArray(r.speakers) ? r.speakers : [];
+  if (speakers.length) {
+    lines.push(`## 참여자별 요약`);
+    speakers.forEach((s: any) => {
+      lines.push(`- **${s.label}** — ${s.summary || ""}`);
+    });
+    lines.push("");
+  }
+
+  // ── 후속 질문
+  if (Array.isArray(r.openQuestions) && r.openQuestions.length) {
+    lines.push(`## 후속 질문`);
+    r.openQuestions.forEach((q: string) => lines.push(`- ❓ ${q}`));
+    lines.push("");
+  }
+
+  // ── 다음 미팅 주제
   if (Array.isArray(r.nextTopics) && r.nextTopics.length) {
     lines.push(`## 다음 미팅 주제`);
     r.nextTopics.forEach((t: string) => lines.push(`- ${t}`));
     lines.push("");
   }
+
+  // ── 성장 인사이트
   if (Array.isArray(r.growthInsights) && r.growthInsights.length) {
     lines.push(`## 성장 인사이트`);
-    r.growthInsights.forEach((t: string) => lines.push(`- ${t}`));
+    r.growthInsights.forEach((t: string) => lines.push(`- 🌱 ${t}`));
     lines.push("");
   }
+
+  // ── 전체 트랜스크립트 (collapsible)
+  const transcript: any[] = Array.isArray(r.transcript) ? r.transcript : [];
+  if (transcript.length) {
+    lines.push(`<details>`);
+    lines.push(`<summary>📝 전체 트랜스크립트 (${transcript.length}개 발화)</summary>`);
+    lines.push("");
+    transcript.forEach((t: any) => {
+      const ts = t.timestamp ? `\`[${t.timestamp}]\` ` : "";
+      lines.push(`${ts}**${t.speaker || "화자"}:** ${t.text}`);
+      lines.push("");
+    });
+    lines.push(`</details>`);
+    lines.push("");
+  }
+
   return lines.join("\n").trim();
 }

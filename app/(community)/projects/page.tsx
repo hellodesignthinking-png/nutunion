@@ -72,7 +72,7 @@ async function ProjectsListWrapper({ userId }: { userId?: string }) {
         .from("profiles")
         .select("role, can_create_crew, grade")
         .eq("id", userId)
-        .single() :
+        .maybeSingle() :
       Promise.resolve({ data: null }),
     userId
       ? supabase.from("project_members").select("project_id, role").eq("user_id", userId)

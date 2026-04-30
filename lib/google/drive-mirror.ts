@@ -12,7 +12,12 @@
 import { google } from "googleapis";
 import { Readable } from "stream";
 import { getGoogleClient } from "@/lib/google/auth";
-import { driveRequestOptions, getDriveStorageTarget } from "./drive-config";
+import {
+  driveRequestOptions,
+  getDriveStorageTarget,
+  getSharedFolderId,
+  getDriveOwnerUserId,
+} from "./drive-config";
 
 export interface MirrorInput {
   userId: string;
@@ -32,11 +37,18 @@ export interface MirrorResult {
 
 export async function mirrorToDrive(input: MirrorInput): Promise<MirrorResult> {
   const { userId, folderId, fileUrl, fileBuffer, fileName, mimeType } = input;
-  if (!folderId) return { skipped: true, reason: "no_folder" };
+
+  // 단일 공유 폴더 모드: env 폴더가 우선. 없으면 호출자 folderId.
+  const envSharedFolderId = getSharedFolderId();
+  const targetFolderId = envSharedFolderId || folderId;
+  if (!targetFolderId) return { skipped: true, reason: "no_folder" };
+
+  const driveOwnerId = getDriveOwnerUserId();
+  const authUserId = driveOwnerId || userId;
 
   let auth;
   try {
-    auth = await getGoogleClient(userId);
+    auth = await getGoogleClient(authUserId);
   } catch {
     return { skipped: true, reason: "user_not_connected" };
   }
@@ -64,7 +76,7 @@ export async function mirrorToDrive(input: MirrorInput): Promise<MirrorResult> {
     const res = await drive.files.create({
       requestBody: {
         name: fileName,
-        parents: [folderId],
+        parents: [targetFolderId],
       },
       media: {
         mimeType,
@@ -72,6 +84,7 @@ export async function mirrorToDrive(input: MirrorInput): Promise<MirrorResult> {
       },
       fields: "id, name, webViewLink, webContentLink",
       ...driveRequestOptions(target),
+      supportsAllDrives: true,
     });
 
     return {

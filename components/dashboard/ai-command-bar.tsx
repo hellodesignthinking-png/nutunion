@@ -134,14 +134,20 @@ export function AICommandBar() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: input }),
       });
-      const data = (await res.json()) as AgentResponse;
-      setResponse(data);
-      const summary = data.actions?.length
-        ? data.actions.map((a) => (a.result?.ok ? "✓" : "✗") + " " + (TOOL_LABEL[a.tool] || a.tool)).join(", ")
-        : (data.reply || "").slice(0, 60);
+      const data = (await res.json().catch(() => ({}))) as Partial<AgentResponse> & { error?: string };
+      if (!res.ok) {
+        const msg = data?.error || `AI 실행 실패 (HTTP ${res.status})`;
+        toast.error(msg);
+        return;
+      }
+      const agent = data as AgentResponse;
+      setResponse(agent);
+      const summary = agent.actions?.length
+        ? agent.actions.map((a) => (a.result?.ok ? "✓" : "✗") + " " + (TOOL_LABEL[a.tool] || a.tool)).join(", ")
+        : (agent.reply || "").slice(0, 60);
       pushHistory({ at: Date.now(), input: input.trim(), summary });
     } catch (err: any) {
-      toast.error("AI 실행 실패: " + (err?.message || "unknown"));
+      toast.error("AI 실행 실패: " + (err?.message || "네트워크 오류"));
     } finally {
       setLoading(false);
     }
@@ -161,11 +167,17 @@ export function AICommandBar() {
             : "personal_events"
           : TOOL_TARGET_TABLE[action.tool];
 
-    const res = await fetch("/api/dashboard/ai-agent/undo", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ target_table: table, target_id: action.result.id }),
-    });
+    let res: Response;
+    try {
+      res = await fetch("/api/dashboard/ai-agent/undo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ target_table: table, target_id: action.result.id }),
+      });
+    } catch (e: any) {
+      toast.error("취소 실패: " + (e?.message || "네트워크 오류"));
+      return;
+    }
     if (res.ok) {
       toast.success("취소됨");
       // UI 에서 해당 action 을 실패 표시로 바꿈
@@ -207,6 +219,10 @@ export function AICommandBar() {
       </div>
 
       <AiCommandTextarea input={input} setInput={setInput} run={run} />
+
+      <div className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mt-1.5">
+        ⌘ / Ctrl + Enter — 빠른 실행
+      </div>
 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mt-3">
         <div className="grid grid-cols-2 md:flex md:flex-wrap gap-1.5">

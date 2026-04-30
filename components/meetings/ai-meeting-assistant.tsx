@@ -46,7 +46,11 @@ interface AiMeetingAssistantProps {
   onSaveSummary?: (summary: string) => void | Promise<void>;
   onSaveNextTopic?: (topic: string) => void | Promise<void>;
   /** Callback to add notes to meeting_notes table */
-  onAddNote?: (content: string, type: "note" | "action_item" | "decision") => void | Promise<void>;
+  onAddNote?: (
+    content: string,
+    type: "note" | "action_item" | "decision",
+    extra?: { dueDate?: string | null; priority?: string | null; assignee?: string | null }
+  ) => void | Promise<void>;
   /** Callback to archive as Google Doc */
   onArchiveToGoogleDoc?: (title: string, content: string) => Promise<{ url?: string; error?: string } | void>;
   /** Callback to navigate to a specific tab */
@@ -65,12 +69,54 @@ interface LibraryAudio {
   uploaded_at: string;
 }
 
+interface QuoteRef {
+  speaker: string;
+  text: string;
+  timestamp?: string | null;
+}
+
+interface TopicGroup {
+  title: string;
+  points: string[];
+  quotes?: QuoteRef[];
+}
+
+interface SpeakerSummary {
+  label: string;
+  summary: string;
+}
+
+interface TranscriptLine {
+  timestamp: string;
+  speaker: string;
+  text: string;
+}
+
+interface ActionItemRich {
+  task: string;
+  assignee?: string | null;
+  dueDate?: string | null;
+  priority?: "high" | "normal" | "low";
+}
+
 interface AiResult {
   summary: string;
   discussions: string[];
   decisions: string[];
-  actionItems: { task: string; assignee?: string }[];
+  actionItems: ActionItemRich[];
   nextTopics: string[];
+  // Plaud-style 새 필드 (optional)
+  overview?: {
+    gist?: string;
+    attendees?: string[];
+    durationMin?: number | null;
+    date?: string | null;
+  };
+  topics?: TopicGroup[];
+  quotes?: QuoteRef[];
+  speakers?: SpeakerSummary[];
+  openQuestions?: string[];
+  transcript?: TranscriptLine[];
 }
 
 /* ─── Helper: Convert File to Base64 ─── */
@@ -384,7 +430,15 @@ export function AiMeetingAssistant({
       // Action items
       for (const item of aiResult.actionItems) {
         const content = item.assignee ? `${item.task} (@${item.assignee})` : item.task;
-        if (onAddNote) notePromises.push(onAddNote(content, "action_item") as Promise<void>);
+        if (onAddNote) {
+          notePromises.push(
+            onAddNote(content, "action_item", {
+              dueDate: item.dueDate ?? null,
+              priority: item.priority ?? null,
+              assignee: item.assignee ?? null,
+            }) as Promise<void>
+          );
+        }
       }
 
       // Execute all note saves in parallel
@@ -426,20 +480,63 @@ export function AiMeetingAssistant({
   /* ── Format meeting as doc content ─── */
   function formatMeetingAsDoc(result: AiResult, summary: string) {
     const r = result as any;
+    const discussions = result.discussions ?? [];
+    const decisions = result.decisions ?? [];
+    const actionItems = result.actionItems ?? [];
+    const nextTopics = result.nextTopics ?? [];
+    const topics = result.topics ?? [];
+    const quotes = result.quotes ?? [];
+    const speakers = result.speakers ?? [];
+    const openQuestions = result.openQuestions ?? [];
+    const transcript = result.transcript ?? [];
+    const overview = result.overview;
+
     let doc = `# 회의록: ${meetingTitle}\n`;
-    doc += `**날짜:** ${new Date().toLocaleDateString("ko-KR")}\n\n`;
-    doc += `## 요약\n${summary}\n\n`;
-    if (result.discussions.length > 0) {
-      doc += `## 논의 사항\n${result.discussions.map((d) => `- ${d}`).join("\n")}\n\n`;
+    doc += `**날짜:** ${overview?.date || new Date().toLocaleDateString("ko-KR")}\n`;
+    if (overview?.durationMin) doc += `**길이:** ${overview.durationMin}분\n`;
+    if ((overview?.attendees ?? []).length) doc += `**참석자:** ${overview!.attendees!.join(", ")}\n`;
+    doc += `\n## 개요\n${overview?.gist || summary}\n\n`;
+
+    if (topics.length > 0) {
+      doc += `## 주제별 논의\n`;
+      topics.forEach((t) => {
+        doc += `\n### ${t.title}\n`;
+        (t.points ?? []).forEach((p) => (doc += `- ${p}\n`));
+        (t.quotes ?? []).forEach((q) => {
+          const ts = q.timestamp ? `\`[${q.timestamp}]\` ` : "";
+          doc += `> ${ts}**${q.speaker}:** ${q.text}\n`;
+        });
+      });
+      doc += `\n`;
+    } else if (discussions.length > 0) {
+      doc += `## 논의 사항\n${discussions.map((d) => `- ${d}`).join("\n")}\n\n`;
     }
-    if (result.decisions.length > 0) {
-      doc += `## 결정 사항\n${result.decisions.map((d) => `- ${d}`).join("\n")}\n\n`;
+    if (decisions.length > 0) {
+      doc += `## 결정 사항\n${decisions.map((d) => `> ✅ ${d}`).join("\n")}\n\n`;
     }
-    if (result.actionItems.length > 0) {
-      doc += `## 액션 아이템\n${result.actionItems.map((a) => `- ${a.task}${a.assignee ? ` (담당: ${a.assignee})` : ""}`).join("\n")}\n\n`;
+    if (actionItems.length > 0) {
+      doc += `## 액션 아이템\n\n| 담당자 | 할 일 | 마감 | 우선순위 |\n| --- | --- | --- | --- |\n`;
+      actionItems.forEach((a) => {
+        const pr = a.priority === "high" ? "🔴 높음" : a.priority === "low" ? "🟢 낮음" : "🟡 보통";
+        doc += `| ${a.assignee || "-"} | ${(a.task || "").replace(/\|/g, "\\|")} | ${a.dueDate || "-"} | ${pr} |\n`;
+      });
+      doc += `\n`;
     }
-    if (result.nextTopics.length > 0) {
-      doc += `## 다음 미팅 주제\n${result.nextTopics.map((t) => `- ${t}`).join("\n")}\n\n`;
+    if (quotes.length > 0) {
+      doc += `## 주요 발언\n`;
+      quotes.forEach((q) => {
+        const ts = q.timestamp ? `\`[${q.timestamp}]\` ` : "";
+        doc += `> ${ts}**${q.speaker}:** ${q.text}\n\n`;
+      });
+    }
+    if (speakers.length > 0) {
+      doc += `## 참여자별 요약\n${speakers.map((s) => `- **${s.label}** — ${s.summary}`).join("\n")}\n\n`;
+    }
+    if (openQuestions.length > 0) {
+      doc += `## 후속 질문\n${openQuestions.map((q) => `- ❓ ${q}`).join("\n")}\n\n`;
+    }
+    if (nextTopics.length > 0) {
+      doc += `## 다음 미팅 주제\n${nextTopics.map((t) => `- ${t}`).join("\n")}\n\n`;
     }
     // Growth sections
     if (r.growthInsights?.length > 0) {
@@ -450,6 +547,14 @@ export function AiMeetingAssistant({
     }
     if (r.discussionQuality) {
       doc += `## 📊 토론 품질\n- 깊이: ${r.discussionQuality.depth}\n- 참여도: ${r.discussionQuality.participation}\n- 실행성: ${r.discussionQuality.actionability}\n\n`;
+    }
+    if (transcript.length > 0) {
+      doc += `<details>\n<summary>📝 전체 트랜스크립트 (${transcript.length}개 발화)</summary>\n\n`;
+      transcript.forEach((line) => {
+        const ts = line.timestamp ? `\`[${line.timestamp}]\` ` : "";
+        doc += `${ts}**${line.speaker}:** ${line.text}\n\n`;
+      });
+      doc += `</details>\n\n`;
     }
     doc += `---\n*NutUnion AI 성장 촉진자에 의해 자동 생성됨*\n`;
     return doc;
@@ -770,7 +875,41 @@ export function AiMeetingAssistant({
       {/* ── AI Results ─── */}
       {aiResult && (
         <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {/* Summary */}
+          {/* ── Plaud-style 메타데이터 strip ─── */}
+          {(aiResult.overview || aiResult.summary) && (
+            <div className="bg-nu-cream/40 border-[3px] border-nu-ink p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles size={14} className="text-nu-pink" />
+                <span className="font-mono-nu text-[11px] font-black uppercase tracking-[0.2em] text-nu-ink">
+                  Meeting Record
+                </span>
+              </div>
+              {/* chips */}
+              <div className="flex items-center gap-1.5 flex-wrap mb-3">
+                {aiResult.overview?.date && (
+                  <span className="px-2 py-0.5 bg-nu-ink text-nu-paper font-mono-nu text-[10px] uppercase tracking-widest">
+                    📅 {aiResult.overview.date}
+                  </span>
+                )}
+                {aiResult.overview?.durationMin ? (
+                  <span className="px-2 py-0.5 bg-nu-ink text-nu-paper font-mono-nu text-[10px] uppercase tracking-widest">
+                    ⏱ {aiResult.overview.durationMin}분
+                  </span>
+                ) : null}
+                {(aiResult.overview?.attendees ?? []).map((a, i) => (
+                  <span key={i} className="px-2 py-0.5 bg-nu-pink/20 text-nu-pink font-mono-nu text-[10px] uppercase tracking-widest border border-nu-pink/40">
+                    👤 {a}
+                  </span>
+                ))}
+              </div>
+              {/* gist */}
+              <p className="text-sm leading-relaxed text-nu-graphite">
+                {aiResult.overview?.gist || aiResult.summary}
+              </p>
+            </div>
+          )}
+
+          {/* Summary (편집 가능) */}
           <ResultSection
             title="회의 요약"
             icon={<Target size={14} className="text-nu-pink" />}
@@ -797,22 +936,66 @@ export function AiMeetingAssistant({
             </div>
           </ResultSection>
 
-          {/* Discussions */}
-          <ResultSection
-            title={`논의 사항 (${aiResult.discussions.length})`}
-            icon={<MessageSquare size={14} className="text-nu-blue" />}
-            expanded={expandedSections.discussions}
-            onToggle={() => toggleSection("discussions")}
-          >
-            <div className="flex flex-col gap-1.5">
-              {aiResult.discussions.map((d, i) => (
-                <div key={i} className="flex items-start gap-2 text-sm text-nu-graphite">
-                  <span className="text-nu-blue mt-0.5 shrink-0">•</span>
-                  <span className="leading-relaxed">{d}</span>
-                </div>
-              ))}
-            </div>
-          </ResultSection>
+          {/* ── 주제별 논의 (Plaud-style topic groups) ─── */}
+          {(aiResult.topics ?? []).length > 0 ? (
+            <ResultSection
+              title={`주제별 논의 (${aiResult.topics!.length})`}
+              icon={<MessageSquare size={14} className="text-nu-blue" />}
+              expanded={expandedSections.discussions}
+              onToggle={() => toggleSection("discussions")}
+            >
+              <div className="flex flex-col gap-4">
+                {aiResult.topics!.map((topic, ti) => (
+                  <div key={ti} className="border-l-4 border-nu-blue/40 pl-3">
+                    <h4 className="font-head text-[14px] font-extrabold text-nu-ink mb-1.5">{topic.title}</h4>
+                    <ul className="flex flex-col gap-1 mb-2">
+                      {(topic.points ?? []).map((p, pi) => (
+                        <li key={pi} className="flex items-start gap-2 text-sm text-nu-graphite">
+                          <span className="text-nu-blue mt-0.5 shrink-0">•</span>
+                          <span className="leading-relaxed">{p}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    {(topic.quotes ?? []).map((q, qi) => (
+                      <blockquote
+                        key={qi}
+                        className="border-l-4 border-nu-pink/40 pl-3 py-1 my-1.5 bg-nu-pink/5"
+                      >
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="px-1.5 py-0.5 bg-nu-pink/20 text-nu-pink font-mono-nu text-[9px] uppercase tracking-widest">
+                            {q.speaker}
+                          </span>
+                          {q.timestamp && (
+                            <span className="font-mono-nu text-[9px] text-nu-muted tabular-nums">
+                              [{q.timestamp}]
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[13px] text-nu-ink italic leading-relaxed">"{q.text}"</p>
+                      </blockquote>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </ResultSection>
+          ) : (
+            /* 구버전 호환: topics 없으면 평탄한 discussions */
+            <ResultSection
+              title={`논의 사항 (${aiResult.discussions.length})`}
+              icon={<MessageSquare size={14} className="text-nu-blue" />}
+              expanded={expandedSections.discussions}
+              onToggle={() => toggleSection("discussions")}
+            >
+              <div className="flex flex-col gap-1.5">
+                {aiResult.discussions.map((d, i) => (
+                  <div key={i} className="flex items-start gap-2 text-sm text-nu-graphite">
+                    <span className="text-nu-blue mt-0.5 shrink-0">•</span>
+                    <span className="leading-relaxed">{d}</span>
+                  </div>
+                ))}
+              </div>
+            </ResultSection>
+          )}
 
           {/* Decisions */}
           {aiResult.decisions.length > 0 && (
@@ -833,7 +1016,7 @@ export function AiMeetingAssistant({
             </ResultSection>
           )}
 
-          {/* Action Items */}
+          {/* Action Items — Plaud-style table */}
           {aiResult.actionItems.length > 0 && (
             <ResultSection
               title={`액션 아이템 (${aiResult.actionItems.length})`}
@@ -841,18 +1024,124 @@ export function AiMeetingAssistant({
               expanded={expandedSections.actions}
               onToggle={() => toggleSection("actions")}
             >
-              <div className="flex flex-col gap-2">
-                {aiResult.actionItems.map((item, i) => (
-                  <div key={i} className="flex items-start gap-2 p-2 bg-nu-amber/5 border border-nu-amber/10">
-                    <ListChecks size={13} className="text-nu-amber mt-0.5 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm text-nu-ink">{item.task}</span>
-                      {item.assignee && (
-                        <span className="ml-2 font-mono-nu text-[11px] uppercase tracking-widest text-nu-pink bg-nu-pink/10 px-1.5 py-0.5">
-                          @{item.assignee}
+              <div className="overflow-x-auto border-[2px] border-nu-ink/20">
+                <table className="w-full text-[13px]">
+                  <thead className="bg-nu-cream/40 border-b-[2px] border-nu-ink/20">
+                    <tr>
+                      <th className="px-2 py-2 text-left w-8"></th>
+                      <th className="px-2 py-2 text-left font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">담당자</th>
+                      <th className="px-2 py-2 text-left font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">할 일</th>
+                      <th className="px-2 py-2 text-left font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">마감</th>
+                      <th className="px-2 py-2 text-left font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">우선순위</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {aiResult.actionItems.map((item, i) => {
+                      const pr = item.priority || "normal";
+                      const prStyle =
+                        pr === "high"
+                          ? "bg-red-100 text-red-700 border-red-300"
+                          : pr === "low"
+                          ? "bg-green-100 text-green-700 border-green-300"
+                          : "bg-amber-100 text-amber-700 border-amber-300";
+                      const prLabel = pr === "high" ? "🔴 높음" : pr === "low" ? "🟢 낮음" : "🟡 보통";
+                      return (
+                        <tr key={i} className="border-t border-nu-ink/10 hover:bg-nu-cream/20">
+                          <td className="px-2 py-2 align-top">
+                            <input type="checkbox" className="mt-0.5" disabled />
+                          </td>
+                          <td className="px-2 py-2 align-top">
+                            {item.assignee ? (
+                              <span className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-pink bg-nu-pink/10 px-1.5 py-0.5">
+                                @{item.assignee}
+                              </span>
+                            ) : (
+                              <span className="text-nu-muted">-</span>
+                            )}
+                          </td>
+                          <td className="px-2 py-2 align-top text-nu-ink leading-snug">{item.task}</td>
+                          <td className="px-2 py-2 align-top font-mono-nu text-[11px] tabular-nums text-nu-graphite whitespace-nowrap">
+                            {item.dueDate || "-"}
+                          </td>
+                          <td className="px-2 py-2 align-top">
+                            <span className={`font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 border ${prStyle}`}>
+                              {prLabel}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </ResultSection>
+          )}
+
+          {/* ── 주요 발언 (verbatim quote highlights) ─── */}
+          {(aiResult.quotes ?? []).length > 0 && (
+            <ResultSection
+              title={`주요 발언 (${aiResult.quotes!.length})`}
+              icon={<MessageSquare size={14} className="text-nu-pink" />}
+              expanded={expandedSections.quotes ?? true}
+              onToggle={() => toggleSection("quotes")}
+            >
+              <div className="grid gap-2 sm:grid-cols-2">
+                {aiResult.quotes!.map((q, i) => (
+                  <div
+                    key={i}
+                    className="border-l-4 border-nu-pink/40 pl-3 pr-2 py-2 bg-nu-pink/5"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="px-1.5 py-0.5 bg-nu-pink/20 text-nu-pink font-mono-nu text-[9px] uppercase tracking-widest">
+                        {q.speaker}
+                      </span>
+                      {q.timestamp && (
+                        <span className="font-mono-nu text-[9px] text-nu-muted tabular-nums">
+                          [{q.timestamp}]
                         </span>
                       )}
                     </div>
+                    <p className="text-[13px] text-nu-ink italic leading-relaxed">"{q.text}"</p>
+                  </div>
+                ))}
+              </div>
+            </ResultSection>
+          )}
+
+          {/* ── 참여자별 요약 ─── */}
+          {(aiResult.speakers ?? []).length > 0 && (
+            <ResultSection
+              title={`참여자별 요약 (${aiResult.speakers!.length})`}
+              icon={<MessageSquare size={14} className="text-nu-blue" />}
+              expanded={expandedSections.speakers ?? true}
+              onToggle={() => toggleSection("speakers")}
+            >
+              <div className="flex flex-col gap-2">
+                {aiResult.speakers!.map((s, i) => (
+                  <div key={i} className="flex items-start gap-3 text-sm">
+                    <span className="px-2 py-0.5 bg-nu-ink text-nu-paper font-mono-nu text-[10px] uppercase tracking-widest shrink-0">
+                      {s.label}
+                    </span>
+                    <span className="text-nu-graphite leading-relaxed">{s.summary}</span>
+                  </div>
+                ))}
+              </div>
+            </ResultSection>
+          )}
+
+          {/* ── 후속 질문 ─── */}
+          {(aiResult.openQuestions ?? []).length > 0 && (
+            <ResultSection
+              title={`후속 질문 (${aiResult.openQuestions!.length})`}
+              icon={<Lightbulb size={14} className="text-amber-500" />}
+              expanded={expandedSections.openQuestions ?? true}
+              onToggle={() => toggleSection("openQuestions")}
+            >
+              <div className="flex flex-col gap-1.5">
+                {aiResult.openQuestions!.map((q, i) => (
+                  <div key={i} className="flex items-start gap-2 text-sm text-nu-graphite">
+                    <span className="text-amber-500 mt-0.5 shrink-0">❓</span>
+                    <span className="leading-relaxed">{q}</span>
                   </div>
                 ))}
               </div>
@@ -1030,6 +1319,7 @@ export function AiMeetingAssistant({
                 {onArchiveToGoogleDoc && " · Google Docs에 자동 아카이브"}
               </p>
             )}
+            {/* (전체 트랜스크립트는 아래에 collapsible 로 렌더링됨) */}
             {/* Post-save quick navigation */}
             {saved && onNavigateTab && (
               <div className="flex items-center justify-center gap-2 pt-1">
@@ -1049,6 +1339,34 @@ export function AiMeetingAssistant({
               </div>
             )}
           </div>
+
+          {/* ── 전체 트랜스크립트 (collapsible) ─── */}
+          {(aiResult.transcript ?? []).length > 0 && (
+            <details className="bg-nu-white border-[3px] border-nu-ink/20 group">
+              <summary className="cursor-pointer px-4 py-3 flex items-center justify-between hover:bg-nu-cream/30 transition-colors select-none">
+                <div className="flex items-center gap-2">
+                  <FileAudio size={14} className="text-nu-graphite" />
+                  <span className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-ink">
+                    전체 트랜스크립트 ({aiResult.transcript!.length}개 발화)
+                  </span>
+                </div>
+                <ChevronDown size={14} className="text-nu-muted group-open:rotate-180 transition-transform" />
+              </summary>
+              <div className="border-t border-nu-ink/10 max-h-[480px] overflow-y-auto px-4 py-3 space-y-2">
+                {aiResult.transcript!.map((line, i) => (
+                  <div key={i} className="flex items-start gap-3 text-[13px] leading-relaxed">
+                    <span className="font-mono-nu text-[10px] tabular-nums text-nu-muted shrink-0 pt-0.5 w-[68px]">
+                      [{line.timestamp || "--:--:--"}]
+                    </span>
+                    <span className="font-bold text-nu-ink shrink-0 min-w-[60px]">
+                      {line.speaker}:
+                    </span>
+                    <span className="text-nu-graphite">{line.text}</span>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
         </div>
       )}
     </div>

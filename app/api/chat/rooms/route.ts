@@ -40,7 +40,12 @@ export async function GET() {
     .order("last_message_at", { ascending: false });
 
   // === 최적화: N+1 제거 — 배치 3개 쿼리로 한번에 ===
-  const roomMap = new Map(roomIds.map((id: string, i: number) => [id, memberships![i]]));
+  // Build the membership map by id (not array index — that broke when the
+  // membership / roomIds arrays got reordered downstream).
+  const roomMap = new Map<string, { room_id: string; last_read_at: string | null }>();
+  for (const m of ((memberships || []) as any[])) {
+    roomMap.set(m.room_id, m);
+  }
 
   // 1) 모든 방의 최근 메시지 100개를 한번에 가져와 방별 최신 1개 추림
   //    (대부분 방이 10개 미만이므로 각 방의 최근 ~10 메시지 정도면 충분)

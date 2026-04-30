@@ -9,8 +9,11 @@ import {
   Eye, Edit3, Columns,
 } from "lucide-react";
 import { toast } from "sonner";
+import { YjsTextarea } from "@/components/notes/yjs-textarea";
 
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
+
+type YjsStatus = "connecting" | "synced" | "saving" | "offline";
 
 interface Backlink { id: string; title: string }
 interface Note {
@@ -79,18 +82,28 @@ export function NotesClient() {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const titleRef = useRef<HTMLInputElement | null>(null);
   const autoOpenHandledRef = useRef(false);
+  const [yjsStatus, setYjsStatus] = useState<YjsStatus>("connecting");
+  const [presenceCount, setPresenceCount] = useState(0);
 
   const load = useCallback(async (archived: boolean) => {
     setLoading(true);
     try {
       const res = await fetch(`/api/personal/notes?archived=${archived ? 1 : 0}`, { cache: "no-store" });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data?.error || `노트 로드 실패 (HTTP ${res.status})`);
+        setNotes([]);
+        return;
+      }
       if (data.migration_needed) {
         setMigrationNeeded(true);
         setNotes([]);
       } else {
         setNotes((data.rows as Note[]) || []);
       }
+    } catch (err: any) {
+      toast.error("노트 로드 실패: " + (err?.message || "네트워크 오류"));
+      setNotes([]);
     } finally {
       setLoading(false);
     }
@@ -132,6 +145,8 @@ export function NotesClient() {
       setIcon(selected.icon || "");
       setTagsStr((selected.tags || []).join(", "));
       setDirty(false);
+      setYjsStatus("connecting");
+      setPresenceCount(0);
       // Restore editor tab pref
       try {
         const saved = localStorage.getItem(`nu:notes:tab:${selected.id}`) as EditorTab | null;
@@ -396,8 +411,8 @@ export function NotesClient() {
 
   return (
     <div className="h-[calc(100vh-4rem)] flex bg-nu-paper">
-      {/* Left sidebar */}
-      <aside className="w-72 border-r-[3px] border-nu-ink bg-white flex flex-col">
+      {/* Left sidebar — hidden on mobile when a note is selected */}
+      <aside className={`${selected ? "hidden md:flex" : "flex"} w-full md:w-72 border-r-[3px] border-nu-ink bg-white flex-col`}>
         <div className="p-3 border-b-[3px] border-nu-ink">
           <div className="flex items-center gap-2 mb-3">
             <FileText size={14} className="text-nu-pink" />
@@ -457,8 +472,8 @@ export function NotesClient() {
         </div>
       </aside>
 
-      {/* Center editor */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      {/* Center editor — hidden on mobile when no note selected */}
+      <main className={`${selected ? "flex" : "hidden md:flex"} flex-1 flex-col overflow-hidden min-w-0`}>
         {!selected ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
@@ -469,6 +484,14 @@ export function NotesClient() {
         ) : (
           <>
             <div className="flex items-center gap-2 p-4 border-b-[3px] border-nu-ink">
+              <button
+                type="button"
+                onClick={() => setSelectedId(null)}
+                aria-label="노트 목록으로 돌아가기"
+                className="md:hidden p-2 border-[2px] border-nu-ink/30 hover:border-nu-ink"
+              >
+                ←
+              </button>
               <input
                 value={icon}
                 onChange={(e) => { setIcon(e.target.value); setDirty(true); }}
@@ -518,6 +541,19 @@ export function NotesClient() {
             </div>
 
             <div className="flex-1 overflow-auto p-6">
+              {/* CRDT sync status + presence indicator */}
+              <div className="flex items-center justify-between mb-3 px-2 py-1.5 border-[2px] border-nu-ink/20 bg-nu-cream/20 font-mono-nu text-[10px] uppercase tracking-widest">
+                <span className="flex items-center gap-1.5 text-nu-ink" aria-live="polite">
+                  {yjsStatus === "synced" && <><span className="text-green-600" aria-hidden>●</span> 동기화됨</>}
+                  {yjsStatus === "saving" && <><span className="text-yellow-500 animate-pulse" aria-hidden>●</span> 저장 중...</>}
+                  {yjsStatus === "connecting" && <><span className="text-nu-muted animate-pulse" aria-hidden>●</span> 연결 중...</>}
+                  {yjsStatus === "offline" && <><span className="text-red-500 animate-pulse" aria-hidden>●</span> 오프라인</>}
+                </span>
+                <span className="text-nu-graphite">
+                  👁️ {presenceCount > 1 ? `다른 사용자 ${presenceCount - 1}명이 보고 있어요` : "나만 보는 중"}
+                </span>
+              </div>
+
               <div className="mb-3">
                 <input
                   value={tagsStr}
@@ -563,10 +599,14 @@ export function NotesClient() {
               )}
 
               {editorTab === "edit" && (
-                <textarea
+                <YjsTextarea
                   ref={textareaRef}
+                  docId={`personal_notes:${selected.id}`}
+                  initialValue={selected.content || ""}
                   value={content}
-                  onChange={(e) => { setContent(e.target.value); setDirty(true); }}
+                  onChange={(next) => { setContent(next); if (next !== (selected.content || "")) setDirty(true); }}
+                  onStatusChange={setYjsStatus}
+                  onPresenceCount={setPresenceCount}
                   onBlur={() => dirty && saveNote()}
                   placeholder="# 제목&#10;- 리스트&#10;- [[다른 노트]]&#10;&#10;마크다운으로 자유롭게 작성하세요..."
                   className="w-full min-h-[60vh] px-4 py-3 border-[2px] border-nu-ink/20 focus:border-nu-ink font-mono text-sm leading-relaxed resize-none"
@@ -581,10 +621,14 @@ export function NotesClient() {
 
               {editorTab === "split" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <textarea
+                  <YjsTextarea
                     ref={textareaRef}
+                    docId={`personal_notes:${selected.id}`}
+                    initialValue={selected.content || ""}
                     value={content}
-                    onChange={(e) => { setContent(e.target.value); setDirty(true); }}
+                    onChange={(next) => { setContent(next); if (next !== (selected.content || "")) setDirty(true); }}
+                    onStatusChange={setYjsStatus}
+                    onPresenceCount={setPresenceCount}
                     onBlur={() => dirty && saveNote()}
                     placeholder="마크다운으로 작성..."
                     className="w-full min-h-[60vh] px-4 py-3 border-[2px] border-nu-ink/20 focus:border-nu-ink font-mono text-sm leading-relaxed resize-none"
@@ -599,9 +643,9 @@ export function NotesClient() {
         )}
       </main>
 
-      {/* Right panel */}
+      {/* Right panel — desktop only (mobile users use back button to return to list) */}
       {selected && (
-        <aside className="w-72 border-l-[3px] border-nu-ink bg-nu-cream/30 p-4 overflow-auto">
+        <aside className="hidden lg:block w-72 border-l-[3px] border-nu-ink bg-nu-cream/30 p-4 overflow-auto">
           <h3 className="font-head text-xs font-extrabold text-nu-ink uppercase mb-3">메타데이터</h3>
           <div className="space-y-3 text-xs">
             <div>

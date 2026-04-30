@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { StorageHealthClient } from "./client";
+import { StorageUsageClient } from "./usage-client";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Storage (R2) 진단 · nutunion" };
@@ -33,6 +34,7 @@ export default async function StorageAdminPage() {
       </div>
 
       <StorageHealthClient />
+      <StorageUsageClient />
     </div>
   );
 }

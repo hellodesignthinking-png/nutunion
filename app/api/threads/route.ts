@@ -30,5 +30,10 @@ export async function GET(req: NextRequest) {
     ? (data || []).filter((t: any) => Array.isArray(t.scope) && t.scope.includes(scope))
     : data || [];
 
-  return NextResponse.json({ threads: filtered });
+  return NextResponse.json({ threads: filtered }, {
+    headers: {
+      // Public list — safe to share across users at the CDN edge.
+      "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+    },
+  });
 }

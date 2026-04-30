@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Readable } from "stream";
+import { getSharedFolderId, getDriveOwnerUserId } from "@/lib/google/drive-config";
 
 /**
  * POST /api/wiki/sync-to-drive
@@ -55,20 +56,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const auth = await getGoogleClient(userId);
+    const driveOwnerId = getDriveOwnerUserId();
+    const auth = await getGoogleClient(driveOwnerId || userId);
     const drive = google.drive({ version: "v3", auth });
 
-    // Get group's wiki folder ID
+    // 단일 공유 폴더 모드: env 의 폴더 ID 항상 사용. 없으면 legacy fallback.
+    const envSharedFolderId = getSharedFolderId();
     const { data: group } = await supabase
       .from("groups")
       .select("google_drive_wiki_folder_id, google_drive_folder_id, name")
       .eq("id", groupId)
       .single();
 
-    // Determine parent folder (wiki subfolder, or main group folder, or root)
     type GroupRow = { name?: string; google_drive_wiki_folder_id?: string; google_drive_folder_id?: string };
     const g = group as GroupRow | null;
-    const parentFolderId = g?.google_drive_wiki_folder_id || g?.google_drive_folder_id || null;
+    const parentFolderId =
+      envSharedFolderId ||
+      g?.google_drive_wiki_folder_id ||
+      g?.google_drive_folder_id ||
+      null;
 
     // Check if this wiki page already has a Google Doc
     let existingDocId: string | null = null;
@@ -104,11 +110,13 @@ export async function POST(req: NextRequest) {
           mimeType: "text/plain",
           body: updateStream,
         },
+        supportsAllDrives: true,
       });
 
       const fileRes = await drive.files.get({
         fileId: existingDocId,
         fields: "id, webViewLink",
+        supportsAllDrives: true,
       });
 
       fileId = existingDocId;
@@ -130,6 +138,7 @@ export async function POST(req: NextRequest) {
           body: stream,
         },
         fields: "id, name, webViewLink",
+        supportsAllDrives: true,
       });
 
       fileId = driveRes.data.id!;

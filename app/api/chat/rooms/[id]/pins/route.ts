@@ -44,7 +44,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     .from("chat_pins")
     .select(`
       id, message_id, pinned_at,
-      message:chat_messages(id, content, is_system, created_at, sender:profiles(id, nickname))
+      message:chat_messages(id, content, is_system, created_at, sender:profiles!chat_messages_sender_id_fkey(id, nickname))
     `)
     .eq("room_id", roomId)
     .order("pinned_at", { ascending: false })

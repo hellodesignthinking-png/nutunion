@@ -12,6 +12,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { generateObjectForUser } from "@/lib/ai/vault";
+import { dispatchNotification } from "@/lib/notifications/dispatch";
 
 type Ctx = {
   admin: SupabaseClient;
@@ -121,20 +122,23 @@ export default async function aiSuggestTalents({ admin, rule, payload, params }:
   for (const c of ranked) {
     matched_user_ids.push(c.id);
     // notification
-    const { error: notifErr } = await admin.from("notifications").insert({
-      user_id: c.id,
-      type: "project_invite_suggestion",
-      title: "🎯 추천 볼트가 도착했어요",
-      body: `'${p.title}' 볼트에 참여하실래요? (매칭 점수 ${c._score})`,
-      metadata: {
-        project_id: projectId,
-        rule_id: rule.id,
-        required_skills,
-        matching_criteria,
-      },
-      is_read: false,
-    });
-    if (!notifErr) notified++;
+    try {
+      await dispatchNotification({
+        recipientId: c.id,
+        eventType: "project_invite_suggestion",
+        title: "🎯 추천 볼트가 도착했어요",
+        body: `'${p.title}' 볼트에 참여하실래요? (매칭 점수 ${c._score})`,
+        metadata: {
+          project_id: projectId,
+          rule_id: rule.id,
+          required_skills,
+          matching_criteria,
+        },
+      });
+      notified++;
+    } catch (notifErr) {
+      console.warn("[ai-suggest-talents] dispatch failed", notifErr);
+    }
 
     // CRM upsert (people) — owner's private address book
     if (syncCrm) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -211,12 +211,18 @@ function InvitePanel({
         { onConflict: "group_id,user_id" }
       );
       if (error) throw error;
-      // Send notification
-      await supabase.from("notifications").insert({
-        user_id: userId,
-        type: "group_invite",
-        content: `"${groupName}" 너트에 초대받았습니다!`,
-        link: `/groups/${groupId}`,
+      // Send notification — 스키마: title NOT NULL + body, link 은 link_url 컬럼
+      await fetch("/api/notifications/dispatch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipientUserId: userId,
+          type: "group_invite",
+          title: "너트 초대",
+          body: `"${groupName}" 너트에 초대받았습니다!`,
+          link_url: `/groups/${groupId}`,
+          metadata: { group_id: groupId },
+        }),
       });
       setInvited((prev) => new Set([...prev, userId]));
       toast.success("초대를 보냈습니다");
@@ -538,6 +544,14 @@ function AISuggestionPanel({
 
 /* ── Main Component ────────────────────────────────────────────── */
 export default function CreateGroupPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-nu-paper" />}>
+      <CreateGroupInner />
+    </Suspense>
+  );
+}
+
+function CreateGroupInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const templateKey = searchParams.get("template");

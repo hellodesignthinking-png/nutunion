@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { dispatchNotification } from "@/lib/notifications/dispatch";
 
 export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
@@ -90,15 +91,15 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // 요청자에게 알림
-  await admin.from("notifications").insert({
-    user_id: (s as any).requester_id,
-    type: action === "approve" ? "settlement_approved" : "settlement_rejected",
+  await dispatchNotification({
+    recipientId: (s as any).requester_id,
+    eventType: action === "approve" ? "settlement_approved" : "settlement_rejected",
     title: action === "approve" ? "정산이 승인됐어요 💰" : "정산이 반려됐어요",
     body: action === "approve"
       ? `${(s as any).amount?.toLocaleString?.() || (s as any).amount} ${(s as any).currency || "KRW"} 정산이 승인됐어요`
       : `정산 요청이 반려됐습니다`,
     metadata: { settlement_id: settlementId },
-    is_read: false,
+    actorId: auth.user.id,
   });
 
   return NextResponse.json({ ok: true, action, status: newStatus });

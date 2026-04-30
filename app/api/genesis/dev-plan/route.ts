@@ -65,6 +65,27 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const intent = String(body?.intent || "").trim();
+    const projectIdParam = typeof body?.projectId === "string" ? body.projectId : null;
+    const prebuiltPlan = body?.plan && typeof body.plan === "object" ? body.plan : null;
+
+    // Pre-built plan attach mode — skip LLM, just persist
+    if (prebuiltPlan && projectIdParam) {
+      const validated = DevPlanSchema.safeParse(prebuiltPlan);
+      const planToSave = validated.success ? validated.data : (prebuiltPlan as DevPlan);
+      const { error: upErr } = await supabase
+        .from("projects")
+        .update({
+          dev_plan: planToSave,
+          dev_plan_generated_at: new Date().toISOString(),
+        })
+        .eq("id", projectIdParam);
+      if (upErr) {
+        log.warn("genesis.devplan.attach_persist_failed", { error: upErr.message, projectId: projectIdParam });
+        return NextResponse.json({ error: upErr.message }, { status: 500 });
+      }
+      return NextResponse.json({ plan: planToSave, model_used: "prebuilt", attached: true });
+    }
+
     if (!intent) {
       return NextResponse.json({ error: "의도(intent)를 입력해주세요" }, { status: 400 });
     }

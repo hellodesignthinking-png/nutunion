@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, X, Loader2, Calendar, Tag, Trash2, Save } from "lucide-react";
 import { toast } from "sonner";
+import { useEscapeKey } from "@/lib/hooks/use-escape-key";
 
 interface Track {
   id: string;
@@ -250,13 +251,14 @@ function CreateModal({ onClose, onCreate }: { onClose: () => void; onCreate: (p:
   const [status, setStatus] = useState<Track["status"]>("idea");
   const [category, setCategory] = useState("");
   const [targetDate, setTargetDate] = useState("");
+  useEscapeKey(onClose);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="bg-white border-[4px] border-nu-ink shadow-[8px_8px_0_0_#0D0F14] w-full max-w-lg p-6">
+      <div role="dialog" aria-modal="true" aria-labelledby="new-track-title" onClick={(e) => e.stopPropagation()} className="bg-white border-[4px] border-nu-ink shadow-[8px_8px_0_0_#0D0F14] w-full max-w-lg p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-head text-xl font-extrabold text-nu-ink">새 트랙</h2>
-          <button onClick={onClose} className="p-1.5 border-[2px] border-nu-ink hover:bg-nu-ink hover:text-nu-paper"><X size={14} /></button>
+          <h2 id="new-track-title" className="font-head text-xl font-extrabold text-nu-ink">새 트랙</h2>
+          <button onClick={onClose} aria-label="닫기" className="p-1.5 border-[2px] border-nu-ink hover:bg-nu-ink hover:text-nu-paper"><X size={14} /></button>
         </div>
         <div className="space-y-3">
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="제목" className="w-full px-3 py-2 border-[2px] border-nu-ink/30 focus:border-nu-ink" />
@@ -294,6 +296,7 @@ function DetailModal({ track, onClose, onSave, onDelete, onMove }: {
   const [targetDate, setTargetDate] = useState(track.target_date || "");
   const [category, setCategory] = useState(track.category || "");
   const [tagsStr, setTagsStr] = useState(track.tags.join(", "));
+  useEscapeKey(onClose);
 
   function save() {
     onSave({
@@ -308,10 +311,10 @@ function DetailModal({ track, onClose, onSave, onDelete, onMove }: {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="bg-white border-[4px] border-nu-ink shadow-[8px_8px_0_0_#0D0F14] w-full max-w-2xl max-h-[90vh] overflow-auto p-6">
+      <div role="dialog" aria-modal="true" aria-label="트랙 상세" onClick={(e) => e.stopPropagation()} className="bg-white border-[4px] border-nu-ink shadow-[8px_8px_0_0_#0D0F14] w-full max-w-2xl max-h-[90vh] overflow-auto p-6">
         <div className="flex items-center justify-between mb-4">
-          <input value={title} onChange={(e) => setTitle(e.target.value)} className="flex-1 font-head text-2xl font-extrabold text-nu-ink border-none focus:outline-none" />
-          <button onClick={onClose} className="p-1.5 border-[2px] border-nu-ink hover:bg-nu-ink hover:text-nu-paper"><X size={14} /></button>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} aria-label="트랙 제목" className="flex-1 font-head text-2xl font-extrabold text-nu-ink border-none focus:outline-none" />
+          <button onClick={onClose} aria-label="닫기" className="p-1.5 border-[2px] border-nu-ink hover:bg-nu-ink hover:text-nu-paper"><X size={14} /></button>
         </div>
 
         <div className="flex gap-1 mb-4 flex-wrap">

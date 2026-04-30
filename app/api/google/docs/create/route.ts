@@ -4,6 +4,7 @@ import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Readable } from "stream";
 import { asGoogleErr } from "@/lib/google/error-helpers";
+import { getSharedFolderId, getDriveOwnerUserId } from "@/lib/google/drive-config";
 
 /**
  * POST /api/google/docs/create
@@ -72,7 +73,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const auth = await getGoogleClient(userId);
+    const driveOwnerId = getDriveOwnerUserId();
+    const auth = await getGoogleClient(driveOwnerId || userId);
     const drive = google.drive({ version: "v3", auth });
 
     // Create Google Doc via Drive API (drive.file scope covers this)
@@ -83,8 +85,9 @@ export async function POST(req: NextRequest) {
       .replace(/\*\*(.*?)\*\*/g, "$1")
       .replace(/\*(.*?)\*/g, "$1");
 
-    // Create the doc as a Google Docs file
-    const parents = folderId ? [folderId] : undefined;
+    // 단일 공유 폴더 모드: 항상 공유 폴더에 저장. 없으면 호출자가 보낸 folderId 사용.
+    const sharedFolderId = getSharedFolderId();
+    const parents = sharedFolderId ? [sharedFolderId] : (folderId ? [folderId] : undefined);
     const buffer = Buffer.from(plainContent, "utf-8");
     const stream = new Readable();
     stream.push(buffer);
@@ -101,6 +104,7 @@ export async function POST(req: NextRequest) {
         body: stream,
       },
       fields: "id, name, mimeType, webViewLink, size",
+      supportsAllDrives: true,
     });
 
     const fileId = driveRes.data.id!;
@@ -144,12 +148,21 @@ export async function POST(req: NextRequest) {
       // Try to update the meeting record with the doc link (column added in migration 105)
       if (meetingId) {
         try {
-          await supabase
+          const { error: meetUpdateErr } = await supabase
             .from("meetings")
             .update({ google_doc_url: webViewLink, google_doc_id: fileId } as any)
             .eq("id", meetingId);
-        } catch {
-          // google_doc_url column may not exist on legacy DB — ignore
+          if (meetUpdateErr) {
+            console.warn(
+              `[docs/create] meetings.google_doc_url update failed (meetingId=${meetingId}):`,
+              meetUpdateErr.message,
+            );
+          }
+        } catch (metaErr) {
+          console.warn(
+            `[docs/create] meetings.google_doc_url update threw (meetingId=${meetingId}):`,
+            (metaErr as Error)?.message,
+          );
         }
       }
     }

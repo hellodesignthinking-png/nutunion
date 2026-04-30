@@ -79,7 +79,7 @@ export default async function GroupDigestsPage({ params }: PageProps) {
             {(group as { name: string }).name}
           </h1>
           <p className="text-[12px] text-nu-graphite mt-1">
-            오픈카톡 대화 내용을 AI 가 논의 / 결정 / 액션으로 자동 정리합니다.
+            너트 채팅 또는 외부 메신저 대화를 AI 가 논의 / 결정 / 액션으로 자동 정리합니다.
           </p>
         </div>
         <ChatDigestCreateModal
@@ -93,14 +93,13 @@ export default async function GroupDigestsPage({ params }: PageProps) {
       {items.length === 0 && (
         <section className="border-[2.5px] border-dashed border-nu-ink/30 bg-nu-cream/20 p-5 mb-6">
           <div className="font-mono-nu text-[10px] uppercase tracking-[0.3em] text-nu-pink mb-2">
-            💡 3단계 — 카톡 대화를 팀 지식으로
+            💡 3단계 — 대화를 팀 지식으로
           </div>
           <ol className="text-[12px] text-nu-graphite leading-relaxed list-decimal pl-5 space-y-1">
-            <li>오픈카톡방 → 메뉴 → <strong>대화 내용 내보내기</strong> → .txt 복사</li>
-            <li>위 <strong>📝 카톡 회의록 정리</strong> 버튼 → 제목 + 대화 붙여넣기</li>
+            <li>너트 내장 채팅 또는 외부 메신저(카톡·슬랙·디스코드 등)에서 대화 텍스트 복사</li>
+            <li>위 <strong>📝 회의록 정리</strong> 버튼 → 제목 + 대화 붙여넣기</li>
             <li>AI 가 논의 · 결정 · 액션 · 다음 주제 자동 추출 → 영구 기록</li>
           </ol>
-          {/* 오픈카톡방 버튼 제거 — 내장 채팅 사용 */}
         </section>
       )}
 

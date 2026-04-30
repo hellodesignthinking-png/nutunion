@@ -18,6 +18,9 @@ export interface DispatchPayload {
   title: string;
   body: string;
   linkUrl?: string;
+  metadata?: Record<string, any>;
+  category?: string;
+  actorId?: string;
   channels?: NotificationChannel[];   // 기본: ['inapp']
   // 선택 컨텍스트
   email?: string;
@@ -46,6 +49,9 @@ export async function dispatchNotification(p: DispatchPayload) {
       title: p.title,
       body: p.body,
       link_url: p.linkUrl ?? null,
+      metadata: p.metadata ?? {},
+      category: p.category ?? "general",
+      actor_id: p.actorId ?? null,
       is_read: false,
     });
     if (!error) delivered.push("inapp");

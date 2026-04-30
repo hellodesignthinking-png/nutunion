@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -68,23 +68,25 @@ function ProjectInvitePanel({
     setInviting(userId);
     try {
       const supabase = createClient();
-      // Create a project application with approved status (direct invite)
-      const { error } = await supabase.from("project_applications").upsert(
-        { project_id: projectId, user_id: userId, status: "invited", message: "리더가 직접 초대했습니다." },
+      // Direct invite — 멤버에 바로 추가 (project_applications 의 RLS·CHECK 제약 회피)
+      // 스키마: project_applications 컬럼은 applicant_id, status enum 은 pending/approved/rejected/withdrawn (invited 미허용)
+      const { error } = await supabase.from("project_members").upsert(
+        { project_id: projectId, user_id: userId, role: "member" },
         { onConflict: "project_id,user_id" }
       );
-      if (error) {
-        // Fallback: create member directly
-        await supabase.from("project_members").upsert(
-          { project_id: projectId, user_id: userId, role: "member" },
-          { onConflict: "project_id,user_id" }
-        );
-      }
-      await supabase.from("notifications").insert({
-        user_id: userId,
-        type: "project_invite",
-        content: `"${projectTitle}" 볼트에 초대받았습니다!`,
-        link: `/projects/${projectId}`,
+      if (error) throw error;
+      // 알림: 스키마는 title NOT NULL + body (content/link 컬럼 없음 → link_url 사용)
+      await fetch("/api/notifications/dispatch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipientUserId: userId,
+          type: "project_invite",
+          title: "볼트 초대",
+          body: `"${projectTitle}" 볼트에 초대받았습니다!`,
+          link_url: `/projects/${projectId}`,
+          metadata: { project_id: projectId },
+        }),
       });
       setInvited((prev) => new Set([...prev, userId]));
       toast.success("초대를 보냈습니다");
@@ -340,6 +342,14 @@ const PROJECT_TEMPLATES: Record<string, ProjectTemplateInfo> = {
 };
 
 export default function ProjectCreatePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-nu-paper" />}>
+      <ProjectCreateInner />
+    </Suspense>
+  );
+}
+
+function ProjectCreateInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const templateKey = searchParams.get("template");
@@ -418,7 +428,7 @@ export default function ProjectCreatePage() {
         .from("profiles")
         .select("role, can_create_crew, can_create_project, grade")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
       const canCreate =
         profile?.role === "admin" ||

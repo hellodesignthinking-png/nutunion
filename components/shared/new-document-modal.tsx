@@ -28,9 +28,41 @@ interface DocTemplate {
   content: string;
   /** file_type stored in DB — determines icon & editing behavior */
   fileType: string;
+  /** If set, creates a Google Drive document instead of an in-app template. */
+  driveType?: "doc" | "sheet" | "slide";
 }
 
 const DOC_TEMPLATES: DocTemplate[] = [
+  {
+    key: "drive-doc",
+    name: "📄 Google 문서",
+    icon: FileText,
+    iconColor: "text-nu-blue",
+    description: "내 Drive 에 Google Docs 문서를 생성합니다",
+    fileType: "drive-doc",
+    driveType: "doc",
+    content: "",
+  },
+  {
+    key: "drive-sheet",
+    name: "📊 Google 스프레드시트",
+    icon: Sheet,
+    iconColor: "text-green-600",
+    description: "내 Drive 에 Google Sheets 를 생성합니다",
+    fileType: "drive-sheet",
+    driveType: "sheet",
+    content: "",
+  },
+  {
+    key: "drive-slide",
+    name: "🖼️ Google 슬라이드",
+    icon: Presentation,
+    iconColor: "text-nu-amber",
+    description: "내 Drive 에 Google Slides 를 생성합니다",
+    fileType: "drive-slide",
+    driveType: "slide",
+    content: "",
+  },
   {
     key: "blank-doc",
     name: "빈 문서",
@@ -294,6 +326,82 @@ export function NewDocumentModal({ targetType, targetId, stage, onCreated, onClo
     }
 
     try {
+      // ── Google Drive 문서 생성 분기 ──
+      if (template.driveType) {
+        const createRes = await fetch("/api/google/drive/create-doc", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: template.driveType,
+            title: docName.trim(),
+            scope: targetType,
+            scope_id: targetId,
+          }),
+        });
+        const createJson = await createRes.json();
+        if (!createRes.ok || !createJson.web_view_link) {
+          if (createJson.code === "NOT_CONNECTED") {
+            toast.error("Google 계정 연결 필요 — /settings/integrations 에서 연결해주세요");
+          } else if (createJson.code === "TOKEN_EXPIRED") {
+            toast.error("Google 토큰 만료 — 다시 연결해주세요");
+          } else {
+            toast.error(createJson.error || "Drive 문서 생성 실패");
+          }
+          setCreating(false);
+          return;
+        }
+
+        // 서버에서 이미 자료실 등록 완료된 경우 → 클라이언트 추가 등록 스킵
+        if (createJson.registered) {
+          toast.success(`"${docName.trim()}" — Drive 에 생성되어 자료실에 등록되었습니다`);
+          onCreated();
+          onClose();
+          return;
+        }
+
+        // Drive 생성 성공 → 자료실 (file_attachments / project_resources) 에 등록 (fallback)
+        if (targetType === "group") {
+          const r = await fetch("/api/resources/group", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              group_id: targetId,
+              file_name: docName.trim(),
+              file_url: createJson.web_view_link,
+              file_size: 0,
+              file_type: template.fileType, // drive-doc | drive-sheet | drive-slide
+              storage_type: "drive",
+              storage_key: createJson.id,
+            }),
+          });
+          if (!r.ok) {
+            const j = await r.json().catch(() => ({}));
+            throw new Error(j.error || "자료실 등록 실패");
+          }
+        } else {
+          const driveTypeMap: Record<string, string> = {
+            doc: "google_doc",
+            sheet: "google_sheet",
+            slide: "google_slide",
+          };
+          const { error } = await supabase.from("project_resources").insert({
+            project_id: targetId,
+            name: docName.trim(),
+            url: createJson.web_view_link,
+            type: driveTypeMap[template.driveType] || "google_doc",
+            stage: stage || "planning",
+            description: `Google Drive ${template.driveType.toUpperCase()}`,
+            uploaded_by: user.id,
+          });
+          if (error) throw error;
+        }
+
+        toast.success(`"${docName.trim()}" — Drive 에 생성되어 자료실에 등록되었습니다`);
+        onCreated();
+        onClose();
+        return;
+      }
+
       // Replace the default heading with user's document name
       const finalContent = template.content
         .replace(/^# .+$/m, `# ${docName.trim()}`);

@@ -5,6 +5,7 @@ import { AppSidebar, AppSidebarGutter } from "@/components/shared/app-sidebar";
 import { AppBottomTabs } from "@/components/shared/app-bottom-tabs";
 import { CommandPalette } from "@/components/shared/command-palette";
 import { OnlineStatusBanner } from "@/components/shared/online-status-banner";
+import { PushPromptBanner } from "@/components/shared/push-prompt-banner";
 import { Footer } from "@/components/landing/footer";
 import type { Profile } from "@/lib/types";
 
@@ -65,6 +66,7 @@ export default async function MainLayout({
       </AppSidebarGutter>
       <Footer />
       <AppBottomTabs />
+      <PushPromptBanner />
     </div>
   );
 }

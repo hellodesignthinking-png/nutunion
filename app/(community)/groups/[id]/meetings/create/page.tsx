@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { TimezoneSelect, localToZonedISO, defaultTimezone } from "@/components/shared/timezone-select";
 
 interface AgendaItem {
   topic: string;
@@ -25,6 +26,14 @@ interface AgendaItem {
 }
 
 export default function CreateMeetingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-nu-paper" />}>
+      <CreateMeetingInner />
+    </Suspense>
+  );
+}
+
+function CreateMeetingInner() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -32,6 +41,7 @@ export default function CreateMeetingPage() {
   const [loading, setLoading] = useState(false);
   const [duration, setDuration] = useState("60");
   const [agendas, setAgendas] = useState<AgendaItem[]>([]);
+  const [timezone, setTimezone] = useState<string>(() => defaultTimezone());
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [newAgenda, setNewAgenda] = useState<AgendaItem>({
@@ -81,11 +91,8 @@ export default function CreateMeetingPage() {
       return;
     }
 
-    // 로컬 시간 기준으로 ISO 문자열 생성 (한국 시간 유지)
-    const [year, month, day] = date.split("-").map(Number);
-    const [hour, minute] = time.split(":").map(Number);
-    const localDate = new Date(year, month - 1, day, hour, minute, 0);
-    const scheduledAt = localDate.toISOString();
+    // 선택한 타임존 기준 wall-clock 을 UTC 로 변환 — 해외 멤버 정확히 표시.
+    const scheduledAt = localToZonedISO(date, time, timezone);
 
     const supabase = createClient();
     const {
@@ -232,6 +239,16 @@ export default function CreateMeetingPage() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div>
+            <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
+              타임존
+            </Label>
+            <div className="mt-1.5">
+              <TimezoneSelect value={timezone} onChange={setTimezone} className="w-full sm:w-auto" />
+            </div>
+            <p className="text-[11px] text-nu-muted mt-1">해외 멤버에게는 자동으로 그쪽 시각으로 표시됩니다</p>
           </div>
 
           <div>

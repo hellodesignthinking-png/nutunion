@@ -20,6 +20,9 @@ interface GroupSubNavProps {
   isManager?: boolean;
 }
 
+// 너트와 볼트의 메뉴 일관성 — 핵심 5개 (홈/일정/탭/자료실/정산) 가 같은 순서로.
+// 이후는 너트 전용 (베스트). 볼트는 활동/할일/마일스톤 추가.
+// 너트와 볼트 어디에 있든 1-5번 위치는 항상 동일한 메뉴로 보임.
 const NAV_ITEMS = [
   { key: "home", label: "홈", href: "", icon: Home },
   { key: "schedule", label: "일정", href: "/schedule", icon: Calendar },

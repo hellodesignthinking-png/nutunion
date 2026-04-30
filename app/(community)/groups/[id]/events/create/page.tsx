@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { TimezoneSelect, localToZonedISO, defaultTimezone } from "@/components/shared/timezone-select";
 
 export default function CreateEventPage() {
   const router = useRouter();
@@ -24,6 +25,10 @@ export default function CreateEventPage() {
   const [loading, setLoading] = useState(false);
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceType, setRecurrenceType] = useState("weekly");
+  const [recurrenceEndType, setRecurrenceEndType] = useState<"count" | "until" | "never">("count");
+  const [recurrenceCount, setRecurrenceCount] = useState(10);
+  const [recurrenceUntil, setRecurrenceUntil] = useState("");
+  const [timezone, setTimezone] = useState<string>(() => defaultTimezone());
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -44,8 +49,8 @@ export default function CreateEventPage() {
       return;
     }
 
-    const startAt = new Date(`${date}T${startTime}:00+09:00`).toISOString();
-    const endAt = new Date(`${date}T${endTime}:00+09:00`).toISOString();
+    const startAt = localToZonedISO(date, startTime, timezone);
+    const endAt = localToZonedISO(date, endTime, timezone);
 
     let recurrenceRule: string | null = null;
     if (isRecurring) {
@@ -55,7 +60,17 @@ export default function CreateEventPage() {
         biweekly: "FREQ=WEEKLY;INTERVAL=2",
         monthly: "FREQ=MONTHLY",
       };
-      recurrenceRule = `RRULE:${rules[recurrenceType]}`;
+      let rule = rules[recurrenceType];
+      // 종료 조건 추가
+      if (recurrenceEndType === "count" && recurrenceCount > 0) {
+        rule += `;COUNT=${recurrenceCount}`;
+      } else if (recurrenceEndType === "until" && recurrenceUntil) {
+        // RFC 5545 UNTIL — UTC YYYYMMDDTHHMMSSZ 형식
+        const u = new Date(`${recurrenceUntil}T23:59:59+09:00`);
+        const z = u.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+        rule += `;UNTIL=${z}`;
+      }
+      recurrenceRule = `RRULE:${rule}`;
     }
 
     const supabase = createClient();
@@ -164,6 +179,15 @@ export default function CreateEventPage() {
                 className="mt-1.5 border-nu-ink/15 bg-transparent"
               />
             </div>
+            <div className="md:col-span-3">
+              <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
+                타임존
+              </Label>
+              <div className="mt-1.5">
+                <TimezoneSelect value={timezone} onChange={setTimezone} className="w-full sm:w-auto" />
+              </div>
+              <p className="text-[11px] text-nu-muted mt-1">해외 멤버를 위한 타임존 — 다른 사용자에게는 자동으로 그쪽 시각으로 표시됩니다</p>
+            </div>
           </div>
 
           <div>
@@ -188,21 +212,72 @@ export default function CreateEventPage() {
           </div>
 
           {isRecurring && (
-            <div>
-              <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
-                반복 주기
-              </Label>
-              <Select value={recurrenceType} onValueChange={(v) => v && setRecurrenceType(v)}>
-                <SelectTrigger className="mt-1.5 border-nu-ink/15 bg-transparent w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="daily">매일</SelectItem>
-                  <SelectItem value="weekly">매주</SelectItem>
-                  <SelectItem value="biweekly">격주</SelectItem>
-                  <SelectItem value="monthly">매월</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="space-y-3 p-4 bg-nu-cream/20 border-2 border-nu-ink/10">
+              <div>
+                <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
+                  반복 주기
+                </Label>
+                <Select value={recurrenceType} onValueChange={(v) => v && setRecurrenceType(v)}>
+                  <SelectTrigger className="mt-1.5 border-nu-ink/15 bg-transparent w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">매일</SelectItem>
+                    <SelectItem value="weekly">매주</SelectItem>
+                    <SelectItem value="biweekly">격주</SelectItem>
+                    <SelectItem value="monthly">매월</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="font-mono-nu text-[12px] uppercase tracking-widest text-nu-gray">
+                  종료 조건
+                </Label>
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  {(["count", "until", "never"] as const).map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => setRecurrenceEndType(opt)}
+                      className={`font-mono-nu text-[11px] uppercase tracking-widest px-3 py-1.5 border-[2px] transition-all ${
+                        recurrenceEndType === opt
+                          ? "border-nu-ink bg-nu-ink text-nu-paper"
+                          : "border-nu-ink/15 text-nu-muted hover:border-nu-ink"
+                      }`}
+                    >
+                      {opt === "count" ? "횟수" : opt === "until" ? "특정일까지" : "무제한"}
+                    </button>
+                  ))}
+                </div>
+                {recurrenceEndType === "count" && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={365}
+                      value={recurrenceCount}
+                      onChange={(e) => setRecurrenceCount(Math.max(1, Number(e.target.value) || 1))}
+                      className="w-20 px-2 py-1 border-2 border-nu-ink/15 text-sm"
+                    />
+                    <span className="text-[12px] text-nu-muted">번 반복</span>
+                  </div>
+                )}
+                {recurrenceEndType === "until" && (
+                  <div className="mt-2">
+                    <input
+                      type="date"
+                      value={recurrenceUntil}
+                      onChange={(e) => setRecurrenceUntil(e.target.value)}
+                      className="px-2 py-1 border-2 border-nu-ink/15 text-sm"
+                    />
+                  </div>
+                )}
+                <p className="mt-2 text-[11px] text-nu-muted">
+                  {recurrenceEndType === "count" && `이 일정이 ${recurrenceCount}번 반복된 후 종료됩니다.`}
+                  {recurrenceEndType === "until" && (recurrenceUntil ? `${recurrenceUntil} 까지 반복합니다.` : "종료 날짜를 선택해주세요")}
+                  {recurrenceEndType === "never" && "수동으로 멈출 때까지 계속 생성됩니다."}
+                </p>
+              </div>
             </div>
           )}
 

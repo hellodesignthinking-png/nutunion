@@ -5,6 +5,7 @@ import {
   ChevronRight, Brain, BookOpen, GitBranch, Plus
 } from "lucide-react";
 import { TopicDetailClient } from "@/components/wiki/topic-detail-client";
+import { TopicIntegrationHero } from "@/components/wiki/topic-integration-hero";
 import type { Metadata } from "next";
 
 export const revalidate = 60;
@@ -12,7 +13,7 @@ export const revalidate = 60;
 export async function generateMetadata({ params }: { params: Promise<{ id: string; topicId: string }> }): Promise<Metadata> {
   const { topicId } = await params;
   const supabase = await createClient();
-  const { data: topic } = await supabase.from("wiki_topics").select("name, description").eq("id", topicId).single();
+  const { data: topic } = await supabase.from("wiki_topics").select("name, description").eq("id", topicId).maybeSingle();
   if (!topic) return { title: "탭 토픽" };
   const { count } = await supabase.from("wiki_pages").select("id", { count: "exact", head: true }).eq("topic_id", topicId);
   return {
@@ -28,14 +29,30 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ id
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: group } = await supabase.from("groups").select("name, host_id").eq("id", groupId).single();
+  const { data: group } = await supabase.from("groups").select("name, host_id").eq("id", groupId).maybeSingle();
   if (!group) notFound();
 
-  const { data: topic } = await supabase
-    .from("wiki_topics")
-    .select("id, name, description, is_public, public_slug")
-    .eq("id", topicId)
-    .single();
+  // Try to fetch the new columns (migration 128). If they don't exist, fall back gracefully.
+  let topic: any = null;
+  let migration128Applied = true;
+  {
+    const tryNew = await supabase
+      .from("wiki_topics")
+      .select("id, name, description, is_public, public_slug, content, current_version, last_synthesized_at")
+      .eq("id", topicId)
+      .maybeSingle();
+    if (tryNew.error) {
+      migration128Applied = false;
+      const fallback = await supabase
+        .from("wiki_topics")
+        .select("id, name, description, is_public, public_slug")
+        .eq("id", topicId)
+        .maybeSingle();
+      topic = fallback.data;
+    } else {
+      topic = tryNew.data;
+    }
+  }
 
   if (!topic) notFound();
 
@@ -170,7 +187,29 @@ export default async function TopicDetailPage({ params }: { params: Promise<{ id
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-8 py-10">
+      <div className="max-w-5xl mx-auto px-8 py-10 space-y-10">
+        {/* New: Integration hero (migration 128 — graceful fallback) */}
+        {migration128Applied && (
+          <TopicIntegrationHero
+            topicId={topicId}
+            topicName={topic.name}
+            topicDescription={topic.description || ""}
+            initialContent={topic.content || null}
+            initialVersion={topic.current_version || 0}
+            initialLastSynthesizedAt={topic.last_synthesized_at || null}
+            isHost={isHost}
+            candidateResources={[...linkedResources, ...groupResources].map(r => ({
+              id: r.id,
+              title: r.title,
+              url: r.url,
+              resource_type: r.resource_type,
+              auto_summary: r.auto_summary,
+              created_at: r.created_at,
+              contributor_nickname: r.contributor_nickname,
+            }))}
+          />
+        )}
+
         <TopicDetailClient
           groupId={groupId}
           topicId={topicId}

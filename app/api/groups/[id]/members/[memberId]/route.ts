@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { dispatchEvent } from "@/lib/automation/engine";
+import { dispatchNotification } from "@/lib/notifications/dispatch";
 
 export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string; memberId: string }> };
@@ -55,13 +56,13 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
     // 승인 알림
-    await admin.from("notifications").insert({
-      user_id: applicantId,
-      type: "join_approved",
+    await dispatchNotification({
+      recipientId: applicantId,
+      eventType: "join_approved",
       title: "너트 가입 승인됐어요 🎉",
       body: `${(group as any).name} 너트에 참여하게 됐어요. 지금 둘러보세요!`,
+      linkUrl: `/groups/${groupId}`,
       metadata: { group_id: groupId },
-      is_read: false,
     });
 
     // Nut-mation dispatch (non-fatal)
@@ -82,13 +83,12 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       .eq("status", "pending");
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    await admin.from("notifications").insert({
-      user_id: applicantId,
-      type: "join_rejected",
+    await dispatchNotification({
+      recipientId: applicantId,
+      eventType: "join_rejected",
       title: "너트 가입이 반려됐어요",
       body: `${(group as any).name} 너트 가입 신청이 반려됐습니다.`,
       metadata: { group_id: groupId },
-      is_read: false,
     });
   }
 

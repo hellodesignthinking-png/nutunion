@@ -100,5 +100,7 @@ export async function GET(_req: NextRequest) {
     upcoming: upcomingRows,
     dormant: dormant || [],
     today_date: `${kst.getUTCFullYear()}-${String(todayMonth).padStart(2,"0")}-${String(todayDay).padStart(2,"0")}`,
+  }, {
+    headers: { "Cache-Control": "private, max-age=120, must-revalidate" },
   });
 }

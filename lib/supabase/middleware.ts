@@ -35,14 +35,24 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const protectedPaths = ["/dashboard", "/groups", "/admin", "/staff"];
-  const isProtected = protectedPaths.some(
-    (path) =>
-      request.nextUrl.pathname === path ||
-      request.nextUrl.pathname.startsWith(path + "/")
-  );
+  // /groups/[id] and /projects/[id] detail pages are public for SEO — only
+  // protect mutating routes (create, settings, finance, etc.) and the
+  // genuinely-private prefixes.
+  const path = request.nextUrl.pathname;
+  const isProtectedPrefix =
+    path === "/dashboard" || path.startsWith("/dashboard/") ||
+    path === "/admin" || path.startsWith("/admin/") ||
+    path === "/staff" || path.startsWith("/staff/") ||
+    path === "/notes" || path.startsWith("/notes/") ||
+    path === "/profile" || path.startsWith("/profile/") ||
+    path === "/settings" || path.startsWith("/settings/") ||
+    path === "/finance" || path.startsWith("/finance/");
+  const isProtectedAction =
+    path === "/groups/create" ||
+    path === "/projects/create" ||
+    /^\/(?:groups|projects)\/[^/]+\/(settings|meetings\/create|events\/create|finance|genesis|dev-plan|venture)/.test(path);
 
-  if (isProtected && !user) {
+  if ((isProtectedPrefix || isProtectedAction) && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirectTo", request.nextUrl.pathname);

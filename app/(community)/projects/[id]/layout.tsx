@@ -1,6 +1,7 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { ChatDockPanel } from "@/components/chat/chat-dock-panel-client";
-import { ProjectSubNav } from "@/components/projects/project-subnav";
+import { ProjectTopNav } from "@/components/projects/project-top-nav";
 
 /**
  * 볼트 공통 레이아웃 — 모든 하위 페이지(탭/회의록/벤처/자료실/설정 등)에서
@@ -56,7 +57,17 @@ export default async function ProjectLayout({
 
   return (
     <>
-      <ProjectSubNav projectId={projectId} projectTitle={projectTitle} isAdmin={isAdminOrLead} />
+      <Suspense fallback={
+        <nav className="bg-white border-b-[3px] border-nu-ink/15 sticky top-[60px] z-[100] shadow-md">
+          <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
+            <div className="h-[52px] flex items-center">
+              <span className="font-head text-sm font-bold text-nu-ink truncate">{projectTitle || ""}</span>
+            </div>
+          </div>
+        </nav>
+      }>
+        <ProjectTopNav projectId={projectId} projectTitle={projectTitle || ""} isAdmin={isAdminOrLead} />
+      </Suspense>
       {children}
       {canSeeChat && <ChatDockPanel projectId={projectId} />}
     </>

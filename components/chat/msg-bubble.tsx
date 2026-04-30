@@ -11,7 +11,7 @@
 
 import { memo, useMemo, useState } from "react";
 import Image from "next/image";
-import { FileIcon, Download, Sparkles, FolderOpen, CornerUpLeft, Heart, X, Copy, Check, UserPlus, XCircle, CheckCircle, Briefcase, DollarSign, Megaphone, BarChart3, Pin } from "lucide-react";
+import { FileIcon, Download, Sparkles, FolderOpen, CornerUpLeft, Heart, X, Copy, Check, UserPlus, XCircle, CheckCircle, Briefcase, DollarSign, Megaphone, BarChart3, Pin, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { decodeAction, type ChatAction } from "@/lib/chat/chat-actions";
 import { FONT_PX, META_PX, type ChatFontSize } from "@/lib/chat/chat-prefs";
@@ -38,6 +38,10 @@ export interface Msg {
   auto_indexed_as?: "file_attachment" | "meeting_note" | null;
   linked_resource_id?: string | null;
   reply_to?: string | null;
+  parent_message_id?: string | null;
+  thread_reply_count?: number | null;
+  thread_last_reply_at?: string | null;
+  mentions?: string[] | null;
   created_at: string;
   edited_at?: string | null;
   sender?: { id: string; nickname: string; avatar_url?: string | null } | null;
@@ -64,6 +68,7 @@ export interface MsgBubbleProps {
   onReact?: (emoji: string) => void;
   onDelete?: () => void;
   onStartEdit?: () => void;
+  onOpenThread?: () => void;
   /** 방의 group/project id — 자동 인덱싱 시스템 메시지의 링크 URL 구성용 */
   roomGroupId?: string | null;
   roomProjectId?: string | null;
@@ -87,6 +92,7 @@ export const MsgBubble = memo(function MsgBubble({
   onReact,
   onDelete,
   onStartEdit,
+  onOpenThread,
   roomGroupId,
   roomProjectId,
 }: MsgBubbleProps) {
@@ -305,9 +311,13 @@ export const MsgBubble = memo(function MsgBubble({
                   <button onClick={onEditCancel} className="px-2 py-0.5 border border-nu-ink/20 rounded">취소</button>
                 </div>
               </div>
-            ) : (
-              msg.content && <div className="whitespace-pre-wrap">{msg.content}</div>
-            )}
+            ) : msg.content ? (
+              <div className="whitespace-pre-wrap">{msg.content}</div>
+            ) : msg.attachment_url ? (
+              <span className={`inline-block text-[10px] font-mono-nu uppercase tracking-widest ${mine ? "text-white/70" : "text-nu-muted"}`}>
+                [첨부]
+              </span>
+            ) : null}
             {msg.edited_at && !isEditing && (
               <span className={`text-[9px] ml-1 font-mono-nu italic ${mine ? "text-white/60" : "text-nu-muted"}`}>· 수정됨</span>
             )}
@@ -391,6 +401,11 @@ export const MsgBubble = memo(function MsgBubble({
                 <button onClick={onReply} className="p-1 hover:bg-nu-ink/5 rounded-full text-nu-graphite" title="답글">
                   <CornerUpLeft size={11} />
                 </button>
+                {onOpenThread && (
+                  <button onClick={onOpenThread} className="p-1 hover:bg-nu-pink/10 rounded-full text-nu-pink" title="스레드로 답글">
+                    <MessageSquare size={11} />
+                  </button>
+                )}
                 {(msg.content || msg.attachment_url) && (
                   <button onClick={copyContent} className="p-1 hover:bg-nu-ink/5 rounded-full text-nu-graphite" title="복사">
                     {copied ? <Check size={11} className="text-green-600" /> : <Copy size={11} />}
@@ -461,6 +476,22 @@ export const MsgBubble = memo(function MsgBubble({
             avatarUrl={msg.sender.avatar_url}
             onClose={() => setProfileOpen(false)}
           />
+        )}
+
+        {/* 스레드 답글 카운터 */}
+        {(msg.thread_reply_count || 0) > 0 && onOpenThread && (
+          <button
+            type="button"
+            onClick={onOpenThread}
+            className={`mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-mono-nu bg-nu-pink/10 text-nu-pink hover:bg-nu-pink/20 transition-colors ${mine ? "self-end" : "self-start"}`}
+            title="스레드 열기"
+          >
+            <MessageSquare size={11} />
+            <span className="font-semibold">{msg.thread_reply_count}답글</span>
+            {msg.thread_last_reply_at && (
+              <span className="opacity-70">· {formatTimeLabel(msg.thread_last_reply_at)}</span>
+            )}
+          </button>
         )}
 
         {/* 리액션 배지 */}

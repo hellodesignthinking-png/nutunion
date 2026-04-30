@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Readable } from "stream";
+import { getSharedFolderId, getDriveOwnerUserId } from "@/lib/google/drive-config";
 
 // ── MIME type whitelist ────────────────────────────────────────
 const ALLOWED_TYPES = [
@@ -69,10 +70,14 @@ export async function POST(req: NextRequest) {
     const supabase = await createClient();
 
     // ── 1. Resolve shared folder & uploader identity ───────────
-    // When a group/project has a shared Google Drive folder,
-    // we upload using the HOST's token so members don't need to connect Google.
+    // 단일 공유 폴더 모드: 모든 업로드를 환경변수의 폴더 ID로 라우팅하고,
+    // owner user(있으면) 의 토큰으로 인증. legacy per-그룹/프로젝트 폴더 컬럼 무시.
+    const envSharedFolderId = getSharedFolderId();
+    const driveOwnerId = getDriveOwnerUserId();
     let uploaderUserId = userId;  // default: use current user's credentials
-    let sharedFolderId: string | null = folderId;
+    let sharedFolderId: string | null = envSharedFolderId || folderId;
+
+    // Membership verification only — folder/host resolution skipped in shared-folder mode.
     if (targetType === "group" && targetId) {
       // Check membership
       const { data: membership } = await supabase
@@ -122,7 +127,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "그룹 멤버만 파일을 업로드할 수 있습니다" }, { status: 403 });
       }
 
-      if (group) {
+      // shared-folder 모드: 그룹 폴더 컬럼 무시. envSharedFolderId 가 있으면 항상 그것을 사용.
+      if (!envSharedFolderId && group) {
         let extractedFromUrl = null;
         if (group.google_drive_url) {
           const parts = group.google_drive_url.split("/folders/");
@@ -183,7 +189,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "프로젝트 멤버만 파일을 업로드할 수 있습니다" }, { status: 403 });
       }
 
-      if (project) {
+      if (!envSharedFolderId && project) {
         let extractedFromUrl = null;
         if (project.google_drive_url) {
           const parts = project.google_drive_url.split("/folders/");
@@ -214,8 +220,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ── 2. Get Google client (host's if shared folder exists) ──
-    const auth = await getGoogleClient(uploaderUserId);
+    // ── 2. Get Google client — owner if set, else uploaderUserId ──
+    const resolvedAuthUserId = driveOwnerId || uploaderUserId;
+    const auth = await getGoogleClient(resolvedAuthUserId);
     const drive = google.drive({ version: "v3", auth });
 
     // ── 3. Upload to Drive ─────────────────────────────────────
@@ -230,6 +237,7 @@ export async function POST(req: NextRequest) {
       requestBody: fileMetadata,
       media: { mimeType: normalizedFileType || finalFileType, body: stream },
       fields: "id, name, mimeType, webViewLink, size",
+      supportsAllDrives: true,
     });
 
     const fileId = driveRes.data.id!;

@@ -20,6 +20,20 @@ const nextConfig: NextConfig = {
         hostname: "i.ytimg.com",
         pathname: "/vi/**",
       },
+      // Cloudflare R2 — public bucket (avatars, group/project images, resources)
+      {
+        protocol: "https",
+        hostname: "**.r2.dev",
+      },
+      {
+        protocol: "https",
+        hostname: "**.r2.cloudflarestorage.com",
+      },
+      // 커스텀 도메인 R2 (env 로 설정한 경우)
+      {
+        protocol: "https",
+        hostname: "cdn.nutunion.co.kr",
+      },
     ],
   },
 
@@ -124,6 +138,9 @@ const nextConfig: NextConfig = {
   // ── 빌드 최적화 ──────────────────────────────────────────────
   compress: true,
   poweredByHeader: false,
+
+  // esbuild는 native 바이너리를 포함하므로 서버 번들에서 제외 (코드 모드 Thread 컴파일용)
+  serverExternalPackages: ["esbuild"],
 
   // ── 번들 분석 + 패키지 최적화 ────────────────────────────────
   experimental: {

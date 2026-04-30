@@ -200,26 +200,24 @@ export function NotificationCenter() {
   // Mark notification as read
   const handleMarkAsRead = useCallback(
     async (notificationId: string, linkUrl?: string | null) => {
+      // Optimistic update first — UI 즉시 반영
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === notificationId ? { ...n, is_read: true } : n
+        )
+      );
+      // Best-effort server update (API → fallback supabase)
       try {
-        const { error } = await supabase
-          .from("notifications")
-          .update({ is_read: true })
-          .eq("id", notificationId);
-
-        if (error) throw error;
-
-        setNotifications((prev) =>
-          prev.map((n) =>
-            n.id === notificationId ? { ...n, is_read: true } : n
-          )
-        );
-
-        if (linkUrl) {
-          router.push(linkUrl);
+        const res = await fetch(`/api/notifications/${notificationId}/read`, { method: "POST" });
+        if (!res.ok) throw new Error("api");
+      } catch {
+        try {
+          await supabase.from("notifications").update({ is_read: true }).eq("id", notificationId);
+        } catch (e) {
+          console.error("Failed to mark notification as read:", e);
         }
-      } catch (error) {
-        console.error("Failed to mark notification as read:", error);
       }
+      if (linkUrl) router.push(linkUrl);
     },
     [supabase, router]
   );
@@ -227,21 +225,20 @@ export function NotificationCenter() {
   // Mark all as read
   const handleMarkAllAsRead = useCallback(async () => {
     if (!userId) return;
-
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     try {
-      const { error } = await supabase
-        .from("notifications")
-        .update({ is_read: true })
-        .eq("user_id", userId)
-        .eq("is_read", false);
-
-      if (error) throw error;
-
-      setNotifications((prev) =>
-        prev.map((n) => ({ ...n, is_read: true }))
-      );
-    } catch (error) {
-      console.error("Failed to mark all as read:", error);
+      const res = await fetch(`/api/notifications/read-all`, { method: "POST" });
+      if (!res.ok) throw new Error("api");
+    } catch {
+      try {
+        await supabase
+          .from("notifications")
+          .update({ is_read: true })
+          .eq("user_id", userId)
+          .eq("is_read", false);
+      } catch (e) {
+        console.error("Failed to mark all as read:", e);
+      }
     }
   }, [userId, supabase]);
 

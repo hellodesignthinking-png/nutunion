@@ -17,6 +17,8 @@ interface WikiTabGoalEditorProps {
   isHost: boolean;
   tabStatus: "building" | "ready" | "published";
   tabPublishedSlug: string | null;
+  readinessPct?: number;
+  isReadyToPublish?: boolean;
 }
 
 /**
@@ -33,6 +35,8 @@ export function WikiTabGoalEditor({
   isHost,
   tabStatus,
   tabPublishedSlug,
+  readinessPct = 100,
+  isReadyToPublish = true,
 }: WikiTabGoalEditorProps) {
   const router = useRouter();
 
@@ -192,12 +196,28 @@ export function WikiTabGoalEditor({
       {isHost && !editingGoal && (
         <div className="flex items-center gap-2 flex-wrap pt-2">
           {tabStatus !== "published" ? (
-            <button
-              onClick={() => { setPublishTitle(tabGoal || groupName + " 탭"); setPublishDesc(tabDescription || ""); setShowPublishModal(true); }}
-              className="flex items-center gap-2 px-4 py-2.5 bg-nu-ink text-white font-mono-nu text-[11px] uppercase tracking-widest font-bold border-[3px] border-nu-ink shadow-[3px_3px_0px_0px_rgba(13,13,13,0.2)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0px_0px_rgba(13,13,13,0.2)] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all"
-            >
-              <Flag size={12} /> 최종 탭 발행
-            </button>
+            <div className="flex flex-col gap-1.5">
+              <button
+                onClick={() => {
+                  if (!isReadyToPublish) {
+                    if (!confirm(`아직 발행 준비가 충분하지 않아요 (완성도 ${readinessPct}%, 권장 70% 이상).\n\n그래도 발행하시겠어요?`)) return;
+                  }
+                  setPublishTitle(tabGoal || groupName + " 탭");
+                  setPublishDesc(tabDescription || "");
+                  setShowPublishModal(true);
+                }}
+                className={`flex items-center gap-2 px-4 py-2.5 font-mono-nu text-[11px] uppercase tracking-widest font-bold border-[3px] border-nu-ink shadow-[3px_3px_0px_0px_rgba(13,13,13,0.2)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0px_0px_rgba(13,13,13,0.2)] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all ${
+                  isReadyToPublish ? "bg-nu-ink text-white" : "bg-nu-amber/30 text-nu-ink"
+                }`}
+              >
+                <Flag size={12} /> {isReadyToPublish ? "최종 탭 발행" : `발행 (완성도 ${readinessPct}%)`}
+              </button>
+              {!isReadyToPublish && (
+                <p className="font-mono-nu text-[10px] text-nu-muted uppercase tracking-widest">
+                  ※ 권장 완성도 70% 이상 — 부족하면 발행 후에도 보완 권장
+                </p>
+              )}
+            </div>
           ) : (
             <button
               onClick={() => setShowUnpublishConfirm(true)}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, Loader2, Wand2 } from "lucide-react";
+import { Sparkles, Loader2, Wand2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -41,7 +41,44 @@ interface Props {
 
 export function GenesisPlanView({ kind, targetId, intent, plan, modelUsed, createdAt, summary }: Props) {
   const [cloning, setCloning] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
   const router = useRouter();
+
+  /** 같은 너트/볼트의 plan 을 새로 생성해서 덮어쓰기 — 멤버/위키/태스크는 손대지 않음. */
+  async function handleRegenerate() {
+    if (!confirm("기존 의도(intent)를 그대로 사용해서 plan 을 새로 생성합니다. 진행할까요?")) return;
+    setRegenerating(true);
+    try {
+      const planRes = await fetch("/api/genesis/plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ intent, kind }),
+      });
+      if (!planRes.ok) throw new Error("plan 생성 실패");
+      const { plan: newPlan, model_used } = await planRes.json();
+
+      // target_id 를 같이 보내면 기존 너트/볼트에 plan 만 갱신 (provisioning 재실행하지 않음)
+      const provRes = await fetch("/api/genesis/provision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind,
+          plan: newPlan,
+          intent,
+          model_used,
+          target_id: targetId,
+          regenerate: true,
+        }),
+      });
+      if (!provRes.ok) throw new Error("저장 실패");
+      toast.success("✨ Plan 을 새로 생성했어요");
+      router.refresh();
+    } catch (e: any) {
+      toast.error("재생성 실패: " + (e?.message || "unknown"));
+    } finally {
+      setRegenerating(false);
+    }
+  }
 
   async function handleClone() {
     setCloning(true);
@@ -129,6 +166,15 @@ export function GenesisPlanView({ kind, targetId, intent, plan, modelUsed, creat
           >
             ← {kind === "group" ? "너트" : "볼트"} 보기
           </a>
+          <button
+            onClick={handleRegenerate}
+            disabled={regenerating}
+            className="font-mono-nu text-[11px] uppercase tracking-widest px-4 py-2 border-[2px] border-nu-ink text-nu-ink hover:bg-nu-ink hover:text-nu-paper disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+            title="현재 너트/볼트의 plan 만 새로 생성 (멤버·위키·태스크는 유지)"
+          >
+            {regenerating ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+            Plan 다시 생성
+          </button>
           <button
             onClick={handleClone}
             disabled={cloning}

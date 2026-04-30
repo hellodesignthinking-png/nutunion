@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { syncCarriageDaily } from "@/lib/bolt/integrations";
+import { dispatchNotification } from "@/lib/notifications/dispatch";
 
 export const maxDuration = 30;
 
@@ -42,12 +43,13 @@ export async function POST(_req: NextRequest, { params }: RouteCtx) {
   const title = ((projRes.data as any).title as string) || "플랫폼";
 
   if (Object.keys(result.metrics).length === 0) {
-    await supabase.from("notifications").insert({
-      user_id: auth.user.id,
-      type: "carriage_sync_skipped",
+    await dispatchNotification({
+      recipientId: auth.user.id,
+      eventType: "carriage_sync_skipped",
       title: `${title} 동기화 건너뜀`,
       body: "Vercel/PostHog 프로젝트 ID 또는 서버 환경 변수(VERCEL_API_TOKEN / POSTHOG_API_KEY)가 없어요.",
-      metadata: { project_id: id, link: `/projects/${id}` },
+      linkUrl: `/projects/${id}`,
+      metadata: { project_id: id },
     });
     return NextResponse.json({
       synced: false,
@@ -73,12 +75,13 @@ export async function POST(_req: NextRequest, { params }: RouteCtx) {
 
   if (upErr) {
     console.error("[sync upsert]", upErr);
-    await supabase.from("notifications").insert({
-      user_id: auth.user.id,
-      type: "carriage_sync_failed",
+    await dispatchNotification({
+      recipientId: auth.user.id,
+      eventType: "carriage_sync_failed",
       title: `${title} 동기화 실패`,
       body: upErr.message,
-      metadata: { project_id: id, link: `/projects/${id}`, error: upErr.message },
+      linkUrl: `/projects/${id}`,
+      metadata: { project_id: id, error: upErr.message },
     });
     return NextResponse.json({ error: upErr.message }, { status: 500 });
   }
@@ -88,12 +91,13 @@ export async function POST(_req: NextRequest, { params }: RouteCtx) {
     result.vercel !== null ? "Vercel" : null,
     result.posthog !== null ? "PostHog" : null,
   ].filter(Boolean).join(" · ");
-  await supabase.from("notifications").insert({
-    user_id: auth.user.id,
-    type: "carriage_sync_succeeded",
+  await dispatchNotification({
+    recipientId: auth.user.id,
+    eventType: "carriage_sync_succeeded",
     title: `${title} 동기화 완료`,
     body: `${providers} 에서 오늘 지표를 가져왔어요.`,
-    metadata: { project_id: id, link: `/projects/${id}`, metrics: result.metrics },
+    linkUrl: `/projects/${id}`,
+    metadata: { project_id: id, metrics: result.metrics },
   });
 
   return NextResponse.json({

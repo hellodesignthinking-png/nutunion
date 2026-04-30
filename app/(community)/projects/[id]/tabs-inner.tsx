@@ -28,6 +28,11 @@ import {
   Columns3,
   BarChart3,
   Puzzle,
+  Sticker,
+  Settings,
+  HelpCircle,
+  Archive,
+  Sparkles,
 } from "lucide-react";
 import { MilestoneList } from "@/components/projects/milestone-list";
 import { ProjectActivityFeed } from "@/components/projects/project-activity-feed";
@@ -37,6 +42,7 @@ import { ProjectFinanceDashboard } from "@/components/projects/project-finance-d
 import { ProjectFinanceSnapshot, type FinanceSnapshot } from "@/components/projects/project-finance-snapshot";
 import { ProjectBurndownChart } from "@/components/projects/project-burndown-chart";
 import { ProjectMeetings } from "@/components/projects/project-meetings";
+import { ProjectCalendar } from "@/components/projects/project-calendar";
 import { ProjectRadarChart } from "@/components/projects/project-vitals";
 import { ProjectKanbanBoard } from "@/components/projects/project-kanban-board";
 import { ProjectInsights } from "@/components/projects/project-insights";
@@ -49,20 +55,25 @@ import { WingDashboard } from "@/components/bolt/wing/wing-dashboard";
 import { TorqueView } from "@/components/bolt/torque/TorqueView";
 import { BoltCalendar } from "@/components/bolt/bolt-calendar";
 import { ConsultingAddonManager } from "@/components/bolt/consulting-addon-manager";
+import { MeetingArchiveTimeline } from "@/components/meetings/meeting-archive-timeline";
 
-// 기본 탭 — insights·modules는 overview Quick Actions에서 접근
+// 메뉴 통일 (2026-04) — 단일 탭바 한 줄로 모든 기능 접근.
+// 순서: 홈 → 할일(칸반/마일스톤) → 회의록 → 자료실 → 탭(위키) → 자금 → 활동 → 설정
+// insights/modules/calendar 는 각 영역 내부에서 접근 (탭바 노출 안 함).
 const baseTabs = [
-  { key: "overview",   label: "개요",     icon: Target },
-  { key: "kanban",     label: "칸반",     icon: Columns3 },
+  { key: "overview",   label: "홈",       icon: Target },
+  { key: "kanban",     label: "할 일",    icon: CheckSquare },
   { key: "milestones", label: "마일스톤", icon: Layers },
-  { key: "calendar",   label: "캘린더",   icon: Calendar },
-  { key: "meetings",   label: "회의록",   icon: FileText },
+  { key: "meetings",   label: "일정",     icon: FileText },
   { key: "resources",  label: "자료실",   icon: FolderOpen },
-  { key: "finance",    label: "자금·보상", icon: Wallet },
+  { key: "wiki",       label: "탭",       icon: Sticker },
+  { key: "finance",    label: "정산",     icon: Wallet },
   { key: "activity",   label: "활동",     icon: Activity },
-  // 숨김 탭 — Quick Actions / URL ?tab= 으로만 접근
+  { key: "settings",   label: "설정",     icon: Settings, leadOnly: true },
+  // 숨김 탭 — URL ?tab= 또는 내부 링크로만 접근
   { key: "insights",   label: "인사이트", icon: BarChart3, hidden: true },
   { key: "modules",    label: "모듈",     icon: Puzzle,    hidden: true },
+  { key: "calendar",   label: "캘린더",   icon: Calendar,  hidden: true },
 ];
 
 const roleConfig: Record<string, { label: string; className: string }> = {
@@ -99,6 +110,7 @@ export function TabsInner({
   totalTasks,
   projectData,
   myTasksData,
+  archivedMeetingsData,
 }: {
   projectId: string;
   milestonesData: string;
@@ -114,6 +126,7 @@ export function TabsInner({
   totalTasks: number;
   projectData?: string;
   myTasksData?: string;
+  archivedMeetingsData?: string;
 }) {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState("overview");
@@ -138,6 +151,7 @@ export function TabsInner({
   const events      = JSON.parse(eventsData);
   const project     = projectData ? JSON.parse(projectData) : null;
   const myTasks     = myTasksData ? JSON.parse(myTasksData) : [];
+  const archivedMeetings = archivedMeetingsData ? JSON.parse(archivedMeetingsData) : [];
 
   // ── Live task stats (refreshable on client) ──
   const [liveTaskStats, setLiveTaskStats] = useState(taskStats);
@@ -177,6 +191,7 @@ export function TabsInner({
   };
   const tabs = baseTabs
     .filter((t) => !(t as any).hidden)
+    .filter((t) => !((t as any).leadOnly && !canEdit))
     .map((t) => ({ ...t, count: tabCounts[t.key] ?? null }));
 
   // Calculate milestone progress
@@ -188,41 +203,10 @@ export function TabsInner({
   return (
     <>
 
-      {/* Tab bar — full width, scrollable on mobile */}
-      <div className="max-w-6xl mx-auto flex gap-0 border-b-[2px] border-nu-ink/[0.08] mb-8 overflow-x-auto scrollbar-hide">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`font-mono-nu text-[13px] uppercase tracking-widest px-4 py-3.5 border-b-[3px] transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 ${
-              activeTab === tab.key
-                ? "border-nu-pink text-nu-ink font-black bg-nu-pink/[0.04]"
-                : "border-transparent text-nu-muted hover:text-nu-graphite"
-            }`}
-          >
-            <tab.icon size={14} />
-            {tab.label}
-            {tab.count != null && tab.count > 0 && (
-              <span className={`text-[11px] font-bold px-1.5 py-0.5 ${
-                activeTab === tab.key
-                  ? "bg-nu-pink/15 text-nu-pink"
-                  : "bg-nu-ink/5 text-nu-muted"
-              }`}>
-                {tab.count}
-              </span>
-            )}
-          </button>
-        ))}
-        {canEdit && (
-          <Link
-            href={`/projects/${projectId}/settings`}
-            className="font-mono-nu text-[13px] uppercase tracking-widest px-4 py-3.5 border-b-[3px] border-transparent text-nu-muted hover:text-nu-graphite no-underline ml-auto flex items-center gap-2 whitespace-nowrap shrink-0"
-            title="볼트 설정"
-          >
-            ⚙️
-          </Link>
-        )}
-      </div>
+      {/* 내부 탭바 제거됨 (2026-04) — ProjectTopNav 가 상단 sticky 가로 메뉴로 대체.
+          전체 화면 활용 위해 본문 위 vertical space 절약. 카운트 배지가 필요하면
+          상단 nav 옆에 mini-stat 으로 노출하거나 본문 헤더에 표시. */}
+      <div className="max-w-6xl mx-auto mb-4" />
 
       {/* Overview Tab — 유형별 전용 대시보드 */}
       {activeTab === "overview" && project?.type === "anchor" && (
@@ -447,31 +431,7 @@ export function TabsInner({
           {/* Sidebar */}
           <div className="space-y-6">
 
-            {/* ── Quick Actions ── */}
-            <div className="bg-nu-ink text-nu-paper p-5">
-              <h3 className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-paper/50 mb-3">Quick Actions</h3>
-              <div className="grid grid-cols-4 gap-1">
-                {[
-                  { label: "칸반",    tab: "kanban",     emoji: "📋" },
-                  { label: "회의록",  tab: "meetings",   emoji: "📝" },
-                  { label: "자료실",  tab: "resources",  emoji: "📁" },
-                  { label: "인사이트", tab: "insights",  emoji: "📊" },
-                  { label: "자금",    tab: "finance",    emoji: "💰" },
-                  { label: "활동",    tab: "activity",   emoji: "⚡" },
-                  { label: "모듈",    tab: "modules",    emoji: "🧩" },
-                  { label: "마일스톤", tab: "milestones", emoji: "🏁" },
-                ].map(({ label, tab, emoji }) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className="flex flex-col items-center gap-1 py-2.5 bg-nu-paper/[0.06] hover:bg-nu-paper/[0.14] transition-colors"
-                  >
-                    <span className="text-[16px] leading-none">{emoji}</span>
-                    <span className="font-mono-nu text-[8px] uppercase tracking-widest text-nu-paper/70">{label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* Quick Actions 그리드 제거 (2026-04) — 상단 탭바와 중복이라 혼란 야기. */}
 
             <div className="bg-nu-pink/5 border-[2px] border-nu-pink/20 p-5">
               <h3 className="font-head text-base font-extrabold flex items-center gap-2 mb-3 text-nu-pink">
@@ -665,14 +625,44 @@ export function TabsInner({
       )}
 
 
-      {/* Meetings Tab — project meeting notes */}
+      {/* Meetings Tab — 너트와 동일한 캘린더 뷰 (월/주/목록) + 미팅 상세는 모달/별도 페이지 */}
       {activeTab === "meetings" && (
-        <div className="max-w-6xl mx-auto">
-          <ProjectMeetings
+        <div className="max-w-6xl mx-auto space-y-8">
+          <ProjectCalendar
             projectId={projectId}
-            canEdit={canEdit}
-            userId={userId}
+            isAdmin={canEdit}
+            isMember={isMember}
+            initialMeetings={archivedMeetings}
           />
+          {/* 회의록 아카이브 — 마감된 회의 타임라인 */}
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-head text-xl font-extrabold text-nu-ink flex items-center gap-2">
+                <BookOpen size={18} className="text-nu-pink" /> 📚 회의록 아카이브
+              </h2>
+            </div>
+            <MeetingArchiveTimeline
+              meetings={archivedMeetings}
+              variant="project"
+              baseHref={`/projects/${projectId}/meetings`}
+            />
+          </section>
+          {/* 회의록 관리 (AI 요약/녹음/마감 등 풀 기능) — 캘린더 아래에 같이 노출 */}
+          <details className="group bg-white border-[2px] border-nu-ink/10">
+            <summary className="px-4 py-3 cursor-pointer flex items-center justify-between hover:bg-nu-cream/40 transition-colors list-none">
+              <span className="font-mono-nu text-[12px] font-bold uppercase tracking-widest text-nu-ink">
+                📋 회의록 관리 (AI 요약 · 녹음 · 마감)
+              </span>
+              <span className="font-mono-nu text-[10px] text-nu-muted group-open:rotate-90 transition-transform">▶</span>
+            </summary>
+            <div className="p-4 border-t-[2px] border-nu-ink/10">
+              <ProjectMeetings
+                projectId={projectId}
+                canEdit={canEdit}
+                userId={userId}
+              />
+            </div>
+          </details>
         </div>
       )}
 
@@ -740,7 +730,166 @@ export function TabsInner({
           />
         </div>
       )}
+
+      {/* ── Wiki/Tap Tab — 빈 탭 사용법 가이드 + 풀 에디터 진입 ─────────── */}
+      {activeTab === "wiki" && (
+        <div className="max-w-4xl mx-auto space-y-6">
+          {/* 사용법 가이드 카드 */}
+          <div className="border-[3px] border-nu-ink bg-nu-cream/50 p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <Sticker size={22} className="text-nu-pink mt-0.5 shrink-0" />
+              <div>
+                <h3 className="font-head text-xl font-extrabold text-nu-ink mb-1">탭이란?</h3>
+                <p className="text-[13px] text-nu-graphite leading-relaxed">
+                  볼트의 <strong>지식 베이스</strong>입니다. 회의록·자료·아이디어를 한 곳에 모아
+                  AI 가 주간 단위로 통합 정리하는 위키 시스템.
+                </p>
+              </div>
+            </div>
+
+            <div className="border-l-[3px] border-nu-pink pl-4 mb-5 space-y-1.5">
+              <p className="font-mono-nu text-[10px] uppercase tracking-[0.25em] text-nu-pink font-bold mb-1">시작하는 방법</p>
+              <p className="text-[13px] text-nu-graphite"><span className="font-mono-nu font-bold text-nu-ink mr-1.5">1.</span>아래 <b>탭 열기</b> 버튼으로 풀 에디터 진입</p>
+              <p className="text-[13px] text-nu-graphite"><span className="font-mono-nu font-bold text-nu-ink mr-1.5">2.</span>아카이브 / 위키 / 대시보드 모드 선택</p>
+              <p className="text-[13px] text-nu-graphite"><span className="font-mono-nu font-bold text-nu-ink mr-1.5">3.</span>회의 녹음 → AI 가 회의록 초안 자동 생성</p>
+              <p className="text-[13px] text-nu-graphite"><span className="font-mono-nu font-bold text-nu-ink mr-1.5">4.</span>볼트 마감 시 영구 아카이브로 승격</p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href={`/projects/${projectId}/tap`}
+                className="h-10 px-5 border-[2.5px] border-nu-ink bg-nu-pink text-nu-paper font-mono-nu text-[11px] font-black uppercase tracking-widest no-underline hover:bg-nu-ink inline-flex items-center gap-2 transition-colors"
+              >
+                <BookOpen size={14} /> 탭 열기
+              </Link>
+              {canEdit && (
+                <Link
+                  href={`/projects/${projectId}/tap?compose=ai`}
+                  className="h-10 px-5 border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper inline-flex items-center gap-2 transition-colors"
+                >
+                  <Sparkles size={14} /> AI 3문 인터뷰로 초안
+                </Link>
+              )}
+            </div>
+          </div>
+
+          {/* 마감 후 영구 아카이브 가이드 — 4단계 체크리스트 */}
+          {canEdit && (
+            <div className="border-[3px] border-nu-ink bg-nu-paper p-6">
+              <div className="flex items-center gap-2 mb-3">
+                <Archive size={18} className="text-nu-ink" />
+                <h3 className="font-head text-lg font-extrabold text-nu-ink">마감 → 영구 아카이브</h3>
+              </div>
+              <p className="text-[13px] text-nu-graphite leading-relaxed mb-4">
+                볼트가 마감되면 이 탭이 <strong>영구 아카이브</strong>로 굳어집니다.
+                마감 전에 아래 4가지를 정리하세요.
+              </p>
+
+              <div className="space-y-2 mb-5">
+                {[
+                  { n: 1, label: "회고 작성", hint: "탭 에디터 → 아카이브 모드", href: `/projects/${projectId}/tap` },
+                  { n: 2, label: "산출물 정리", hint: "자료실에 최종본 업로드", tab: "resources" },
+                  { n: 3, label: "배운 점 기록", hint: "탭 위키 모드로 인사이트 정리", href: `/projects/${projectId}/tap` },
+                  { n: 4, label: "마감 확정", hint: "상단 [볼트 마감] 버튼 → 영구 아카이브 승격", admin: true },
+                ].map((step) => (
+                  <div key={step.n} className="flex items-center gap-3 p-3 border-[2px] border-nu-ink/10 bg-nu-cream/30">
+                    <span className="w-7 h-7 shrink-0 bg-nu-ink text-nu-paper font-mono-nu text-[12px] font-black flex items-center justify-center">
+                      {step.n}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-nu-ink">{step.label}</p>
+                      <p className="text-[11px] text-nu-muted">{step.hint}</p>
+                    </div>
+                    {step.tab ? (
+                      <button
+                        onClick={() => setActiveTab(step.tab as string)}
+                        className="font-mono-nu text-[10px] uppercase tracking-widest px-2.5 py-1 border border-nu-ink/20 text-nu-ink hover:bg-nu-ink hover:text-nu-paper"
+                      >
+                        이동
+                      </button>
+                    ) : step.href ? (
+                      <Link
+                        href={step.href}
+                        className="font-mono-nu text-[10px] uppercase tracking-widest px-2.5 py-1 border border-nu-ink/20 text-nu-ink hover:bg-nu-ink hover:text-nu-paper no-underline"
+                      >
+                        이동
+                      </Link>
+                    ) : (
+                      <span className="font-mono-nu text-[10px] uppercase tracking-widest px-2.5 py-1 border border-nu-ink/10 text-nu-muted">
+                        호스트
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Settings Tab — 호스트 전용. Thread 모듈도 여기서 관리 ────── */}
+      {activeTab === "settings" && canEdit && (
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="border-[3px] border-nu-ink bg-nu-paper p-6">
+            <h3 className="font-head text-xl font-extrabold text-nu-ink mb-2 flex items-center gap-2">
+              <Settings size={20} /> 볼트 설정
+            </h3>
+            <p className="text-[13px] text-nu-graphite mb-5">
+              볼트 정보·역할 슬롯·권한·툴 연결 등은 전용 설정 페이지에서 관리하세요.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href={`/projects/${projectId}/settings`}
+                className="h-10 px-5 border-[2.5px] border-nu-ink bg-nu-ink text-nu-paper font-mono-nu text-[11px] font-bold uppercase tracking-widest no-underline hover:bg-nu-pink hover:border-nu-pink inline-flex items-center gap-2"
+              >
+                <Settings size={14} /> 전체 설정 페이지
+              </Link>
+              <button
+                onClick={() => setActiveTab("modules")}
+                className="h-10 px-5 border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink font-mono-nu text-[11px] uppercase tracking-widest hover:bg-nu-ink hover:text-nu-paper inline-flex items-center gap-2"
+              >
+                <Puzzle size={14} /> 모듈 (Thread)
+              </button>
+            </div>
+          </div>
+
+          {/* Thread 모듈 — 인라인 안내 + 관리 진입 */}
+          <ThreadModuleHelp projectId={projectId} />
+        </div>
+      )}
     </>
+  );
+}
+
+/* ── Thread 모듈 안내 카드 ───────────────────────────────────────────── */
+function ThreadModuleHelp({ projectId }: { projectId: string }) {
+  return (
+    <div className="border-[3px] border-nu-ink bg-nu-cream/40 p-6">
+      <div className="flex items-start gap-3 mb-3">
+        <Puzzle size={20} className="text-nu-pink mt-0.5 shrink-0" />
+        <div>
+          <h3 className="font-head text-lg font-extrabold text-nu-ink mb-1 flex items-center gap-2">
+            Thread (모듈)
+            <span className="font-mono-nu text-[9px] uppercase tracking-[0.25em] px-1.5 py-0.5 bg-nu-amber/20 text-nu-amber border border-nu-amber/30">BETA</span>
+          </h3>
+          <p className="text-[13px] text-nu-graphite leading-relaxed">
+            <strong>Thread</strong> = 이 볼트에 끼우는 <strong>기능 모듈</strong>(게시판·캘린더·투표 등).
+            볼트마다 필요한 기능만 골라 설치하세요.
+          </p>
+        </div>
+      </div>
+      <div className="border-l-[3px] border-nu-pink pl-4 mb-4 text-[12px] text-nu-graphite space-y-1">
+        <p>· 기본 탭바(홈/할일/회의록/자료실/탭/자금/활동)는 모든 볼트 공통입니다.</p>
+        <p>· Thread 는 <strong>추가 기능</strong>이 필요할 때만 설치하세요. 게시판이 필요한 볼트, 투표가 필요한 볼트 등.</p>
+        <p>· 설치 후에는 홈 탭 하단에 모듈 영역이 나타납니다.</p>
+      </div>
+      <Link
+        href={`/projects/${projectId}/threads`}
+        className="h-10 px-5 border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink font-mono-nu text-[11px] font-bold uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper inline-flex items-center gap-2"
+      >
+        <Puzzle size={14} /> Thread 관리 페이지
+      </Link>
+    </div>
   );
 }
 

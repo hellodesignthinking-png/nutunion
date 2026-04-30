@@ -61,35 +61,57 @@ function isAllowedAudioUrl(raw: string): boolean {
 }
 
 const SYSTEM_PROMPT = `당신은 NutUnion 플랫폼의 AI 회의록 정리 어시스턴트이자 **성장 촉진자**입니다.
-사용자가 제공하는 회의 내용을 분석하여 구조화된 회의록을 생성하고,
-회원들의 토론과 논의에서 성장 포인트를 발견합니다.
+회의 녹음/메모를 Plaud 스타일의 **풍부한 회의 기록**으로 변환합니다.
+단순 요약이 아니라, 화자 분리·타임스탬프·주제별 그룹핑·인용 발췌까지 포함된 진짜 미팅 레코드를 만드세요.
 
-반드시 아래 JSON 형식으로만 응답하세요:
+반드시 아래 JSON 형식으로만 응답하세요 (모든 텍스트는 한국어):
 
 {
-  "summary": "회의 전체를 2-3문장으로 요약",
-  "discussions": ["논의된 주요 사항 목록"],
+  "summary": "회의 전체를 2-3문장으로 요약 (개요 단락)",
+  "overview": {
+    "gist": "회의의 본질을 1-2단락으로 풀어낸 글 (Plaud 의 'gist' 처럼 회의의 분위기와 핵심을 잡아냄)",
+    "attendees": ["참석자 이름 또는 화자 라벨 (예: '화자 1', '화자 2')"],
+    "durationMin": 60,
+    "date": "YYYY-MM-DD (녹음/메타데이터에서 추정 가능하면)"
+  },
+  "topics": [
+    {
+      "title": "주제 제목 (예: '신규 채용 전략')",
+      "points": ["이 주제 안에서 논의된 핵심 포인트 (불릿)"],
+      "quotes": [{"speaker": "화자 1", "text": "직접 인용한 발언 (1-2문장)", "timestamp": "00:12:34"}]
+    }
+  ],
+  "discussions": ["topics 의 points 를 평탄화한 백업 배열 (구버전 호환)"],
   "decisions": ["결정된 사항 목록"],
-  "actionItems": [{"task": "할 일", "assignee": "담당자 (null 가능)"}],
+  "actionItems": [{"task": "할 일", "assignee": "담당자 또는 null", "dueDate": "YYYY-MM-DD 또는 null", "priority": "high|normal|low"}],
+  "quotes": [{"speaker": "화자 1", "text": "회의 전체에서 인상적인 발언", "timestamp": "00:34:12"}],
+  "speakers": [{"label": "화자 1", "summary": "이 화자가 회의에서 기여한 내용 요약 1-2문장"}],
+  "openQuestions": ["답이 안 나온 질문/후속 확인 필요 항목"],
   "nextTopics": ["다음 미팅 주제 제안 2-3개"],
-  "growthInsights": ["이번 회의에서 팀이 성장한 포인트 (예: 새로운 시각, 합의 도출, 문제 해결)"],
+  "growthInsights": ["이번 회의에서 팀이 성장한 포인트"],
   "learningRecommendations": ["논의 내용 기반 학습 권장 주제/자료"],
   "discussionQuality": {
-    "depth": "얼마나 깊이 논의했는지 (피상적/적절/심도 있음)",
+    "depth": "피상적/적절/심도 있음",
     "participation": "참여도 평가",
     "actionability": "실행 가능성 평가"
-  }
+  },
+  "transcript": [
+    {"timestamp": "00:00:05", "speaker": "화자 1", "text": "발화 내용..."},
+    {"timestamp": "00:00:18", "speaker": "화자 2", "text": "..."}
+  ]
 }
 
 규칙:
-- 반드시 유효한 JSON만 출력
-- 한국어로 작성
-- 논의사항은 핵심만 간결하게
-- 액션아이템은 구체적으로 (누가 무엇을 언제까지)
-- growthInsights: 팀의 성장을 격려하는 톤으로 작성
-- learningRecommendations: 토론에서 나온 주제 기반 학습 자료/주제 제안
-- discussionQuality: 토론의 질을 반성할 수 있도록 피드백
-- 내용이 부족하면 있는 만큼만 정리`;
+- 반드시 유효한 JSON만 출력 (마크다운, 설명 텍스트 금지)
+- 한국어로 작성 (화자 라벨도 '화자 1', '화자 2' 처럼 한국어로)
+- **화자 분리(diarization)**: 녹음에서 다른 목소리를 감지하면 별도 화자로 표기. 이름이 명확히 호명되면 이름 사용, 아니면 '화자 1' 형식
+- **타임스탬프**: \`[HH:MM:SS]\` 형식. transcript 와 quotes 에 반드시 포함 (녹음 기반일 때). 녹음이 없고 텍스트만 있으면 transcript 는 빈 배열
+- **topics**: 회의 흐름을 주제별로 그룹화. 평탄한 불릿 나열이 아닌, 논리적 chunk 로 묶기. 보통 3-7개
+- **quotes**: 1-2 문장 내의 짧은 직접 인용. 핵심이 되는 발언만 발췌 (전체 5-10개 정도)
+- **actionItems.dueDate / priority**: 회의에서 명시되었거나 합리적으로 추론 가능하면 채우고, 아니면 null/normal
+- **transcript**: 녹음 기반일 때만 채움. 가능한 모든 발화를 시간순으로. 텍스트 노트만 있으면 빈 배열
+- **speakers**: 등장한 모든 화자에 대해 한 줄 기여도 요약
+- 내용이 부족하면 있는 만큼만 정리. 빈 배열/null 허용`;
 
 export async function POST(request: NextRequest) {
   if (!GEMINI_API_KEY) {
@@ -217,7 +239,7 @@ export async function POST(request: NextRequest) {
       userPrompt += `\n## 통합 지침\n녹음 기반 내용과 실시간 노트를 교차 검증하여 완벽한 회의록을 작성하세요. 서로 다른 표현은 더 정확한 쪽을 채택하고, 노트에는 없지만 녹음에서 언급된 중요한 맥락/뉘앙스/의사결정 근거는 반드시 포함하세요. 노트는 "참석자가 중요하게 여긴 포인트"를 반영하므로 요약의 골격으로 활용하세요.\n`;
     }
 
-    userPrompt += `\n다음 JSON 스키마로 회의록을 생성하세요: summary(한 단락 요약), discussions(논의 사항 배열), decisions(결정 사항 배열), actionItems([{ task, assignee? }]), nextTopics(다음 회의 주제 제안 배열), growthInsights(배운 점/회고 인사이트 배열).`;
+    userPrompt += `\n시스템 프롬프트의 전체 JSON 스키마(overview, topics, decisions, actionItems with dueDate/priority, quotes, speakers, openQuestions, transcript 등)를 빠짐없이 채우세요. 녹음이 첨부됐다면 화자 분리 + [HH:MM:SS] 타임스탬프 + transcript 를 반드시 포함하세요. Plaud 스타일의 풍부한 회의 기록을 목표로 하세요.`;
     if (previousDigest) {
       userPrompt += `\n이전 주간 다이제스트의 맥락을 참고하여 연속성 있게 작성하세요. 이미 결정된 사항은 반복하지 마세요.`;
     }
@@ -256,7 +278,7 @@ export async function POST(request: NextRequest) {
       generationConfig: {
         temperature: 0.3,
         topP: 0.8,
-        maxOutputTokens: 8192,  // 2048 → 8192 (장문 회의록 응답이 중간에 끊기지 않게)
+        maxOutputTokens: 32768,  // 트랜스크립트 + 화자분리 + 인용 포함된 풀 회의록 대응
         responseMimeType: "application/json",
       },
     };
@@ -352,14 +374,78 @@ export async function POST(request: NextRequest) {
       finalSummary = "회의 요약을 생성할 수 없습니다.";
     }
 
+    // topics → 평탄화된 discussions 백업 (구버전 호환)
+    const topicsArr = Array.isArray(result.topics) ? result.topics : [];
+    const flattenedDiscussions: string[] = Array.isArray(result.discussions) && result.discussions.length
+      ? result.discussions
+      : topicsArr.flatMap((t: any) => {
+          const title = typeof t?.title === "string" ? t.title : "";
+          const points = Array.isArray(t?.points) ? t.points : [];
+          return points.map((p: string) => (title ? `[${title}] ${p}` : p));
+        });
+
     const normalized = {
       summary: finalSummary,
-      discussions: Array.isArray(result.discussions) ? result.discussions : [],
+      // Plaud-style 새 필드
+      overview: result.overview && typeof result.overview === "object"
+        ? {
+            gist: typeof result.overview.gist === "string" ? result.overview.gist : finalSummary,
+            attendees: Array.isArray(result.overview.attendees) ? result.overview.attendees : [],
+            durationMin: typeof result.overview.durationMin === "number" ? result.overview.durationMin : null,
+            date: typeof result.overview.date === "string" ? result.overview.date : null,
+          }
+        : { gist: finalSummary, attendees: [], durationMin: null, date: null },
+      topics: topicsArr.map((t: any) => ({
+        title: typeof t?.title === "string" ? t.title : "주제",
+        points: Array.isArray(t?.points) ? t.points.filter((p: any) => typeof p === "string") : [],
+        quotes: Array.isArray(t?.quotes)
+          ? t.quotes
+              .filter((q: any) => q && typeof q.text === "string")
+              .map((q: any) => ({
+                speaker: typeof q.speaker === "string" ? q.speaker : "화자",
+                text: q.text,
+                timestamp: typeof q.timestamp === "string" ? q.timestamp : null,
+              }))
+          : [],
+      })),
+      quotes: Array.isArray(result.quotes)
+        ? result.quotes
+            .filter((q: any) => q && typeof q.text === "string")
+            .map((q: any) => ({
+              speaker: typeof q.speaker === "string" ? q.speaker : "화자",
+              text: q.text,
+              timestamp: typeof q.timestamp === "string" ? q.timestamp : null,
+            }))
+        : [],
+      speakers: Array.isArray(result.speakers)
+        ? result.speakers
+            .filter((s: any) => s && typeof s.label === "string")
+            .map((s: any) => ({
+              label: s.label,
+              summary: typeof s.summary === "string" ? s.summary : "",
+            }))
+        : [],
+      openQuestions: Array.isArray(result.openQuestions) ? result.openQuestions : [],
+      transcript: Array.isArray(result.transcript)
+        ? result.transcript
+            .filter((t: any) => t && typeof t.text === "string")
+            .map((t: any) => ({
+              timestamp: typeof t.timestamp === "string" ? t.timestamp : "",
+              speaker: typeof t.speaker === "string" ? t.speaker : "화자",
+              text: t.text,
+            }))
+        : [],
+      // 구버전 호환 필드
+      discussions: flattenedDiscussions,
       decisions: Array.isArray(result.decisions) ? result.decisions : [],
       actionItems: Array.isArray(result.actionItems)
-        ? (result.actionItems as { task?: string; content?: string; assignee?: string | null }[]).map((item) => ({
+        ? (result.actionItems as { task?: string; content?: string; assignee?: string | null; dueDate?: string | null; priority?: string }[]).map((item) => ({
             task: item.task || item.content || "",
             assignee: item.assignee ?? null,
+            dueDate: item.dueDate ?? null,
+            priority: (item.priority === "high" || item.priority === "low" || item.priority === "normal")
+              ? item.priority
+              : "normal",
           }))
         : [],
       nextTopics: Array.isArray(result.nextTopics) ? result.nextTopics : [],

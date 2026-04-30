@@ -240,13 +240,16 @@ export default function ProjectSettingsPage() {
       if (memErr && memErr.code !== "23505") throw memErr; // ignore duplicate
 
       // 3. Notify applicant
-      await supabase.from("notifications").insert({
-        user_id: app.applicant_id,
-        type: "application_approved",
-        title: "볼트 지원 승낙",
-        body: `'${title}' 볼트에 합류하셨습니다! 환영합니다.`,
-        metadata: { project_id: projectId },
-        is_read: false,
+      await fetch("/api/notifications/dispatch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipientUserId: app.applicant_id,
+          type: "application_approved",
+          title: "볼트 지원 승낙",
+          body: `'${title}' 볼트에 합류하셨습니다! 환영합니다.`,
+          metadata: { project_id: projectId },
+        }),
       });
 
       setApplications(prev => prev.filter(a => a.id !== app.id));
@@ -271,13 +274,16 @@ export default function ProjectSettingsPage() {
         .eq("id", app.id);
       if (error) throw error;
 
-      await supabase.from("notifications").insert({
-        user_id: app.applicant_id,
-        type: "application_rejected",
-        title: "볼트 지원 결과",
-        body: `'${title}' 볼트 지원이 검토 후 보류되었습니다.`,
-        metadata: { project_id: projectId },
-        is_read: false,
+      await fetch("/api/notifications/dispatch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipientUserId: app.applicant_id,
+          type: "application_rejected",
+          title: "볼트 지원 결과",
+          body: `'${title}' 볼트 지원이 검토 후 보류되었습니다.`,
+          metadata: { project_id: projectId },
+        }),
       });
 
       setApplications(prev => prev.filter(a => a.id !== app.id));
@@ -302,13 +308,16 @@ export default function ProjectSettingsPage() {
 
       setMembers(prev => prev.map(m => m.id === memberId ? { ...m, role: newRole } : m));
       if (userId) {
-        await supabase.from("notifications").insert({
-          user_id: userId,
-          type: "role_changed",
-          title: "볼트 역할 변경",
-          body: `볼트에서 역할이 '${roleLabels[newRole] || newRole}'(으)로 변경되었습니다.`,
-          metadata: { project_id: projectId },
-          is_read: false,
+        await fetch("/api/notifications/dispatch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            recipientUserId: userId,
+            type: "role_changed",
+            title: "볼트 역할 변경",
+            body: `볼트에서 역할이 '${roleLabels[newRole] || newRole}'(으)로 변경되었습니다.`,
+            metadata: { project_id: projectId },
+          }),
         });
       }
       toast.success("역할이 변경되었습니다");
@@ -386,15 +395,18 @@ export default function ProjectSettingsPage() {
 
     setMembers(prev => prev.map(m => m.id === memberId ? { ...m, role: newRole } : m));
 
-    await supabase.from("notifications").insert({
-      user_id: userId,
-      type: "role_changed",
-      title: isCurrentlyManager ? "매니저 권한 해제" : "볼트 매니저로 임명",
-      body: isCurrentlyManager
-        ? "볼트 매니저 권한이 해제되었습니다."
-        : "볼트 매니저로 임명되었습니다. 와셔 관리와 볼트 설정 일부를 제어할 수 있습니다.",
-      metadata: { project_id: projectId },
-      is_read: false,
+    await fetch("/api/notifications/dispatch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        recipientUserId: userId,
+        type: "role_changed",
+        title: isCurrentlyManager ? "매니저 권한 해제" : "볼트 매니저로 임명",
+        body: isCurrentlyManager
+          ? "볼트 매니저 권한이 해제되었습니다."
+          : "볼트 매니저로 임명되었습니다. 와셔 관리와 볼트 설정 일부를 제어할 수 있습니다.",
+        metadata: { project_id: projectId },
+      }),
     });
 
     toast.success(isCurrentlyManager ? "일반 멤버로 변경되었습니다" : "매니저로 임명되었습니다");

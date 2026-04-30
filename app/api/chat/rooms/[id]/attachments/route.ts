@@ -263,7 +263,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     .from("chat_messages")
     .insert(full)
     .select(
-      "id, room_id, sender_id, content, attachment_url, attachment_type, attachment_name, attachment_size, auto_indexed_as, linked_resource_id, created_at, sender:profiles(id, nickname, avatar_url)",
+      "id, room_id, sender_id, content, attachment_url, attachment_type, attachment_name, attachment_size, auto_indexed_as, linked_resource_id, created_at, sender:profiles!chat_messages_sender_id_fkey(id, nickname, avatar_url)",
     )
     .single();
 
@@ -283,7 +283,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
         attachment_type: full.attachment_type,
       })
       .select(
-        "id, room_id, sender_id, content, attachment_url, attachment_type, created_at, sender:profiles(id, nickname, avatar_url)",
+        "id, room_id, sender_id, content, attachment_url, attachment_type, created_at, sender:profiles!chat_messages_sender_id_fkey(id, nickname, avatar_url)",
       )
       .single();
   }
@@ -300,7 +300,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
         content: `${emoji} ${fileName}\n${publicUrl}`,
       })
       .select(
-        "id, room_id, sender_id, content, created_at, sender:profiles(id, nickname, avatar_url)",
+        "id, room_id, sender_id, content, created_at, sender:profiles!chat_messages_sender_id_fkey(id, nickname, avatar_url)",
       )
       .single();
   }

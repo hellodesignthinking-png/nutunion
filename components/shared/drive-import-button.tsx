@@ -178,9 +178,17 @@ export function DriveImportButton({
               {!loading && files && files.length > 0 && (
                 <div className="space-y-1">
                   {files.map((f) => {
-                    const isNative = f.mimeType?.startsWith(
-                      "application/vnd.google-apps.",
-                    );
+                    // 지원되는 네이티브: Docs(→docx) / Sheets(→xlsx) / Slides(→pptx) / Drawing(→png)
+                    // 미지원 네이티브: Form / Site / Script / Map 등
+                    const isExportableNative =
+                      f.mimeType === "application/vnd.google-apps.document" ||
+                      f.mimeType === "application/vnd.google-apps.spreadsheet" ||
+                      f.mimeType === "application/vnd.google-apps.presentation" ||
+                      f.mimeType === "application/vnd.google-apps.drawing";
+                    const isUnsupportedNative =
+                      f.mimeType?.startsWith("application/vnd.google-apps.") &&
+                      !isExportableNative;
+                    const isNative = isUnsupportedNative;
                     const busy = importingId === f.id;
                     return (
                       <div
@@ -208,9 +216,11 @@ export function DriveImportButton({
                           disabled={busy || isNative}
                           onClick={() => importFile(f)}
                           title={
-                            isNative
-                              ? "Google Docs/Sheets/Slides 는 가져올 수 없습니다"
-                              : "R2로 가져오기"
+                            isUnsupportedNative
+                              ? "이 형식은 지원하지 않아요 (Form/Site/Script 등)"
+                              : isExportableNative
+                                ? "Office 형식으로 변환해서 가져오기"
+                                : "R2로 가져오기"
                           }
                           className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-ink text-nu-ink bg-white hover:bg-nu-ink hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 shrink-0"
                         >

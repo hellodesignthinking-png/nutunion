@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, cache } from "react";
 import { GenerativeArt } from "@/components/art/generative-art";
 import {
   Calendar,
@@ -27,12 +27,14 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { GroupActions } from "@/components/groups/group-actions";
+import { ShareButton } from "@/components/shared/share-dialog";
 import { GroupSearch } from "@/components/groups/group-search";
 import { GroupStatusPanel } from "@/components/groups/group-status-panel";
 import { DriveR2MigrationBanner } from "@/components/shared/drive-r2-migration-banner";
 import { OnboardingChecklist } from "@/components/groups/onboarding-checklist";
 import { getCategory } from "@/lib/constants";
 import { ThreadBetaSection } from "@/components/threads/thread-beta-section";
+import { MeetingArchiveTimeline } from "@/components/meetings/meeting-archive-timeline";
 
 // Lazy-load heavy below-fold components
 const CrewActivityFeed = dynamic(() => import("@/components/crews/crew-activity-feed").then(m => m.CrewActivityFeed));
@@ -56,14 +58,17 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const title = group ? `${group.name} — nutunion` : "너트 — nutunion";
   const description = (group?.description || "nutunion 너트 · Protocol Collective").slice(0, 160);
   const ogUrl = `/api/og/group/${id}`;
+  const canonical = `https://nutunion.co.kr/groups/${id}`;
   return {
     title,
     description,
+    alternates: { canonical },
     openGraph: {
       title: group?.name || "너트",
       description,
       images: [{ url: ogUrl, width: 1200, height: 630 }],
       type: "website",
+      url: canonical,
     },
     twitter: {
       card: "summary_large_image",
@@ -113,6 +118,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
 
   let group: any = null;
   let userMembership: any = null;
+  let isGenesis = false;
 
   try {
     // 1차: 최소 필드 (확실히 존재하는 컬럼) — 이게 실패하면 그룹 자체가 없는 것
@@ -137,24 +143,33 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
     group = groupData as any;
     userMembership = membershipData;
 
-    // 2차: 선택적 필드 — 실패해도 페이지 계속 렌더
-    try {
-      const { data: extra } = await supabase.from("groups")
+    // 2차/3차/Genesis 병렬화 — 이전엔 3 round-trip 직렬이었음
+    const [extraRes, hostRes, genesisRes] = await Promise.all([
+      supabase.from("groups")
         .select("image_url, kakao_chat_url, google_drive_url, google_drive_folder_id")
         .eq("id", id)
-        .maybeSingle();
-      if (extra) Object.assign(group, extra);
-    } catch { /* 일부 컬럼 누락 — graceful */ }
-
-    // 3차: 호스트 프로필 — 실패해도 페이지 계속
-    try {
-      const { data: host } = await supabase
+        .maybeSingle()
+        .then((r) => r, () => ({ data: null })),
+      supabase
         .from("profiles")
         .select("id, nickname, avatar_url")
         .eq("id", group.host_id)
-        .maybeSingle();
-      if (host) group.host = host;
-    } catch { /* graceful */ }
+        .maybeSingle()
+        .then((r) => r, () => ({ data: null })),
+      supabase
+        .from("genesis_plans")
+        .select("id")
+        .eq("target_kind", "group")
+        .eq("target_id", id)
+        .limit(1)
+        .maybeSingle()
+        .then((r) => r, () => ({ data: null })),
+    ]);
+    const extra = (extraRes as any)?.data;
+    if (extra) Object.assign(group, extra);
+    const host = (hostRes as any)?.data;
+    if (host) group.host = host;
+    isGenesis = !!(genesisRes as any)?.data;
   } catch (err: any) {
     // If notFound() was thrown it will propagate correctly; re-throw
     if (err?.digest?.startsWith("NEXT_NOT_FOUND")) throw err;
@@ -163,19 +178,6 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
   }
 
   if (!group) notFound();
-
-  // Genesis AI 로 생성된 공간인지 확인
-  let isGenesis = false;
-  try {
-    const { data: gp } = await supabase
-      .from("genesis_plans")
-      .select("id")
-      .eq("target_kind", "group")
-      .eq("target_id", id)
-      .limit(1)
-      .maybeSingle();
-    isGenesis = !!gp;
-  } catch { /* migration 104 미적용 */ }
 
   const isHost        = !!user && group.host_id === user.id;
   const isManager     = isHost || userMembership?.role === "moderator";
@@ -259,6 +261,17 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
             </div>
 
             <div className="flex gap-2 shrink-0 flex-wrap">
+              <Link href={`/groups/${id}/threads`} className="h-9 px-3 bg-nu-paper border-[2px] border-nu-ink/20 text-nu-graphite no-underline hover:bg-nu-ink hover:text-nu-paper inline-flex items-center font-mono-nu text-[11px] uppercase tracking-widest" title="Thread 관리">
+                🧩 Thread
+              </Link>
+              {(isHost || isManager) && (
+                <ShareButton
+                  title={group.name}
+                  description={group.description || "nutunion 너트 — 함께 만들어가는 공간"}
+                  url={`https://nutunion.co.kr/groups/${id}`}
+                  kind="너트"
+                />
+              )}
               {(isHost || isManager) && (
                 <Link href={`/groups/${id}/settings`} className="h-9 px-3 bg-nu-paper border-[2px] border-nu-ink/20 text-nu-graphite no-underline hover:bg-nu-ink hover:text-nu-paper inline-flex items-center">
                   <Settings size={15} />
@@ -420,29 +433,10 @@ async function GroupJoinAction({ id, groupName, hostId, userId, maxMembers, memb
   );
 }
 
-async function HeroQuickStats({ id }: { id: string }) {
+// Dedupe: HeroQuickStats + GroupStatsSection both need member/meeting counts.
+// React's `cache` makes the request memoized for the lifetime of the request.
+const getGroupCounts = cache(async (id: string) => {
   const supabase = await createClient();
-  const [{ count: memberCount }, { count: meetingCount }] = await Promise.all([
-    supabase.from("group_members").select("user_id", { count: "exact", head: true }).eq("group_id", id).eq("status", "active"),
-    supabase.from("meetings").select("id", { count: "exact", head: true }).eq("group_id", id),
-  ]);
-  return (
-    <>
-      <span className="flex items-center gap-1.5 text-nu-muted">
-        <Users size={12} /> <span className="text-nu-ink font-bold">{memberCount ?? 0}</span> 와셔
-      </span>
-      <span className="flex items-center gap-1.5 text-nu-muted">
-        <BookOpen size={12} /> <span className="text-nu-ink font-bold">{meetingCount ?? 0}</span> 미팅
-      </span>
-    </>
-  );
-}
-
-async function GroupStatsSection({ id, colors }: { id: string; colors: any }) {
-  try {
-  const supabase = await createClient();
-
-  // Parallel queries: members + meetings count + group created_at + recent activity check
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const [{ data: members }, { count: totalMeetings }, { data: groupMeta }, { count: recentActivityCount }] = await Promise.all([
     supabase.from("group_members").select("user_id, status").eq("group_id", id).in("status", ["active", "pending", "waitlist"]),
@@ -450,17 +444,45 @@ async function GroupStatsSection({ id, colors }: { id: string; colors: any }) {
     supabase.from("groups").select("created_at").eq("id", id).single(),
     supabase.from("meetings").select("id", { count: "exact", head: true }).eq("group_id", id).gte("scheduled_at", sevenDaysAgo),
   ]);
-
-  const activeCount = members?.filter(m => m.status === "active").length || 0;
+  const activeCount = members?.filter((m: any) => m.status === "active").length || 0;
   const pendingCount = (members?.length || 0) - activeCount;
-  const createdDaysAgo = groupMeta?.created_at
-    ? Math.floor((Date.now() - new Date(groupMeta.created_at).getTime()) / (1000 * 60 * 60 * 24))
+  return {
+    activeCount,
+    pendingCount,
+    totalMeetings: totalMeetings ?? 0,
+    createdAt: groupMeta?.created_at ?? null,
+    recentActivityCount: recentActivityCount ?? 0,
+  };
+});
+
+async function HeroQuickStats({ id }: { id: string }) {
+  const { activeCount, totalMeetings } = await getGroupCounts(id);
+  return (
+    <>
+      <span className="flex items-center gap-1.5 text-nu-muted">
+        <Users size={12} /> <span className="text-nu-ink font-bold">{activeCount}</span> 와셔
+      </span>
+      <span className="flex items-center gap-1.5 text-nu-muted">
+        <BookOpen size={12} /> <span className="text-nu-ink font-bold">{totalMeetings}</span> 미팅
+      </span>
+    </>
+  );
+}
+
+async function GroupStatsSection({ id, colors }: { id: string; colors: any }) {
+  try {
+  // Single source of truth: getGroupCounts is React-cached per request,
+  // so HeroQuickStats and this section share the underlying queries.
+  const { activeCount, pendingCount, totalMeetings, createdAt, recentActivityCount } = await getGroupCounts(id);
+
+  const createdDaysAgo = createdAt
+    ? Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24))
     : 0;
-  const isRecentlyActive = (recentActivityCount ?? 0) > 0;
+  const isRecentlyActive = recentActivityCount > 0;
 
   const stats = [
     { icon: <Users size={18} />, label: "와셔", value: activeCount, sub: pendingCount > 0 ? `+${pendingCount} 대기` : null },
-    { icon: <BookOpen size={18} />, label: "총 미팅", value: totalMeetings ?? 0, sub: null },
+    { icon: <BookOpen size={18} />, label: "총 미팅", value: totalMeetings, sub: null },
     { icon: <Clock size={18} />, label: "활동일", value: createdDaysAgo, sub: "일째" },
   ];
 
@@ -515,7 +537,26 @@ async function GroupUpcomingSection({ id, colors, isHost, isMember, userId }: an
   ] = await Promise.all([
     supabase.from("events").select("id, title, start_at, end_at, location, max_attendees").eq("group_id", id).gte("start_at", now).order("start_at").limit(5),
     supabase.from("meetings").select("id, title, scheduled_at, duration_min, location, status").eq("group_id", id).in("status", ["upcoming", "in_progress"]).gte("scheduled_at", now).order("scheduled_at").limit(5),
-    supabase.from("meetings").select("id, title, scheduled_at, summary, next_topic, status").eq("group_id", id).eq("status", "completed").order("scheduled_at", { ascending: false }).limit(3),
+    (async () => {
+      // Try the rich shape (post-migration 129). Fall back to the legacy column
+      // set if ai_result/next_topics columns don't exist yet.
+      const now = new Date().toISOString();
+      const rich = await supabase
+        .from("meetings")
+        .select("id, title, scheduled_at, summary, next_topic, next_topics, ai_result, google_doc_url, status")
+        .eq("group_id", id)
+        .or(`status.eq.completed,scheduled_at.lt.${now}`)
+        .order("scheduled_at", { ascending: false })
+        .limit(10);
+      if (!rich.error) return rich;
+      return supabase
+        .from("meetings")
+        .select("id, title, scheduled_at, summary, next_topic, status, google_doc_url")
+        .eq("group_id", id)
+        .or(`status.eq.completed,scheduled_at.lt.${now}`)
+        .order("scheduled_at", { ascending: false })
+        .limit(10);
+    })(),
   ]);
 
   const allUpcoming = [
@@ -601,30 +642,18 @@ async function GroupUpcomingSection({ id, colors, isHost, isMember, userId }: an
         )}
       </section>
 
-      {pastMeetings && pastMeetings.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-head text-xl font-extrabold text-nu-ink flex items-center gap-2">
-              <Target size={18} className="text-nu-amber" /> 지난 미팅 기록
-            </h2>
-          </div>
-          <div className="flex flex-col gap-3">
-            {pastMeetings.map((m: any) => (
-              <Link key={m.id} href={`/groups/${id}/meetings/${m.id}`} className="bg-nu-white border-[2px] border-nu-ink/[0.08] p-5 no-underline hover:border-nu-amber/40 transition-all group">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-nu-amber/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <BookOpen size={16} className="text-nu-amber" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-head text-sm font-bold text-nu-ink group-hover:text-nu-amber transition-colors mb-1">{m.title}</p>
-                    <p className="font-mono-nu text-[12px] text-nu-muted">{new Date(m.scheduled_at).toLocaleDateString("ko", { year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Seoul" })}</p>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-head text-xl font-extrabold text-nu-ink flex items-center gap-2">
+            <BookOpen size={18} className="text-nu-pink" /> 회의록 아카이브
+          </h2>
+        </div>
+        <MeetingArchiveTimeline
+          meetings={(pastMeetings as any[]) || []}
+          variant="group"
+          baseHref={`/groups/${id}/meetings`}
+        />
+      </section>
     </div>
   );
   } catch (err) {

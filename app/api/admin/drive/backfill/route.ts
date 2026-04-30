@@ -54,6 +54,21 @@ interface BackfillItemResult {
 }
 
 export async function POST(req: NextRequest) {
+  // [Drive shared-folder mode — 2026-04 rewire]
+  // 단일 공유 폴더 모드에서는 그룹/프로젝트별 폴더 백필이 무의미하다.
+  // env 가 설정돼 있으면 즉시 종료.
+  if (process.env.GOOGLE_DRIVE_SHARED_FOLDER_ID?.trim()) {
+    log.info("drive.backfill.shared_folder_mode_skip", { path: req.nextUrl.pathname });
+    return NextResponse.json({
+      processed: 0,
+      created: 0,
+      failed: 0,
+      skipped: 0,
+      sharedFolderMode: true,
+      message: "Shared folder mode active — backfill skipped",
+    });
+  }
+
   // [Drive migration Phase A] Deprecation guard — require ?force=1 for legacy cleanup runs.
   const force = req.nextUrl.searchParams.get("force");
   if (force !== "1") {

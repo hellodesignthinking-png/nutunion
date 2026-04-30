@@ -23,6 +23,28 @@ interface ResourcePreviewModalProps {
 
 type RenderMode = "iframe-src" | "iframe-srcdoc" | "image" | "video" | "audio" | "text";
 
+/**
+ * 자료실 업로드 파일은 프록시를 거쳐 Content-Disposition: inline 으로 강제 — 일부 R2/Supabase
+ * 응답이 attachment 로 떨어져 iframe 안에서 다운로드 트리거되는 문제를 우회한다.
+ * Google Docs / Drive 변환 URL 처럼 외부 처리 URL 은 그대로 통과.
+ */
+function toInlineUrl(url: string): string {
+  if (!url || !/^https?:\/\//i.test(url)) return url;
+  try {
+    const u = new URL(url);
+    const host = u.hostname;
+    const isStorage =
+      host.endsWith(".r2.dev") ||
+      host.endsWith(".r2.cloudflarestorage.com") ||
+      host.endsWith(".supabase.co") ||
+      host === "cdn.nutunion.co.kr";
+    if (!isStorage) return url;
+    return `/api/files/preview-proxy?url=${encodeURIComponent(url)}`;
+  } catch {
+    return url;
+  }
+}
+
 export function ResourcePreviewModal({ isOpen, onClose, url, name }: ResourcePreviewModalProps) {
   const [embedUrl, setEmbedUrl] = useState("");
   const [srcDoc, setSrcDoc] = useState<string | null>(null);
@@ -77,10 +99,12 @@ export function ResourcePreviewModal({ isOpen, onClose, url, name }: ResourcePre
     }
 
     // 4) 외부 URL (Supabase Storage, R2, CDN 등)
+    // 자료실 업로드 파일은 inlineUrl(프록시) 로 로드 — Content-Disposition: inline 보장.
+    const inlineUrl = toInlineUrl(url);
 
     // 4-a) 이미지 → <img>
     if (isImage) {
-      setEmbedUrl(url);
+      setEmbedUrl(inlineUrl);
       setMode("image");
       setLoading(false);
       return;
@@ -88,7 +112,7 @@ export function ResourcePreviewModal({ isOpen, onClose, url, name }: ResourcePre
 
     // 4-b) 동영상 → <video>
     if (isVideo) {
-      setEmbedUrl(url);
+      setEmbedUrl(inlineUrl);
       setMode("video");
       setLoading(false);
       return;
@@ -96,7 +120,7 @@ export function ResourcePreviewModal({ isOpen, onClose, url, name }: ResourcePre
 
     // 4-c) 오디오 → <audio>
     if (isAudio) {
-      setEmbedUrl(url);
+      setEmbedUrl(inlineUrl);
       setMode("audio");
       setLoading(false);
       return;
@@ -107,7 +131,7 @@ export function ResourcePreviewModal({ isOpen, onClose, url, name }: ResourcePre
     if (isHtml) {
       (async () => {
         try {
-          const res = await fetch(url);
+          const res = await fetch(inlineUrl);
           if (!res.ok) throw new Error(`${res.status}`);
 
           // 원저 서버가 프레임 임베드를 금지했는지 확인 (Drive 등)
@@ -123,7 +147,7 @@ export function ResourcePreviewModal({ isOpen, onClose, url, name }: ResourcePre
             if (!cancelled) {
               setError("원저 서버가 프레임 임베드를 차단했습니다 — 원본에서 열어주세요");
               setMode("iframe-src");
-              setEmbedUrl(url);
+              setEmbedUrl(inlineUrl);
               setLoading(false);
             }
             return;
@@ -140,7 +164,7 @@ export function ResourcePreviewModal({ isOpen, onClose, url, name }: ResourcePre
           if (!cancelled) {
             setError("HTML 불러오기 실패 — 원본 링크에서 열어주세요");
             setMode("iframe-src");
-            setEmbedUrl(url);
+            setEmbedUrl(inlineUrl);
             setLoading(false);
           }
         }
@@ -152,7 +176,7 @@ export function ResourcePreviewModal({ isOpen, onClose, url, name }: ResourcePre
     if (isMarkdown) {
       (async () => {
         try {
-          const res = await fetch(url);
+          const res = await fetch(inlineUrl);
           const md = await res.text();
           if (cancelled) return;
           const html = markdownToHtml(md);
@@ -161,7 +185,7 @@ export function ResourcePreviewModal({ isOpen, onClose, url, name }: ResourcePre
           setLoading(false);
         } catch {
           if (!cancelled) {
-            setEmbedUrl(url);
+            setEmbedUrl(inlineUrl);
             setMode("iframe-src");
             setLoading(false);
           }
@@ -174,7 +198,7 @@ export function ResourcePreviewModal({ isOpen, onClose, url, name }: ResourcePre
     if (isText) {
       (async () => {
         try {
-          const res = await fetch(url);
+          const res = await fetch(inlineUrl);
           const txt = await res.text();
           if (cancelled) return;
           const html = textToPreHtml(txt);
@@ -183,7 +207,7 @@ export function ResourcePreviewModal({ isOpen, onClose, url, name }: ResourcePre
           setLoading(false);
         } catch {
           if (!cancelled) {
-            setEmbedUrl(url);
+            setEmbedUrl(inlineUrl);
             setMode("iframe-src");
             setLoading(false);
           }
@@ -192,8 +216,8 @@ export function ResourcePreviewModal({ isOpen, onClose, url, name }: ResourcePre
       return;
     }
 
-    // 4-g) 나머지 — 그냥 iframe 임베드 (PDF 등은 브라우저가 처리)
-    setEmbedUrl(url);
+    // 4-g) 나머지 — iframe 임베드 (PDF 등). inline 프록시로 다운로드 트리거 방지.
+    setEmbedUrl(inlineUrl);
     setMode("iframe-src");
 
     return () => {

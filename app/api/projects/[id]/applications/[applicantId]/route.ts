@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { dispatchNotification } from "@/lib/notifications/dispatch";
 
 export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string; applicantId: string }> };
@@ -66,15 +67,15 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   }
 
   // 지원자 알림
-  await admin.from("notifications").insert({
-    user_id: applicantId,
-    type: action === "approve" ? "application_approved" : "application_rejected",
+  await dispatchNotification({
+    recipientId: applicantId,
+    eventType: action === "approve" ? "application_approved" : "application_rejected",
     title: action === "approve" ? "볼트 지원이 승인됐어요 🎉" : "볼트 지원이 반려됐어요",
     body: action === "approve"
       ? `${(proj as any).title} 볼트에 참여하게 됐어요!`
       : `${(proj as any).title} 볼트 지원이 반려됐습니다.`,
+    linkUrl: `/projects/${projectId}`,
     metadata: { project_id: projectId },
-    is_read: false,
   });
 
   return NextResponse.json({ ok: true, action });

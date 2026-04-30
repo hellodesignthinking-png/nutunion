@@ -61,15 +61,19 @@ export function GroupActions({
       return;
     }
 
-    // 호스트에게 알림 전송
-    await supabase.from("notifications").insert({
-      user_id: hostId,
-      type: "join_request",
-      title: "가입 신청이 도착했습니다",
-      body: `${groupName} 너트에 새 가입 신청이 있습니다. 설정에서 승인해주세요.`,
-      metadata: { group_id: groupId },
-      is_read: false,
-    });
+    // 호스트에게 알림 전송 (fire-and-forget)
+    fetch("/api/notifications/dispatch", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        userId: hostId,
+        title: "가입 신청이 도착했습니다",
+        body: `${groupName} 너트에 새 가입 신청이 있습니다. 설정에서 승인해주세요.`,
+        metadata: { group_id: groupId, type: "join_request" },
+        category: "group",
+        actorId: userId,
+      }),
+    }).catch((e) => console.warn("notify failed", e));
 
     // 너트 채팅방에도 시스템 메시지 (호스트가 바로 승인/거절 가능)
     try {

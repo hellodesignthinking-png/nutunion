@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Plus, Star, X } from "lucide-react";
+import { useEscapeKey } from "@/lib/hooks/use-escape-key";
 
 type Person = {
   id: string;
@@ -115,6 +116,7 @@ function AddPersonModal({ onClose, onCreated }: { onClose: () => void; onCreated
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  useEscapeKey(onClose);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -132,13 +134,16 @@ function AddPersonModal({ onClose, onCreated }: { onClose: () => void; onCreated
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
       <form
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-person-title"
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
         className="bg-nu-paper border-[3px] border-nu-ink shadow-[6px_6px_0_0_#0D0F14] p-5 w-full max-w-lg max-h-[90vh] overflow-auto"
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-head text-xl font-extrabold">인맥 추가</h2>
-          <button type="button" onClick={onClose} className="p-1"><X size={18} /></button>
+          <h2 id="add-person-title" className="font-head text-xl font-extrabold">인맥 추가</h2>
+          <button type="button" onClick={onClose} aria-label="닫기" className="p-1"><X size={18} /></button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <Field label="이름 *" value={form.display_name} onChange={(v) => setForm({ ...form, display_name: v })} />

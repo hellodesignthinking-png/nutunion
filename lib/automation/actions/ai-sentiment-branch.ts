@@ -9,6 +9,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { generateObjectForUser } from "@/lib/ai/vault";
+import { dispatchNotification } from "@/lib/notifications/dispatch";
 
 type Ctx = {
   admin: SupabaseClient;
@@ -76,9 +77,9 @@ export default async function aiSentimentBranch({ admin, rule, payload, params }
   }
   const notifyUser = hostId || rule.owner_id;
 
-  await admin.from("notifications").insert({
-    user_id: notifyUser,
-    type: "sentiment_alert",
+  await dispatchNotification({
+    recipientId: notifyUser,
+    eventType: "sentiment_alert",
     title: `🔍 ${notifyOn === "negative" ? "부정적" : notifyOn} 감정 감지`,
     body: summary || `자동화 룰 "${rule.name}" 이 ${sentiment} 톤을 감지했어요.`,
     metadata: {
@@ -88,7 +89,6 @@ export default async function aiSentimentBranch({ admin, rule, payload, params }
       sentiment,
       confidence,
     },
-    is_read: false,
   });
 
   // System chat message to the source room if we have one

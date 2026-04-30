@@ -34,7 +34,55 @@ export function ChatDigestList({
   canDelete?: boolean;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [convertingId, setConvertingId] = useState<string | null>(null);
   const router = useRouter();
+
+  async function handleToTasks(digestId: string, count: number) {
+    if (count === 0) return;
+    // 사용자 본인이 멤버인 프로젝트 목록을 가져와서 선택
+    const { createClient: createSupa } = await import("@/lib/supabase/client");
+    const supabase = createSupa();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { toast.error("로그인이 필요합니다"); return; }
+    const { data: rows } = await supabase
+      .from("project_members")
+      .select("project_id, projects(id, title, status)")
+      .eq("user_id", user.id);
+    const projects = (rows || [])
+      .map((r: any) => r.projects)
+      .filter((p: any) => p && (p.status === "active" || p.status === "draft"))
+      .slice(0, 30);
+    if (projects.length === 0) {
+      toast.error("멤버로 있는 활성 볼트가 없어요");
+      return;
+    }
+    const list = projects.map((p: any, i: number) => `${i + 1}. ${p.title}`).join("\n");
+    const choice = window.prompt(
+      `${count}개 실행 항목을 어느 볼트에 추가할까요?\n\n${list}\n\n번호 입력:`,
+    );
+    if (!choice) return;
+    const idx = parseInt(choice, 10) - 1;
+    const project = projects[idx];
+    if (!project) { toast.error("잘못된 선택"); return; }
+
+    setConvertingId(digestId);
+    try {
+      const r = await fetch(`/api/chat-digest/${digestId}/to-tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project_id: project.id, status: "todo" }),
+      });
+      const json = await r.json();
+      if (!r.ok) {
+        toast.error(json?.error || "변환 실패");
+        return;
+      }
+      const matchedMsg = json.with_assignee > 0 ? ` · 담당자 매칭 ${json.with_assignee}건` : "";
+      toast.success(`${json.inserted}개 태스크 생성됨${matchedMsg}`);
+    } finally {
+      setConvertingId(null);
+    }
+  }
 
   const handleDelete = async (id: string) => {
     if (!confirm("이 회의록을 삭제하시겠습니까?")) return;
@@ -146,7 +194,7 @@ export function ChatDigestList({
                 {/* 실행 항목 */}
                 {d.action_items.length > 0 && (
                   <Section title="실행 항목">
-                    <ul className="space-y-1.5">
+                    <ul className="space-y-1.5 mb-2">
                       {d.action_items.map((a, i) => (
                         <li key={i} className="text-[13px] text-nu-ink flex gap-2">
                           <input type="checkbox" disabled className="mt-1 accent-nu-pink" />
@@ -162,6 +210,15 @@ export function ChatDigestList({
                         </li>
                       ))}
                     </ul>
+                    <button
+                      type="button"
+                      onClick={() => handleToTasks(d.id, d.action_items.length)}
+                      disabled={convertingId === d.id}
+                      className="font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-pink text-nu-pink hover:bg-nu-pink hover:text-white transition-all disabled:opacity-50"
+                      title="실행 항목을 볼트(프로젝트) 칸반 태스크로 자동 등록"
+                    >
+                      {convertingId === d.id ? "등록 중..." : `→ 볼트 칸반에 ${d.action_items.length}개 추가`}
+                    </button>
                   </Section>
                 )}
 

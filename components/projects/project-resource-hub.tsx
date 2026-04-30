@@ -45,12 +45,15 @@ import { ResourceInteractions } from "@/components/shared/resource-interactions"
 import { ResourceEditor } from "@/components/shared/resource-editor";
 import { resolveTemplateContent } from "@/lib/template-resolver";
 import { NewDocumentModal } from "@/components/shared/new-document-modal";
+import { NewDocDropdown } from "@/components/shared/new-doc-dropdown";
 import { DriveImportButton } from "@/components/shared/drive-import-button";
+import { DriveDirectUploadButton } from "@/components/shared/drive-direct-upload-button";
+import { DriveSyncBadge } from "@/components/shared/drive-sync-badge";
 import { DropZoneUpload } from "@/components/shared/drop-zone-upload";
 import { LinkPreviewPanel } from "@/components/shared/link-preview-panel";
 
 type ResourceStage = "planning" | "interim" | "evidence" | "final";
-type ResourceType = "google_doc" | "google_sheet" | "google_slide" | "drive" | "notion" | "link";
+type ResourceType = "google_doc" | "google_sheet" | "google_slide" | "google_drawing" | "drive" | "notion" | "link";
 
 interface ProjectResource {
   id: string;
@@ -98,6 +101,7 @@ const typeConfig: Record<ResourceType, { icon: typeof FileText; label: string; c
   google_doc: { icon: FileText, label: "Docs", color: "text-blue-600" },
   google_sheet: { icon: Sheet, label: "Sheets", color: "text-green-600" },
   google_slide: { icon: Presentation, label: "Slides", color: "text-amber-600" },
+  google_drawing: { icon: FileText, label: "Drawing", color: "text-purple-600" },
   drive: { icon: HardDrive, label: "Drive", color: "text-green-600" },
   notion: { icon: BookOpen, label: "Notion", color: "text-nu-ink" },
   link: { icon: Link, label: "링크", color: "text-nu-blue" },
@@ -114,6 +118,7 @@ function detectType(url: string): ResourceType {
   if (url.includes("docs.google.com/document")) return "google_doc";
   if (url.includes("docs.google.com/spreadsheets")) return "google_sheet";
   if (url.includes("docs.google.com/presentation")) return "google_slide";
+  if (url.includes("docs.google.com/drawings")) return "google_drawing";
   if (url.includes("drive.google.com")) return "drive";
   if (url.includes("notion.so") || url.includes("notion.site")) return "notion";
   return "link";
@@ -185,6 +190,71 @@ export function ProjectResourceHub({
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeStage, setActiveStage] = useState<ResourceStage | "all">("all");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name">("newest");
+  const [driveOnly, setDriveOnly] = useState(false);
+  const [currentFolder, setCurrentFolder] = useState<string>("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
+  async function bulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`${selectedIds.size}개 자료를 삭제할까요? Drive 사본도 같이 정리됩니다.`)) return;
+    setBulkBusy(true);
+    let ok = 0, fail = 0;
+    for (const id of selectedIds) {
+      try {
+        const r = await fetch("/api/files/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, table: "project_resources" }),
+        });
+        if (r.ok) ok++; else fail++;
+      } catch { fail++; }
+    }
+    setBulkBusy(false);
+    clearSelection();
+    if (fail > 0) toast.error(`${ok}개 삭제 / ${fail}개 실패`);
+    else toast.success(`${ok}개 삭제 완료`);
+    await loadResources();
+  }
+
+  async function bulkMove() {
+    if (selectedIds.size === 0) return;
+    const target = window.prompt("이동할 폴더 경로 (빈 칸 = 루트)", currentFolder);
+    if (target === null) return;
+    setBulkBusy(true);
+    try {
+      const r = await fetch("/api/files/move", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          table: "project_resources",
+          ids: Array.from(selectedIds),
+          folder_path: target,
+        }),
+      });
+      const json = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        if (json?.code === "MIGRATION_MISSING") toast.error("폴더 기능 미활성 (마이그레이션 133 필요)");
+        else toast.error(json?.error || "이동 실패");
+        return;
+      }
+      toast.success(`${json.moved}개 이동 완료`);
+      clearSelection();
+      await loadResources();
+    } finally {
+      setBulkBusy(false);
+    }
+  }
   const [showAddForm, setShowAddForm] = useState(false);
   const [showNewDocModal, setShowNewDocModal] = useState(false);
   const [previewData, setPreviewData] = useState<{
@@ -462,14 +532,32 @@ export function ProjectResourceHub({
   const isGenesisFolder = (r: ProjectResource) =>
     (r as any).type === "folder-placeholder" || (r.name || "").startsWith("📁 ");
 
-  // Filter
-  const filtered = resources.filter((r) => {
-    if (isGenesisFolder(r)) return false;
-    const stageOk = activeStage === "all" || r.stage === activeStage;
-    const searchOk = r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    return stageOk && searchOk;
-  });
+  // Filter + Sort
+  const sortFn = (a: any, b: any): number => {
+    if (sortBy === "name") return (a.name || "").localeCompare(b.name || "", "ko");
+    if (sortBy === "oldest") return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  };
+  const filtered = resources
+    .filter((r) => {
+      if (isGenesisFolder(r)) return false;
+      const stageOk = activeStage === "all" || r.stage === activeStage;
+      const searchOk = r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        r.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      const folderOk = (((r as any).folder_path || "") === currentFolder);
+      const driveOk = !driveOnly || !!(r as any).drive_edit_file_id;
+      return stageOk && searchOk && folderOk && driveOk;
+    })
+    .sort(sortFn);
+
+  // 발견된 폴더 목록 (전체 자료 기준 — 폴더 필터링 전)
+  const folderList: string[] = Array.from(
+    new Set(resources.map((r) => (r as any).folder_path).filter((p: any) => typeof p === "string" && p.length > 0)),
+  ).sort();
+
+  // R2 사용량 / Drive 사본 통계 (이미 로드된 데이터에서 합산)
+  const r2Count = resources.filter((r) => (r as any).storage_type === "r2").length;
+  const driveCopies = resources.filter((r) => !!(r as any).drive_edit_file_id).length;
 
   const byStage = {
     planning: filtered.filter((r) => r.stage === "planning"),
@@ -551,9 +639,17 @@ export function ProjectResourceHub({
   // Delete
   async function handleDelete(id: string) {
     if (!confirm("이 자료를 삭제하시겠습니까?")) return;
-    const supabase = createClient();
-    const { error } = await supabase.from("project_resources").delete().eq("id", id);
-    if (error) { toast.error("삭제에 실패했습니다"); return; }
+    // 통합 삭제 API — DB row + 스토리지(R2/Supabase) 같이 제거.
+    const r = await fetch("/api/files/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, table: "project_resources" }),
+    });
+    const json = await r.json().catch(() => ({}));
+    if (!r.ok) { toast.error(json?.error || "삭제에 실패했습니다"); return; }
+    if (Array.isArray(json.storage_warnings) && json.storage_warnings.length > 0) {
+      console.warn("[delete] storage cleanup warnings", json.storage_warnings);
+    }
     toast.success("삭제되었습니다");
     setResources((prev) => prev.filter((r) => r.id !== id));
     if (previewData) {
@@ -725,12 +821,20 @@ export function ProjectResourceHub({
                   <span className="font-mono-nu text-[11px] md:text-[12px] uppercase tracking-widest font-bold">Quick Add</span>
                 </div>
                 <div className="flex-1 w-full flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:flex-wrap">
-                  {/* 1. 새 문서 — full width on mobile */}
+                  {/* 1. 새 문서 — Google Docs/Sheets/Slides 자동 생성 */}
+                  <NewDocDropdown
+                    scope="project"
+                    scopeId={projectId}
+                    onCreated={() => loadResources()}
+                    className="w-full sm:w-auto"
+                  />
+                  {/* 위키 문서 (legacy) */}
                   <button
                     onClick={() => setShowNewDocModal(true)}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 font-mono-nu text-xs md:text-sm font-bold uppercase tracking-widest px-4 py-2 bg-nu-pink text-white hover:bg-nu-pink/90 transition-all cursor-pointer border-[2px] border-nu-pink"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 font-mono-nu text-[11px] md:text-xs font-bold uppercase tracking-widest px-3 py-2 border-[2px] border-nu-ink/20 hover:border-nu-ink text-nu-graphite hover:bg-nu-ink hover:text-nu-paper transition-all cursor-pointer"
+                    title="위키 페이지 형식으로 작성"
                   >
-                    <FileText size={13} /> ✍️ 새 문서
+                    <FileText size={13} /> 위키 문서
                   </button>
 
                   {/* 2. 파일 업로드 + 3. Drive — 2-col on mobile, inline on desktop */}
@@ -741,7 +845,15 @@ export function ProjectResourceHub({
                     <input type="file" className="hidden" onChange={handleFileUpload} />
                   </label>
 
-                  {/* 3. Google Drive 업로드 */}
+                  {/* 3a. Drive 에 직접 업로드 — 편집 가능한 사본을 바로 자료실에 등록 */}
+                  <DriveDirectUploadButton
+                    targetType="project"
+                    targetId={projectId}
+                    onUploaded={() => loadResources()}
+                    stage={activeStage === "all" ? "evidence" : activeStage}
+                  />
+
+                  {/* 3b. 기존 Drive 파일을 R2 로 가져오기 */}
                   <DriveImportButton
                     prefix="resources"
                     scopeId={projectId}
@@ -928,24 +1040,140 @@ export function ProjectResourceHub({
                 <Loader2 size={24} className="animate-spin text-nu-gray" />
               </div>
             ) : filtered.length === 0 ? (
-              <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-10 text-center">
-                <FileText size={36} className="text-nu-gray/20 mx-auto mb-3" />
-                <p className="text-nu-gray text-sm mb-1">{searchQuery ? "검색 결과가 없습니다" : "아직 자료가 없습니다"}</p>
-                {canEdit && !searchQuery && <p className="text-[12px] text-nu-muted">Drive 연결 또는 링크 추가로 자료를 등록해보세요</p>}
-              </div>
+              searchQuery ? (
+                <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-10 text-center">
+                  <FileText size={36} className="text-nu-gray/20 mx-auto mb-3" />
+                  <p className="text-nu-gray text-sm">검색 결과가 없습니다</p>
+                </div>
+              ) : (
+                <div className="border-[3px] border-nu-ink bg-nu-cream/50 p-6">
+                  <div className="flex items-start gap-3 mb-4">
+                    <FileText size={22} className="text-nu-pink mt-0.5 shrink-0" />
+                    <div>
+                      <h3 className="font-head text-xl font-extrabold text-nu-ink mb-1">자료실이란?</h3>
+                      <p className="text-[13px] text-nu-graphite leading-relaxed">
+                        볼트의 <strong>모든 산출물·레퍼런스·링크</strong>를 모으는 곳입니다.
+                        Drive 폴더 연결, 파일 업로드, 외부 링크를 한 화면에서 관리하세요.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="border-l-[3px] border-nu-pink pl-4 space-y-1.5">
+                    <p className="font-mono-nu text-[10px] uppercase tracking-[0.25em] text-nu-pink font-bold mb-1">시작하는 방법</p>
+                    {canEdit ? (
+                      <>
+                        <p className="text-[13px] text-nu-graphite"><span className="font-mono-nu font-bold text-nu-ink mr-1.5">1.</span>상단 <b>+ 추가</b> 버튼으로 파일 업로드 또는 링크 등록</p>
+                        <p className="text-[13px] text-nu-graphite"><span className="font-mono-nu font-bold text-nu-ink mr-1.5">2.</span>Google Drive 폴더를 연결해 자동 동기화</p>
+                        <p className="text-[13px] text-nu-graphite"><span className="font-mono-nu font-bold text-nu-ink mr-1.5">3.</span>마감 시 자료실의 산출물이 탭 아카이브로 함께 보관</p>
+                      </>
+                    ) : (
+                      <p className="text-[13px] text-nu-graphite">볼트 리더가 자료를 등록하면 여기에 표시됩니다.</p>
+                    )}
+                  </div>
+                </div>
+              )
             ) : (
-              <div className="grid grid-cols-1 gap-2.5">
-                {filtered.map((r) => (
-                  <ResourceCard
-                    key={r.id}
-                    resource={r}
-                    canEdit={canEdit}
-                    isSelected={previewData?.url === r.url}
-                    onPreview={() => { setPreviewData({ url: r.url, name: r.name, id: r.id, content: resolveTemplateContent(r.url, r.content), storage_type: (r as any).storage_type, storage_key: (r as any).storage_key, uploaded_by: r.uploaded_by, mime: (r as any).mime_type || null }); setRightTab("preview"); if (!isSplitView) setIsSplitView(true); }}
-                    onDelete={() => handleDelete(r.id)}
-                  />
-                ))}
-              </div>
+              <>
+                {/* 통계 + 정렬 + Drive only + 폴더 바 */}
+                <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px]">
+                  <span className="font-mono-nu uppercase tracking-widest text-nu-muted">자료 {resources.length}</span>
+                  <span className="w-px h-3 bg-nu-ink/15" />
+                  <span className="font-mono-nu uppercase tracking-widest text-nu-muted">R2 {r2Count}</span>
+                  {driveCopies > 0 && (
+                    <>
+                      <span className="w-px h-3 bg-nu-ink/15" />
+                      <span className="font-mono-nu uppercase tracking-widest text-nu-pink">Drive 사본 {driveCopies}</span>
+                    </>
+                  )}
+                </div>
+                <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                  {(["newest", "oldest", "name"] as const).map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setSortBy(v)}
+                      className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 border-[2px] transition-all ${sortBy === v ? "border-nu-ink bg-nu-ink text-nu-paper" : "border-nu-ink/15 text-nu-muted hover:border-nu-ink"}`}
+                    >
+                      {v === "newest" ? "최신" : v === "oldest" ? "오래됨" : "이름"}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setDriveOnly((v) => !v)}
+                    className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 border-[2px] transition-all flex items-center gap-1 ${driveOnly ? "border-nu-pink bg-nu-pink/10 text-nu-pink" : "border-nu-ink/15 text-nu-muted hover:border-nu-ink"}`}
+                  >
+                    Drive 편집중
+                  </button>
+                </div>
+                {/* 폴더 바 */}
+                <div className="mb-3 flex flex-wrap items-center gap-1.5">
+                  <button
+                    onClick={() => setCurrentFolder("")}
+                    className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 border-[2px] transition-all ${currentFolder === "" ? "border-nu-ink bg-nu-ink text-nu-paper" : "border-nu-ink/15 text-nu-muted hover:border-nu-ink"}`}
+                  >
+                    루트
+                  </button>
+                  {folderList.map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setCurrentFolder(p)}
+                      className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 border-[2px] transition-all ${currentFolder === p ? "border-nu-ink bg-nu-ink text-nu-paper" : "border-nu-ink/15 text-nu-muted hover:border-nu-ink"}`}
+                      title={p}
+                    >
+                      📁 {p}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => {
+                      const name = window.prompt("새 폴더 이름");
+                      if (name && name.trim()) setCurrentFolder(name.trim());
+                    }}
+                    className="font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 border-[2px] border-dashed border-nu-ink/20 text-nu-muted hover:border-nu-ink hover:text-nu-ink"
+                  >
+                    + 폴더
+                  </button>
+                </div>
+
+                {/* 벌크 액션 바 */}
+                {selectedIds.size > 0 && (
+                  <div className="mb-2 px-3 py-1.5 bg-nu-ink text-nu-paper border-2 border-nu-ink flex items-center justify-between gap-2 sticky top-0 z-20">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono-nu text-[11px] uppercase tracking-widest font-bold">{selectedIds.size}개 선택</span>
+                      <button onClick={clearSelection} className="font-mono-nu text-[10px] uppercase tracking-widest underline opacity-70">해제</button>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={bulkMove} disabled={bulkBusy} className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-2 py-1 border border-nu-paper/30 hover:bg-nu-paper/10 disabled:opacity-60">📁 이동</button>
+                      <button onClick={bulkDelete} disabled={bulkBusy} className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-2 py-1 border border-red-400 bg-red-500 hover:bg-red-600 disabled:opacity-60 flex items-center gap-1">
+                        {bulkBusy ? <Loader2 size={10} className="animate-spin" /> : <Trash2 size={10} />}
+                        삭제
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 gap-2.5">
+                  {filtered.map((r) => (
+                    <div key={r.id} className="flex items-center gap-2">
+                      {canEdit && (
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(r.id)}
+                          onChange={() => toggleSelected(r.id)}
+                          className="w-4 h-4 accent-nu-pink shrink-0"
+                          title="선택"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <ResourceCard
+                          resource={r}
+                          canEdit={canEdit}
+                          isSelected={previewData?.url === r.url}
+                          onPreview={() => { setPreviewData({ url: r.url, name: r.name, id: r.id, content: resolveTemplateContent(r.url, r.content), storage_type: (r as any).storage_type, storage_key: (r as any).storage_key, uploaded_by: r.uploaded_by, mime: (r as any).mime_type || null }); setRightTab("preview"); if (!isSplitView) setIsSplitView(true); }}
+                          onDelete={() => handleDelete(r.id)}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -1268,6 +1496,12 @@ function ResourceCard({ resource, canEdit, isSelected, onPreview, onDelete }: {
                 {new Date(resource.created_at).toLocaleDateString("ko", { month: "short", day: "numeric" })}
               </span>
             </span>
+            <DriveSyncBadge
+              driveFileId={(resource as any).drive_edit_file_id}
+              syncedAt={(resource as any).drive_edit_synced_at}
+              ownerUserId={(resource as any).drive_edit_user_id}
+              currentUserId={null /* 카드에서는 ownership 표시 생략, 동기화 시각만 */}
+            />
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>

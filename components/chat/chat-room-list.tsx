@@ -1,7 +1,11 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
 import { Hash, Users, User, Paperclip, Mic } from "lucide-react";
+
+const INITIAL_PAGE_SIZE = 20;
+const PAGE_INCREMENT = 20;
 
 interface Room {
   id: string;
@@ -29,6 +33,8 @@ interface Props {
 }
 
 export function ChatRoomList({ rooms, activeRoomId, onSelect }: Props) {
+  const [visibleCount, setVisibleCount] = useState(INITIAL_PAGE_SIZE);
+
   if (rooms.length === 0) {
     return (
       <div className="p-6 text-center text-[12px] text-nu-graphite">
@@ -40,9 +46,13 @@ export function ChatRoomList({ rooms, activeRoomId, onSelect }: Props) {
     );
   }
 
+  const visible = rooms.slice(0, visibleCount);
+  const hasMore = rooms.length > visibleCount;
+
   return (
+    <>
     <ul className="divide-y divide-nu-ink/[0.05]">
-      {rooms.map((r) => {
+      {visible.map((r) => {
         const title =
           r.type === "dm"
             ? r.dm_peer?.nickname || "DM"
@@ -111,6 +121,17 @@ export function ChatRoomList({ rooms, activeRoomId, onSelect }: Props) {
         );
       })}
     </ul>
+    {hasMore && (
+      <div className="p-3 flex justify-center border-t border-nu-ink/[0.05]">
+        <button
+          onClick={() => setVisibleCount((c) => c + PAGE_INCREMENT)}
+          className="px-3 py-1.5 text-[11px] font-mono-nu uppercase tracking-widest font-bold border-[2px] border-nu-ink bg-nu-paper text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-colors"
+        >
+          ↓ 더 보기 ({rooms.length - visibleCount})
+        </button>
+      </div>
+    )}
+    </>
   );
 }
 

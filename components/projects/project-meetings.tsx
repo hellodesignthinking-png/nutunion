@@ -478,22 +478,31 @@ export function ProjectMeetings({
         )
       )}
 
-      {/* Global Empty State */}
+      {/* Global Empty State — 회의록 사용법 가이드 */}
       {meetings.length === 0 && (
-        <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/10 p-12 text-center">
-          <Calendar
-            size={40}
-            className="mx-auto text-nu-muted/40 mb-4"
-            strokeWidth={1.5}
-          />
-          <p className="font-head text-sm font-bold text-nu-ink mb-1">
-            아직 회의가 없습니다
-          </p>
-          <p className="text-xs text-nu-muted">
-            {canEdit
-              ? "첫 회의를 생성하여 팀의 논의를 체계적으로 관리해보세요"
-              : "볼트 리더가 회의를 생성하면 여기에 표시됩니다"}
-          </p>
+        <div className="border-[3px] border-nu-ink bg-nu-cream/50 p-6">
+          <div className="flex items-start gap-3 mb-4">
+            <Calendar size={22} className="text-nu-pink mt-0.5 shrink-0" strokeWidth={2} />
+            <div>
+              <h3 className="font-head text-xl font-extrabold text-nu-ink mb-1">회의록이란?</h3>
+              <p className="text-[13px] text-nu-graphite leading-relaxed">
+                팀의 모든 논의·결정·할 일을 <strong>한 곳에서</strong> 관리하는 곳입니다.
+                AI 가 녹음을 자동 요약하고, 액션 아이템을 칸반에 연동합니다.
+              </p>
+            </div>
+          </div>
+          <div className="border-l-[3px] border-nu-pink pl-4 mb-1 space-y-1.5">
+            <p className="font-mono-nu text-[10px] uppercase tracking-[0.25em] text-nu-pink font-bold mb-1">시작하는 방법</p>
+            {canEdit ? (
+              <>
+                <p className="text-[13px] text-nu-graphite"><span className="font-mono-nu font-bold text-nu-ink mr-1.5">1.</span>위 <b>+ 회의 생성</b> 버튼으로 첫 회의 만들기</p>
+                <p className="text-[13px] text-nu-graphite"><span className="font-mono-nu font-bold text-nu-ink mr-1.5">2.</span>회의 시작 시 녹음 → AI 가 회의록 초안 자동 생성</p>
+                <p className="text-[13px] text-nu-graphite"><span className="font-mono-nu font-bold text-nu-ink mr-1.5">3.</span>액션 아이템은 칸반 보드로 자동 전환</p>
+              </>
+            ) : (
+              <p className="text-[13px] text-nu-graphite">볼트 리더가 회의를 생성하면 여기에 표시됩니다.</p>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -13,7 +13,7 @@ export const revalidate = 60;
 export async function generateMetadata({ params }: { params: Promise<{ id: string; pageId: string }> }): Promise<Metadata> {
   const { id: groupId, pageId } = await params;
   const supabase = await createClient();
-  const { data: page } = await supabase.from("wiki_pages").select("title, content, updated_at, topic:wiki_topics(name)").eq("id", pageId).single();
+  const { data: page } = await supabase.from("wiki_pages").select("title, content, updated_at, topic:wiki_topics(name)").eq("id", pageId).maybeSingle();
   if (!page) return { title: "탭 페이지" };
   const desc = (page.content || "").replace(/[#*`\[\]]/g, "").slice(0, 160);
   const topicName = (page as any).topic?.name;
@@ -30,7 +30,7 @@ export default async function WikiPageDetailPage({ params }: { params: Promise<{
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: group } = await supabase.from("groups").select("name").eq("id", groupId).single();
+  const { data: group } = await supabase.from("groups").select("name").eq("id", groupId).maybeSingle();
   if (!group) notFound();
 
   const { data: page } = await supabase
@@ -43,7 +43,7 @@ export default async function WikiPageDetailPage({ params }: { params: Promise<{
       author:profiles!wiki_pages_created_by_fkey(nickname)
     `)
     .eq("id", pageId)
-    .single();
+    .maybeSingle();
 
   if (!page) notFound();
 

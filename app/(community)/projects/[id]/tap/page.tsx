@@ -330,12 +330,41 @@ export default function BoltTapPage() {
               {tap.content_md}
             </article>
           ) : (
-            <div className="border-[2px] border-dashed border-nu-ink/15 p-12 text-center">
-              <BookOpen size={32} className="mx-auto text-nu-muted mb-3" />
-              <p className="text-[13px] text-nu-graphite mb-1">아직 탭이 비어있습니다</p>
-              <p className="text-[11px] text-nu-muted">
-                볼트가 마감되면 이곳이 <strong>영구 아카이브</strong>가 됩니다. 회고·산출물·배운 점을 기록하세요.
-              </p>
+            <div className="border-[3px] border-nu-ink bg-nu-cream/50 p-6">
+              <div className="flex items-start gap-3 mb-4">
+                <BookOpen size={22} className="text-nu-pink mt-0.5 shrink-0" />
+                <div>
+                  <h3 className="font-head text-xl font-extrabold text-nu-ink mb-1">탭이란?</h3>
+                  <p className="text-[13px] text-nu-graphite leading-relaxed">
+                    볼트의 <strong>지식 베이스</strong>입니다. 회의록·자료·아이디어를 한 곳에 모아
+                    AI 가 통합 정리하는 위키 시스템.
+                  </p>
+                </div>
+              </div>
+
+              <div className="border-l-[3px] border-nu-pink pl-4 mb-5 space-y-1.5">
+                <p className="font-mono-nu text-[10px] uppercase tracking-[0.25em] text-nu-pink font-bold mb-1">시작하는 방법</p>
+                <p className="text-[13px] text-nu-graphite"><span className="font-mono-nu font-bold text-nu-ink mr-1.5">1.</span>오른쪽 상단 <b>편집</b> 버튼 → 모드 선택 (아카이브/위키/대시보드)</p>
+                <p className="text-[13px] text-nu-graphite"><span className="font-mono-nu font-bold text-nu-ink mr-1.5">2.</span><b>회의 녹음</b> 탭에서 녹음 → AI 회의록 초안 자동 생성</p>
+                <p className="text-[13px] text-nu-graphite"><span className="font-mono-nu font-bold text-nu-ink mr-1.5">3.</span>볼트 마감 시 → <b>영구 아카이브</b>로 굳어집니다</p>
+              </div>
+
+              {canEdit && (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setEditing(true)}
+                    className="h-10 px-5 border-[2.5px] border-nu-ink bg-nu-pink text-nu-paper font-mono-nu text-[11px] font-black uppercase tracking-widest hover:bg-nu-ink inline-flex items-center gap-2"
+                  >
+                    <Edit3 size={14} /> 새 탭 만들기
+                  </button>
+                  <button
+                    onClick={() => setAiOpen(true)}
+                    className="h-10 px-5 border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink font-mono-nu text-[11px] uppercase tracking-widest hover:bg-nu-ink hover:text-nu-paper inline-flex items-center gap-2"
+                  >
+                    <Sparkles size={14} /> AI 3문 인터뷰
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

@@ -2,17 +2,22 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { UnifiedCalendarDialog } from "@/components/dashboard/unified-calendar-dialog";
 
 export default function CalendarFullPage() {
+  const router = useRouter();
   const [open, setOpen] = useState(true);
   // When the dialog is closed from this full-page, navigate back to dashboard
+  // (router.back preserves scroll/tab state when arriving from dashboard;
+  // falls back to /dashboard via push when this is a fresh tab)
   useEffect(() => {
     if (!open) {
-      window.location.href = "/dashboard";
+      if (window.history.length > 1) router.back();
+      else router.push("/dashboard");
     }
-  }, [open]);
+  }, [open, router]);
   return (
     <div className="min-h-screen bg-nu-paper">
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4">

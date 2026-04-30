@@ -69,8 +69,10 @@ export default function GroupFinancePage() {
   } | null>(null);
   const [isSplitView, setIsSplitView] = useState(true);
   const [activeTab, setActiveTab] = useState<"all" | "my">("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [contributions, setContributions] = useState<Record<string, UserContribution>>({});
   const [showClaimForm, setShowClaimForm] = useState(false);
+  const [receiptUploading, setReceiptUploading] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
 
   // Form state
@@ -100,10 +102,18 @@ export default function GroupFinancePage() {
     count: expenditures.filter((e) => e.status !== "paid").length,
   };
 
-  const filteredExpenditures =
-    activeTab === "all"
-      ? expenditures
-      : expenditures.filter((e) => e.payer_id === currentUserId);
+  const filteredExpenditures = (activeTab === "all"
+    ? expenditures
+    : expenditures.filter((e) => e.payer_id === currentUserId)
+  ).filter((e) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      (e.item || "").toLowerCase().includes(q) ||
+      (e.category || "").toLowerCase().includes(q) ||
+      (e.payer?.nickname || "").toLowerCase().includes(q)
+    );
+  });
 
   // Fetch initial data
   useEffect(() => {
@@ -464,6 +474,8 @@ export default function GroupFinancePage() {
             <div className="relative flex-1">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-nu-muted" />
               <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="항목 또는 결제자 검색"
                 className="w-full pl-10 pr-4 py-2.5 bg-nu-white border-2 border-nu-ink/10 focus:border-nu-ink transition-all text-sm outline-none"
               />
@@ -548,15 +560,51 @@ export default function GroupFinancePage() {
 
                   <div>
                     <label className="block font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted mb-2">
-                      영수증 URL (선택)
+                      영수증 (선택)
                     </label>
-                    <input
-                      type="url"
-                      placeholder="https://..."
-                      value={formData.receiptUrl}
-                      onChange={(e) => setFormData({ ...formData, receiptUrl: e.target.value })}
-                      className="w-full px-3 py-2 bg-nu-cream border-2 border-nu-ink/10 focus:border-nu-ink outline-none transition-all"
-                    />
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        type="url"
+                        placeholder="https://... (URL 직접 입력)"
+                        value={formData.receiptUrl}
+                        onChange={(e) => setFormData({ ...formData, receiptUrl: e.target.value })}
+                        className="flex-1 px-3 py-2 bg-nu-cream border-2 border-nu-ink/10 focus:border-nu-ink outline-none transition-all"
+                      />
+                      <label
+                        className={`shrink-0 flex items-center justify-center gap-1.5 font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-2 border-2 border-nu-ink bg-nu-paper text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-all cursor-pointer ${receiptUploading ? "opacity-60 pointer-events-none" : ""}`}
+                        title="사진/PDF 직접 업로드 — 모바일에서는 카메라 즉시 촬영 가능"
+                      >
+                        {receiptUploading ? <Loader2 size={12} className="animate-spin" /> : "📎"}
+                        {receiptUploading ? "업로드 중..." : "파일 첨부"}
+                        <input
+                          type="file"
+                          accept="image/*,application/pdf"
+                          capture="environment"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            e.currentTarget.value = "";
+                            if (!file) return;
+                            setReceiptUploading(true);
+                            try {
+                              const { uploadFile } = await import("@/lib/storage/upload-client");
+                              const up = await uploadFile(file, { prefix: "uploads", scopeId: groupId });
+                              setFormData((prev) => ({ ...prev, receiptUrl: up.url }));
+                              toast.success(`영수증 업로드 완료 · ${up.storage.toUpperCase()}`);
+                            } catch (err: any) {
+                              toast.error(err?.message || "영수증 업로드 실패");
+                            } finally {
+                              setReceiptUploading(false);
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+                    {formData.receiptUrl && (
+                      <p className="font-mono-nu text-[10px] text-nu-muted mt-1 truncate">
+                        ✓ {formData.receiptUrl.split("/").pop()}
+                      </p>
+                    )}
                   </div>
 
                   <div>

@@ -249,6 +249,8 @@ export default async function GroupWikiPage({ params }: { params: Promise<{ id: 
                 isHost={isHost}
                 tabStatus={tabStatus}
                 tabPublishedSlug={tabPublishedSlug}
+                readinessPct={tabReadinessPct}
+                isReadyToPublish={isReadyToPublish}
               />
             </div>
 

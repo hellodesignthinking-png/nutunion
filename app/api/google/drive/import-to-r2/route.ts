@@ -65,17 +65,65 @@ export async function POST(req: NextRequest) {
     const mime = meta.mimeType || "application/octet-stream";
     const size = meta.size ? Number(meta.size) : 0;
 
-    // Block Google-native docs (they can't be downloaded as-is without export)
+    // Google 네이티브 문서 — export 로 다운로드 가능 형식 변환
+    // (Docs → docx / Sheets → xlsx / Slides → pptx / Drawing → png)
+    const NATIVE_EXPORT: Record<string, { mime: string; ext: string }> = {
+      "application/vnd.google-apps.document": {
+        mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ext: "docx",
+      },
+      "application/vnd.google-apps.spreadsheet": {
+        mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ext: "xlsx",
+      },
+      "application/vnd.google-apps.presentation": {
+        mime: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        ext: "pptx",
+      },
+      "application/vnd.google-apps.drawing": {
+        mime: "image/png",
+        ext: "png",
+      },
+    };
+
+    const exportTarget = NATIVE_EXPORT[mime];
+    let exportedBuffer: Buffer | null = null;
+    let effectiveMime = mime;
+    let effectiveName = rawName;
+
     if (mime.startsWith("application/vnd.google-apps.")) {
-      span.end({ status: 400, reason: "google_native" });
-      return NextResponse.json(
-        {
-          error:
-            "Google Docs/Sheets/Slides 등 네이티브 문서는 직접 가져올 수 없습니다. PDF/Office 파일을 선택해주세요.",
-          code: "GOOGLE_NATIVE_DOC",
-        },
-        { status: 400 },
-      );
+      if (!exportTarget) {
+        span.end({ status: 400, reason: "google_native_unsupported" });
+        return NextResponse.json(
+          {
+            error:
+              "이 형식의 Google 네이티브 문서는 지원하지 않습니다 (Form/Site/Script 등). Docs/Sheets/Slides/Drawing 만 지원.",
+            code: "GOOGLE_NATIVE_UNSUPPORTED",
+            mime,
+          },
+          { status: 400 },
+        );
+      }
+      // export 로 변환
+      try {
+        const exportRes = await drive.files.export(
+          { fileId: driveFileId, mimeType: exportTarget.mime },
+          { responseType: "arraybuffer" },
+        );
+        exportedBuffer = Buffer.from(exportRes.data as ArrayBuffer);
+        effectiveMime = exportTarget.mime;
+        // 확장자 부여 (원본 이름에 없으면)
+        if (!rawName.toLowerCase().endsWith(`.${exportTarget.ext}`)) {
+          effectiveName = `${rawName}.${exportTarget.ext}`;
+        }
+      } catch (err: any) {
+        span.end({ status: 502, reason: "google_native_export_failed" });
+        log.error(err, "drive.import_to_r2.export_failed", { drive_file_id: driveFileId, mime });
+        return NextResponse.json(
+          { error: "Google 문서 변환 실패: " + (err?.message || "unknown") },
+          { status: 502 },
+        );
+      }
     }
 
     if (size && size > MAX_SIZE) {
@@ -86,12 +134,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2) Download bytes
-    const mediaRes = await drive.files.get(
-      { fileId: driveFileId, alt: "media" },
-      { responseType: "arraybuffer" },
-    );
-    const buf = Buffer.from(mediaRes.data as ArrayBuffer);
+    // 2) Bytes — 네이티브 문서면 이미 export 한 buffer 사용, 아니면 download
+    let buf: Buffer;
+    if (exportedBuffer) {
+      buf = exportedBuffer;
+    } else {
+      const mediaRes = await drive.files.get(
+        { fileId: driveFileId, alt: "media" },
+        { responseType: "arraybuffer" },
+      );
+      buf = Buffer.from(mediaRes.data as ArrayBuffer);
+    }
     const bytes = buf.byteLength;
 
     if (bytes > MAX_SIZE) {
@@ -102,8 +155,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3) PUT to R2
-    const safeName = rawName.replace(/[^\w.\-]/g, "_").slice(0, 80);
+    // 3) PUT to R2 — 변환된 파일명/MIME 사용
+    const safeName = effectiveName.replace(/[^\w.\-]/g, "_").slice(0, 80);
     const scopeSeg = scopeId ? `${scopeId.replace(/[^\w.\-]/g, "_")}/` : "";
     const key = `${prefix}/${userId}/${scopeSeg}${Date.now()}_${safeName}`;
 
@@ -112,20 +165,21 @@ export async function POST(req: NextRequest) {
         Bucket: process.env.R2_BUCKET!,
         Key: key,
         Body: buf,
-        ContentType: mime,
+        ContentType: effectiveMime,
       }),
     );
 
     const url = getPublicUrl(key);
 
-    span.end({ bytes, prefix, status: 200 });
+    span.end({ bytes, prefix, status: 200, exported: !!exportedBuffer });
     return NextResponse.json({
       url,
       key,
       storage_key: key,
-      name: rawName,
+      name: effectiveName,
       size: bytes,
-      mime,
+      mime: effectiveMime,
+      exported: !!exportedBuffer,
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);

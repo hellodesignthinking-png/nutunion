@@ -38,7 +38,13 @@ export default function SchedulePage() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [isHost, setIsHost] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  const [view, setView] = useState<"month" | "week" | "list">("month");
+  // 데스크탑은 month, 모바일(<768px)은 자동으로 list — 가로 스크롤 600px 강제 회피
+  const [view, setView] = useState<"month" | "week" | "list">(() => {
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
+      return "list";
+    }
+    return "month";
+  });
   const [groupName, setGroupName] = useState("");
   const [loading, setLoading] = useState(true);
 

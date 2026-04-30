@@ -19,6 +19,7 @@ import { createClient as createAdminClient, type SupabaseClient } from "@supabas
 import { log } from "@/lib/observability/logger";
 import { getR2Client, getPublicUrl, isR2Configured } from "@/lib/storage/r2";
 import { dispatchEvent } from "@/lib/automation/engine";
+import { dispatchNotification } from "@/lib/notifications/dispatch";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -113,6 +114,42 @@ export async function POST(request: NextRequest) {
   if (!plan || !plan.title || !Array.isArray(plan.phases)) {
     return NextResponse.json({ error: "유효하지 않은 plan" }, { status: 400 });
   }
+
+  // ── Plan 정규화 — AI/템플릿/임의 입력 모두에서 안전한 기본값 보장 ──
+  plan.title = String(plan.title || "새 공간").slice(0, 100);
+  plan.summary = String(plan.summary || "").slice(0, 1000);
+  plan.category = String(plan.category || "general").slice(0, 50);
+  plan.phases = (plan.phases || []).map((p) => ({
+    name: String(p?.name || "단계").slice(0, 100),
+    goal: String(p?.goal || "").slice(0, 500),
+    duration_days: typeof p?.duration_days === "number" ? p.duration_days : null,
+    wiki_pages: Array.isArray(p?.wiki_pages)
+      ? p.wiki_pages
+          .filter((w: any) => w && w.title)
+          .map((w: any) => ({
+            title: String(w.title).slice(0, 200),
+            outline: String(w.outline || ""),
+          }))
+      : [],
+    milestones: Array.isArray(p?.milestones)
+      ? p.milestones.filter((m: any) => typeof m === "string" && m.trim()).map((m: string) => m.slice(0, 200))
+      : [],
+  }));
+  plan.suggested_roles = Array.isArray(plan.suggested_roles)
+    ? plan.suggested_roles
+        .filter((r: any) => r && r.role_name)
+        .map((r: any) => ({
+          role_name: String(r.role_name).slice(0, 100),
+          specialty_tags: Array.isArray(r.specialty_tags) ? r.specialty_tags.map((t: any) => String(t)) : [],
+          why: String(r.why || "").slice(0, 300),
+        }))
+    : [];
+  plan.resources_folders = Array.isArray(plan.resources_folders)
+    ? plan.resources_folders.filter((f: any) => typeof f === "string" && f.trim()).map((f: string) => f.slice(0, 80))
+    : [];
+  plan.first_tasks = Array.isArray(plan.first_tasks)
+    ? plan.first_tasks.filter((t: any) => typeof t === "string" && t.trim()).map((t: string) => t.slice(0, 200))
+    : [];
 
   const summary = {
     wikis_created: 0,
@@ -507,28 +544,28 @@ export async function POST(request: NextRequest) {
             { onConflict: "group_id,user_id" },
           );
           if (error) throw new Error(error.message);
-          await admin.from("notifications").insert({
-            user_id: inviteeId,
-            type: "group_invite",
-            content: `"${plan.title}" 너트에 Genesis AI 가 초대했습니다!`,
-            link: `/groups/${targetId}`,
+          await dispatchNotification({
+            recipientId: inviteeId,
+            eventType: "group_invite",
+            title: "너트 초대",
+            body: `"${plan.title}" 너트에 Genesis AI 가 초대했습니다!`,
+            linkUrl: `/groups/${targetId}`,
+            metadata: { group_id: targetId, source: "genesis" },
           });
         } else {
-          const appRes = await admin.from("project_applications").upsert(
-            { project_id: targetId, user_id: inviteeId, status: "invited", message: "Genesis AI 팀매칭 추천" },
+          // project_applications 의 status CHECK 는 invited 미허용 + 컬럼명은 applicant_id
+          // → 곧바로 project_members 로 추가 (Genesis 직접 초대 의도)
+          await admin.from("project_members").upsert(
+            { project_id: targetId, user_id: inviteeId, role: "member" },
             { onConflict: "project_id,user_id" },
           );
-          if (appRes.error) {
-            await admin.from("project_members").upsert(
-              { project_id: targetId, user_id: inviteeId, role: "member" },
-              { onConflict: "project_id,user_id" },
-            );
-          }
-          await admin.from("notifications").insert({
-            user_id: inviteeId,
-            type: "project_invite",
-            content: `"${plan.title}" 볼트에 Genesis AI 가 초대했습니다!`,
-            link: `/projects/${targetId}`,
+          await dispatchNotification({
+            recipientId: inviteeId,
+            eventType: "project_invite",
+            title: "볼트 초대",
+            body: `"${plan.title}" 볼트에 Genesis AI 가 초대했습니다!`,
+            linkUrl: `/projects/${targetId}`,
+            metadata: { project_id: targetId, source: "genesis" },
           });
         }
         return true;

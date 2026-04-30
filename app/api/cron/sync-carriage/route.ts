@@ -10,6 +10,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { syncCarriageDaily } from "@/lib/bolt/integrations";
+import { dispatchNotification } from "@/lib/notifications/dispatch";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -77,12 +78,13 @@ export async function GET(req: Request) {
       if (upErr) {
         // 실패 알림 — 볼트 owner 에게
         if (b.created_by) {
-          await db.from("notifications").insert({
-            user_id: b.created_by,
-            type: "carriage_sync_failed",
+          await dispatchNotification({
+            recipientId: b.created_by,
+            eventType: "carriage_sync_failed",
             title: `${b.title} 자동 동기화 실패`,
             body: upErr.message,
-            metadata: { project_id: b.id, link: `/projects/${b.id}`, error: upErr.message },
+            linkUrl: `/projects/${b.id}`,
+            metadata: { project_id: b.id, error: upErr.message },
           });
         }
         throw new Error(upErr.message);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { dispatchPushToUsers } from "@/lib/push/dispatch";
+import { dispatchNotification } from "@/lib/notifications/dispatch";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -58,15 +59,15 @@ export async function GET(req: Request) {
 
     const titles = topBolts.map((b: any) => b.title).slice(0, 3).join(", ");
     // 알림 insert
-    const { error: notifErr } = await supabase.from("notifications").insert({
-      user_id: u.id,
-      type: "weekly_match",
-      title: "이번 주 어울릴 볼트 TOP 3",
-      body: titles,
-      link_url: `/projects?match=weekly`,
-      is_read: false,
-    });
-    if (notifErr) { console.warn("[weekly-matches] notif insert failed:", notifErr.message); skipped++; continue; }
+    try {
+      await dispatchNotification({
+        recipientId: u.id,
+        eventType: "weekly_match",
+        title: "이번 주 어울릴 볼트 TOP 3",
+        body: titles,
+        linkUrl: `/projects?match=weekly`,
+      });
+    } catch (e: any) { console.warn("[weekly-matches] notif insert failed:", e?.message); skipped++; continue; }
 
     // 웹푸시 (가능하면)
     try {

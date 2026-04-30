@@ -15,12 +15,30 @@
  */
 
 import { Suspense, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { ChatRoomList } from "@/components/chat/chat-room-list";
-import { ChatRoomView } from "@/components/chat/chat-room-view";
-import { NewDMModal } from "@/components/chat/new-dm-modal";
-import { MessageSquare, Hash, Users, User, Globe, UserPlus } from "lucide-react";
+import { MessageSquare, Hash, Users, User, Globe, UserPlus, Loader2 } from "lucide-react";
 import { acquireFullscreenLock } from "@/lib/chat/fullscreen-lock";
+import { toast } from "sonner";
+
+// 무거운 채팅방 상세 — 사용자가 방을 선택할 때만 코드 로드 (초기 /chat 진입 페이로드 축소)
+const ChatRoomView = dynamic(
+  () => import("@/components/chat/chat-room-view").then((m) => ({ default: m.ChatRoomView })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex-1 flex items-center justify-center bg-[#FAF6F2]">
+        <Loader2 size={20} className="animate-spin text-nu-pink" />
+      </div>
+    ),
+  },
+);
+
+const NewDMModal = dynamic(
+  () => import("@/components/chat/new-dm-modal").then((m) => ({ default: m.NewDMModal })),
+  { ssr: false },
+);
 
 type Tab = "all" | "nut" | "bolt" | "dm";
 
@@ -53,12 +71,20 @@ function ChatPageInner() {
   // 방 목록 로드
   useEffect(() => {
     (async () => {
-      const res = await fetch("/api/chat/rooms", { cache: "no-store" });
-      const json = await res.json();
-      setRooms(json.rooms || []);
-      // 데스크탑에서만 첫 방 자동 선택 (모바일은 목록 먼저 보여주기)
-      if (typeof window !== "undefined" && window.innerWidth >= 768) {
-        if (!activeRoom && json.rooms?.[0]) setActiveRoom(json.rooms[0].id);
+      try {
+        const res = await fetch("/api/chat/rooms", { cache: "no-store" });
+        if (!res.ok) {
+          toast.error(`채팅 목록을 불러오지 못했습니다 (HTTP ${res.status})`);
+          return;
+        }
+        const json = await res.json();
+        setRooms(json.rooms || []);
+        // 데스크탑에서만 첫 방 자동 선택 (모바일은 목록 먼저 보여주기)
+        if (typeof window !== "undefined" && window.innerWidth >= 768) {
+          if (!activeRoom && json.rooms?.[0]) setActiveRoom(json.rooms[0].id);
+        }
+      } catch (err: any) {
+        toast.error("채팅 목록 로드 실패: " + (err?.message || "네트워크 오류"));
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps

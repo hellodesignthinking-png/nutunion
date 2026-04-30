@@ -35,6 +35,32 @@ interface Props {
 export function ThreadsAdminClient({ runtimeDefs, dbThreads }: Props) {
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [autoMsg, setAutoMsg] = useState<string | null>(null);
+  const [autoBusy, setAutoBusy] = useState(false);
+
+  const handleAutoInstall = async () => {
+    setAutoBusy(true); setAutoMsg(null);
+    try {
+      const pre = await fetch("/api/admin/threads/auto-install", { method: "GET" });
+      const preJson = await pre.json();
+      if (!pre.ok) {
+        setAutoMsg(`❌ ${preJson.error || "preview_failed"}`);
+        return;
+      }
+      const ok = confirm(
+        `자동 설치 미리보기\n\n` +
+        `너트(groups): ${preJson.groups_total}\n` +
+        `볼트(projects): ${preJson.projects_total}\n` +
+        `새로 설치할 Thread: ${preJson.inserts_planned}\n\n진행할까요?`,
+      );
+      if (!ok) { setAutoBusy(false); return; }
+      const res = await fetch("/api/admin/threads/auto-install", { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) setAutoMsg(`❌ ${json.error || "실패"}`);
+      else setAutoMsg(`✅ ${json.inserts}개 설치됨 (너트 ${json.groups_processed} / 볼트 ${json.projects_processed})`);
+    } catch (e: any) { setAutoMsg(`❌ ${e.message}`); }
+    finally { setAutoBusy(false); }
+  };
 
   const handleSync = async () => {
     setSyncing(true);
@@ -107,9 +133,27 @@ export function ThreadsAdminClient({ runtimeDefs, dbThreads }: Props) {
         {syncMsg && <div className="text-sm border-[2px] border-nu-ink/20 p-2 bg-nu-cream/30">{syncMsg}</div>}
       </section>
 
+      <section className="border-[3px] border-nu-pink p-4 bg-white shadow-[4px_4px_0_0_#0D0F14] space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h2 className="font-head text-lg font-extrabold text-nu-ink">🚀 모든 너트/볼트에 Core Thread 자동 설치</h2>
+            <p className="text-xs text-nu-muted">너트: board / members / announcement / ai-copilot · 볼트: milestone / ai-copilot. 멱등(이미 설치된 건 건너뜀).</p>
+          </div>
+          <button
+            onClick={handleAutoInstall}
+            disabled={autoBusy}
+            className="border-[3px] border-nu-ink bg-nu-pink text-white font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2 shadow-[3px_3px_0_0_#0D0F14] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_#0D0F14] transition disabled:opacity-50"
+          >
+            {autoBusy ? "처리 중…" : "자동 설치 실행"}
+          </button>
+        </div>
+        {autoMsg && <div className="text-sm border-[2px] border-nu-ink/20 p-2 bg-nu-cream/30">{autoMsg}</div>}
+      </section>
+
       <section>
         <h2 className="font-head text-lg font-extrabold text-nu-ink mb-3">등록된 Thread</h2>
-        <div className="border-[2px] border-nu-ink/10 divide-y divide-nu-ink/10 bg-white">
+        <div className="border-[2px] border-nu-ink/10 divide-y divide-nu-ink/10 bg-white overflow-x-auto">
+          <div className="min-w-[560px]">
           <div className="grid grid-cols-[1fr_90px_90px_90px_80px] gap-2 px-3 py-2 bg-nu-cream/40 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">
             <div>Thread</div>
             <div>Runtime</div>
@@ -140,6 +184,7 @@ export function ThreadsAdminClient({ runtimeDefs, dbThreads }: Props) {
               <div className="font-mono-nu text-[12px] tabular-nums text-nu-ink">{row.db?.install_count ?? 0}</div>
             </div>
           ))}
+          </div>
         </div>
       </section>
 

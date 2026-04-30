@@ -37,7 +37,7 @@ export default function ProjectApplicationsPage() {
         .from("projects")
         .select("*")
         .eq("id", projectId)
-        .single();
+        .maybeSingle();
 
       if (projError || !proj) {
         toast.error("볼트를 찾을 수 없습니다");
@@ -59,7 +59,7 @@ export default function ProjectApplicationsPage() {
         .from("profiles")
         .select("role")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
       const hasAccess =
         !profileError && (membership?.role === "lead" || profile?.role === "admin");

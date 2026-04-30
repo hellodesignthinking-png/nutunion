@@ -1,7 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ThreadRunner } from "./thread-runner";
-import type { ThreadInstallation } from "@/lib/threads/registry";
+import { registry, type ThreadInstallation } from "@/lib/threads/registry";
+// Side-effect: load all Thread definitions so we can show install dropdown.
+import "@/lib/threads/bootstrap";
 
 interface Props {
   targetType: "nut" | "bolt";
@@ -16,6 +18,18 @@ export function ThreadBetaSection({ targetType, targetId, currentUserId, canMana
   const [installing, setInstalling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [selectedSlug, setSelectedSlug] = useState<string>("");
+
+  const availableDefs = useMemo(
+    () => registry.forScope(targetType).sort((a, b) => (a.isCore === b.isCore ? 0 : a.isCore ? -1 : 1)),
+    [targetType],
+  );
+
+  useEffect(() => {
+    if (availableDefs.length > 0 && !selectedSlug) setSelectedSlug(availableDefs[0].slug);
+  }, [availableDefs, selectedSlug]);
+
+  const installedSlugs = new Set(installations.map((i) => i.thread?.slug).filter(Boolean) as string[]);
 
   const load = async () => {
     setLoading(true);
@@ -41,18 +55,14 @@ export function ThreadBetaSection({ targetType, targetId, currentUserId, canMana
   }, [expanded, targetType, targetId]);
 
   const handleInstall = async () => {
+    if (!selectedSlug) return;
     setInstalling(true);
     setError(null);
     try {
       const res = await fetch("/api/threads/install", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          slug: "hello-world",
-          target_type: targetType,
-          target_id: targetId,
-          config: { message: `설치 시각: ${new Date().toLocaleString("ko-KR")}` },
-        }),
+        body: JSON.stringify({ slug: selectedSlug, target_type: targetType, target_id: targetId, config: {} }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -79,16 +89,20 @@ export function ThreadBetaSection({ targetType, targetId, currentUserId, canMana
     <section className="mt-12 border-t-[2px] border-dashed border-nu-ink/20 pt-6">
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted hover:text-nu-ink transition-colors"
+        className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted hover:text-nu-ink transition-colors flex items-center gap-2"
+        title="Thread = 이 볼트에 끼우는 기능 모듈 (게시판/캘린더/투표 등)"
       >
-        🧪 Thread 베타 {expanded ? "▾" : "▸"}
+        🧩 Thread 모듈 (베타) {expanded ? "▾" : "▸"}
       </button>
 
       {expanded && (
         <div className="mt-4 space-y-3">
-          <p className="text-[11px] text-nu-muted font-mono">
-            Module Lattice 실험 영역 — {targetType === "nut" ? "너트" : "볼트"}에 Thread 를 설치할 수 있어요.
-          </p>
+          <div className="border-l-[3px] border-nu-pink bg-nu-pink/5 pl-3 py-2">
+            <p className="text-[12px] text-nu-ink leading-relaxed">
+              <strong>Thread</strong> = 이 {targetType === "nut" ? "너트" : "볼트"}에 끼우는 <strong>기능 모듈</strong>(게시판·캘린더·투표 등).
+              필요한 기능만 골라 설치하세요.
+            </p>
+          </div>
 
           {error && (
             <div className="border-[2px] border-amber-500 bg-amber-50 p-2 text-[11px] text-amber-900 font-mono">
@@ -120,13 +134,26 @@ export function ThreadBetaSection({ targetType, targetId, currentUserId, canMana
           )}
 
           {canManage && (
-            <button
-              onClick={handleInstall}
-              disabled={installing}
-              className="border-[2px] border-nu-ink bg-white text-nu-ink font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 shadow-[2px_2px_0_0_#0D0F14] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#0D0F14] transition disabled:opacity-50"
-            >
-              {installing ? "설치 중…" : "+ Thread 설치 (베타: hello-world)"}
-            </button>
+            <div className="flex gap-2 items-center flex-wrap">
+              <select
+                value={selectedSlug}
+                onChange={(e) => setSelectedSlug(e.target.value)}
+                className="border-[2px] border-nu-ink/50 px-2 py-1 text-[11px] font-mono"
+              >
+                {availableDefs.map((d) => (
+                  <option key={d.slug} value={d.slug} disabled={installedSlugs.has(d.slug)}>
+                    {d.icon} {d.name} {installedSlugs.has(d.slug) ? "(설치됨)" : ""}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleInstall}
+                disabled={installing || !selectedSlug || installedSlugs.has(selectedSlug)}
+                className="border-[2px] border-nu-ink bg-white text-nu-ink font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 shadow-[2px_2px_0_0_#0D0F14] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#0D0F14] transition disabled:opacity-50"
+              >
+                {installing ? "설치 중…" : "+ Thread 설치"}
+              </button>
+            </div>
           )}
         </div>
       )}

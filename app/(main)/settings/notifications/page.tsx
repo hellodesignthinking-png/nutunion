@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { ArrowLeft, Check, Loader2, Bell, Mail, MessageSquare, Smartphone } from "lucide-react";
+import { PushSubscribeToggle } from "@/components/shared/push-subscribe-toggle";
 
 interface Prefs {
   inapp: Record<string, boolean>;
@@ -105,6 +106,21 @@ export default function NotificationSettingsPage() {
             이벤트별 · 채널별로 받을 알림을 선택하세요. 조용한 시간대에는 긴급 알림만 전송됩니다.
           </p>
         </header>
+
+        {/* Browser push subscription — 실제 브라우저/모바일 푸시 등록 (없으면 매트릭스의 Push 컬럼은 동작 안 함) */}
+        <section className="mb-8 p-4 border-2 border-[color:var(--neutral-100)] bg-[color:var(--neutral-50)]">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="font-mono-nu text-[11px] uppercase tracking-[0.25em] text-[color:var(--neutral-700)] font-bold mb-1">
+                브라우저·모바일 푸시
+              </h2>
+              <p className="text-[12px] text-[color:var(--neutral-600)] max-w-md">
+                이 기기에 푸시 알림을 받으려면 먼저 활성화하세요. 모바일은 홈 화면에 추가한 PWA 에서 가장 안정적이에요.
+              </p>
+            </div>
+            <PushSubscribeToggle />
+          </div>
+        </section>
 
         {/* Matrix */}
         <section className="mb-8">

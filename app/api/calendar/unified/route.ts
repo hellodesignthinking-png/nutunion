@@ -35,6 +35,9 @@ export async function GET(req: NextRequest) {
   const allEvents: UnifiedEvent[] = [];
   let googleConnected = false;
 
+  // Run Google + group meetings + project meetings sections in parallel.
+  // Previously these were three sequential await blocks (~3x the latency).
+  const googleTask = (async () => {
   // ── 1. Google Calendar events ────────────────────────────────────
   try {
     const auth = await getGoogleClient(user.id);
@@ -73,45 +76,54 @@ export async function GET(req: NextRequest) {
     // Google not connected — silently skip
     googleConnected = false;
   }
+  })();
 
+  const groupTask = (async () => {
   // ── 2. Nutunion group meetings ────────────────────────────────────
   try {
-    // Get user's active group memberships
-    const { data: memberships } = await supabase
+    // Get user's active group memberships + hosted groups in parallel
+    const [{ data: memberships }, { data: hostedGroups }] = await Promise.all([
+      supabase
       .from("group_members")
       .select("group_id")
       .eq("user_id", user.id)
-      .eq("status", "active");
+        .eq("status", "active"),
+      supabase
+        .from("groups")
+        .select("id, name")
+        .eq("host_id", user.id),
+    ]);
 
     const groupIds = ((memberships ?? []) as { group_id: string }[]).map((m) => m.group_id);
-
-    // Also include groups where user is host
-    const { data: hostedGroups } = await supabase
-      .from("groups")
-      .select("id, name")
-      .eq("host_id", user.id);
     const hostedIds = ((hostedGroups ?? []) as { id: string }[]).map((g) => g.id);
+    const hostedNames = (hostedGroups ?? []) as { id: string; name: string }[];
 
     const allGroupIds = [...new Set([...groupIds, ...hostedIds])];
 
     if (allGroupIds.length > 0) {
-      // Get group names for labels
-      const { data: groups } = await supabase
-        .from("groups")
-        .select("id, name")
-        .in("id", allGroupIds);
-      const groupNameMap: Record<string, string> = {};
-      for (const g of groups || []) groupNameMap[g.id] = g.name;
+      // Get group names for labels — but skip the round-trip if all ids are
+      // already hostedGroups (we already have names) or just a few extra.
+      const knownNames = new Map<string, string>();
+      for (const g of hostedNames) knownNames.set(g.id, g.name);
+      const missingIds = allGroupIds.filter((id) => !knownNames.has(id));
 
-      // Fetch meetings
-      const { data: meetings } = await supabase
-        .from("meetings")
-        .select("id, group_id, title, description, scheduled_at, duration_min, location, status")
-        .in("group_id", allGroupIds)
-        .neq("status", "cancelled")
-        .gte("scheduled_at", timeMin.toISOString())
-        .lte("scheduled_at", timeMax.toISOString())
-        .order("scheduled_at", { ascending: true });
+      const [groupsRes, meetingsRes] = await Promise.all([
+        missingIds.length > 0
+          ? supabase.from("groups").select("id, name").in("id", missingIds)
+          : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+        supabase
+          .from("meetings")
+          .select("id, group_id, title, description, scheduled_at, duration_min, location, status")
+          .in("group_id", allGroupIds)
+          .neq("status", "cancelled")
+          .gte("scheduled_at", timeMin.toISOString())
+          .lte("scheduled_at", timeMax.toISOString())
+          .order("scheduled_at", { ascending: true }),
+      ]);
+      const { data: groups } = groupsRes;
+      const { data: meetings } = meetingsRes;
+      const groupNameMap: Record<string, string> = Object.fromEntries(knownNames);
+      for (const g of groups || []) groupNameMap[g.id] = g.name;
 
       for (const m of meetings || []) {
         const start = new Date(m.scheduled_at);
@@ -135,41 +147,66 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.error("Group meetings fetch error:", err);
   }
+  })();
 
+  const projectTask = (async () => {
   // ── 3. Project meetings ───────────────────────────────────────────
   try {
-    const { data: projectMembers } = await supabase
+    const [{ data: projectMembers }, { data: createdProjects }] = await Promise.all([
+      supabase
       .from("project_members")
       .select("project_id")
-      .eq("user_id", user.id);
-
-    const { data: createdProjects } = await supabase
+        .eq("user_id", user.id),
+      supabase
       .from("projects")
       .select("id, title")
-      .eq("created_by", user.id);
+        .eq("created_by", user.id),
+    ]);
 
     const projectMemberIds = ((projectMembers ?? []) as { project_id: string }[]).map((p) => p.project_id);
-    const createdProjectIds = ((createdProjects ?? []) as { id: string }[]).map((p) => p.id);
+    const createdProjectsArr = (createdProjects ?? []) as { id: string; title: string }[];
+    const createdProjectIds = createdProjectsArr.map((p) => p.id);
     const allProjectIds = [...new Set([...projectMemberIds, ...createdProjectIds])];
 
     if (allProjectIds.length > 0) {
-      const { data: projects } = await supabase
-        .from("projects")
-        .select("id, title")
-        .in("id", allProjectIds);
-      const projectNameMap: Record<string, string> = {};
-      for (const p of projects || []) projectNameMap[p.id] = p.title;
+      const knownNames = new Map<string, string>();
+      for (const p of createdProjectsArr) knownNames.set(p.id, p.title);
+      const missingIds = allProjectIds.filter((id) => !knownNames.has(id));
 
-      // Project meetings (if project_meetings table exists)
-      try {
-        const { data: projectMeetings } = await supabase
+      // Run all 3 queries (project name lookup + meetings + milestones) in parallel.
+      const [projectsRes, projectMeetingsRes, milestonesRes] = await Promise.all([
+        missingIds.length > 0
+          ? supabase.from("projects").select("id, title").in("id", missingIds)
+          : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+        supabase
           .from("project_meetings")
           .select("id, project_id, title, description, scheduled_at, duration_min, location, status")
           .in("project_id", allProjectIds)
           .neq("status", "cancelled")
           .gte("scheduled_at", timeMin.toISOString())
           .lte("scheduled_at", timeMax.toISOString())
-          .order("scheduled_at", { ascending: true });
+          .order("scheduled_at", { ascending: true })
+          .then((r) => r, () => ({ data: [] as any[] })),
+        supabase
+          .from("project_milestones")
+          .select("id, project_id, title, description, due_date, status")
+          .in("project_id", allProjectIds)
+          .not("due_date", "is", null)
+          .neq("status", "cancelled")
+          .gte("due_date", timeMin.toISOString().split("T")[0])
+          .lte("due_date", timeMax.toISOString().split("T")[0])
+          .order("due_date", { ascending: true })
+          .then((r) => r, () => ({ data: [] as any[] })),
+      ]);
+
+      const { data: projects } = projectsRes;
+      const projectNameMap: Record<string, string> = Object.fromEntries(knownNames);
+      for (const p of projects || []) projectNameMap[p.id] = p.title;
+
+      const projectMeetings = (projectMeetingsRes as any).data;
+      const milestones = (milestonesRes as any).data;
+
+      try {
 
         for (const m of projectMeetings || []) {
           const start = new Date(m.scheduled_at);
@@ -193,18 +230,8 @@ export async function GET(req: NextRequest) {
         // project_meetings table may not exist
       }
 
-      // Project milestones with due dates
+      // Project milestones with due dates (already fetched above in parallel)
       try {
-        const { data: milestones } = await supabase
-          .from("project_milestones")
-          .select("id, project_id, title, description, due_date, status")
-          .in("project_id", allProjectIds)
-          .not("due_date", "is", null)
-          .neq("status", "cancelled")
-          .gte("due_date", timeMin.toISOString().split("T")[0])
-          .lte("due_date", timeMax.toISOString().split("T")[0])
-          .order("due_date", { ascending: true });
-
         for (const ms of milestones || []) {
           const start = new Date(ms.due_date + "T09:00:00");
           const end = new Date(ms.due_date + "T10:00:00");
@@ -229,6 +256,10 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.error("Project meetings fetch error:", err);
   }
+  })();
+
+  // Run all three sources concurrently — drops total wait time from sum to max.
+  await Promise.all([googleTask, groupTask, projectTask]);
 
   // Sort all events by start time
   allEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());

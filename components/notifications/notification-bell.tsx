@@ -70,17 +70,27 @@ export function NotificationBell() {
   const unreadCount = items.filter((n) => !n.is_read).length;
 
   async function markAllRead() {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    await supabase.from("notifications").update({ is_read: true, read_at: new Date().toISOString() }).eq("user_id", user.id).eq("is_read", false);
-    setItems(items.map((n) => ({ ...n, is_read: true })));
+    setItems((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    try {
+      const res = await fetch("/api/notifications/read-all", { method: "POST" });
+      if (!res.ok) throw new Error("api");
+    } catch {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      await supabase.from("notifications").update({ is_read: true, read_at: new Date().toISOString() }).eq("user_id", user.id).eq("is_read", false);
+    }
   }
 
   async function markOne(id: string) {
-    const supabase = createClient();
-    await supabase.from("notifications").update({ is_read: true, read_at: new Date().toISOString() }).eq("id", id);
-    setItems(items.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
+    setItems((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
+    try {
+      const res = await fetch(`/api/notifications/${id}/read`, { method: "POST" });
+      if (!res.ok) throw new Error("api");
+    } catch {
+      const supabase = createClient();
+      await supabase.from("notifications").update({ is_read: true, read_at: new Date().toISOString() }).eq("id", id);
+    }
   }
 
   return (

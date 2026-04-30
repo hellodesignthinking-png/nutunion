@@ -5,6 +5,7 @@
  * Invoked daily by the schedule.daily_9am cron trigger.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { dispatchNotification } from "@/lib/notifications/dispatch";
 
 type Ctx = {
   admin: SupabaseClient;
@@ -52,13 +53,12 @@ export default async function sendOverdueReminder({ admin, rule }: Ctx) {
   let count = 0;
   for (const [userId, userTasks] of byAssignee.entries()) {
     const body = `기한이 지난 Task 가 ${userTasks.length}개 있어요. 확인해 주세요.`;
-    await admin.from("notifications").insert({
-      user_id: userId,
-      type: "task_overdue_reminder",
+    await dispatchNotification({
+      recipientId: userId,
+      eventType: "task_overdue_reminder",
       title: "⏰ 기한 초과 Task 리마인더",
       body,
       metadata: { task_ids: userTasks.map((t) => t.id), rule_id: rule.id },
-      is_read: false,
     });
     count++;
   }

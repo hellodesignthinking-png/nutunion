@@ -52,10 +52,14 @@ import { resolveTemplateContent } from "@/lib/template-resolver";
 import { NewDocumentModal } from "@/components/shared/new-document-modal";
 import { DriveLinkBanner } from "@/components/shared/drive-link-banner";
 import { DriveImportButton } from "@/components/shared/drive-import-button";
+import { DriveDirectUploadButton } from "@/components/shared/drive-direct-upload-button";
+import { DriveSyncBadge } from "@/components/shared/drive-sync-badge";
+import { FileAiSummary } from "@/components/shared/file-ai-summary";
 import { DropZoneUpload } from "@/components/shared/drop-zone-upload";
+import { NewDocDropdown } from "@/components/shared/new-doc-dropdown";
 import { LinkPreviewPanel } from "@/components/shared/link-preview-panel";
 
-function getFileIcon(fileType: string | null) {
+function getFileIcon(fileType: string | null, url?: string | null) {
   if (!fileType) return <File size={20} />;
   // Template document types
   if (fileType === "meeting_notes") return <BookOpen size={20} className="text-nu-pink" />;
@@ -63,12 +67,29 @@ function getFileIcon(fileType: string | null) {
   if (fileType === "presentation") return <FileText size={20} className="text-nu-amber" />;
   if (fileType === "checklist") return <FileText size={20} className="text-green-500" />;
   if (fileType === "document") return <FileText size={20} className="text-nu-blue" />;
+  // Google Drive native document types
+  if (fileType === "drive-doc") return <FileText size={20} className="text-blue-600" />;
+  if (fileType === "drive-sheet") return <FileText size={20} className="text-green-600" />;
+  if (fileType === "drive-slide") return <FileText size={20} className="text-amber-600" />;
+  if (fileType === "drive-drawing") return <FileText size={20} className="text-purple-600" />;
   // Standard file types
   if (fileType.startsWith("image/")) return <Image size={20} className="text-nu-pink" />;
   if (fileType.startsWith("video/")) return <Film size={20} className="text-nu-blue" />;
   if (fileType.includes("pdf") || fileType.includes("document")) return <FileText size={20} className="text-nu-amber" />;
   if (fileType === "drive-link") return <HardDrive size={20} className="text-green-600" />;
-  if (fileType === "url-link") return <Link2 size={20} className="text-nu-blue" />;
+  if (fileType === "url-link") {
+    // Recognize popular link platforms by URL pattern
+    const u = (url || "").toLowerCase();
+    if (u.includes("youtube.com") || u.includes("youtu.be")) return <Film size={20} className="text-red-600" />;
+    if (u.includes("vimeo.com")) return <Film size={20} className="text-cyan-600" />;
+    if (u.includes("loom.com")) return <Film size={20} className="text-purple-600" />;
+    if (u.includes("figma.com")) return <FileText size={20} className="text-fuchsia-600" />;
+    if (u.includes("notion.so") || u.includes("notion.site")) return <BookOpen size={20} className="text-nu-ink" />;
+    if (u.includes("github.com") || u.includes("gist.github.com")) return <FileText size={20} className="text-nu-ink" />;
+    if (u.includes("twitter.com") || u.includes("x.com")) return <Link2 size={20} className="text-sky-500" />;
+    if (u.includes("open.spotify.com")) return <Link2 size={20} className="text-green-500" />;
+    return <Link2 size={20} className="text-nu-blue" />;
+  }
   return <File size={20} className="text-nu-graphite" />;
 }
 
@@ -80,6 +101,10 @@ function getDocTypeLabel(fileType: string | null): string | null {
     checklist: "체크리스트",
     table_doc: "테이블",
     document: "문서",
+    "drive-doc": "Google 문서",
+    "drive-sheet": "Google 시트",
+    "drive-slide": "Google 슬라이드",
+    "drive-drawing": "Google 드로잉",
   };
   return fileType ? labels[fileType] || null : null;
 }
@@ -143,6 +168,81 @@ export default function ResourcesPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name" | "size">("newest");
+  const [driveOnly, setDriveOnly] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [currentFolder, setCurrentFolder] = useState<string>("");
+  const [bulkMoving, setBulkMoving] = useState(false);
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
+  async function bulkMove() {
+    if (selectedIds.size === 0) return;
+    const target = window.prompt(
+      "이동할 폴더 경로를 입력하세요 (빈 칸 = 루트, 예: 'design' 또는 'clients/2026')",
+      currentFolder,
+    );
+    if (target === null) return;
+    setBulkMoving(true);
+    try {
+      const r = await fetch("/api/files/move", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          table: "file_attachments",
+          ids: Array.from(selectedIds),
+          folder_path: target,
+        }),
+      });
+      const json = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        if (json?.code === "MIGRATION_MISSING") {
+          toast.error("폴더 기능이 활성화되지 않았어요 (마이그레이션 133 필요)");
+        } else {
+          toast.error(json?.error || "이동 실패");
+        }
+        return;
+      }
+      const skipped = json.skipped > 0 ? ` (${json.skipped}개는 권한 없어 건너뜀)` : "";
+      toast.success(`${json.moved}개 이동 완료${skipped}`);
+      clearSelection();
+      await loadData();
+    } finally {
+      setBulkMoving(false);
+    }
+  }
+
+  async function bulkDelete() {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`${selectedIds.size}개 자료를 삭제할까요? Drive 사본도 같이 정리됩니다.`)) return;
+    setBulkDeleting(true);
+    let okCount = 0;
+    let failCount = 0;
+    for (const id of selectedIds) {
+      try {
+        const r = await fetch("/api/files/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, table: "file_attachments" }),
+        });
+        if (r.ok) okCount++;
+        else failCount++;
+      } catch { failCount++; }
+    }
+    setBulkDeleting(false);
+    clearSelection();
+    if (failCount > 0) toast.error(`${okCount}개 삭제 / ${failCount}개 실패`);
+    else toast.success(`${okCount}개 삭제 완료`);
+    await loadData();
+  }
   const [userId, setUserId] = useState<string | null>(null);
   const [isManager, setIsManager] = useState(false);
   const [hostId, setHostId] = useState<string | null>(null);
@@ -555,20 +655,23 @@ export default function ResourcesPage() {
     }
   }
 
-  async function handleDelete(fileId: string, fileUrl: string, fileType: string | null) {
-    const supabase = createClient();
-    if (fileType !== "drive-link") {
-      const path = fileUrl.split("/media/")[1];
-      if (path) await supabase.storage.from("media").remove([path]);
+  async function handleDelete(fileId: string, _fileUrl: string, _fileType: string | null) {
+    // 통합 삭제 API — DB row + 스토리지(R2/Supabase) 같이 제거.
+    const r = await fetch("/api/files/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: fileId, table: "file_attachments" }),
+    });
+    const json = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      toast.error(json?.error || "삭제에 실패했습니다");
+      return;
     }
-
-    const { error } = await supabase.from("file_attachments").delete().eq("id", fileId);
-    if (error) {
-      toast.error("삭제에 실패했습니다");
-    } else {
-      toast.success("파일이 삭제되었습니다");
-      await loadData();
+    if (Array.isArray(json.storage_warnings) && json.storage_warnings.length > 0) {
+      console.warn("[delete] storage cleanup warnings", json.storage_warnings);
     }
+    toast.success("파일이 삭제되었습니다");
+    await loadData();
   }
 
   async function handleRename(fileId: string, newName: string) {
@@ -585,13 +688,45 @@ export default function ResourcesPage() {
   // Genesis R2 folder placeholders — 자료실 상단 "폴더" 섹션에 별도 표시
   const genesisFolders = files.filter((f) => f.file_type === "folder-placeholder" || (f.file_name || "").startsWith("📁 "));
   const normalFiles = files.filter((f) => f.file_type !== "folder-placeholder" && !(f.file_name || "").startsWith("📁 "));
-  const uploadedFiles = normalFiles.filter((f) => f.file_type !== "drive-link" && f.file_type !== "url-link");
-  const driveFiles = normalFiles.filter((f) => f.file_type === "drive-link");
+  const isDriveFile = (ft: string | null | undefined) =>
+    ft === "drive-link" || ft === "drive-doc" || ft === "drive-sheet" || ft === "drive-slide" || ft === "drive-drawing";
+  const uploadedFiles = normalFiles.filter((f) => !isDriveFile(f.file_type) && f.file_type !== "url-link");
+  const driveFiles = normalFiles.filter((f) => isDriveFile(f.file_type));
   const externalLinks = normalFiles.filter((f) => f.file_type === "url-link");
 
-  const filteredUploadedFiles = uploadedFiles.filter((f) => f.file_name.toLowerCase().includes(searchQuery.toLowerCase()));
-  const filteredDriveFiles = driveFiles.filter((f) => f.file_name.toLowerCase().includes(searchQuery.toLowerCase()));
-  const filteredExternalLinks = externalLinks.filter((f) => f.file_name.toLowerCase().includes(searchQuery.toLowerCase()));
+  // 정렬 + Drive-only 필터
+  const sortFn = (a: any, b: any): number => {
+    switch (sortBy) {
+      case "oldest":
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      case "name":
+        return (a.file_name || "").localeCompare(b.file_name || "", "ko");
+      case "size":
+        return (b.file_size || 0) - (a.file_size || 0);
+      case "newest":
+      default:
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
+  };
+  const driveFilterFn = (f: any) => !driveOnly || !!f.drive_edit_file_id;
+
+  const folderFilterFn = (f: any) => ((f.folder_path || "") === currentFolder);
+  const filteredUploadedFiles = uploadedFiles
+    .filter((f) => f.file_name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .filter(folderFilterFn)
+    .filter(driveFilterFn)
+    .sort(sortFn);
+
+  // 현재 그룹에서 발견된 모든 폴더 (루트 제외)
+  const folderList: string[] = Array.from(
+    new Set(uploadedFiles.map((f) => (f as any).folder_path).filter((p: any) => typeof p === "string" && p.length > 0)),
+  ).sort();
+  const filteredDriveFiles = driveFiles
+    .filter((f) => f.file_name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort(sortFn);
+  const filteredExternalLinks = externalLinks
+    .filter((f) => f.file_name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort(sortFn);
   const filteredMeetingResources = meetingResources.filter((r) => r.name.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredWikiPages = wikiPages.filter((w) => w.title.toLowerCase().includes(searchQuery.toLowerCase()) || w.topic_name.toLowerCase().includes(searchQuery.toLowerCase()));
 
@@ -671,8 +806,11 @@ export default function ResourcesPage() {
             </div>
           </div>
 
+          {/* Storage Stats — R2 사용량 + Drive 사본 수 (그룹 전체 기준) */}
+          <ResourceStatsPanel files={files} />
+
           {/* Search Enhancement */}
-          <div className="relative mb-8">
+          <div className="relative mb-3">
             <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-nu-muted" />
             <input
               value={searchQuery}
@@ -680,6 +818,42 @@ export default function ResourcesPage() {
               placeholder="파일 이름, 태그, 또는 문서 본문의 내용을 지능적으로 검색합니다..."
               className="w-full pl-12 pr-4 py-4 bg-nu-white border-2 border-nu-ink shadow-[4px_4px_0px_0px_#0d0d0d] focus:translate-x-1 focus:translate-y-1 focus:shadow-none transition-all outline-none font-medium text-nu-ink"
             />
+          </div>
+
+          {/* Sort + Filter row */}
+          <div className="mb-8 flex flex-wrap items-center gap-2">
+            <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mr-1">정렬</span>
+            {([
+              { v: "newest", label: "최신순" },
+              { v: "oldest", label: "오래된순" },
+              { v: "name", label: "이름" },
+              { v: "size", label: "크기" },
+            ] as const).map((opt) => (
+              <button
+                key={opt.v}
+                onClick={() => setSortBy(opt.v)}
+                className={`font-mono-nu text-[11px] uppercase tracking-widest px-2.5 py-1 border-[2px] transition-all ${
+                  sortBy === opt.v
+                    ? "border-nu-ink bg-nu-ink text-nu-paper"
+                    : "border-nu-ink/15 text-nu-muted hover:border-nu-ink"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+            <span className="w-px h-4 bg-nu-ink/15 mx-2" />
+            <button
+              onClick={() => setDriveOnly((v) => !v)}
+              className={`font-mono-nu text-[11px] uppercase tracking-widest px-2.5 py-1 border-[2px] transition-all flex items-center gap-1.5 ${
+                driveOnly
+                  ? "border-nu-pink bg-nu-pink/10 text-nu-pink"
+                  : "border-nu-ink/15 text-nu-muted hover:border-nu-ink"
+              }`}
+              title="Drive 사본 연결된 파일만"
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${driveOnly ? "bg-nu-pink" : "bg-nu-ink/20"}`} />
+              Drive 편집중만
+            </button>
           </div>
 
           {/* ── Quick Upload Hub (3-button consolidated) ── */}
@@ -690,12 +864,19 @@ export default function ResourcesPage() {
                 <span className="font-mono-nu text-[12px] uppercase tracking-widest font-bold">Quick Add</span>
               </div>
               <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-wrap">
-                {/* 1. 새 문서 */}
+                {/* 1. 새 문서 — Google Docs/Sheets/Slides 자동 생성 */}
+                <NewDocDropdown
+                  scope="group"
+                  scopeId={groupId}
+                  onCreated={() => loadData()}
+                />
+                {/* 위키 문서 (legacy) */}
                 <button
                   onClick={() => setShowNewDocModal(true)}
-                  className="flex items-center justify-center gap-2 font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2.5 bg-nu-pink text-white hover:bg-nu-pink/90 transition-all cursor-pointer border-[2px] border-nu-pink"
+                  className="flex items-center justify-center gap-2 font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-2.5 border-[2px] border-nu-ink/20 hover:border-nu-ink text-nu-graphite hover:bg-nu-ink hover:text-nu-paper transition-all cursor-pointer"
+                  title="위키 페이지 형식으로 작성"
                 >
-                  <FileText size={14} /> ✍️ 새 문서
+                  <FileText size={13} /> 위키 문서
                 </button>
 
                 {/* 2. 파일 업로드 (R2) */}
@@ -705,7 +886,14 @@ export default function ResourcesPage() {
                   <input type="file" className="hidden" onChange={handleUpload} multiple={false} />
                 </label>
 
-                {/* 3. Google Drive 업로드 */}
+                {/* 3a. Drive 에 직접 업로드 — 편집 가능한 사본을 바로 자료실에 등록 */}
+                <DriveDirectUploadButton
+                  targetType="group"
+                  targetId={groupId}
+                  onUploaded={() => loadData()}
+                />
+
+                {/* 3b. 기존 Drive 파일을 R2 로 가져오기 */}
                 <DriveImportButton
                   prefix="resources"
                   scopeId={groupId}
@@ -871,7 +1059,7 @@ export default function ResourcesPage() {
                   <div key={`file-${f.id}`} className="bg-nu-white border-[2px] border-nu-ink/[0.08] hover:border-nu-blue/40 transition-all group">
                     <div className="p-4 flex items-center gap-3">
                       <div className="w-9 h-9 bg-nu-blue/10 flex items-center justify-center shrink-0">
-                        {getFileIcon(f.file_type)}
+                        {getFileIcon(f.file_type, f.file_url)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -915,7 +1103,15 @@ export default function ResourcesPage() {
                             </span>
                           )}
                         </div>
-                        <span className="font-mono-nu text-[11px] text-nu-muted/60">{f.uploader?.nickname || ""} · {timeAgo(f.created_at)}</span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono-nu text-[11px] text-nu-muted/60">{f.uploader?.nickname || ""} · {timeAgo(f.created_at)}</span>
+                          <DriveSyncBadge
+                            driveFileId={(f as any).drive_edit_file_id}
+                            syncedAt={(f as any).drive_edit_synced_at}
+                            ownerUserId={(f as any).drive_edit_user_id}
+                            currentUserId={userId}
+                          />
+                        </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <button
@@ -1149,35 +1345,115 @@ export default function ResourcesPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 gap-4">
-                    {filteredUploadedFiles.map((file) => (
-                      <FileCard
-                        key={file.id}
-                        file={file}
-                        userId={userId}
-                        hostId={hostId}
-                        isManager={isManager}
-                        onDelete={handleDelete}
-                        onRename={handleRename}
-                        onPreview={(url, name) => setPreviewData({ url, name, id: file.id, content: resolveTemplateContent(url, file.content), mime: file.file_type, size: file.file_size, storage_type: (file as any).storage_type, storage_key: (file as any).storage_key, uploaded_by: file.uploaded_by })}
-                        showAiSummary={showAiSummary}
-                        aiSummary={getAiSummary(file.file_name)}
-                        onToggleComments={() => toggleComments(file.id)}
-                        commentsExpanded={!!expandedComments[file.id]}
-                        comments={commentsByResource[file.id] || []}
-                        commentInput={commentInputs[file.id] || ""}
-                        onCommentInputChange={(val) => setCommentInputs(prev => ({ ...prev, [file.id]: val }))}
-                        onPostComment={() => postComment(file.id)}
-                        onDeleteComment={(commentId) => deleteComment(file.id, commentId)}
-                        postingComment={postingComment === file.id}
-                        tags={tagsByResource[file.id] || []}
-                        onToggleTag={(tag) => toggleTag(file.id, tag)}
-                        onAddToWiki={() => addToWikiResources(file)}
-                        addingWiki={addingWikiResource === file.id}
-                        isWikiLinked={wikiLinkedIds.has(file.id)}
-                      />
-                    ))}
-                  </div>
+                  <>
+                    {/* 폴더 바 — 루트 + 발견된 폴더들 + 새 폴더 만들기 */}
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mr-1">
+                        폴더
+                      </span>
+                      <button
+                        onClick={() => setCurrentFolder("")}
+                        className={`font-mono-nu text-[11px] uppercase tracking-widest px-2.5 py-1 border-[2px] transition-all ${
+                          currentFolder === ""
+                            ? "border-nu-ink bg-nu-ink text-nu-paper"
+                            : "border-nu-ink/15 text-nu-muted hover:border-nu-ink"
+                        }`}
+                      >
+                        루트
+                      </button>
+                      {folderList.map((p) => (
+                        <button
+                          key={p}
+                          onClick={() => setCurrentFolder(p)}
+                          className={`font-mono-nu text-[11px] uppercase tracking-widest px-2.5 py-1 border-[2px] transition-all ${
+                            currentFolder === p
+                              ? "border-nu-ink bg-nu-ink text-nu-paper"
+                              : "border-nu-ink/15 text-nu-muted hover:border-nu-ink"
+                          }`}
+                          title={p}
+                        >
+                          📁 {p}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => {
+                          const name = window.prompt("새 폴더 이름 (예: 'clients/2026')");
+                          if (name && name.trim()) setCurrentFolder(name.trim());
+                        }}
+                        className="font-mono-nu text-[11px] uppercase tracking-widest px-2.5 py-1 border-[2px] border-dashed border-nu-ink/20 text-nu-muted hover:border-nu-ink hover:text-nu-ink"
+                        title="새 폴더로 전환 — 파일 이동 시 자동으로 생성됩니다"
+                      >
+                        + 새 폴더
+                      </button>
+                    </div>
+
+                    {/* 벌크 액션 바 — 선택된 항목이 있을 때만 노출 */}
+                    {selectedIds.size > 0 && (
+                      <div className="mb-3 px-4 py-2 bg-nu-ink text-nu-paper border-2 border-nu-ink flex items-center justify-between gap-3 sticky top-0 z-20">
+                        <div className="flex items-center gap-3">
+                          <span className="font-mono-nu text-[12px] uppercase tracking-widest font-bold">
+                            {selectedIds.size}개 선택됨
+                          </span>
+                          <button
+                            onClick={clearSelection}
+                            className="font-mono-nu text-[10px] uppercase tracking-widest underline opacity-70 hover:opacity-100"
+                          >
+                            해제
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={bulkMove}
+                            disabled={bulkMoving}
+                            className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 border-2 border-nu-paper/30 bg-nu-paper/10 text-nu-paper hover:bg-nu-paper/20 transition-all flex items-center gap-1.5 disabled:opacity-60"
+                          >
+                            {bulkMoving ? <Loader2 size={12} className="animate-spin" /> : "📁"}
+                            폴더 이동
+                          </button>
+                          <button
+                            onClick={bulkDelete}
+                            disabled={bulkDeleting}
+                            className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 border-2 border-red-400 bg-red-500 text-white hover:bg-red-600 transition-all flex items-center gap-1.5 disabled:opacity-60"
+                          >
+                            {bulkDeleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                            일괄 삭제
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 gap-4">
+                      {filteredUploadedFiles.map((file) => (
+                        <FileCard
+                          key={file.id}
+                          file={file}
+                          userId={userId}
+                          hostId={hostId}
+                          isManager={isManager}
+                          onDelete={handleDelete}
+                          onRename={handleRename}
+                          onPreview={(url, name) => setPreviewData({ url, name, id: file.id, content: resolveTemplateContent(url, file.content), mime: file.file_type, size: file.file_size, storage_type: (file as any).storage_type, storage_key: (file as any).storage_key, uploaded_by: file.uploaded_by })}
+                          showAiSummary={showAiSummary}
+                          aiSummary={getAiSummary(file.file_name)}
+                          onToggleComments={() => toggleComments(file.id)}
+                          commentsExpanded={!!expandedComments[file.id]}
+                          comments={commentsByResource[file.id] || []}
+                          commentInput={commentInputs[file.id] || ""}
+                          onCommentInputChange={(val) => setCommentInputs(prev => ({ ...prev, [file.id]: val }))}
+                          onPostComment={() => postComment(file.id)}
+                          onDeleteComment={(commentId) => deleteComment(file.id, commentId)}
+                          postingComment={postingComment === file.id}
+                          tags={tagsByResource[file.id] || []}
+                          onToggleTag={(tag) => toggleTag(file.id, tag)}
+                          onAddToWiki={() => addToWikiResources(file)}
+                          addingWiki={addingWikiResource === file.id}
+                          isWikiLinked={wikiLinkedIds.has(file.id)}
+                          selectable
+                          selected={selectedIds.has(file.id)}
+                          onToggleSelect={() => toggleSelected(file.id)}
+                        />
+                      ))}
+                    </div>
+                  </>
                 )}
               </section>
             )}
@@ -1597,10 +1873,64 @@ function InlineComments({
   );
 }
 
+function ResourceStatsPanel({ files }: { files: Array<FileAttachment & { drive_edit_file_id?: string | null; storage_type?: string | null; file_size?: number | null }> }) {
+  const r2Bytes = files
+    .filter((f) => (f as any).storage_type === "r2")
+    .reduce((sum, f) => sum + ((f as any).file_size || 0), 0);
+  const supabaseBytes = files
+    .filter((f) => (f as any).storage_type === "supabase")
+    .reduce((sum, f) => sum + ((f as any).file_size || 0), 0);
+  const driveCopies = files.filter((f) => !!(f as any).drive_edit_file_id).length;
+  const totalFiles = files.length;
+
+  function fmt(b: number): string {
+    if (!b) return "0 B";
+    if (b < 1024) return `${b} B`;
+    if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+    if (b < 1024 * 1024 * 1024) return `${(b / 1024 / 1024).toFixed(1)} MB`;
+    return `${(b / 1024 / 1024 / 1024).toFixed(2)} GB`;
+  }
+
+  if (totalFiles === 0) return null;
+
+  return (
+    <div className="mb-4 px-4 py-3 bg-nu-cream/20 border-2 border-nu-ink/10 flex flex-wrap items-center gap-4 text-[12px]">
+      <div className="flex items-center gap-1.5">
+        <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">파일</span>
+        <span className="font-bold text-nu-ink">{totalFiles}</span>
+      </div>
+      <span className="w-px h-4 bg-nu-ink/15" />
+      <div className="flex items-center gap-1.5">
+        <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">R2</span>
+        <span className="font-bold text-nu-ink">{fmt(r2Bytes)}</span>
+      </div>
+      {supabaseBytes > 0 && (
+        <>
+          <span className="w-px h-4 bg-nu-ink/15" />
+          <div className="flex items-center gap-1.5">
+            <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">Supabase (legacy)</span>
+            <span className="font-bold text-nu-ink">{fmt(supabaseBytes)}</span>
+          </div>
+        </>
+      )}
+      {driveCopies > 0 && (
+        <>
+          <span className="w-px h-4 bg-nu-ink/15" />
+          <div className="flex items-center gap-1.5">
+            <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">Drive 편집 사본</span>
+            <span className="font-bold text-nu-pink">{driveCopies}</span>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function FileCard({
   file, userId, hostId, isManager, onDelete, onRename, isDrive, isLink, onPreview, showAiSummary, aiSummary,
   onToggleComments, commentsExpanded, comments, commentInput, onCommentInputChange, onPostComment, onDeleteComment, postingComment,
   tags, onToggleTag, onAddToWiki, addingWiki, isWikiLinked,
+  selectable, selected, onToggleSelect,
 }: {
   file: FileAttachment & { uploader?: { nickname: string | null } };
   userId: string | null;
@@ -1626,6 +1956,9 @@ function FileCard({
   onAddToWiki?: () => void;
   addingWiki?: boolean;
   isWikiLinked?: boolean;
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }) {
   const [status, setStatus] = useState<"draft" | "review" | "asset">("draft");
   const [isEditing, setIsEditing] = useState(false);
@@ -1707,8 +2040,18 @@ function FileCard({
       }`}
     >
       <div className="p-4 flex items-center gap-4">
+        {selectable && (
+          <input
+            type="checkbox"
+            checked={!!selected}
+            onChange={() => onToggleSelect?.()}
+            className="w-4 h-4 accent-nu-pink shrink-0"
+            title="선택"
+            onClick={(e) => e.stopPropagation()}
+          />
+        )}
         <div className={`w-12 h-12 flex items-center justify-center shrink-0 border-2 border-nu-ink/5 ${isDrive ? "bg-green-50" : isLink ? "bg-nu-blue/5" : "bg-nu-cream/50"}`}>
-          {isDrive ? <HardDrive size={20} className="text-green-600" /> : isLink ? <Link2 size={20} className="text-nu-blue" /> : getFileIcon(file.file_type)}
+          {isDrive ? <HardDrive size={20} className="text-green-600" /> : isLink ? getFileIcon(file.file_type, file.file_url) : getFileIcon(file.file_type, file.file_url)}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
@@ -1801,6 +2144,18 @@ function FileCard({
             <span className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest">{(file as any).uploader?.nickname || "MEMBER"}</span>
             <span className="w-1 h-1 bg-nu-ink/10 rounded-full" />
             <span className="font-mono-nu text-[11px] text-nu-muted uppercase tracking-widest">{new Date(file.created_at).toLocaleDateString("ko")}</span>
+            <DriveSyncBadge
+              driveFileId={(file as any).drive_edit_file_id}
+              syncedAt={(file as any).drive_edit_synced_at}
+              ownerUserId={(file as any).drive_edit_user_id}
+              currentUserId={userId}
+            />
+            <FileAiSummary
+              table="file_attachments"
+              fileId={file.id}
+              initial={(file as any).ai_summary || null}
+              fileExt={(file.file_name || "").split(".").pop()}
+            />
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">

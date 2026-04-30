@@ -45,6 +45,7 @@ export default function GroupSettingsPage() {
   const [group, setGroup] = useState<GroupData | null>(null);
   const [members, setMembers] = useState<MemberData[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -167,13 +168,16 @@ export default function GroupSettingsPage() {
     if (error) { toast.error("승인에 실패했습니다"); return; }
     setMembers(prev => prev.map(m => m.user_id === targetUserId ? { ...m, status: "active" } : m));
 
-    await supabase.from("notifications").insert({
-      user_id: targetUserId,
-      type: "group_accepted",
-      title: "너트 가입 승인",
-      body: `${group?.name} 너트에 가입이 승인되었습니다.`,
-      metadata: { group_id: groupId },
-      is_read: false,
+    await fetch("/api/notifications/dispatch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        recipientUserId: targetUserId,
+        type: "group_accepted",
+        title: "너트 가입 승인",
+        body: `${group?.name} 너트에 가입이 승인되었습니다.`,
+        metadata: { group_id: groupId },
+      }),
     });
     toast.success(`${targetNickname}님이 승인되었습니다`);
   }
@@ -194,15 +198,18 @@ export default function GroupSettingsPage() {
     ));
 
     // 알림 발송
-    await supabase.from("notifications").insert({
-      user_id: targetUserId,
-      type: "role_changed",
-      title: isCurrentlyModerator ? "매니저 권한 해제" : "매니저로 임명되었습니다",
-      body: isCurrentlyModerator
-        ? `${group?.name} 너트의 매니저 권한이 해제되었습니다.`
-        : `${group?.name} 너트의 매니저로 임명되었습니다. 너트의 일정, 파일, 와셔 관리를 할 수 있습니다.`,
-      metadata: { group_id: groupId },
-      is_read: false,
+    await fetch("/api/notifications/dispatch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        recipientUserId: targetUserId,
+        type: "role_changed",
+        title: isCurrentlyModerator ? "매니저 권한 해제" : "매니저로 임명되었습니다",
+        body: isCurrentlyModerator
+          ? `${group?.name} 너트의 매니저 권한이 해제되었습니다.`
+          : `${group?.name} 너트의 매니저로 임명되었습니다. 너트의 일정, 파일, 와셔 관리를 할 수 있습니다.`,
+        metadata: { group_id: groupId },
+      }),
     });
 
     toast.success(isCurrentlyModerator ? "일반 와셔로 변경되었습니다" : "매니저로 임명되었습니다");
@@ -229,13 +236,16 @@ export default function GroupSettingsPage() {
 
     setMembers(prev => prev.filter(m => m.user_id !== targetUserId));
 
-    await supabase.from("notifications").insert({
-      user_id: targetUserId,
-      type: "group_rejected",
-      title: "너트 가입 거절",
-      body: `${group?.name} 너트 가입 신청이 거절되었습니다.\n사유: ${reason}`,
-      metadata: { group_id: groupId, reason },
-      is_read: false,
+    await fetch("/api/notifications/dispatch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        recipientUserId: targetUserId,
+        type: "group_rejected",
+        title: "너트 가입 거절",
+        body: `${group?.name} 너트 가입 신청이 거절되었습니다.\n사유: ${reason}`,
+        metadata: { group_id: groupId, reason },
+      }),
     });
     toast.success("거절되었습니다");
   }
@@ -358,20 +368,129 @@ export default function GroupSettingsPage() {
         </form>
       </div>
 
+      {/* Invite link — 외부 사용자 일괄 초대 */}
+      <div className="bg-nu-white border border-nu-ink/[0.08] p-6 mb-6">
+        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+          <h2 className="font-head text-sm font-extrabold">초대 링크</h2>
+          <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">
+            아래 링크를 보내면 누구나 가입 신청 → 호스트가 승인
+          </span>
+        </div>
+        <div className="flex flex-col sm:flex-row items-stretch gap-2">
+          <code className="flex-1 px-3 py-2 bg-nu-cream/30 border-2 border-nu-ink/10 text-[11px] font-mono-nu text-nu-ink truncate">
+            {typeof window !== "undefined" ? `${window.location.origin}/groups/${groupId}` : `/groups/${groupId}`}
+          </code>
+          <button
+            onClick={async () => {
+              const link = `${window.location.origin}/groups/${groupId}`;
+              try {
+                await navigator.clipboard.writeText(link);
+                toast.success("초대 링크가 복사되었습니다");
+              } catch {
+                toast.error("복사 실패 — 직접 선택 후 복사해주세요");
+              }
+            }}
+            className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-2 border-2 border-nu-ink bg-nu-paper text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-all"
+          >
+            📋 복사
+          </button>
+          <button
+            onClick={async () => {
+              const link = `${window.location.origin}/groups/${groupId}`;
+              const text = `${group?.name || "너트"} 가입 초대\n${link}`;
+              if (navigator.share) {
+                try {
+                  await navigator.share({ title: group?.name || "너트", text, url: link });
+                } catch { /* user cancelled */ }
+              } else {
+                window.open(`https://accounts.kakao.com/login?continue=${encodeURIComponent("https://sharer.kakao.com")}`, "_blank");
+              }
+            }}
+            className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-2 border-2 border-nu-pink bg-nu-pink text-white hover:bg-nu-ink transition-all"
+          >
+            공유
+          </button>
+        </div>
+      </div>
+
       {/* Active members */}
       <div className="bg-nu-white border border-nu-ink/[0.08] p-8 mb-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <h2 className="font-head text-lg font-extrabold">와셔 ({activeMembers.length})</h2>
           <p className="font-mono-nu text-[11px] uppercase tracking-widest text-nu-muted">매니저는 일정·파일·와셔 관리 가능</p>
         </div>
+        {/* 벌크 액션 바 */}
+        {selectedMemberIds.size > 0 && (
+          <div className="mb-3 px-3 py-2 bg-nu-ink text-nu-paper border-2 border-nu-ink flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="font-mono-nu text-[11px] uppercase tracking-widest font-bold">{selectedMemberIds.size}명 선택</span>
+              <button onClick={() => setSelectedMemberIds(new Set())} className="font-mono-nu text-[10px] uppercase tracking-widest underline opacity-70">해제</button>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={async () => {
+                  if (!confirm(`${selectedMemberIds.size}명을 매니저로 임명할까요?`)) return;
+                  for (const uid of selectedMemberIds) {
+                    const m = activeMembers.find((x) => x.user_id === uid);
+                    if (m && m.role === "member") await handlePromoteManager(uid, false);
+                  }
+                  setSelectedMemberIds(new Set());
+                }}
+                className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-2 py-1 border border-nu-paper/30 hover:bg-nu-paper/10"
+              >
+                매니저 임명
+              </button>
+              <button
+                onClick={async () => {
+                  if (!confirm(`${selectedMemberIds.size}명의 매니저 권한을 해제할까요?`)) return;
+                  for (const uid of selectedMemberIds) {
+                    const m = activeMembers.find((x) => x.user_id === uid);
+                    if (m && m.role === "moderator") await handlePromoteManager(uid, true);
+                  }
+                  setSelectedMemberIds(new Set());
+                }}
+                className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-2 py-1 border border-nu-paper/30 hover:bg-nu-paper/10"
+              >
+                매니저 해제
+              </button>
+              <button
+                onClick={async () => {
+                  if (!confirm(`${selectedMemberIds.size}명을 너트에서 제거할까요?`)) return;
+                  for (const uid of selectedMemberIds) {
+                    await handleRemoveMember(uid);
+                  }
+                  setSelectedMemberIds(new Set());
+                }}
+                className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-2 py-1 border border-red-400 bg-red-500 hover:bg-red-600"
+              >
+                제거
+              </button>
+            </div>
+          </div>
+        )}
         <div className="flex flex-col divide-y divide-nu-ink/5">
           {activeMembers.map((m) => {
             const isModerator = m.role === "moderator";
             const isCurrentHost = m.role === "host";
             return (
-              <div key={m.user_id} className="flex items-center justify-between py-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-nu-cream flex items-center justify-center font-head text-xs font-bold">
+              <div key={m.user_id} className="flex items-center justify-between py-3 gap-3 flex-wrap">
+                <div className="flex items-center gap-3 min-w-0">
+                  {!isCurrentHost && (
+                    <input
+                      type="checkbox"
+                      checked={selectedMemberIds.has(m.user_id)}
+                      onChange={() => {
+                        setSelectedMemberIds((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(m.user_id)) next.delete(m.user_id); else next.add(m.user_id);
+                          return next;
+                        });
+                      }}
+                      className="w-4 h-4 accent-nu-pink shrink-0"
+                      title="선택"
+                    />
+                  )}
+                  <div className="w-8 h-8 rounded-full bg-nu-cream flex items-center justify-center font-head text-xs font-bold shrink-0">
                     {(m.profile?.nickname || "U").charAt(0).toUpperCase()}
                   </div>
                   <div>
@@ -420,25 +539,44 @@ export default function GroupSettingsPage() {
       {/* Pending / join requests */}
       {pendingMembers.length > 0 && (
         <div className="bg-nu-white border-[2px] border-nu-amber/30 p-8 mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="w-2.5 h-2.5 rounded-full bg-nu-amber animate-pulse" />
-            <h2 className="font-head text-lg font-extrabold">
-              가입 신청 대기 ({pendingMembers.length})
-            </h2>
+          <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-nu-amber animate-pulse" />
+              <h2 className="font-head text-lg font-extrabold">
+                가입 신청 대기 ({pendingMembers.length})
+              </h2>
+            </div>
+            {pendingMembers.length > 1 && (
+              <button
+                onClick={async () => {
+                  if (!confirm(`${pendingMembers.length}명을 모두 승인할까요?`)) return;
+                  for (const m of pendingMembers) {
+                    await handleApproveMember(m.user_id, m.profile?.nickname || "와셔");
+                  }
+                }}
+                className="font-mono-nu text-[11px] uppercase tracking-widest px-3 py-1.5 bg-nu-blue text-white hover:bg-nu-blue/90 transition-colors flex items-center gap-1"
+                title="모두 한 번에 승인"
+              >
+                <UserPlus size={12} /> 일괄 승인
+              </button>
+            )}
           </div>
           <div className="flex flex-col divide-y divide-nu-ink/5">
             {pendingMembers.map(m => (
-              <div key={m.user_id} className="flex items-center justify-between py-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-nu-amber/20 flex items-center justify-center font-head text-xs font-bold text-nu-amber">
+              <div key={m.user_id} className="flex items-center justify-between py-3 gap-3 flex-wrap">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-nu-amber/20 flex items-center justify-center font-head text-xs font-bold text-nu-amber shrink-0">
                     {(m.profile?.nickname || "U").charAt(0).toUpperCase()}
                   </div>
-                  <div>
-                    <p className="text-sm font-medium">{m.profile?.nickname || "Unknown"}</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{m.profile?.nickname || "Unknown"}</p>
+                    {m.profile?.email && (
+                      <p className="text-[11px] text-nu-muted truncate font-mono-nu">{m.profile.email}</p>
+                    )}
                     <p className="text-[12px] text-nu-amber">가입 신청 대기중</p>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 shrink-0">
                   <button
                     onClick={() => handleApproveMember(m.user_id, m.profile?.nickname || "와셔")}
                     className="font-mono-nu text-[12px] uppercase tracking-widest px-3 py-1.5 bg-nu-blue text-white hover:bg-nu-blue/90 transition-colors flex items-center gap-1"

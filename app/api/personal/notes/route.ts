@@ -25,7 +25,9 @@ export async function GET(req: NextRequest) {
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-  return NextResponse.json({ rows: data });
+  return NextResponse.json({ rows: data }, {
+    headers: { "Cache-Control": "private, max-age=30, must-revalidate" },
+  });
 }
 
 /** POST /api/personal/notes — create */

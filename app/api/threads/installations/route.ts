@@ -14,12 +14,16 @@ export async function GET(req: NextRequest) {
   if (target_type !== "nut" && target_type !== "bolt") {
     return NextResponse.json({ error: "invalid_target_type" }, { status: 400 });
   }
+  // UUID format validation — prevents Postgres "invalid input syntax for uuid" 500s
+  if (!/^[0-9a-fA-F-]{36}$/.test(target_id)) {
+    return NextResponse.json({ error: "invalid_target_id" }, { status: 400 });
+  }
 
   const { data, error } = await supabase
     .from("thread_installations")
     .select(`
       id, thread_id, target_type, target_id, position, config, is_enabled, installed_by, installed_at,
-      thread:threads ( id, slug, name, description, icon, category, scope, schema, config_schema, is_core, version )
+      thread:threads ( id, slug, name, description, icon, category, scope, schema, config_schema, is_core, version, ui_component, builder_state, builder_mode )
     `)
     .eq("target_type", target_type)
     .eq("target_id", target_id)

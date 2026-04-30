@@ -37,15 +37,29 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     .eq("is_public", true)
     .single();
 
-  if (topicError || !topic) return { title: "탭을 찾을 수 없습니다" };
+  if (topicError || !topic) return { title: "탭을 찾을 수 없습니다 — nutunion" };
+
+  const title = `${topic.name} — nutunion Wiki`;
+  const description = (topic.public_description || `${topic.name}에 대한 nutunion 공개 위키 문서`).slice(0, 160);
+  const canonical = `https://nutunion.co.kr/wiki/${slug}`;
+  const ogImage = "/hero-risograph.png";
 
   return {
-    title: `${topic.name} — NutUnion Wiki`,
-    description: topic.public_description || `${topic.name}에 대한 공개 탭`,
+    title,
+    description,
+    alternates: { canonical },
     openGraph: {
-      title: `${topic.name} — NutUnion Wiki`,
-      description: topic.public_description || `${topic.name}에 대한 공개 탭`,
+      title,
+      description,
       type: "article",
+      url: canonical,
+      images: [{ url: ogImage, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImage],
     },
   };
 }
@@ -92,8 +106,27 @@ export default async function PublicWikiPage({ params }: { params: Promise<{ slu
   const totalChars = pageList.reduce((sum, p: any) => sum + (p.content?.length || 0), 0);
   const readingMinutes = Math.max(1, Math.ceil(totalChars / 500));
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: topic.name,
+    description: topic.public_description || `${topic.name}에 대한 nutunion 공개 위키 문서`,
+    datePublished: topic.published_at || undefined,
+    author: { "@type": "Organization", name: "nutunion" },
+    publisher: {
+      "@type": "Organization",
+      name: "nutunion",
+      logo: { "@type": "ImageObject", url: "https://nutunion.co.kr/icon-512.png" },
+    },
+    mainEntityOfPage: `https://nutunion.co.kr/wiki/${slug}`,
+  };
+
   return (
     <div className="min-h-screen bg-nu-paper">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* ── Header ── */}
       <div className="border-b-[3px] border-nu-ink bg-gradient-to-br from-nu-cream/50 via-white to-nu-cream/30 relative overflow-hidden">
         <div className="absolute -right-32 -top-32 w-96 h-96 bg-nu-pink/[0.03] rounded-full blur-3xl" />

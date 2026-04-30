@@ -28,11 +28,27 @@ export interface DriveStorageTarget {
   /** supportsAllDrives 플래그 */
   supportsAllDrives: boolean;
   /** 현재 사용 중인 저장 전략 (로그/디버그용) */
-  strategy: "shared-drive" | "host-drive";
+  strategy: "shared-folder" | "shared-drive" | "host-drive";
 }
 
-/** 환경변수 기반 저장 전략 결정 — 이름 오타 대응 fallback 포함 */
+/** 환경변수 기반 저장 전략 결정.
+ *
+ * 우선순위:
+ *   1. GOOGLE_DRIVE_SHARED_FOLDER_ID — 단일 공유 폴더 모드 (현재 표준).
+ *      모든 너트/볼트가 이 폴더 하나에 같이 저장됨.
+ *   2. GOOGLE_SHARED_DRIVE_ID — 조직 Shared Drive 모드 (legacy).
+ *   3. 호스트 개인 Drive (legacy).
+ */
 export function getDriveStorageTarget(): DriveStorageTarget {
+  const sharedFolderId = process.env.GOOGLE_DRIVE_SHARED_FOLDER_ID?.trim();
+  if (sharedFolderId) {
+    return {
+      parentFolderId: sharedFolderId,
+      supportsAllDrives: true,
+      strategy: "shared-folder",
+    };
+  }
+
   const sharedDriveId =
     process.env.GOOGLE_SHARED_DRIVE_ID?.trim() ||
     process.env.GOOGLE_DRIVE_SHARED_DRIVE_ID?.trim() ||  // legacy/typo 대응
@@ -57,6 +73,21 @@ export function getDriveStorageTarget(): DriveStorageTarget {
   };
 }
 
+/** 단일 공유 폴더 ID 직접 조회 (없으면 null). */
+export function getSharedFolderId(): string | null {
+  return process.env.GOOGLE_DRIVE_SHARED_FOLDER_ID?.trim() || null;
+}
+
+/** Drive 작업 OAuth 주체로 사용할 owner user UUID — 미설정 시 null. */
+export function getDriveOwnerUserId(): string | null {
+  return process.env.NUTUNION_DRIVE_OWNER_USER_ID?.trim() || null;
+}
+
+/** Drive auth 주체 결정 — owner 가 설정되면 owner, 없으면 currentUserId. */
+export async function getDriveAuthUserId(currentUserId: string): Promise<string> {
+  return getDriveOwnerUserId() || currentUserId;
+}
+
 /** files.create requestBody 에 parents 병합 */
 export function withParents<T extends Record<string, unknown>>(
   body: T,
@@ -79,6 +110,9 @@ export function driveRequestOptions(target: DriveStorageTarget) {
 /** 설정 상태 요약 (admin UI / 로그용) */
 export function describeStorageStrategy(): string {
   const t = getDriveStorageTarget();
+  if (t.strategy === "shared-folder") {
+    return `Google Drive 단일 공유 폴더 (${t.parentFolderId?.slice(0, 8)}...) — owner 토큰으로 일괄 쓰기`;
+  }
   if (t.strategy === "shared-drive") {
     return `Google Shared Drive (${t.driveId?.slice(0, 8)}...) — 호스트 탈퇴 영향 없음`;
   }

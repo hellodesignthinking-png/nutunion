@@ -78,6 +78,8 @@ export default function ApplicationList({
 }: ApplicationListProps) {
   const [applications, setApplications] = useState<ProjectApplication[]>([]);
   const [filter, setFilter] = useState("all");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name">("newest");
+  const [visibleCount, setVisibleCount] = useState(20);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
@@ -130,47 +132,20 @@ export default function ApplicationList({
     setProcessing(applicationId);
 
     try {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) throw new Error("로그인이 필요합니다");
-
-      // Update application status
-      const updatePayload: Record<string, unknown> = {
-        status: action,
-        reviewed_by: user.id,
-        reviewed_at: new Date().toISOString(),
-      };
-
-      if (action === "rejected" && reason) {
-        updatePayload.rejection_reason = reason;
-      }
-
-      const { error: updateError } = await supabase
-        .from("project_applications")
-        .update(updatePayload)
-        .eq("id", applicationId);
-
-      if (updateError) throw updateError;
-
-      // If approved, add to project_members
-      if (action === "approved") {
-        const { error: memberError } = await supabase
-          .from("project_members")
-          .insert({
-            project_id: projectId,
-            user_id: applicantId,
-            role: "member",
-          });
-
-        if (memberError) {
-          // If already a member, just ignore
-          if (!memberError.message.includes("duplicate")) {
-            throw memberError;
-          }
-        }
+      // 서버 API 사용 — admin client 로 RLS 우회 + 알림 자동 생성
+      // (이전 직접 insert 는 project_members RLS 로 403)
+      const apiAction = action === "approved" ? "approve" : "reject";
+      const r = await fetch(`/api/projects/${projectId}/applications/${applicantId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: apiAction,
+          reason: apiAction === "reject" ? reason : undefined,
+        }),
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        throw new Error(j.error || `처리 실패 (${r.status})`);
       }
 
       toast.success(
@@ -237,7 +212,34 @@ export default function ApplicationList({
         </div>
       ) : (
         <div className="space-y-4">
-          {applications.map((app) => {
+          {/* 정렬 + 카운트 */}
+          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+            <div className="flex items-center gap-1.5">
+              <span className="font-mono-nu uppercase tracking-widest text-nu-muted">정렬</span>
+              {(["newest", "oldest", "name"] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setSortBy(v)}
+                  className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 border-[2px] transition-all ${sortBy === v ? "border-nu-ink bg-nu-ink text-nu-paper" : "border-nu-ink/15 text-nu-muted hover:border-nu-ink"}`}
+                >
+                  {v === "newest" ? "최신" : v === "oldest" ? "오래됨" : "이름"}
+                </button>
+              ))}
+            </div>
+            <span className="font-mono-nu uppercase tracking-widest text-nu-muted">
+              총 {applications.length}건 · {Math.min(visibleCount, applications.length)}건 표시
+            </span>
+          </div>
+          {[...applications].sort((a, b) => {
+            if (sortBy === "name") {
+              const an = (a.applicant?.nickname || a.applicant?.name || "").toString();
+              const bn = (b.applicant?.nickname || b.applicant?.name || "").toString();
+              return an.localeCompare(bn, "ko");
+            }
+            const at = new Date(a.created_at).getTime();
+            const bt = new Date(b.created_at).getTime();
+            return sortBy === "oldest" ? at - bt : bt - at;
+          }).slice(0, visibleCount).map((app) => {
             const badge = statusBadge[app.status] ?? statusBadge.pending;
             const BadgeIcon = badge.icon;
             const applicant = app.applicant;
@@ -417,6 +419,16 @@ export default function ApplicationList({
               </div>
             );
           })}
+          {applications.length > visibleCount && (
+            <div className="flex justify-center pt-4">
+              <button
+                onClick={() => setVisibleCount((n) => n + 20)}
+                className="font-mono-nu text-[11px] uppercase tracking-widest px-4 py-2 border-[2px] border-nu-ink/20 text-nu-ink hover:border-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-all"
+              >
+                더 보기 (+{Math.min(20, applications.length - visibleCount)})
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

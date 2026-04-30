@@ -95,16 +95,31 @@ export default function NotificationsPage() {
   }, [userId]);
 
   async function markAsRead(id: string) {
-    const supabase = createClient();
-    await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+    // Optimistic — remove unread state immediately
     setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, is_read: true } : n));
+    try {
+      const res = await fetch(`/api/notifications/${id}/read`, { method: "POST" });
+      if (!res.ok) {
+        // Fallback to direct supabase update (RLS allows owner)
+        const supabase = createClient();
+        await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+      }
+    } catch {
+      const supabase = createClient();
+      await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+    }
   }
 
   async function markAllRead() {
     if (!userId) return;
-    const supabase = createClient();
-    await supabase.from("notifications").update({ is_read: true }).eq("user_id", userId).eq("is_read", false);
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    try {
+      const res = await fetch(`/api/notifications/read-all`, { method: "POST" });
+      if (!res.ok) throw new Error("api failed");
+    } catch {
+      const supabase = createClient();
+      await supabase.from("notifications").update({ is_read: true }).eq("user_id", userId).eq("is_read", false);
+    }
     toast.success("모든 알림을 읽음 처리했습니다");
   }
 
@@ -214,9 +229,19 @@ export default function NotificationsPage() {
                   const href   = cfg.getLink ? cfg.getLink(meta) : "/dashboard";
                   const CfgIcon = cfg.icon;
 
+                  const handleCardClick = () => {
+                    if (!n.is_read) markAsRead(n.id);
+                    if (href && href !== "/dashboard") {
+                      window.location.href = href;
+                    }
+                  };
                   return (
                     <div key={n.id}
-                      className={`bg-nu-white border flex items-start gap-4 p-4 transition-all group ${n.is_read ? "border-nu-ink/[0.05] opacity-70" : "border-nu-pink/20 shadow-sm"}`}>
+                      onClick={handleCardClick}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleCardClick(); } }}
+                      className={`bg-nu-white border-[3px] border-nu-ink flex items-start gap-4 p-4 transition-all group cursor-pointer hover:bg-nu-pink/5 ${n.is_read ? "opacity-60" : "shadow-[3px_3px_0_var(--nu-pink,#FF3D80)]"}`}>
                       {/* Icon */}
                       <div className={`w-10 h-10 flex items-center justify-center shrink-0 ${cfg.bg}`}>
                         <CfgIcon size={16} className={cfg.color} />
@@ -236,20 +261,20 @@ export default function NotificationsPage() {
                         <p className="font-mono-nu text-[12px] text-nu-muted mt-1.5">{timeAgo(n.created_at)}</p>
                       </div>
                       {/* Actions */}
-                      <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                         {href && href !== "/dashboard" && (
-                          <Link href={href} onClick={() => !n.is_read && markAsRead(n.id)}
+                          <Link href={href} onClick={(e) => { e.stopPropagation(); if (!n.is_read) markAsRead(n.id); }}
                             className="p-1.5 text-nu-muted hover:text-nu-blue transition-colors">
                             <ArrowRight size={14} />
                           </Link>
                         )}
                         {!n.is_read && (
-                          <button onClick={() => markAsRead(n.id)}
+                          <button onClick={(e) => { e.stopPropagation(); markAsRead(n.id); }}
                             className="p-1.5 text-nu-muted hover:text-green-600 transition-colors" title="읽음 처리">
                             <Check size={14} />
                           </button>
                         )}
-                        <button onClick={() => deleteNotif(n.id)}
+                        <button onClick={(e) => { e.stopPropagation(); deleteNotif(n.id); }}
                           className="p-1.5 text-nu-muted hover:text-nu-red transition-colors" title="삭제">
                           <Trash2 size={12} />
                         </button>
