@@ -15,7 +15,7 @@
 // 업데이트:
 //   VERSION 변경 → install 시 구 캐시 싹 삭제 + skipWaiting 즉시 적용
 
-const VERSION = "nutunion-sw-v6";
+const VERSION = "nutunion-sw-v7";
 const STATIC_CACHE = `${VERSION}-static`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 

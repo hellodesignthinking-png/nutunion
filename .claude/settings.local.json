@@ -165,7 +165,9 @@
       "Bash(vercel ls *)",
       "Bash(vercel deploy *)",
       "Bash(git fetch *)",
-      "Bash(vercel inspect *)"
+      "Bash(vercel inspect *)",
+      "Bash(grep -rln \"headers:.*\\\\${\" /Users/TaiNa0/Desktop/nutunion/components /Users/TaiNa0/Desktop/nutunion/app /Users/TaiNa0/Desktop/nutunion/lib)",
+      "Bash(grep -rEn 'headers[\"'\"'\"']?\\\\s*:.*\\\\$\\\\{' /Users/TaiNa0/Desktop/nutunion/components /Users/TaiNa0/Desktop/nutunion/app /Users/TaiNa0/Desktop/nutunion/lib)"
     ]
   }
 }
