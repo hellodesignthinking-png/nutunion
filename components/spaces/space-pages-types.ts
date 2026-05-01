@@ -33,7 +33,8 @@ export type BlockType =
   | "callout"
   | "table"
   | "audio"
-  | "embed";
+  | "embed"
+  | "image";
 
 /** 블록 스타일 커스텀 — data.color / data.align 으로 공통 적용 */
 export type BlockColor = "default" | "red" | "amber" | "emerald" | "sky" | "violet" | "pink";
@@ -64,6 +65,7 @@ export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   table:    "표",
   audio:    "음성 메모",
   embed:    "임베드",
+  image:    "이미지",
 };
 
 export const SLASH_COMMANDS: Array<{ type: BlockType; label: string; sub: string; keys: string[] }> = [
@@ -81,4 +83,5 @@ export const SLASH_COMMANDS: Array<{ type: BlockType; label: string; sub: string
   { type: "table",    label: "표",         sub: "미니 테이블",   keys: ["table", "표", "데이터"] },
   { type: "audio",    label: "음성 메모",  sub: "🎙 녹음",       keys: ["audio", "음성", "녹음"] },
   { type: "embed",    label: "임베드",     sub: "YouTube/Drive/Figma", keys: ["embed", "임베드", "youtube", "drive", "figma"] },
+  { type: "image",    label: "이미지",     sub: "📷 업로드/붙여넣기", keys: ["image", "이미지", "사진", "img"] },
 ];

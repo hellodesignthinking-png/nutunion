@@ -17,6 +17,8 @@ interface Props {
   ownerId?: string;
   /** 현재 사용자 id — 댓글 본인 표시 */
   currentUserId?: string;
+  /** 부모(에디터)에 저장 상태 보고 — saving/saved 인디케이터 */
+  onSaveStateChange?: (state: "saving" | "saved" | "idle") => void;
 }
 
 const SAVE_DEBOUNCE = 600;
@@ -30,7 +32,7 @@ const SAVE_DEBOUNCE = 600;
  * - "+" 버튼 = 블록 사이 삽입
  * - 드래그-드롭 순서 변경
  */
-export function SpacePageBlocks({ pageId, legacyContent, ownerType, ownerId, currentUserId }: Props) {
+export function SpacePageBlocks({ pageId, legacyContent, ownerType, ownerId, currentUserId, onSaveStateChange }: Props) {
   const [openCommentsFor, setOpenCommentsFor] = useState<string | null>(null);
   const [blocks, setBlocks] = useState<SpaceBlock[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,16 +68,22 @@ export function SpacePageBlocks({ pageId, legacyContent, ownerType, ownerId, cur
   const queueSave = useCallback((id: string, patch: Partial<SpaceBlock>) => {
     const prev = saveTimers.current.get(id);
     if (prev) clearTimeout(prev);
+    onSaveStateChange?.("saving");
     const t = setTimeout(() => {
-      void fetch(`/api/spaces/blocks/${id}`, {
+      fetch(`/api/spaces/blocks/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
-      }).catch(() => undefined);
+      })
+        .then(() => {
+          onSaveStateChange?.("saved");
+          setTimeout(() => onSaveStateChange?.("idle"), 1500);
+        })
+        .catch(() => onSaveStateChange?.("idle"));
       saveTimers.current.delete(id);
     }, SAVE_DEBOUNCE);
     saveTimers.current.set(id, t);
-  }, []);
+  }, [onSaveStateChange]);
 
   const updateBlock = useCallback((id: string, patch: Partial<SpaceBlock>) => {
     setBlocks((prev) => prev.map((b) => b.id === id ? { ...b, ...patch } : b));

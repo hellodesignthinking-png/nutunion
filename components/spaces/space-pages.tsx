@@ -9,6 +9,7 @@ import { SpacePageTreeNode } from "./space-page-tree-node";
 import { SpacePageEditor } from "./space-page-editor";
 import { SnippetsPanel } from "./snippets-panel";
 import { TemplatePicker } from "./template-picker";
+import { PageSearch } from "./page-search";
 import type { PageTemplate } from "./templates";
 
 interface Props {
@@ -273,6 +274,13 @@ export function SpacePages({ ownerType, ownerId, currentUserId, currentUserNickn
             </button>
           </div>
         </div>
+        {/* 페이지 간 검색 */}
+        <PageSearch
+          pages={pages}
+          ownerType={ownerType}
+          ownerId={ownerId}
+          onJump={(id) => setSelectedId(id)}
+        />
         {/* 모드 토글 — 트리 / 즐겨찾기 / 최근 */}
         <div className="flex border-b border-nu-ink/10 bg-white text-[10px] font-mono-nu uppercase tracking-widest">
           <button
@@ -368,9 +376,11 @@ export function SpacePages({ ownerType, ownerId, currentUserId, currentUserNickn
         {selected ? (
           <SpacePageEditor
             page={selected}
+            allPages={pages}
             onUpdateTitle={(title) => updatePage(selected.id, { title })}
             onUpdateIcon={(icon) => updatePage(selected.id, { icon })}
             onUpdateContent={(content) => updatePage(selected.id, { content })}
+            onJumpToPage={(id) => setSelectedId(id)}
             ownerType={ownerType}
             ownerId={ownerId}
             currentUserId={currentUserId}

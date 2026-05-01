@@ -8,6 +8,7 @@ import { SLASH_COMMANDS, BLOCK_COLOR_CLASSES } from "./space-pages-types";
 import { TableBlock } from "./blocks/table-block";
 import { EmbedBlock } from "./blocks/embed-block";
 import { AudioBlock } from "./blocks/audio-block";
+import { ImageBlock } from "./blocks/image-block";
 
 interface Props {
   block: SpaceBlock;
@@ -261,6 +262,9 @@ export function SpaceBlockRenderer({ block, onChange, onEnter, onBackspaceEmpty,
   }
   if (block.type === "audio") {
     return <AudioBlock block={block} onChange={onChange} />;
+  }
+  if (block.type === "image") {
+    return <ImageBlock block={block} onChange={onChange} />;
   }
 
   // 스타일 데이터 — color / align (text/h1-3/quote/callout 만 유효)
