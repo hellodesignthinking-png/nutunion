@@ -16,6 +16,8 @@ interface Props {
   mindmapData: MindMapData;
   children: ReactNode; // 기존 list 뷰 (DashboardTabs 등)
   toggleSlot?: (toggle: ReactNode) => ReactNode; // header 의 어디에 토글을 둘지 부모가 결정
+  /** realtime 구독을 위한 사용자 id */
+  userId?: string;
 }
 
 /**
@@ -27,7 +29,7 @@ interface Props {
  *
  * Phase B 의 핵심 — Phase A 의 toast-only 토글이 실제 뷰 전환으로 승격.
  */
-export function DashboardViewSwitcher({ nickname, mindmapData, children }: Props) {
+export function DashboardViewSwitcher({ nickname, mindmapData, children, userId }: Props) {
   const [view, setView] = useState<"list" | "mindmap">("list");
   const [hydrated, setHydrated] = useState(false);
 
@@ -45,7 +47,7 @@ export function DashboardViewSwitcher({ nickname, mindmapData, children }: Props
         <DashboardViewToggle defaultView={view} onChange={setView} />
       </div>
       {hydrated && view === "mindmap" ? (
-        <MindMapDashboard nickname={nickname} data={mindmapData} />
+        <MindMapDashboard nickname={nickname} data={mindmapData} userId={userId} />
       ) : (
         children
       )}

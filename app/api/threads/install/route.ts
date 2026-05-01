@@ -22,10 +22,10 @@ export const POST = withRouteLog("threads.install", async (req: NextRequest) => 
     return NextResponse.json({ error: "invalid_target_type" }, { status: 400 });
   }
 
-  // Lookup thread
+  // Lookup thread (code-mode 는 approval_status='approved' 필수)
   const { data: thread, error: threadErr } = await supabase
     .from("threads")
-    .select("id, slug, scope")
+    .select("id, slug, scope, ui_component, approval_status, created_by")
     .eq("slug", slug)
     .maybeSingle();
   if (threadErr) {
@@ -37,6 +37,24 @@ export const POST = withRouteLog("threads.install", async (req: NextRequest) => 
   if (!thread) return NextResponse.json({ error: "thread_not_found" }, { status: 404 });
   if (!Array.isArray(thread.scope) || !thread.scope.includes(target_type)) {
     return NextResponse.json({ error: "scope_mismatch" }, { status: 400 });
+  }
+  // code-mode 보안 가드 — approved 만 install. 작성자 본인은 미승인 상태도 install 가능
+  // (자기 너트/볼트에서 미리보기 목적). 마이그 138 미적용 환경(approval_status null) 은 통과.
+  if (
+    (thread as any).ui_component === "__code__"
+    && (thread as any).approval_status === "pending"
+    && (thread as any).created_by !== user.id
+  ) {
+    return NextResponse.json(
+      { error: "code-mode Thread 는 admin 승인 후 설치할 수 있어요", code: "PENDING_APPROVAL" },
+      { status: 403 },
+    );
+  }
+  if ((thread as any).approval_status === "rejected") {
+    return NextResponse.json(
+      { error: "이 Thread 는 승인이 거부됐어요", code: "REJECTED" },
+      { status: 403 },
+    );
   }
 
   // Pre-check: user must be host/moderator (nut) or lead (bolt)

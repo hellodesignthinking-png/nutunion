@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
-import { X, ExternalLink } from "lucide-react";
+import { useEffect, useState } from "react";
+import { X, ExternalLink, Save, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import type { MindMapNodeData } from "@/lib/dashboard/mindmap-types";
 import { NODE_COLORS } from "@/lib/dashboard/mindmap-types";
+
+interface BoltOption { id: string; title: string }
 
 function renderMetaValue(v: unknown): string {
   if (v == null) return "";
@@ -24,10 +27,15 @@ function renderMetaValue(v: unknown): string {
 export function NodeDrawer({
   node,
   onClose,
+  bolts = [],
 }: {
   node: MindMapNodeData | null;
   onClose: () => void;
+  /** ai-task 노드 일 때 어느 볼트에 저장할지 선택지 */
+  bolts?: BoltOption[];
 }) {
+  const [savingBoltId, setSavingBoltId] = useState<string | null>(null);
+
   // ESC 키로 닫기 — 접근성
   useEffect(() => {
     if (!node) return;
@@ -37,6 +45,27 @@ export function NodeDrawer({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [node, onClose]);
+
+  async function saveAiTaskTo(projectId: string) {
+    if (!node || node.kind !== "ai-task") return;
+    const fullTitle = (node.meta?.["전체"] as string) || node.title;
+    setSavingBoltId(projectId);
+    try {
+      const res = await fetch("/api/dashboard/mindmap/save-ai-task", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project_id: projectId, title: fullTitle }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || "저장 실패");
+      toast.success("볼트에 태스크로 저장됨");
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "저장 실패");
+    } finally {
+      setSavingBoltId(null);
+    }
+  }
 
   if (!node) return null;
   const colors = NODE_COLORS[node.kind];
@@ -84,6 +113,32 @@ export function NodeDrawer({
             );
           })}
         </div>
+
+        {node.kind === "ai-task" && bolts.length > 0 && (
+          <div className="px-4 py-3 border-t-[2px] border-nu-ink/10 bg-orange-50/40">
+            <div className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mb-2">
+              💾 어느 볼트에 저장할까요
+            </div>
+            <div className="space-y-1.5">
+              {bolts.map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  disabled={savingBoltId !== null}
+                  onClick={() => saveAiTaskTo(b.id)}
+                  className="w-full text-left text-[12px] px-3 py-2 border-[2px] border-nu-ink hover:bg-nu-amber/20 disabled:opacity-50 flex items-center justify-between gap-2"
+                >
+                  <span className="truncate">{b.title}</span>
+                  {savingBoltId === b.id ? (
+                    <Loader2 size={12} className="animate-spin shrink-0" />
+                  ) : (
+                    <Save size={12} className="shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {node.href && (
           <div className="px-4 py-3 border-t-[2px] border-nu-ink/10">

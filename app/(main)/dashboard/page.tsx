@@ -141,7 +141,7 @@ export default async function DashboardPage() {
       )}
 
       {/* ── 뷰 전환 (리스트 ⇄ 마인드맵) ───────────────────── */}
-      <DashboardViewSwitcher nickname={nickname} mindmapData={mindmapData}>
+      <DashboardViewSwitcher nickname={nickname} mindmapData={mindmapData} userId={user.id}>
         <Suspense fallback={<div className="h-64 bg-nu-cream/30 animate-pulse" />}>
           <DashboardTabs
             userId={user.id}

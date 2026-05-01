@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
-import { Camera, Search, X, Filter } from "lucide-react";
+import { Camera, Search, X, Filter, Radio } from "lucide-react";
 import { toast } from "sonner";
+import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import ReactFlow, {
   Background,
   Controls,
@@ -61,6 +62,8 @@ const RADIUS: Record<string, number> = {
 interface Props {
   nickname: string;
   data: MindMapData;
+  /** realtime 구독을 위한 사용자 id — 없으면 구독 비활성 */
+  userId?: string;
 }
 
 /**
@@ -72,7 +75,7 @@ interface AiSuggestion {
   tasks: string[];
 }
 
-export function MindMapDashboard({ nickname, data }: Props) {
+export function MindMapDashboard({ nickname, data, userId }: Props) {
   const [selected, setSelected] = useState<MindMapNodeData | null>(null);
   const [highlighted, setHighlighted] = useState<Set<string>>(new Set());
   const [savedPositions, setSavedPositions] = useState<Record<string, { x: number; y: number }>>({});
@@ -196,6 +199,26 @@ export function MindMapDashboard({ nickname, data }: Props) {
   const filterActive = filterText.trim().length > 0 || filterKinds.size > 0;
   const filterLower = filterText.trim().toLowerCase();
 
+  // hover focus state — useMemo 들이 참조하므로 위쪽에 선언
+  const [hoverNodeId, setHoverNodeId] = useState<string | null>(null);
+  const focusNodeIds = useMemo<Set<string> | null>(() => {
+    if (!hoverNodeId) return null;
+    const ids = new Set<string>([hoverNodeId, "center"]);
+    if (hoverNodeId.startsWith("washer-")) {
+      const wid = hoverNodeId.slice("washer-".length);
+      const w = data.washers.find((x) => x.id === wid);
+      if (w) {
+        w.nutIds.forEach((n) => ids.add(`nut-${n}`));
+        w.boltIds.forEach((b) => ids.add(`bolt-${b}`));
+      }
+    } else if (hoverNodeId.startsWith("topic-")) {
+      const tid = hoverNodeId.slice("topic-".length);
+      const t = data.topics.find((x) => x.id === tid);
+      if (t) ids.add(`nut-${t.groupId}`);
+    }
+    return ids;
+  }, [hoverNodeId, data.washers, data.topics]);
+
   const nodes = useMemo(
     () => baseNodes.map((n) => {
       const data = n.data as MindMapNodeData;
@@ -208,6 +231,10 @@ export function MindMapDashboard({ nickname, data }: Props) {
         const matchesKind = filterKinds.size === 0 || filterKinds.has(data.kind);
         isDimmed = !(matchesText && matchesKind);
       }
+      // hover focus — 활성 시 focusNodeIds 에 없는 노드는 dim
+      if (focusNodeIds && !focusNodeIds.has(n.id)) {
+        isDimmed = true;
+      }
       const pos = savedPositions[n.id];
       return {
         ...n,
@@ -215,7 +242,7 @@ export function MindMapDashboard({ nickname, data }: Props) {
         data: { ...data, highlighted: isHighlighted, dimmed: isDimmed },
       };
     }),
-    [baseNodes, highlighted, savedPositions, filterActive, filterLower, filterKinds],
+    [baseNodes, highlighted, savedPositions, filterActive, filterLower, filterKinds, focusNodeIds],
   );
 
   // 필터 매칭 결과 — 안내 오버레이 + 엣지 dimming 에 사용
@@ -227,9 +254,9 @@ export function MindMapDashboard({ nickname, data }: Props) {
     ? nodes.filter((n) => (n.data as MindMapNodeData).kind !== "center" && !(n.data as MindMapNodeData).dimmed).length
     : Infinity;
 
-  // 엣지도 양 끝 노드가 dimmed 면 같이 dim — 고아 엣지 방지
+  // 엣지도 양 끝 노드가 dimmed 면 같이 dim — 고아 엣지 방지 (filter + hover 통합)
   const styledEdges = useMemo(() => {
-    if (!filterActive) return edges;
+    if (!filterActive && !focusNodeIds) return edges;
     return edges.map((e) => {
       const sDim = dimmedIds.has(e.source);
       const tDim = dimmedIds.has(e.target);
@@ -239,16 +266,48 @@ export function MindMapDashboard({ nickname, data }: Props) {
       return {
         ...e,
         style: { ...baseStyle, opacity: baseOpacity * 0.15 },
-        // 라벨도 함께 흐리게 — 라벨 배경/텍스트 둘 다
         labelStyle: e.labelStyle ? { ...e.labelStyle, opacity: 0.3 } : undefined,
         labelBgStyle: e.labelBgStyle ? { ...e.labelBgStyle, fillOpacity: 0.2 } : undefined,
       };
     });
-  }, [edges, dimmedIds, filterActive]);
+  }, [edges, dimmedIds, filterActive, focusNodeIds]);
 
   const onNodeClick: NodeMouseHandler = useCallback((_, node) => {
     if (node.id === "center") return;
     setSelected(node.data as MindMapNodeData);
+  }, []);
+
+  // realtime — 새 멘션 알림 시 해당 노드 펄스 강조 + 토스트
+  const [liveBadge, setLiveBadge] = useState(false);
+  useEffect(() => {
+    if (!userId) return;
+    const supa = createBrowserClient();
+    const channel = supa
+      .channel(`dashboard:${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
+        (payload) => {
+          const row = payload.new as { category?: string; title?: string };
+          if (row.category === "mention") {
+            toast.info(`💬 새 멘션: ${row.title || ""}`, { duration: 4000 });
+            // 잠시 헤더 LIVE 배지 펄스
+            setLiveBadge(true);
+            setTimeout(() => setLiveBadge(false), 3000);
+          }
+        },
+      )
+      .subscribe();
+    return () => { void supa.removeChannel(channel); };
+  }, [userId]);
+
+  // hover 핸들러 (focusNodeIds/state 는 위에서 이미 선언됨)
+  const onNodeMouseEnter: NodeMouseHandler = useCallback((_, node) => {
+    const kind = (node.data as MindMapNodeData).kind;
+    if (kind === "washer" || kind === "topic") setHoverNodeId(node.id);
+  }, []);
+  const onNodeMouseLeave: NodeMouseHandler = useCallback(() => {
+    setHoverNodeId(null);
   }, []);
 
   const total = data.nuts.length + data.bolts.length + data.schedule.length + data.issues.length;
@@ -256,8 +315,16 @@ export function MindMapDashboard({ nickname, data }: Props) {
   return (
     <div className="border-[3px] border-nu-ink bg-nu-cream/20 shadow-[4px_4px_0_0_#0D0F14] overflow-hidden">
       <div className="px-3 py-2 border-b-[2px] border-nu-ink/15 flex flex-wrap items-center justify-between gap-2 bg-white">
-        <div className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted shrink-0">
+        <div className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted shrink-0 flex items-center gap-1.5">
           Genesis Mind Map · 노드 {total + 1}개
+          {userId && (
+            <span
+              className={`inline-flex items-center gap-1 px-1.5 py-0.5 border ${liveBadge ? "border-emerald-700 text-emerald-700 bg-emerald-50 animate-pulse" : "border-nu-ink/15 text-nu-muted"}`}
+              title="멘션 알림 실시간 구독 중"
+            >
+              <Radio size={9} /> LIVE
+            </span>
+          )}
         </div>
 
         {/* 검색 + 종류 필터 */}
@@ -383,6 +450,8 @@ export function MindMapDashboard({ nickname, data }: Props) {
           edges={styledEdges}
           nodeTypes={nodeTypes}
           onNodeClick={onNodeClick}
+          onNodeMouseEnter={onNodeMouseEnter}
+          onNodeMouseLeave={onNodeMouseLeave}
           onNodeDragStop={onNodeDragStop}
           fitView
           minZoom={0.3}
@@ -411,7 +480,11 @@ export function MindMapDashboard({ nickname, data }: Props) {
           />
         </ReactFlow>
       </div>
-      <NodeDrawer node={selected} onClose={() => setSelected(null)} />
+      <NodeDrawer
+        node={selected}
+        onClose={() => setSelected(null)}
+        bolts={data.bolts.map((b) => ({ id: b.id, title: b.title }))}
+      />
     </div>
   );
 }

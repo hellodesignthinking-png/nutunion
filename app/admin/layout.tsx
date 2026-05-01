@@ -24,6 +24,7 @@ export default async function AdminLayout({
 
   const navItems = [
     { label: "Overview", href: "/admin/overview" },
+    { label: "Metrics", href: "/admin/metrics" },
     { label: "Analytics", href: "/admin/analytics" },
     { label: "Integrations", href: "/admin/integrations" },
     { label: "Drive 백필", href: "/admin/drive-backfill" },

@@ -75,6 +75,19 @@ function safe(value: unknown, depth = 0, seen: WeakSet<object> = new WeakSet()):
   return out;
 }
 
+/** 외부 sink 어댑터 — Sentry/Datadog/OTel 통합용 hook.
+ *  주입 안 하면 console.* 만 출력. setLogSink({ onError: (rec) => Sentry.captureException(...) }) 형태.
+ */
+export interface LogSink {
+  onError?: (record: LogRecord) => void;
+  onWarn?: (record: LogRecord) => void;
+  onAny?: (record: LogRecord) => void;
+}
+let _sink: LogSink | null = null;
+export function setLogSink(sink: LogSink | null): void {
+  _sink = sink;
+}
+
 function emit(level: LogLevel, event: string, extra: Record<string, unknown> = {}) {
   const rec: LogRecord = {
     level,
@@ -90,6 +103,15 @@ function emit(level: LogLevel, event: string, extra: Record<string, unknown> = {
   else if (level === "warn") console.warn(line);
   else if (level === "debug") console.debug(line);
   else console.log(line);
+
+  // 외부 sink — Sentry 등에 비동기 전송 (sink 가 throw 하면 무시)
+  if (_sink) {
+    try {
+      if (level === "error") _sink.onError?.(rec);
+      else if (level === "warn") _sink.onWarn?.(rec);
+      _sink.onAny?.(rec);
+    } catch { /* sink 자체 오류는 무시 — 무한 루프 방지 */ }
+  }
 }
 
 export const log = {
