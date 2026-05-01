@@ -12,7 +12,8 @@ export type NodeKind =
   | "washer"     // 같은 너트·볼트의 동료 (인적 네트워크)
   | "topic"      // wiki 탭 (지식 네트워크)
   | "ai-role"    // Genesis 가 제안한 임시 역할 (washer 후보)
-  | "ai-task";   // Genesis 가 제안한 임시 첫 액션
+  | "ai-task"    // Genesis 가 제안한 임시 첫 액션
+  | "empty";     // 빈 상태 안내 — 색상 중립
 
 export interface MindMapNodeData {
   kind: NodeKind;
@@ -24,6 +25,10 @@ export interface MindMapNodeData {
   href?: string;
   /** drawer 상세에 사용할 추가 메타 */
   meta?: Record<string, unknown>;
+  /** Genesis 응답으로 매칭된 노드 — ring 강조. reactflow 의 selected 와 분리. */
+  highlighted?: boolean;
+  /** 검색·필터로 dim 처리 — 매칭 안 된 노드 50% opacity */
+  dimmed?: boolean;
 }
 
 export interface MindMapData {
@@ -47,4 +52,5 @@ export const NODE_COLORS: Record<NodeKind, { bg: string; border: string; ink: st
   topic:    { bg: "bg-sky-100",     border: "border-sky-700",      ink: "text-sky-900",      pulse: "ring-sky-500" },
   "ai-role":{ bg: "bg-yellow-100",  border: "border-yellow-600",   ink: "text-yellow-900",   pulse: "ring-yellow-500" },
   "ai-task":{ bg: "bg-orange-100",  border: "border-orange-600",   ink: "text-orange-900",   pulse: "ring-orange-500" },
+  empty:    { bg: "bg-nu-cream/50", border: "border-nu-ink/30",    ink: "text-nu-muted",     pulse: "ring-nu-ink/30" },
 };

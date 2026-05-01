@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
-import { Camera } from "lucide-react";
+import { Camera, Search, X, Filter } from "lucide-react";
 import { toast } from "sonner";
 import ReactFlow, {
   Background,
@@ -33,7 +33,18 @@ const MINIMAP_COLOR: Record<NodeKind, string> = {
   topic: "#0EA5E9",
   "ai-role": "#EAB308",
   "ai-task": "#F97316",
+  empty: "#A8A29E",
 };
+
+// 필터 칩에 보일 종류 (center/empty/ai-* 제외)
+const FILTERABLE_KINDS: { kind: NodeKind; label: string }[] = [
+  { kind: "nut", label: "너트" },
+  { kind: "bolt", label: "볼트" },
+  { kind: "schedule", label: "일정" },
+  { kind: "issue", label: "이슈" },
+  { kind: "topic", label: "탭" },
+  { kind: "washer", label: "와셔" },
+];
 
 // 방사형 레이아웃 — 중앙에서 12시 방향부터 360°/N 각도로 배치.
 // kind 별로 반경을 약간 다르게 줘서 종류별 그룹이 자연스럽게 형성.
@@ -66,8 +77,16 @@ export function MindMapDashboard({ nickname, data }: Props) {
   const [highlighted, setHighlighted] = useState<Set<string>>(new Set());
   const [savedPositions, setSavedPositions] = useState<Record<string, { x: number; y: number }>>({});
   const [aiSuggestion, setAiSuggestion] = useState<AiSuggestion | null>(null);
+  const [filterText, setFilterText] = useState("");
+  const [filterKinds, setFilterKinds] = useState<Set<NodeKind>>(new Set());
   const flowRef = useRef<HTMLDivElement | null>(null);
   const [exporting, setExporting] = useState(false);
+
+  // ref 로 최신 data 보관 — onAnswer 가 deps 변화 없이 항상 최신 데이터로 매칭
+  const dataRef = useRef(data);
+  useEffect(() => { dataRef.current = data; }, [data]);
+  const nicknameRef = useRef(nickname);
+  useEffect(() => { nicknameRef.current = nickname; }, [nickname]);
 
   const handleExport = useCallback(async () => {
     if (!flowRef.current || exporting) return;
@@ -122,15 +141,21 @@ export function MindMapDashboard({ nickname, data }: Props) {
     roles: Array<{ name: string; tags?: string[]; why?: string }>;
     tasks: string[];
   }) => {
-    // 키워드와 노드 title/subtitle 매칭 → 6초간 ring 강조
+    // 노드 데이터로부터 키워드 매칭 — ref 통해 최신 data 사용 (deps 안정화)
+    const d = dataRef.current;
     const matchedIds = new Set<string>();
-    const allNodes = buildGraph(nickname, data, onAnswer, null).nodes;
-    for (const n of allNodes) {
-      if (n.id === "center") continue;
-      const text = `${(n.data as MindMapNodeData).title} ${(n.data as MindMapNodeData).subtitle ?? ""}`.toLowerCase();
+    const candidates: Array<{ id: string; text: string }> = [
+      ...d.nuts.map((n) => ({ id: `nut-${n.id}`, text: n.name.toLowerCase() })),
+      ...d.bolts.map((b) => ({ id: `bolt-${b.id}`, text: b.title.toLowerCase() })),
+      ...d.schedule.map((s) => ({ id: `sched-${s.id}`, text: s.title.toLowerCase() })),
+      ...d.issues.map((i) => ({ id: `issue-${i.id}`, text: i.title.toLowerCase() })),
+      ...d.topics.map((t) => ({ id: `topic-${t.id}`, text: t.name.toLowerCase() })),
+      ...d.washers.map((w) => ({ id: `washer-${w.id}`, text: w.nickname.toLowerCase() })),
+    ];
+    for (const c of candidates) {
       for (const kw of result.keywords) {
-        if (text.includes(kw)) {
-          matchedIds.add(n.id);
+        if (c.text.includes(kw)) {
+          matchedIds.add(c.id);
           break;
         }
       }
@@ -140,28 +165,43 @@ export function MindMapDashboard({ nickname, data }: Props) {
       setTimeout(() => setHighlighted(new Set()), 6000);
     }
 
-    // AI 제안 임시 노드 추가 — 30초 후 자동 사라짐 (또는 사용자가 다른 질문 시 교체)
+    // AI 제안 임시 노드 추가 — 30초 후 자동 사라짐 (또는 dismiss 버튼)
     if (result.roles.length > 0 || result.tasks.length > 0) {
       setAiSuggestion({ roles: result.roles, tasks: result.tasks });
       setTimeout(() => setAiSuggestion(null), 30_000);
     }
-  }, [nickname, data]);
+  }, []);
 
   const { nodes: baseNodes, edges } = useMemo(
     () => buildGraph(nickname, data, onAnswer, aiSuggestion),
     [nickname, data, onAnswer, aiSuggestion],
   );
 
-  // 하이라이트 적용 + 저장된 위치 복원
+  // 하이라이트 + 필터 매칭 + 저장된 위치 복원
+  // selected 는 reactflow 내부 클릭 selection 용 — 우리 highlight 와 분리해 data.highlighted 사용.
+  const filterActive = filterText.trim().length > 0 || filterKinds.size > 0;
+  const filterLower = filterText.trim().toLowerCase();
+
   const nodes = useMemo(
     () => baseNodes.map((n) => {
+      const data = n.data as MindMapNodeData;
+      const isHighlighted = highlighted.has(n.id);
+      let isDimmed = false;
+      if (filterActive && data.kind !== "center") {
+        const matchesText = !filterLower
+          || data.title.toLowerCase().includes(filterLower)
+          || (data.subtitle?.toLowerCase().includes(filterLower) ?? false);
+        const matchesKind = filterKinds.size === 0 || filterKinds.has(data.kind);
+        isDimmed = !(matchesText && matchesKind);
+      }
       const pos = savedPositions[n.id];
-      const out = { ...n };
-      if (pos) out.position = pos;
-      if (highlighted.has(n.id)) out.selected = true;
-      return out;
+      return {
+        ...n,
+        ...(pos ? { position: pos } : {}),
+        data: { ...data, highlighted: isHighlighted, dimmed: isDimmed },
+      };
     }),
-    [baseNodes, highlighted, savedPositions],
+    [baseNodes, highlighted, savedPositions, filterActive, filterLower, filterKinds],
   );
 
   const onNodeClick: NodeMouseHandler = useCallback((_, node) => {
@@ -173,10 +213,34 @@ export function MindMapDashboard({ nickname, data }: Props) {
 
   return (
     <div className="border-[3px] border-nu-ink bg-nu-cream/20 shadow-[4px_4px_0_0_#0D0F14] overflow-hidden">
-      <div className="px-3 py-2 border-b-[2px] border-nu-ink/15 flex items-center justify-between bg-white">
-        <div className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">
+      <div className="px-3 py-2 border-b-[2px] border-nu-ink/15 flex flex-wrap items-center justify-between gap-2 bg-white">
+        <div className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted shrink-0">
           Genesis Mind Map · 노드 {total + 1}개
         </div>
+
+        {/* 검색 + 종류 필터 */}
+        <div className="flex items-center gap-1 flex-1 min-w-0 max-w-md">
+          <div className="relative flex-1 min-w-0">
+            <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-nu-muted" />
+            <input
+              type="search"
+              value={filterText}
+              onChange={(e) => setFilterText(e.target.value)}
+              placeholder="노드 검색…"
+              className="w-full pl-7 pr-2 py-1 text-[12px] border border-nu-ink/20 focus:border-nu-ink outline-none"
+              aria-label="마인드맵 노드 검색"
+            />
+            {filterText && (
+              <button
+                type="button"
+                onClick={() => setFilterText("")}
+                className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-nu-muted hover:text-nu-ink"
+                aria-label="검색어 지우기"
+              ><X size={10} /></button>
+            )}
+          </div>
+        </div>
+
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -200,10 +264,59 @@ export function MindMapDashboard({ nickname, data }: Props) {
               레이아웃 초기화
             </button>
           )}
-          <div className="font-mono-nu text-[10px] text-nu-muted">드래그 · 휠 줌</div>
+          {aiSuggestion && (
+            <button
+              type="button"
+              onClick={() => setAiSuggestion(null)}
+              className="font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 border border-orange-600 text-orange-700 hover:bg-orange-50 flex items-center gap-1"
+              title="AI 제안 노드 닫기"
+            >
+              <X size={10} /> AI 노드
+            </button>
+          )}
+          <div className="font-mono-nu text-[10px] text-nu-muted hidden sm:inline">드래그 · 휠 줌</div>
         </div>
       </div>
-      <div ref={flowRef} style={{ width: "100%", height: 600 }} className="touch-pan-y">
+
+      {/* 종류 필터 칩 */}
+      <div className="px-3 py-1.5 border-b border-nu-ink/10 flex items-center gap-1.5 flex-wrap bg-white/60">
+        <Filter size={11} className="text-nu-muted shrink-0" />
+        {FILTERABLE_KINDS.map(({ kind, label }) => {
+          const active = filterKinds.has(kind);
+          const color = NODE_COLORS[kind];
+          return (
+            <button
+              key={kind}
+              type="button"
+              onClick={() => setFilterKinds((prev) => {
+                const next = new Set(prev);
+                if (next.has(kind)) next.delete(kind); else next.add(kind);
+                return next;
+              })}
+              aria-pressed={active}
+              className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 border ${active ? `${color.bg} ${color.border} ${color.ink}` : "border-nu-ink/20 text-nu-muted hover:bg-nu-cream"}`}
+            >
+              {label}
+            </button>
+          );
+        })}
+        {filterKinds.size > 0 && (
+          <button
+            type="button"
+            onClick={() => setFilterKinds(new Set())}
+            className="font-mono-nu text-[10px] text-nu-muted hover:text-nu-ink ml-auto"
+          >
+            필터 해제
+          </button>
+        )}
+      </div>
+      <div
+        ref={flowRef}
+        style={{ width: "100%", height: 600 }}
+        className="touch-pan-y"
+        role="region"
+        aria-label="Genesis 마인드맵 — 너트, 볼트, 일정, 이슈, 탭, 와셔 노드 그래프"
+      >
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -350,19 +463,24 @@ function buildGraph(
   ];
 
   if (all.length === 0) {
-    // 빈 상태 — 시작 안내 노드
+    // 빈 상태 — 안내 노드 (empty kind, 중립 색상)
     nodes.push({
       id: "empty",
       type: "card",
       position: { x: 0, y: 220 },
       data: {
-        kind: "nut",
+        kind: "empty",
         title: "아직 비어 있어요",
-        subtitle: "너트나 볼트를 만들어 가지를 만들어보세요",
+        subtitle: "너트·볼트를 만들면 가지가 자라요",
         href: "/groups/create",
       } satisfies MindMapNodeData,
     });
-    edges.push({ id: "e-empty", source: "center", target: "empty", style: { strokeWidth: 2 } });
+    edges.push({
+      id: "e-empty",
+      source: "center",
+      target: "empty",
+      style: { strokeWidth: 2, strokeDasharray: "4 4", opacity: 0.4 },
+    });
     return { nodes, edges };
   }
 
@@ -439,8 +557,10 @@ function buildGraph(
           source: `nut-${nut.id}`,
           target: `bolt-${bolt.id}`,
           style: { stroke: "#0D0F14", strokeWidth: 1.5, strokeDasharray: "6 4", opacity: 0.4 },
-          label: sharedWashers.length > 1 ? `${sharedWashers.length}명 공유` : undefined,
+          label: `${sharedWashers.length}명 공유`,
           labelStyle: { fontSize: 10, fontFamily: "ui-monospace, monospace" },
+          labelBgStyle: { fill: "#FFFCF6", fillOpacity: 0.9 },
+          labelBgPadding: [4, 2],
         });
       }
     }

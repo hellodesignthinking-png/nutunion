@@ -1,7 +1,7 @@
 "use client";
 
 import { Handle, Position } from "reactflow";
-import { Users, Briefcase, Calendar, AlertTriangle, Sparkles, User, BookOpen, Lightbulb, ListTodo } from "lucide-react";
+import { Users, Briefcase, Calendar, AlertTriangle, Sparkles, User, BookOpen, Lightbulb, ListTodo, Plus } from "lucide-react";
 import type { NodeKind, MindMapNodeData } from "@/lib/dashboard/mindmap-types";
 import { NODE_COLORS } from "@/lib/dashboard/mindmap-types";
 
@@ -15,6 +15,7 @@ const ICONS: Record<NodeKind, typeof Users> = {
   topic: BookOpen,
   "ai-role": Lightbulb,
   "ai-task": ListTodo,
+  empty: Plus,
 };
 
 /**
@@ -23,20 +24,27 @@ const ICONS: Record<NodeKind, typeof Users> = {
  *
  * Phase B 의 정적 노드 — 클릭 시 부모 onNodeClick 으로 drawer 트리거.
  */
-export function NodeCard({ data, selected }: { data: MindMapNodeData; selected?: boolean }) {
+export function NodeCard({ data }: { data: MindMapNodeData }) {
   const colors = NODE_COLORS[data.kind];
   const Icon = ICONS[data.kind];
   const isCenter = data.kind === "center";
+  const highlighted = data.highlighted;
+  const dimmed = data.dimmed;
 
   return (
     <div
+      role="button"
+      aria-label={`${data.kind}: ${data.title}`}
+      tabIndex={isCenter ? -1 : 0}
       className={`
         ${colors.bg} ${colors.ink}
         border-[3px] ${colors.border}
         ${isCenter ? "px-5 py-4 min-w-[180px]" : "px-3 py-2 min-w-[140px]"}
         shadow-[3px_3px_0_0_#0D0F14]
-        ${selected ? `ring-4 ring-offset-2 ${colors.pulse}` : ""}
+        ${highlighted ? `ring-4 ring-offset-2 ${colors.pulse} animate-pulse` : ""}
+        ${dimmed ? "opacity-30" : ""}
         transition-all
+        focus:outline-none focus-visible:ring-4 focus-visible:ring-nu-ink/50
       `}
     >
       {/* 양방향 연결 핸들 — 중앙 노드는 4방향, 가지는 1개만 */}
