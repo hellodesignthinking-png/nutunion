@@ -48,12 +48,15 @@ export function CenterGenesisNode({ data }: { data: CenterNodeData }) {
 
     // 디버깅: 사용자 측 정확한 진단을 위해 콘솔에 자세히 — preload 경고와 섞이지 않게 prefix.
     console.info("[Genesis] 요청 시작:", trimmed);
+    // 멱등성 키는 헤더에 들어가야 하므로 ASCII 만 — 한글은 SHA-256 해시로 변환.
+    // (이전에 raw 한글을 헤더에 넣어 ISO-8859-1 위반으로 fetch 자체가 실패했음)
+    const idempotencyKey = await sha256Hex(`mindmap:${trimmed}`).then((h) => h.slice(0, 16));
     try {
       const res = await fetch("/api/genesis/plan", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Idempotency-Key": `mindmap:${trimmed.slice(0, 50)}`,
+          "X-Idempotency-Key": idempotencyKey,
         },
         body: JSON.stringify({ intent: trimmed, kind: "group" }),
         signal: controller.signal,
@@ -190,4 +193,12 @@ export function CenterGenesisNode({ data }: { data: CenterNodeData }) {
       )}
     </div>
   );
+}
+
+/** 브라우저 SubtleCrypto 로 SHA-256 hex 생성 — 헤더에 한글 못 넣는 제약 우회. */
+async function sha256Hex(input: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
