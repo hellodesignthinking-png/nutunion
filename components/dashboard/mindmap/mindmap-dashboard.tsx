@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
-import { Camera, Search, X, Filter, Radio, Clock, Network, Wand2, ArrowDown, ArrowRight, ChevronDown, Trash2 } from "lucide-react";
+import { Camera, Search, X, Filter, Radio, Clock, Network, Wand2, ArrowDown, ArrowRight, ChevronDown, Trash2, Focus, Keyboard, Info } from "lucide-react";
 import { dagreLayout, type LayoutDirection } from "@/lib/dashboard/auto-layout";
 import { toast } from "sonner";
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
@@ -28,6 +28,7 @@ import { SectorHalo } from "./sector-halo";
 import { ContextMenu, type ContextMenuTarget } from "./context-menu";
 import { EdgeLabelEditor } from "./edge-label-editor";
 import { GenesisPlanPanel, type GenesisPlan } from "./genesis-plan-panel";
+import { HelpOverlay } from "./help-overlay";
 import type { MindMapData, MindMapNodeData, NodeKind } from "@/lib/dashboard/mindmap-types";
 import { NODE_COLORS } from "@/lib/dashboard/mindmap-types";
 
@@ -128,6 +129,11 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
   const [aiSuggestion, setAiSuggestion] = useState<AiSuggestion | null>(null);
   // Genesis 가 만든 plan 전체 — 풀 패널로 펼쳐 보여줌. intent 도 같이 보관해 panel 헤더에 표시.
   const [aiPlan, setAiPlan] = useState<{ plan: GenesisPlan; intent?: string } | null>(null);
+  // 포커스 모드 — 단일 노드 + 1-hop 만 보임. F 키 또는 우클릭 / 버튼.
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
+  // 키보드 단축키 도움말 / Legend 오버레이
+  const [showHelp, setShowHelp] = useState(false);
+  const [showLegend, setShowLegend] = useState(false);
   const [filterText, setFilterText] = useState("");
   const [filterKinds, setFilterKinds] = useState<Set<NodeKind>>(new Set());
   const [viewMode, setViewMode] = useState<ViewMode>("radial");
@@ -202,18 +208,44 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
   useEffect(() => { nicknameRef.current = nickname; }, [nickname]);
   const searchRef = useRef<HTMLInputElement | null>(null);
 
-  // Cmd/Ctrl+K 검색 포커스 — 표준 단축키
+  // Cmd/Ctrl+K 검색 포커스 + F 포커스모드 + ? 도움말 + Esc 종료
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      // input/textarea 에서는 발화 안 됨
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         searchRef.current?.focus();
         searchRef.current?.select();
+        return;
+      }
+      if (e.key === "?" || (e.shiftKey && e.key === "/")) {
+        e.preventDefault();
+        setShowHelp((v) => !v);
+        return;
+      }
+      if (e.key.toLowerCase() === "i" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        setShowLegend((v) => !v);
+        return;
+      }
+      if (e.key === "Escape") {
+        if (focusedNodeId) { setFocusedNodeId(null); return; }
+        if (showHelp) { setShowHelp(false); return; }
+        if (showLegend) { setShowLegend(false); return; }
+      }
+      if (e.key.toLowerCase() === "f" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        // 선택 노드가 있으면 그것을 포커스. 없으면 토글로 끄기.
+        if (focusedNodeId) {
+          setFocusedNodeId(null);
+        } else if (selected?.id && selected.id !== "center") {
+          setFocusedNodeId(selected.id);
+        }
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [focusedNodeId, selected, showHelp, showLegend]);
 
   const handleExport = useCallback(async () => {
     if (!flowRef.current || exporting) return;
@@ -417,6 +449,46 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
     return ids;
   }, [hoverNodeId, data.washers, data.topics, data.files]);
 
+  // 포커스 진입 시 카메라 줌 — 1-hop 노드들로 fitView.
+  useEffect(() => {
+    if (!focusedNodeId || !rfRef.current) return;
+    const inst = rfRef.current;
+    const targets: Array<{ id: string }> = [{ id: focusedNodeId }];
+    // 엣지 기반 1-hop
+    for (const e of inst.getEdges()) {
+      if (e.source === focusedNodeId) targets.push({ id: e.target });
+      else if (e.target === focusedNodeId) targets.push({ id: e.source });
+    }
+    if (targets.length > 1) {
+      try { inst.fitView({ nodes: targets, padding: 0.3, duration: 600, maxZoom: 1.6 }); }
+      catch { /* ignore */ }
+    } else {
+      try { inst.fitView({ nodes: targets, padding: 0.5, duration: 600, maxZoom: 1.5 }); }
+      catch { /* ignore */ }
+    }
+  }, [focusedNodeId]);
+
+  // 포커스 모드 — 선택 노드 + 1-hop (엣지 기준) + center + 그 노드의 sector halo.
+  const focusModeIds = useMemo<Set<string> | null>(() => {
+    if (!focusedNodeId) return null;
+    const ids = new Set<string>([focusedNodeId, "center"]);
+    // 모든 엣지를 훑어 source/target 매칭하는 반대쪽을 추가
+    for (const e of edges) {
+      if (e.source === focusedNodeId) ids.add(e.target);
+      else if (e.target === focusedNodeId) ids.add(e.source);
+    }
+    // 사용자 자유 엣지도 포함
+    for (const e of userEdges) {
+      if (e.source_id === focusedNodeId) ids.add(e.target_id);
+      else if (e.target_id === focusedNodeId) ids.add(e.source_id);
+    }
+    // sector halo — 노드의 kind 부터 추출해 그 halo 도 같이 보여줌
+    const kindMatch = focusedNodeId.match(/^([a-z]+)-/);
+    const kind = kindMatch?.[1] === "sched" ? "schedule" : kindMatch?.[1];
+    if (kind) ids.add(`halo-${kind}`);
+    return ids;
+  }, [focusedNodeId, edges, userEdges]);
+
   const aiActive = highlighted.size > 0;
   const nodes = useMemo(
     () => baseNodes.map((n) => {
@@ -434,6 +506,10 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
       if (focusNodeIds && !focusNodeIds.has(n.id)) {
         isDimmed = true;
       }
+      // 포커스 모드 — 선택 노드 + 1-hop 외 모두 dim. center 는 항상 보임.
+      if (focusModeIds && !focusModeIds.has(n.id)) {
+        isDimmed = true;
+      }
       // AI 답변 활성 — 매칭 안 된 노드는 dim (center/sector 제외, 매칭은 강조)
       if (aiActive && data.kind !== "center" && (data as unknown as { kind: string }).kind !== "sector" && !isHighlighted) {
         isDimmed = true;
@@ -446,7 +522,7 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
         data: { ...data, highlighted: isHighlighted, dimmed: isDimmed },
       };
     }),
-    [baseNodes, highlighted, aiActive, savedPositions, filterActive, filterLower, filterKinds, focusNodeIds, viewMode],
+    [baseNodes, highlighted, aiActive, savedPositions, filterActive, filterLower, filterKinds, focusNodeIds, focusModeIds, viewMode],
   );
 
   // 필터 매칭 결과 — 안내 오버레이 + 엣지 dimming 에 사용
@@ -589,6 +665,43 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
   const openDrawerById = useCallback((id: string) => {
     const n = rfRef.current?.getNode(id);
     if (n) setSelected({ ...(n.data as MindMapNodeData), id });
+  }, []);
+
+  // Genesis 노드 확장 — 컨텍스트 메뉴에서 호출. 결과는 ai-task 임시 노드 형태로 추가.
+  const expandNode = useCallback(async (nodeId: string) => {
+    const n = rfRef.current?.getNode(nodeId);
+    if (!n) return;
+    const d = n.data as MindMapNodeData;
+    if (d.kind === "center" || d.kind === "empty" || d.kind?.startsWith("ai-")) {
+      toast.info("이 종류는 분기할 수 없어요");
+      return;
+    }
+    toast.loading(`Genesis 가 "${d.title}" 에서 분기 중…`, { id: "expand-node" });
+    try {
+      const res = await fetch("/api/dashboard/mindmap/expand-node", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: d.kind, title: d.title, sub: d.subtitle, meta: d.meta }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        toast.error(`분기 실패: ${json?.error || res.status}`, { id: "expand-node" });
+        return;
+      }
+      const sugs = (json.suggestions || []) as Array<{ title: string; why: string }>;
+      if (sugs.length === 0) {
+        toast.error("AI 가 분기를 만들지 못했어요", { id: "expand-node" });
+        return;
+      }
+      // 임시 ai-task 노드들로 변환 — 기존 aiSuggestion 메커니즘 재사용
+      setAiSuggestion({
+        roles: [],
+        tasks: sugs.map((s) => `${s.title} — ${s.why}`),
+      });
+      toast.success(`💡 ${sugs.length}개 분기 — 30초 후 자동 사라짐`, { id: "expand-node" });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "네트워크 오류", { id: "expand-node" });
+    }
   }, []);
 
   // realtime — 새 멘션 알림 시 해당 노드 펄스 강조 + 토스트
@@ -855,6 +968,22 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
               💡 답변 패널
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => setShowLegend(true)}
+            className="font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-1 border border-nu-ink/30 hover:bg-nu-cream flex items-center gap-1"
+            title="Legend — 시각 언어 설명 (I 키)"
+          >
+            <Info size={11} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowHelp(true)}
+            className="font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-1 border border-nu-ink/30 hover:bg-nu-cream flex items-center gap-1"
+            title="키보드 단축키 (? 키)"
+          >
+            <Keyboard size={11} />
+          </button>
           <div className="font-mono-nu text-[10px] text-nu-muted hidden sm:inline">드래그 · 휠 줌</div>
         </div>
       </div>
@@ -898,6 +1027,24 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
         role="region"
         aria-label="Genesis 마인드맵 — 너트, 볼트, 일정, 이슈, 탭, 와셔 노드 그래프"
       >
+        {/* 포커스 모드 배너 — 1-hop 만 보이는 zen 모드 */}
+        {focusedNodeId && (
+          <div className="absolute top-3 left-3 z-30 bg-nu-ink text-nu-paper border-[3px] border-nu-ink shadow-[3px_3px_0_0_rgba(255,61,136,0.5)] flex items-center gap-2 px-3 py-1.5">
+            <Focus size={12} className="text-nu-pink" />
+            <span className="font-mono-nu text-[10px] uppercase tracking-widest">
+              포커스 모드 · 1-hop
+            </span>
+            <button
+              type="button"
+              onClick={() => setFocusedNodeId(null)}
+              className="font-mono-nu text-[10px] uppercase tracking-widest border border-nu-paper/40 px-1.5 py-0.5 hover:bg-nu-paper/10"
+              title="포커스 해제 (F 또는 ESC)"
+            >
+              <X size={10} />
+            </button>
+          </div>
+        )}
+
         {/* 다중 선택 액션바 — 2개 이상 선택 시 캔버스 상단 가운데 떠오름 */}
         {(selection.nodes.length + selection.edges.length) > 1 && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 bg-white border-[3px] border-nu-ink shadow-[3px_3px_0_0_#0D0F14] flex items-center gap-1 px-2 py-1.5">
@@ -1025,6 +1172,8 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
         onClose={() => setCtxMenu(null)}
         onOpenDrawer={openDrawerById}
         onDeleteEdge={deleteUserEdge}
+        onFocusNode={(id) => setFocusedNodeId(id)}
+        onExpandNode={expandNode}
       />
       <EdgeLabelEditor
         target={edgeLabelTarget}
@@ -1035,6 +1184,10 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
         plan={aiPlan?.plan ?? null}
         intent={aiPlan?.intent}
         onClose={() => setAiPlan(null)}
+      />
+      <HelpOverlay
+        mode={showHelp ? "help" : showLegend ? "legend" : null}
+        onClose={() => { setShowHelp(false); setShowLegend(false); }}
       />
     </div>
   );

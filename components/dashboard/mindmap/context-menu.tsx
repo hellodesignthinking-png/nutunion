@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { ExternalLink, Eye, Trash2, StickyNote, Unplug } from "lucide-react";
+import { ExternalLink, Eye, Trash2, StickyNote, Unplug, Sparkles, Focus } from "lucide-react";
 
 export interface ContextMenuTarget {
   /** "node" | "edge" — 어느 종류 위에서 우클릭했는지 */
@@ -22,6 +22,8 @@ interface Props {
   onClose: () => void;
   onOpenDrawer: (id: string) => void;
   onDeleteEdge: (id: string) => void;
+  onFocusNode?: (id: string) => void;
+  onExpandNode?: (id: string) => void;
 }
 
 /**
@@ -32,7 +34,7 @@ interface Props {
  *
  * ESC 또는 외부 클릭으로 닫힘. 키보드 접근성을 위해 첫 항목에 자동 포커스.
  */
-export function ContextMenu({ target, onClose, onOpenDrawer, onDeleteEdge }: Props) {
+export function ContextMenu({ target, onClose, onOpenDrawer, onDeleteEdge, onFocusNode, onExpandNode }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const firstBtnRef = useRef<HTMLButtonElement | null>(null);
 
@@ -98,6 +100,28 @@ export function ContextMenu({ target, onClose, onOpenDrawer, onDeleteEdge }: Pro
           >
             <StickyNote size={11} /> 메모 추가/보기
           </button>
+          {onFocusNode && (
+            <button
+              type="button"
+              role="menuitem"
+              className={itemCls}
+              onClick={() => { onFocusNode(target.targetId); onClose(); }}
+              title="이 노드 + 직접 연결만 보기 (F 키)"
+            >
+              <Focus size={11} /> 포커스 모드
+            </button>
+          )}
+          {onExpandNode && (
+            <button
+              type="button"
+              role="menuitem"
+              className={`${itemCls} text-nu-pink`}
+              onClick={() => { onExpandNode(target.targetId); onClose(); }}
+              title="Genesis AI 가 이 노드에서 5가지 분기 제안"
+            >
+              <Sparkles size={11} /> Genesis 로 분기
+            </button>
+          )}
         </>
       ) : (
         <>

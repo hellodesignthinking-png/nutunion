@@ -46,11 +46,21 @@ export function DashboardViewSwitcher({ nickname, mindmapData, children, userId 
 
   // 마인드맵 모드 = 진짜 풀스크린: body 클래스 토글로 nav/sidebar/footer 모두 감춤.
   // ESC 키 또는 우상단 [→ 리스트] 버튼으로 종료.
+  // CRITICAL: setView("list") 만 부르면 DashboardViewToggle 의 mount-time
+  // useEffect 가 localStorage="mindmap" 을 읽고 다시 onChange("mindmap") 으로
+  // 되돌리는 무한 루프 발생. 종료 시 localStorage 도 즉시 동기화 필수.
+  const exitToList = () => {
+    setView("list");
+    try { localStorage.setItem("dashboard.view", "list"); } catch { /* ignore */ }
+  };
   useEffect(() => {
     if (!isMindmap) return;
     document.body.classList.add("nu-mindmap-fullscreen");
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setView("list");
+      if (e.key === "Escape") {
+        setView("list");
+        try { localStorage.setItem("dashboard.view", "list"); } catch { /* ignore */ }
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => {
@@ -72,7 +82,7 @@ export function DashboardViewSwitcher({ nickname, mindmapData, children, userId 
           <div className="flex items-center gap-1.5">
             <button
               type="button"
-              onClick={() => setView("list")}
+              onClick={exitToList}
               title="리스트로 돌아가기 (ESC)"
               className="font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 border-[2px] border-nu-ink bg-white hover:bg-nu-cream flex items-center gap-1 shadow-[2px_2px_0_0_#0D0F14]"
             >
