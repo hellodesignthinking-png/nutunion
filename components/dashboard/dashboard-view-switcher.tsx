@@ -41,13 +41,23 @@ export function DashboardViewSwitcher({ nickname, mindmapData, children, userId 
     setHydrated(true);
   }, []);
 
+  const isMindmap = hydrated && view === "mindmap";
+
   return (
     <>
       <div className="mb-3 flex justify-end">
         <DashboardViewToggle defaultView={view} onChange={setView} />
       </div>
-      {hydrated && view === "mindmap" ? (
-        <MindMapDashboard nickname={nickname} data={mindmapData} userId={userId} />
+      {isMindmap ? (
+        // 풀-블리드 — 100vw 로 부모 max-w-4xl 컨테이너 탈출, 높이는 뷰포트 ~85%.
+        // left:50% + -ml-[50vw] 트릭은 어떤 max-width 부모 안에서도 viewport 전체 폭을
+        // 차지하면서 document flow 는 유지 (header/toggle 위치 안 흔들림).
+        <div
+          className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen px-3 sm:px-6"
+          style={{ height: "calc(100vh - 220px)", minHeight: 560 }}
+        >
+          <MindMapDashboard nickname={nickname} data={mindmapData} userId={userId} fillContainer />
+        </div>
       ) : (
         children
       )}

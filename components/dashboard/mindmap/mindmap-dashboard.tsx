@@ -76,7 +76,20 @@ interface Props {
   data: MindMapData;
   /** realtime 구독을 위한 사용자 id — 없으면 구독 비활성 */
   userId?: string;
+  /** 부모 컨테이너 높이를 모두 채울지 (true) 아니면 고정 600px (false, 기본). */
+  fillContainer?: boolean;
 }
+
+// 종류별 표시 순서 — 12시 방향부터 시계방향. 풀-블리드 모드에서 섹터 배치 기준.
+const KIND_DISPLAY_ORDER = [
+  "nut",
+  "bolt",
+  "schedule",
+  "issue",
+  "topic",
+  "file",
+  "washer",
+] as const;
 
 /**
  * Phase B 정적 마인드맵 — 중앙 Genesis + 너트/볼트/일정/이슈 가지.
@@ -87,7 +100,7 @@ interface AiSuggestion {
   tasks: string[];
 }
 
-export function MindMapDashboard({ nickname, data, userId }: Props) {
+export function MindMapDashboard({ nickname, data, userId, fillContainer = false }: Props) {
   const [selected, setSelected] = useState<MindMapNodeData | null>(null);
   const [highlighted, setHighlighted] = useState<Set<string>>(new Set());
   const [savedPositions, setSavedPositions] = useState<Record<string, { x: number; y: number }>>({});
@@ -392,7 +405,7 @@ export function MindMapDashboard({ nickname, data, userId }: Props) {
   const total = data.nuts.length + data.bolts.length + data.schedule.length + data.issues.length + data.files.length;
 
   return (
-    <div className="border-[3px] border-nu-ink bg-nu-cream/20 shadow-[4px_4px_0_0_#0D0F14] overflow-hidden">
+    <div className={`border-[3px] border-nu-ink bg-nu-cream/20 shadow-[4px_4px_0_0_#0D0F14] overflow-hidden ${fillContainer ? "flex flex-col h-full" : ""}`}>
       <div className="px-3 py-2 border-b-[2px] border-nu-ink/15 flex flex-wrap items-center justify-between gap-2 bg-white">
         <div className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted shrink-0 flex items-center gap-1.5">
           Genesis Mind Map · 노드 {total + 1}개
@@ -532,7 +545,7 @@ export function MindMapDashboard({ nickname, data, userId }: Props) {
       </div>
       <div
         ref={flowRef}
-        style={{ width: "100%", height: 600 }}
+        style={fillContainer ? { width: "100%", flex: 1, minHeight: 0 } : { width: "100%", height: 600 }}
         className="touch-pan-y relative"
         role="region"
         aria-label="Genesis 마인드맵 — 너트, 볼트, 일정, 이슈, 탭, 와셔 노드 그래프"
@@ -755,30 +768,68 @@ function buildGraph(
     return { nodes, edges };
   }
 
-  // 360°/N 으로 각도 배분
-  const N = all.length;
-  all.forEach((entry, idx) => {
-    const angle = (idx / N) * 2 * Math.PI - Math.PI / 2; // 12시부터
-    const radius = RADIUS[entry.kind] ?? 300;
-    const x = Math.cos(angle) * radius;
-    const y = Math.sin(angle) * radius;
-    nodes.push({
-      id: entry.id,
-      type: "card",
-      position: { x, y },
-      data: entry.data,
-    });
+  // ── 종류별 섹터 클러스터 배치 ──────────────────────────────────
+  // 같은 kind 끼리 한 부채꼴 안에 모이도록 — "내 세계관"이 영역으로 나뉘어 보임.
+  // 각 섹터는 항목 수에 비례하지만 최소 sector 가 보장돼 1개짜리도 시각적 자리 차지.
+  const byKind = new Map<string, typeof all>();
+  for (const entry of all) {
+    const arr = byKind.get(entry.kind) ?? [];
+    arr.push(entry);
+    byKind.set(entry.kind, arr);
+  }
+  const presentKinds = (KIND_DISPLAY_ORDER as readonly string[]).filter(
+    (k) => (byKind.get(k)?.length ?? 0) > 0,
+  );
+  const TWO_PI = Math.PI * 2;
+  const SECTOR_GAP = 0.04 * TWO_PI; // 섹터 사이 4% gap → 7개 섹터면 ~28% gap
+  const totalGap = SECTOR_GAP * presentKinds.length;
+  const remaining = TWO_PI - totalGap;
+  // 섹터 크기 — 항목 수 비례 + 최소 보장 (전체의 5%)
+  const minShare = 0.05;
+  const counts = presentKinds.map((k) => byKind.get(k)!.length);
+  const totalCount = counts.reduce((s, c) => s + c, 0) || 1;
+  const rawShares = counts.map((c) => c / totalCount);
+  // 최소 보장 후 나머지를 비례 분배
+  const sharesAfterMin = rawShares.map((s) => Math.max(s, minShare));
+  const sumShares = sharesAfterMin.reduce((s, x) => s + x, 0);
+  const normalizedShares = sharesAfterMin.map((s) => s / sumShares);
+  const sectorAngles = normalizedShares.map((s) => s * remaining);
 
-    // 중앙→가지 기본 엣지 — washer/topic/file 은 cross-ref 만으로 연결되도록 생략
-    if (entry.kind !== "washer" && entry.kind !== "topic" && entry.kind !== "file") {
-      edges.push({
-        id: `e-${entry.id}`,
-        source: "center",
-        target: entry.id,
-        style: { stroke: "#0D0F14", strokeWidth: 2 },
+  let cursor = -Math.PI / 2 - sectorAngles[0] / 2; // 첫 섹터 중앙이 12시 방향
+  for (let s = 0; s < presentKinds.length; s++) {
+    const kind = presentKinds[s];
+    const items = byKind.get(kind)!;
+    const sector = sectorAngles[s];
+    const M = items.length;
+    // 섹터 안 가장자리 padding — 노드끼리 너무 붙지 않게
+    const padding = sector * 0.08;
+    const innerSpan = sector - padding * 2;
+    const baseRadius = RADIUS[kind] ?? 300;
+    items.forEach((entry, idx) => {
+      const t = M === 1 ? 0.5 : idx / (M - 1);
+      const angle = cursor + padding + t * innerSpan;
+      // 같은 kind 안에서 살짝 stagger — 짝홀로 +/- 25 px 반경 변동
+      const r = baseRadius + (idx % 2 === 0 ? -25 : 25);
+      const x = Math.cos(angle) * r;
+      const y = Math.sin(angle) * r;
+      nodes.push({
+        id: entry.id,
+        type: "card",
+        position: { x, y },
+        data: entry.data,
       });
-    }
-  });
+      // 중앙→가지 기본 엣지 — washer/topic/file 은 cross-ref 만으로 연결
+      if (kind !== "washer" && kind !== "topic" && kind !== "file") {
+        edges.push({
+          id: `e-${entry.id}`,
+          source: "center",
+          target: entry.id,
+          style: { stroke: "#0D0F14", strokeWidth: 2 },
+        });
+      }
+    });
+    cursor += sector + SECTOR_GAP;
+  }
 
   // ── Cross-reference 엣지 ─────────────────────────────────────────
   // 너트 ↔ 탭 (소속) — 점선 sky
