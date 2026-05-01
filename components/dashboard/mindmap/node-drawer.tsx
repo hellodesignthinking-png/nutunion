@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { X, ExternalLink, Save, Loader2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { X, ExternalLink, Save, Loader2, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
-import type { MindMapNodeData } from "@/lib/dashboard/mindmap-types";
+import type { MindMapNodeData, MindMapData } from "@/lib/dashboard/mindmap-types";
 import { NODE_COLORS } from "@/lib/dashboard/mindmap-types";
 import { NodeNotes } from "./node-notes";
+import { computeRelations } from "@/lib/dashboard/node-relations";
 
 // 노트가 의미 있는 노드 종류 — center/empty/ai-* 는 ephemeral 이라 제외
 const NOTABLE_KINDS = new Set(["nut", "bolt", "schedule", "issue", "topic", "washer", "file"]);
@@ -32,13 +33,24 @@ export function NodeDrawer({
   node,
   onClose,
   bolts = [],
+  data,
+  onNavigate,
 }: {
   node: MindMapNodeData | null;
   onClose: () => void;
   /** ai-task 노드 일 때 어느 볼트에 저장할지 선택지 */
   bolts?: BoltOption[];
+  /** 연관 섹션 렌더에 필요 — 이 노드가 가진 모든 cross-link 계산 */
+  data?: MindMapData;
+  /** 연관 chip 클릭 시 다른 노드로 jump (선택 변경 + 카메라 fitView) */
+  onNavigate?: (nodeId: string) => void;
 }) {
   const [savingBoltId, setSavingBoltId] = useState<string | null>(null);
+
+  const relations = useMemo(
+    () => (node?.id && data ? computeRelations(node.id, data) : []),
+    [node?.id, data],
+  );
 
   // ESC 키로 닫기 — 접근성
   useEffect(() => {
@@ -99,6 +111,49 @@ export function NodeDrawer({
         </div>
 
         <div className="flex-1 overflow-auto p-4 space-y-3">
+          {/* 연관 섹션 — 이 노드의 모든 연결점, 클릭 시 그 노드로 jump */}
+          {relations.length > 0 && (
+            <div className="border-[2px] border-nu-ink bg-white">
+              <div className="px-2.5 py-1.5 bg-nu-ink text-nu-paper font-mono-nu text-[9px] uppercase tracking-widest">
+                🔗 연결점 {relations.reduce((a, g) => a + g.items.length, 0)}개
+              </div>
+              <div className="p-2 space-y-2.5">
+                {relations.map((group) => (
+                  <div key={group.title}>
+                    <div className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-1">
+                      {group.title}
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {group.items.map((item) => {
+                        const c = NODE_COLORS[item.kind];
+                        return (
+                          <button
+                            key={item.nodeId}
+                            type="button"
+                            onClick={() => onNavigate?.(item.nodeId)}
+                            disabled={!onNavigate}
+                            className={`group inline-flex items-center gap-1 max-w-full ${c.bg} ${c.ink} border-[2px] ${c.border} px-1.5 py-0.5 hover:shadow-[2px_2px_0_0_#0D0F14] transition-shadow disabled:cursor-default disabled:hover:shadow-none`}
+                            title={item.sub ? `${item.label} · ${item.sub}` : item.label}
+                          >
+                            <span className="text-[12px] font-bold truncate max-w-[140px]">{item.label}</span>
+                            {item.sub && (
+                              <span className="font-mono-nu text-[9px] uppercase tracking-widest opacity-60 truncate max-w-[80px]">
+                                {item.sub}
+                              </span>
+                            )}
+                            {onNavigate && (
+                              <ArrowRight size={10} className="opacity-40 group-hover:opacity-100 shrink-0" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {node.meta && Object.entries(node.meta).map(([k, v]) => {
             const rendered = renderMetaValue(v);
             if (!rendered) return null;

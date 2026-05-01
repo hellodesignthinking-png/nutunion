@@ -9,12 +9,15 @@ interface CenterNodeData {
   kind: "center";
   title: string;
   subtitle?: string;
-  /** 응답 후 호출 — 부모에서 관련 노드 하이라이트 + 임시 노드 추가 */
+  /** 응답 후 호출 — 부모에서 관련 노드 하이라이트 + 임시 노드 추가 + plan 풀 패널 노출 */
   onAnswer: (result: {
     text: string;
     keywords: string[];
     roles: Array<{ name: string; tags?: string[]; why?: string }>;
     tasks: string[];
+    /** Genesis 가 만든 전체 plan — phases/wiki/milestones/folders 포함. 부모가 panel 로 펼침. */
+    plan?: Record<string, unknown>;
+    intent?: string;
   }) => void;
 }
 
@@ -104,8 +107,15 @@ export function CenterGenesisNode({ data }: { data: CenterNodeData }) {
           tags: Array.isArray(r?.specialty_tags) ? (r.specialty_tags as unknown[]).map(String) : [],
           why: r?.why ? String(r.why) : undefined,
         })));
-      data.onAnswer({ text: summary, keywords: Array.from(keywords), roles, tasks });
-      toast.success(`💡 매칭 ${keywords.size}개 · 역할 ${roles.length}개 · 액션 ${tasks.length}개`);
+      data.onAnswer({
+        text: summary,
+        keywords: Array.from(keywords),
+        roles,
+        tasks,
+        plan,
+        intent: trimmed,
+      });
+      toast.success(`💡 매칭 ${keywords.size}개 · 역할 ${roles.length}개 · 액션 ${tasks.length}개 — 우측 패널에서 자세히`);
     } catch (err) {
       const msg = err instanceof Error
         ? (err.name === "AbortError" ? "AI 응답 45초 초과 — 다시 시도해주세요" : err.message)

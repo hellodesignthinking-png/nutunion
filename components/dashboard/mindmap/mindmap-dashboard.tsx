@@ -27,6 +27,7 @@ import { FileHoverPreview } from "./file-hover-preview";
 import { SectorHalo } from "./sector-halo";
 import { ContextMenu, type ContextMenuTarget } from "./context-menu";
 import { EdgeLabelEditor } from "./edge-label-editor";
+import { GenesisPlanPanel, type GenesisPlan } from "./genesis-plan-panel";
 import type { MindMapData, MindMapNodeData, NodeKind } from "@/lib/dashboard/mindmap-types";
 import { NODE_COLORS } from "@/lib/dashboard/mindmap-types";
 
@@ -125,6 +126,8 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
   const [highlighted, setHighlighted] = useState<Set<string>>(new Set());
   const [savedPositions, setSavedPositions] = useState<Record<string, { x: number; y: number }>>({});
   const [aiSuggestion, setAiSuggestion] = useState<AiSuggestion | null>(null);
+  // Genesis 가 만든 plan 전체 — 풀 패널로 펼쳐 보여줌. intent 도 같이 보관해 panel 헤더에 표시.
+  const [aiPlan, setAiPlan] = useState<{ plan: GenesisPlan; intent?: string } | null>(null);
   const [filterText, setFilterText] = useState("");
   const [filterKinds, setFilterKinds] = useState<Set<NodeKind>>(new Set());
   const [viewMode, setViewMode] = useState<ViewMode>("radial");
@@ -326,7 +329,13 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
     keywords: string[];
     roles: Array<{ name: string; tags?: string[]; why?: string }>;
     tasks: string[];
+    plan?: Record<string, unknown>;
+    intent?: string;
   }) => {
+    // 풀 plan 패널 — 사용자가 phases/milestones/wiki/folders 까지 자세히 볼 수 있게
+    if (result.plan) {
+      setAiPlan({ plan: result.plan as GenesisPlan, intent: result.intent });
+    }
     // 노드 데이터로부터 키워드 매칭 — ref 통해 최신 data 사용 (deps 안정화)
     const d = dataRef.current;
     const matchedIds = new Set<string>();
@@ -836,6 +845,16 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
               <X size={10} /> AI 노드
             </button>
           )}
+          {aiPlan && (
+            <button
+              type="button"
+              onClick={() => setAiPlan({ ...aiPlan })}
+              className="font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 border border-nu-pink text-nu-pink hover:bg-nu-pink/10 flex items-center gap-1"
+              title="Genesis 답변 다시 펼치기"
+            >
+              💡 답변 패널
+            </button>
+          )}
           <div className="font-mono-nu text-[10px] text-nu-muted hidden sm:inline">드래그 · 휠 줌</div>
         </div>
       </div>
@@ -989,6 +1008,17 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
         node={selected}
         onClose={() => setSelected(null)}
         bolts={data.bolts.map((b) => ({ id: b.id, title: b.title }))}
+        data={data}
+        onNavigate={(targetId) => {
+          // drawer 안 chip 클릭 → 그 노드로 selected 변경 + 카메라 줌
+          const inst = rfRef.current;
+          const target = inst?.getNode(targetId);
+          if (!target) return;
+          setSelected({ ...(target.data as MindMapNodeData), id: target.id });
+          try {
+            inst?.fitView({ nodes: [{ id: targetId }, { id: "center" }], padding: 0.3, duration: 600, maxZoom: 1.4 });
+          } catch { /* ignore */ }
+        }}
       />
       <ContextMenu
         target={ctxMenu}
@@ -1000,6 +1030,11 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
         target={edgeLabelTarget}
         onClose={() => setEdgeLabelTarget(null)}
         onSave={saveEdgeLabel}
+      />
+      <GenesisPlanPanel
+        plan={aiPlan?.plan ?? null}
+        intent={aiPlan?.intent}
+        onClose={() => setAiPlan(null)}
       />
     </div>
   );
