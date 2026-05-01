@@ -12,6 +12,7 @@ import ReactFlow, {
   type Edge as RFEdge,
   type NodeMouseHandler,
   type NodeDragHandler,
+  type ReactFlowInstance,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { NodeCard } from "./node-card";
@@ -109,6 +110,7 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
   const [filterKinds, setFilterKinds] = useState<Set<NodeKind>>(new Set());
   const [viewMode, setViewMode] = useState<ViewMode>("radial");
   const flowRef = useRef<HTMLDivElement | null>(null);
+  const rfRef = useRef<ReactFlowInstance | null>(null);
   const [exporting, setExporting] = useState(false);
 
   // viewMode 복원/저장 — localStorage 즉시 캐시 + 클라우드 디바운스 동기화 (cloudHydrated 후만)
@@ -257,6 +259,13 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
     }
     setHighlighted(matchedIds);
     if (matchedIds.size > 0) {
+      // 매칭 노드들로 카메라 줌 — Genesis "내비게이터" UX
+      if (rfRef.current) {
+        const targets = Array.from(matchedIds).map((id) => ({ id }));
+        try {
+          rfRef.current.fitView({ nodes: targets, padding: 0.25, duration: 800, maxZoom: 1.6 });
+        } catch { /* SSR 또는 노드 미마운트 — 무시 */ }
+      }
       setTimeout(() => setHighlighted(new Set()), 6000);
     }
 
@@ -569,6 +578,7 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
           nodes={nodes}
           edges={styledEdges}
           nodeTypes={nodeTypes}
+          onInit={(inst) => { rfRef.current = inst; }}
           onNodeClick={onNodeClick}
           onNodeMouseEnter={onNodeMouseEnter}
           onNodeMouseLeave={onNodeMouseLeave}
@@ -820,11 +830,46 @@ function buildGraph(
       });
       // 중앙→가지 기본 엣지 — washer/topic/file 은 cross-ref 만으로 연결
       if (kind !== "washer" && kind !== "topic" && kind !== "file") {
+        // 활성 상태 → 애니메이션 + smoothstep 곡선
+        const dataStatus = entry.data.meta?.["상태"];
+        const dataKind = entry.data.meta?.["종류"];
+        const dataTime = entry.data.meta?.["시간"];
+        let animated = false;
+        let stroke = "#0D0F14";
+        let strokeWidth = 2;
+        let label: string | undefined;
+        if (kind === "bolt" && (dataStatus === "active" || dataStatus === "review")) {
+          animated = true; // 진행 중 → 흐르는 점선
+          stroke = "#F59E0B";
+          strokeWidth = 2.5;
+        } else if (kind === "schedule" && typeof dataTime === "string") {
+          const h = (new Date(dataTime).getTime() - Date.now()) / (1000 * 60 * 60);
+          if (h >= 0 && h < 48) {
+            animated = true; // 임박 → 흐르는
+            stroke = "#10B981";
+            strokeWidth = 2.5;
+          }
+        } else if (kind === "issue" && String(dataKind).includes("마감")) {
+          animated = true; // 마감 지남 → 빨갛게 흐르는
+          stroke = "#DC2626";
+          strokeWidth = 2.5;
+          label = "긴급";
+        }
         edges.push({
           id: `e-${entry.id}`,
           source: "center",
           target: entry.id,
-          style: { stroke: "#0D0F14", strokeWidth: 2 },
+          type: "smoothstep",
+          animated,
+          style: { stroke, strokeWidth },
+          ...(label
+            ? {
+                label,
+                labelStyle: { fontSize: 9, fontFamily: "ui-monospace, monospace", fill: stroke },
+                labelBgStyle: { fill: "#FFFCF6", fillOpacity: 0.95 },
+                labelBgPadding: [3, 1] as [number, number],
+              }
+            : {}),
         });
       }
     });
@@ -832,13 +877,14 @@ function buildGraph(
   }
 
   // ── Cross-reference 엣지 ─────────────────────────────────────────
-  // 너트 ↔ 탭 (소속) — 점선 sky
+  // 너트 ↔ 탭 (소속) — 점선 sky + "지식" 라벨
   for (const t of data.topics) {
     if (data.nuts.some((n) => n.id === t.groupId)) {
       edges.push({
         id: `e-cr-topic-${t.id}`,
         source: `nut-${t.groupId}`,
         target: `topic-${t.id}`,
+        type: "bezier",
         style: { stroke: "#0EA5E9", strokeWidth: 1.5, strokeDasharray: "4 3" },
       });
     }

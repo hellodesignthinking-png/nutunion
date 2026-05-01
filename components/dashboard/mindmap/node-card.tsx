@@ -1,7 +1,7 @@
 "use client";
 
 import { Handle, Position } from "reactflow";
-import { Users, Briefcase, Calendar, AlertTriangle, Sparkles, User, BookOpen, Lightbulb, ListTodo, Plus, File } from "lucide-react";
+import { Users, Briefcase, Calendar, AlertTriangle, Sparkles, User, BookOpen, Lightbulb, ListTodo, Plus, File, Crown, Wrench } from "lucide-react";
 import type { NodeKind, MindMapNodeData } from "@/lib/dashboard/mindmap-types";
 import { NODE_COLORS } from "@/lib/dashboard/mindmap-types";
 
@@ -20,10 +20,14 @@ const ICONS: Record<NodeKind, typeof Users> = {
 };
 
 /**
- * 모든 종류의 마인드맵 노드를 렌더링하는 단일 컴포넌트.
- * data.kind 로 색상/아이콘/모양 분기.
+ * 통합 카드 — kind 별로 accent 영역을 다르게.
  *
- * Phase B 의 정적 노드 — 클릭 시 부모 onNodeClick 으로 drawer 트리거.
+ * - bolt: 상태→진행률 바
+ * - schedule: D-Day 큰 뱃지
+ * - issue: 긴급도 칩 + 좌측 빨간 띠
+ * - nut: 역할 칩 (호스트/운영/멤버)
+ * - washer: 공유 너트·볼트 카운트
+ * - file: 파일 유형 칩
  */
 export function NodeCard({ data }: { data: MindMapNodeData }) {
   const colors = NODE_COLORS[data.kind];
@@ -40,15 +44,21 @@ export function NodeCard({ data }: { data: MindMapNodeData }) {
       className={`
         ${colors.bg} ${colors.ink}
         border-[3px] ${colors.border}
-        ${isCenter ? "px-5 py-4 min-w-[180px]" : "px-3 py-2 min-w-[140px]"}
+        ${isCenter ? "px-5 py-4 min-w-[180px]" : "px-3 py-2 min-w-[160px] max-w-[220px]"}
         shadow-[3px_3px_0_0_#0D0F14]
         ${highlighted ? `ring-4 ring-offset-2 ${colors.pulse} animate-pulse` : ""}
         ${dimmed ? "opacity-30" : ""}
+        ${data.kind === "issue" ? "relative overflow-hidden" : ""}
         transition-all
         focus:outline-none focus-visible:ring-4 focus-visible:ring-nu-ink/50
       `}
     >
-      {/* 양방향 연결 핸들 — 중앙 노드는 4방향, 가지는 1개만 */}
+      {/* issue 좌측 빨간 경고 띠 */}
+      {data.kind === "issue" && (
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-700" aria-hidden />
+      )}
+
+      {/* 핸들 — 중앙은 4방향, 가지는 1개 */}
       {isCenter ? (
         <>
           <Handle type="source" position={Position.Top} style={{ opacity: 0 }} />
@@ -72,6 +82,129 @@ export function NodeCard({ data }: { data: MindMapNodeData }) {
       {data.subtitle && (
         <div className="text-[11px] opacity-80 mt-0.5 truncate">{data.subtitle}</div>
       )}
+
+      {/* kind-specific accent — 주요 정보를 시각적 요소로 강조 */}
+      {!isCenter && <Accent data={data} />}
     </div>
   );
+}
+
+function Accent({ data }: { data: MindMapNodeData }) {
+  switch (data.kind) {
+    case "bolt": {
+      const status = String(data.meta?.["상태"] || "active");
+      const pct = boltStatusPct(status);
+      const daysLeft = data.meta?.["남은 일수"];
+      const isOverdue = typeof daysLeft === "number" && daysLeft < 0;
+      return (
+        <div className="mt-1.5">
+          <div className="h-1.5 bg-white/70 border border-nu-ink overflow-hidden">
+            <div
+              className={`h-full ${isOverdue ? "bg-red-600" : "bg-nu-amber"}`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between mt-1 font-mono-nu text-[9px] uppercase tracking-widest opacity-70">
+            <span>{statusLabel(status)}</span>
+            <span>{pct}%</span>
+          </div>
+        </div>
+      );
+    }
+    case "schedule": {
+      const at = data.meta?.["시간"] ? new Date(String(data.meta["시간"])) : null;
+      if (!at || Number.isNaN(at.getTime())) return null;
+      const hours = (at.getTime() - Date.now()) / (1000 * 60 * 60);
+      const ddBadge = formatDDay(hours);
+      return (
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <div className="bg-emerald-700 text-emerald-50 font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 border border-emerald-900">
+            {ddBadge}
+          </div>
+          <div className="font-mono-nu text-[9px] uppercase tracking-widest opacity-60">
+            {String(data.meta?.["종류"] || "")}
+          </div>
+        </div>
+      );
+    }
+    case "issue": {
+      const kind = String(data.meta?.["종류"] || "");
+      const urgent = kind.includes("마감"); // overdue_task = 긴급
+      return (
+        <div className="mt-1.5 flex items-center gap-1">
+          <span className={`font-mono-nu text-[9px] uppercase tracking-widest px-1.5 py-0.5 border ${urgent ? "bg-red-700 text-white border-red-900" : "bg-red-100 text-red-900 border-red-700"}`}>
+            {urgent ? "🔥 HIGH" : "💬 MED"}
+          </span>
+        </div>
+      );
+    }
+    case "nut": {
+      const role = String(data.meta?.["역할"] || "member");
+      const isHost = role === "host";
+      const isMod = role === "moderator";
+      const RoleIcon = isHost ? Crown : isMod ? Wrench : Users;
+      return (
+        <div className="mt-1.5">
+          <span className={`inline-flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest px-1.5 py-0.5 border ${isHost ? "bg-nu-pink/20 border-nu-pink text-nu-pink" : "border-nu-ink/30"}`}>
+            <RoleIcon size={9} />
+            {isHost ? "호스트" : isMod ? "운영" : "멤버"}
+          </span>
+        </div>
+      );
+    }
+    case "washer": {
+      const nuts = Number(data.meta?.["너트"] || 0);
+      const bolts = Number(data.meta?.["볼트"] || 0);
+      return (
+        <div className="mt-1.5 flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest opacity-70">
+          <span className="px-1 border border-nu-pink/40 text-nu-pink">N {nuts}</span>
+          <span className="px-1 border border-nu-amber/60 text-nu-ink">B {bolts}</span>
+        </div>
+      );
+    }
+    case "file": {
+      const type = String(data.meta?.["종류"] || "").split("/").pop()?.toUpperCase() || "FILE";
+      const size = String(data.meta?.["크기"] || "");
+      return (
+        <div className="mt-1.5 flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest opacity-70">
+          <span className="px-1 border border-stone-700 bg-white">{type}</span>
+          {size && <span>{size}</span>}
+        </div>
+      );
+    }
+    default:
+      return null;
+  }
+}
+
+function boltStatusPct(status: string): number {
+  // 상태 → 진행률 추정. 실제 진행률 컬럼이 없을 때의 발견적 기준.
+  switch (status) {
+    case "draft":   return 15;
+    case "active":  return 60;
+    case "paused":  return 50;
+    case "review":  return 85;
+    case "closed":
+    case "done":
+    case "completed": return 100;
+    default: return 40;
+  }
+}
+
+function statusLabel(status: string): string {
+  return ({
+    draft: "초안",
+    active: "진행 중",
+    paused: "일시 중지",
+    review: "검토",
+    closed: "완료",
+    done: "완료",
+    completed: "완료",
+  } as Record<string, string>)[status] || status;
+}
+
+function formatDDay(hours: number): string {
+  if (hours < 0) return `D+${Math.ceil(-hours / 24)}`;
+  if (hours < 24) return `D-Day`;
+  return `D-${Math.ceil(hours / 24)}`;
 }
