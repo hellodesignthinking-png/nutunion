@@ -23,6 +23,7 @@ import { Readable } from "stream";
 import { google } from "googleapis";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -48,7 +49,7 @@ function cleanCache() {
 
 /** GET — iframe 에서 직접 호출 가능. file_url + file_name query.
  *  same-origin URL 이라 브라우저 PDF 뷰어 인라인 렌더 보장. */
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("personal.hwp-preview.get", async (req: NextRequest) => {
   const userId = await getCurrentUserId();
   if (!userId) {
     return new NextResponse("로그인이 필요합니다", { status: 401 });
@@ -98,7 +99,7 @@ export async function GET(req: NextRequest) {
     });
   }
   return new NextResponse("변환 실패", { status: 500 });
-}
+});
 
 /** 공통 변환 헬퍼 — GET + POST 양쪽에서 호출. */
 async function convertHwpToPdf(args: { userId: string; fileUrl: string; fileName: string }): Promise<{
@@ -174,7 +175,7 @@ async function convertHwpToPdf(args: { userId: string; fileUrl: string; fileName
 }
 
 /** POST — 클라이언트에서 명시적 호출 시 (raw PDF binary 응답) */
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("personal.hwp-preview.post", async (req: NextRequest) => {
   const userId = await getCurrentUserId();
   if (!userId) {
     return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
@@ -205,4 +206,4 @@ export async function POST(req: NextRequest) {
       "X-Content-Type-Options": "nosniff",
     },
   });
-}
+});

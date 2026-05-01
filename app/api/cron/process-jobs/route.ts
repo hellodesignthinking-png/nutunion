@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { claimPendingJobs, completeJob, failJob, type WorkflowJob } from "@/lib/workflow/queue";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { runWikiSynthesis } from "@/lib/ai/wiki-synthesis-core";
 
 export const runtime = "nodejs";
@@ -15,7 +16,7 @@ export const maxDuration = 60;
  * 실제 처리 로직은 프로세서 함수에 등록.
  * 단일 실행 내 최대 5건. 완료되지 못한 잡은 다음 크론에서 재시도.
  */
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("cron.process-jobs", async (req: NextRequest) => {
   const auth = req.headers.get("authorization");
   if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -55,7 +56,7 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({ processed: jobs.length, results });
-}
+});
 
 // ── 프로세서 레지스트리 ──────────────────────────────────────
 // 각 task_type 별로 실제 로직을 등록. 여기서는 스텁만 — 실제 이식 시

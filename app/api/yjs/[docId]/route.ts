@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -44,10 +45,10 @@ async function authorizeDocId(
   return false;
 }
 
-export async function GET(
+export const GET = withRouteLog("yjs.docId.get", async (
   _req: NextRequest,
   ctx: { params: Promise<{ docId: string }> }
-) {
+) => {
   const { docId: rawDocId } = await ctx.params;
   const docId = decodeDocId(rawDocId);
 
@@ -92,12 +93,12 @@ export async function GET(
   }
 
   return NextResponse.json({ state: b64, updated_at: data.updated_at });
-}
+});
 
-export async function POST(
+export const POST = withRouteLog("yjs.docId.post", async (
   req: NextRequest,
   ctx: { params: Promise<{ docId: string }> }
-) {
+) => {
   const { docId: rawDocId } = await ctx.params;
   const docId = decodeDocId(rawDocId);
 
@@ -136,4 +137,4 @@ export async function POST(
   }
 
   return NextResponse.json({ ok: true });
-}
+});

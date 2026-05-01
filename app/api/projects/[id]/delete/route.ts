@@ -13,6 +13,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
@@ -21,12 +22,12 @@ export const maxDuration = 30;
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
-export async function POST(_req: NextRequest, { params }: RouteCtx) {
+export const POST = withRouteLog("projects.id.delete.post", async (_req: NextRequest, { params }: RouteCtx) => {
   return handle(params);
-}
-export async function DELETE(_req: NextRequest, { params }: RouteCtx) {
+});
+export const DELETE = withRouteLog("projects.id.delete.delete", async (_req: NextRequest, { params }: RouteCtx) => {
   return handle(params);
-}
+});
 
 async function handle(params: Promise<{ id: string }>) {
   const { id } = await params;

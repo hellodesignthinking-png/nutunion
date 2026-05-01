@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import {
   ClosureSchema,
   SYSTEM_PROMPT,
@@ -55,7 +56,7 @@ const BodySchema = z.object({
  *   · 없으면 AI 호출해서 생성
  *   · projects.status='completed', closed_at=now(), closure_* 저장
  */
-export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+export const POST = withRouteLog("projects.id.close.post", async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   try {
     const { id } = await context.params;
 
@@ -309,13 +310,13 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     log.error(err, "project.close.unhandled");
     return NextResponse.json({ error: "서버 오류" }, { status: 500 });
   }
-}
+});
 
 /**
  * DELETE /api/projects/[id]/close — 마감 취소 (status=active 복원)
  * admin/staff 또는 closed_by 본인만 가능
  */
-export async function DELETE(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
+export const DELETE = withRouteLog("projects.id.close.delete", async (_req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   const { id } = await context.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -347,4 +348,4 @@ export async function DELETE(_req: NextRequest, context: { params: Promise<{ id:
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
-}
+});

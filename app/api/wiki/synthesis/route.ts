@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { generateObjectForUser } from "@/lib/ai/vault";
 import { extractContent } from "@/lib/wiki/content-extractor";
@@ -10,7 +11,7 @@ export const maxDuration = 120;
 const TOTAL_PROMPT_CHAR_BUDGET = 50_000;
 
 // GET: List synthesis logs for a group
-export async function GET(request: NextRequest) {
+export const GET = withRouteLog("wiki.synthesis.get", async (request: NextRequest) => {
   const { searchParams } = new URL(request.url);
   const groupId = searchParams.get("groupId");
   const limit = parseInt(searchParams.get("limit") || "10");
@@ -67,13 +68,13 @@ export async function GET(request: NextRequest) {
   }));
 
   return NextResponse.json({ logs });
-}
+});
 
 // POST: Topic-rewrite synthesis flow (NEW behavior — replaces append-flow).
 // Body: { topic_id: string, resource_ids: string[], preview?: boolean }
 //   preview=true → returns AI proposal but does not commit.
 //   preview=false (or omitted) → snapshots current content, overwrites with AI result, bumps version.
-export async function POST(request: NextRequest) {
+export const POST = withRouteLog("wiki.synthesis.post", async (request: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "로그인 필요" }, { status: 401 });
@@ -359,4 +360,4 @@ ${resourceBlock}
     versioning_ok: versioningOk,
     extraction_stats: extractStats,
   });
-}
+});

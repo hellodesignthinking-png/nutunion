@@ -11,6 +11,7 @@ import { createHash } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import { generateObjectForUser, generateTextForUser } from "@/lib/ai/vault";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { tryAcquireLease, releaseLease } from "@/lib/locks/lease";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -96,7 +97,7 @@ const SYSTEM = `당신은 nutunion 의 시니어 실행기획 비서입니다.
 
 도메인이 위에 없어도 동일한 사고로 추론해서 만들어라. 비어 있는 응답 금지.`;
 
-export async function POST(request: NextRequest) {
+export const POST = withRouteLog("genesis.plan", async (request: NextRequest) => {
   try {
     const supabase = await createClient();
     const {
@@ -255,7 +256,7 @@ export async function POST(request: NextRequest) {
       );
     }
   }
-}
+});
 
 // ============================================================
 // 템플릿 라이브러리 — AI 완전 실패 시 폴백

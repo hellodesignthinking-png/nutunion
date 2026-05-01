@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { google } from "googleapis";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 
@@ -11,7 +12,7 @@ import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
  */
 
 // GET: List chat spaces or messages in a space
-export async function GET(request: NextRequest) {
+export const GET = withRouteLog("google.chat.get", async (request: NextRequest) => {
   try {
     const userId = await getCurrentUserId();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -78,10 +79,10 @@ export async function GET(request: NextRequest) {
         : undefined
     }, { status: 500 });
   }
-}
+});
 
 // POST: Send a message to a chat space
-export async function POST(request: NextRequest) {
+export const POST = withRouteLog("google.chat.post", async (request: NextRequest) => {
   try {
     const userId = await getCurrentUserId();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -120,4 +121,4 @@ export async function POST(request: NextRequest) {
     console.error("Google Chat send error:", error);
     return NextResponse.json({ error: "메시지 전송 실패" }, { status: 500 });
   }
-}
+});

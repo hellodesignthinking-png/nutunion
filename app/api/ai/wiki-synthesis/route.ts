@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { generateTextWithFallback, listConfiguredProviders } from "@/lib/ai/model";
@@ -11,7 +12,7 @@ import { aiError } from "@/lib/ai/error";
 import { runWikiSynthesis, WikiSynthesisError } from "@/lib/ai/wiki-synthesis-core";
 
 // ── Diagnostic GET endpoint ─ production에서는 차단 ──────────────
-export async function GET(request: NextRequest) {
+export const GET = withRouteLog("ai.wiki-synthesis.get", async (request: NextRequest) => {
   // 프로덕션 / Vercel 배포 환경에서는 진단 엔드포인트 비활성화
   if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production") {
     return NextResponse.json({ error: "diagnostic disabled in production" }, { status: 404 });
@@ -94,7 +95,7 @@ export async function GET(request: NextRequest) {
     const fatal = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ checks, fatal }, { status: 500 });
   }
-}
+});
 
 const SYSTEM_PROMPT = `당신은 NutUnion 너트의 **회의록 기반 통합 탭 강화 엔진** AI입니다.
 
@@ -190,7 +191,7 @@ const SYSTEM_PROMPT = `당신은 NutUnion 너트의 **회의록 기반 통합 �
 - crossReferences는 최대 5개
 - knowledgeGaps는 구체적 행동 제안 포함`;
 
-export async function POST(request: NextRequest) {
+export const POST = withRouteLog("ai.wiki-synthesis.post", async (request: NextRequest) => {
   // model.ts buildChain 이 사용 가능한 provider 0개면 알아서 throw → catch 가 처리.
   try {
     const body = await request.json();
@@ -231,4 +232,4 @@ export async function POST(request: NextRequest) {
     log.error(error, "ai.wiki-synthesis.failed");
     return aiError("server_error", "ai/wiki-synthesis", { internal: error });
   }
-}
+});

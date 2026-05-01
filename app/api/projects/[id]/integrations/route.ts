@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 
@@ -25,7 +26,7 @@ async function getAccessToken(userId: string, provider: string): Promise<string 
   return data?.access_token ?? null;
 }
 
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = withRouteLog("projects.id.integrations.get", async (_req: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id: projectId } = await params;
   const supabase = await createClient();
   const { data } = await supabase
@@ -34,9 +35,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     .eq("project_id", projectId)
     .order("created_at", { ascending: false });
   return NextResponse.json({ integrations: data || [] });
-}
+});
 
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export const POST = withRouteLog("projects.id.integrations.post", async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id: projectId } = await params;
   const body = await req.json();
   const { provider, action, name, parentId } = body as { provider: string; action: string; name?: string; parentId?: string };
@@ -132,4 +133,4 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     log.error(err, "projects.id.integrations.failed");
     return NextResponse.json({ error: err.message || "Create failed" }, { status: 500 });
   }
-}
+});

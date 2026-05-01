@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
  * 외부 URL의 Open Graph 메타데이터를 서버에서 프록시하여 반환.
  * 클라이언트에서 CORS 없이 사용 가능.
  */
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("og", async (req: NextRequest) => {
   const { searchParams } = new URL(req.url);
   const url = searchParams.get("url");
 
@@ -98,7 +99,7 @@ export async function GET(req: NextRequest) {
     // timeout / fetch error
     return NextResponse.json({ error: err?.message || "error" }, { status: 502 });
   }
-}
+});
 
 function decodeHtmlEntities(str: string): string {
   return str

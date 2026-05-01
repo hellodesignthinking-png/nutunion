@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { encryptKey, decryptKey, maskKey } from "@/lib/ai/vault";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const dynamic = "force-dynamic";
 
 type Provider = "openai" | "anthropic" | "google";
 
 /** GET — 저장된 키의 마스킹된 미리보기 + preferred_provider */
-export async function GET() {
+export const GET = withRouteLog("settings.ai-keys.get", async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -30,10 +31,10 @@ export async function GET() {
     google: preview(data?.google_key_enc, data?.google_key_iv),
     preferred_provider: data?.preferred_provider || "auto",
   });
-}
+});
 
 /** POST — 하나 이상의 provider 키 업데이트 */
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("settings.ai-keys.post", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -74,4 +75,4 @@ export async function POST(req: NextRequest) {
   }
   log.info("user_ai_keys.updated", { user_id: user.id });
   return NextResponse.json({ ok: true });
-}
+});

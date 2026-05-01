@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { finalizePoll, type PollRow } from "@/lib/chat/poll-finalize";
@@ -96,7 +97,7 @@ async function loadPollSummary(db: any, pollId: string, userId: string) {
   };
 }
 
-export async function GET(_req: NextRequest, { params }: Ctx) {
+export const GET = withRouteLog("polls.id.get", async (_req: NextRequest, { params }: Ctx) => {
   const { id } = await params;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -114,9 +115,9 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     }
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
+});
 
-export async function POST(req: NextRequest, { params }: Ctx) {
+export const POST = withRouteLog("polls.id.post", async (req: NextRequest, { params }: Ctx) => {
   const { id: pollId } = await params;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -184,4 +185,4 @@ export async function POST(req: NextRequest, { params }: Ctx) {
 
   const summary = await loadPollSummary(db, pollId, auth.user.id);
   return NextResponse.json(summary);
-}
+});

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -15,7 +16,7 @@ export const maxDuration = 300;
  *   NEXT_PUBLIC_SUPABASE_URL
  *   OPENAI_API_KEY        — 임베딩 모델 호출 (없으면 skip)
  */
-export async function GET(req: Request) {
+export const GET = withRouteLog("cron.embeddings-refresh", async (req: Request) => {
   const auth = req.headers.get("authorization") || "";
   if (process.env.CRON_SECRET && auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -43,7 +44,7 @@ export async function GET(req: Request) {
     projects: projectResult,
     ran_at: new Date().toISOString(),
   });
-}
+});
 
 function hashText(s: string) {
   return crypto.createHash("sha1").update(s).digest("hex");

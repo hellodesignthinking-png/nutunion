@@ -9,12 +9,13 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { parseAndNotifyMentions } from "@/lib/notifications/mentions";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const dynamic = "force-dynamic";
 
 const ALLOWED_TABLES = new Set(["file_attachments", "project_resources"]);
 
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("file-comments.get", async (req: NextRequest) => {
   const url = new URL(req.url);
   const fileId = url.searchParams.get("file_id");
   const fileTable = url.searchParams.get("file_table");
@@ -49,9 +50,9 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({ items: data || [] });
-}
+});
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("file-comments.post", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -110,4 +111,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ item: data, mentions });
-}
+});

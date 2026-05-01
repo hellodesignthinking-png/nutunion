@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit } from "@/lib/rate-limit";
 
 // POST: 새 의뢰 제출
-export async function POST(request: NextRequest) {
+export const POST = withRouteLog("challenges.post", async (request: NextRequest) => {
   try {
     const supabase = await createClient();
 
@@ -91,10 +92,10 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // GET: 본인 의뢰 목록 조회
-export async function GET() {
+export const GET = withRouteLog("challenges.get", async () => {
   try {
     const supabase = await createClient();
     const {
@@ -119,4 +120,4 @@ export async function GET() {
   } catch {
     return NextResponse.json({ proposals: [] });
   }
-}
+});

@@ -1,12 +1,13 @@
 import { google } from "googleapis";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 
 import { asGoogleErr } from "@/lib/google/error-helpers";
 
 // GET: 일정 목록 조회
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("google.calendar.get", async (req: NextRequest) => {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -56,10 +57,10 @@ export async function GET(req: NextRequest) {
     console.error("Calendar API error:", err);
     return NextResponse.json({ error: "Calendar API 오류" }, { status: 500 });
   }
-}
+});
 
 // POST: 새 일정 생성
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("google.calendar.post", async (req: NextRequest) => {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -109,4 +110,4 @@ export async function POST(req: NextRequest) {
     console.error("Calendar create error:", err);
     return NextResponse.json({ error: "Calendar 일정 생성 오류" }, { status: 500 });
   }
-}
+});

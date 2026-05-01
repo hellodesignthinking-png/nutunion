@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createSupabase, SupabaseClient } from "@supabase/supabase-js";
 import { generateTextWithFallback } from "@/lib/ai/model";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 function getServiceClient(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -21,7 +22,7 @@ function getServiceClient(): SupabaseClient {
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("cron.insights-weekly.get", async (req: NextRequest) => {
   log.info("cron.insights-weekly.invoked", { method: "GET" });
   const secret = process.env.CRON_SECRET;
   if (secret) {
@@ -37,12 +38,12 @@ export async function GET(req: NextRequest) {
     log.error(e, "cron.insights-weekly.failed", {});
     return NextResponse.json({ ok: false, error: e?.message }, { status: 500 });
   }
-}
+});
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("cron.insights-weekly.post", async (req: NextRequest) => {
   log.info("cron.insights-weekly.invoked", { method: "POST" });
   return GET(req);
-}
+});
 
 export async function runInsights(period: "weekly" | "monthly", userIds?: string[]) {
   const started = Date.now();

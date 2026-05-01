@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 // Helper: verify admin
@@ -19,7 +20,7 @@ async function verifyAdmin(supabase: any) {
 }
 
 // GET: 전체 의뢰 목록 (관리자)
-export async function GET() {
+export const GET = withRouteLog("challenges.admin.get", async () => {
   try {
     const supabase = await createClient();
     const admin = await verifyAdmin(supabase);
@@ -49,10 +50,10 @@ export async function GET() {
     log.error(err, "challenges.admin.failed");
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
+});
 
 // PATCH: 의뢰 상태 업데이트 (관리자)
-export async function PATCH(request: NextRequest) {
+export const PATCH = withRouteLog("challenges.admin.patch", async (request: NextRequest) => {
   try {
     const supabase = await createClient();
     const admin = await verifyAdmin(supabase);
@@ -168,4 +169,4 @@ export async function PATCH(request: NextRequest) {
     log.error(err, "challenges.admin.failed");
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
+});

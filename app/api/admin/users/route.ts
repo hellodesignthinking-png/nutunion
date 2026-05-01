@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
@@ -24,7 +25,7 @@ async function requireAdmin() {
 }
 
 // ── POST /api/admin/users — Create new user ─────────────────────────
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("admin.users.post", async (req: NextRequest) => {
   const supabase = await requireAdmin();
   if (!supabase) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -68,10 +69,10 @@ export async function POST(req: NextRequest) {
     log.error(e, "admin.users.failed");
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
-}
+});
 
 // ── PATCH /api/admin/users — Update profile or reset password ───────
-export async function PATCH(req: NextRequest) {
+export const PATCH = withRouteLog("admin.users.patch", async (req: NextRequest) => {
   const supabase = await requireAdmin();
   if (!supabase) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -131,4 +132,4 @@ export async function PATCH(req: NextRequest) {
     log.error(e, "admin.users.failed");
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
-}
+});

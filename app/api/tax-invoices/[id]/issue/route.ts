@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { calcWithholding, calcVat } from "@/lib/contracts/templates";
 
@@ -16,7 +17,7 @@ import { calcWithholding, calcVat } from "@/lib/contracts/templates";
  *
  * Docs: https://developers.popbill.com
  */
-export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export const POST = withRouteLog("tax-invoices.id.issue.post", async (_req: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -124,7 +125,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     log.error(err, "tax-invoices.id.issue.failed");
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
+});
 
 async function popbillToken(linkId: string, secretKey: string, corpNum: string, apiHost: string): Promise<string> {
   // 간략화 — 실제 운영 시 토큰 캐시 + 시그니처 필요
@@ -143,7 +144,7 @@ async function popbillToken(linkId: string, secretKey: string, corpNum: string, 
 /**
  * 원천징수영수증 PDF 생성 — Contract 에서 사용 (서버 사이드 HTML → PDF)
  */
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = withRouteLog("tax-invoices.id.issue.get", async (_req: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -174,4 +175,4 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     <p style="margin-top:40px;color:#666;font-size:12px">※ 본 영수증은 nutunion 에서 자동 발행한 참고용 문서입니다. 국세청 신고용으로는 세무사 검토가 필요합니다.</p>
     </body></html>`;
   return new NextResponse(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
-}
+});

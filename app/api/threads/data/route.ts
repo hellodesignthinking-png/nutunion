@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { checkInstallationMembership, checkRowMembership } from "@/lib/threads/membership";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 // GET /api/threads/data?installation_id=&limit=&before=
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("threads.data.get", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -46,10 +47,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return NextResponse.json({ rows: data || [] });
-}
+});
 
 // POST /api/threads/data  body: { installation_id, data }
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("threads.data.post", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -81,10 +82,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return NextResponse.json({ row });
-}
+});
 
 // PATCH /api/threads/data  body: { id, data }
-export async function PATCH(req: NextRequest) {
+export const PATCH = withRouteLog("threads.data.patch", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -112,10 +113,10 @@ export async function PATCH(req: NextRequest) {
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ row });
-}
+});
 
 // DELETE /api/threads/data  body: { id }
-export async function DELETE(req: NextRequest) {
+export const DELETE = withRouteLog("threads.data.delete", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -134,4 +135,4 @@ export async function DELETE(req: NextRequest) {
   const { error } = await supabase.from("thread_data").delete().eq("id", body.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
-}
+});

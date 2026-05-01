@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { google } from "googleapis";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 
@@ -10,7 +11,7 @@ import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
  * PATCH — update a task (status, title, etc.)
  */
 
-export async function GET(request: NextRequest) {
+export const GET = withRouteLog("google.tasks.get", async (request: NextRequest) => {
   try {
     const userId = await getCurrentUserId();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -72,9 +73,9 @@ export async function GET(request: NextRequest) {
     // API 에러를 200 + 빈 목록으로 반환 — 대시보드 위젯 폭발 방지
     return NextResponse.json({ error: "Google Tasks API 오류", detail, tasks: [], taskLists: [] }, { status: 200 });
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withRouteLog("google.tasks.post", async (request: NextRequest) => {
   try {
     const userId = await getCurrentUserId();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -117,9 +118,9 @@ export async function POST(request: NextRequest) {
     console.error("Google Tasks create error:", detail);
     return NextResponse.json({ error: "할일 생성 실패", detail }, { status: 500 });
   }
-}
+});
 
-export async function PATCH(request: NextRequest) {
+export const PATCH = withRouteLog("google.tasks.patch", async (request: NextRequest) => {
   try {
     const userId = await getCurrentUserId();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -165,4 +166,4 @@ export async function PATCH(request: NextRequest) {
     console.error("Google Tasks update error:", detail);
     return NextResponse.json({ error: "할일 수정 실패", detail }, { status: 500 });
   }
-}
+});

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -13,7 +14,7 @@ import { createClient } from "@/lib/supabase/server";
  *   GET /api/ai/match?kind=bolts&limit=3  — 내 프로필에 맞는 볼트 추천
  *   GET /api/ai/match?kind=washers&projectId=xxx — 이 볼트에 어울릴 와셔
  */
-export async function GET(req: Request) {
+export const GET = withRouteLog("ai.match", async (req: Request) => {
   const url = new URL(req.url);
   const kind = (url.searchParams.get("kind") || "bolts") as "nuts" | "bolts" | "washers";
   const limit = Math.min(20, Math.max(1, Number(url.searchParams.get("limit") || "3")));
@@ -32,7 +33,7 @@ export async function GET(req: Request) {
     log.error(err, "ai.match.failed");
     return NextResponse.json({ error: err.message || "Match failed", items: [] }, { status: 500 });
   }
-}
+});
 
 async function matchNuts(supabase: any, userId: string, limit: number) {
   const { data: profile } = await supabase

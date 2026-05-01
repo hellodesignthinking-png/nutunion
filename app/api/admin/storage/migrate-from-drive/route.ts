@@ -16,6 +16,7 @@ import { createClient as createSbClient } from "@supabase/supabase-js";
 import { getGoogleClient } from "@/lib/google/auth";
 import { getR2Client, getPublicUrl, isR2Configured } from "@/lib/storage/r2";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -78,7 +79,7 @@ function getServiceClient() {
   return createSbClient(url, key, { auth: { persistSession: false } });
 }
 
-export async function GET() {
+export const GET = withRouteLog("admin.storage.migrate-from-drive.get", async () => {
   const auth = await requireAdmin();
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
@@ -178,7 +179,7 @@ export async function GET() {
     candidates: out,
     summary: { total: totalFA, r2: totalR2, drive: totalDrive, pending: out.length },
   });
-}
+});
 
 interface MigrateInput { table: Table; id: string }
 
@@ -264,7 +265,7 @@ async function migrateOne(
   }
 }
 
-export async function POST(req: Request) {
+export const POST = withRouteLog("admin.storage.migrate-from-drive.post", async (req: Request) => {
   const auth = await requireAdmin();
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   if (!isR2Configured()) return NextResponse.json({ error: "R2_NOT_CONFIGURED" }, { status: 501 });
@@ -287,4 +288,4 @@ export async function POST(req: Request) {
       failed: results.filter(r => r.status === "failed").length,
     },
   });
-}
+});

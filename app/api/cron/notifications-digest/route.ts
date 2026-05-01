@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -11,7 +12,7 @@ export const maxDuration = 300;
  * - notification_preferences.email.daily_digest === true 만 발송.
  * - Resend 환경변수 필요.
  */
-export async function GET(req: Request) {
+export const GET = withRouteLog("cron.notifications-digest", async (req: Request) => {
   const auth = req.headers.get("authorization") || "";
   if (process.env.CRON_SECRET && auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -104,7 +105,7 @@ export async function GET(req: Request) {
 
   log.info("cron.notifications_digest.done", { eligible: eligible.length, sent, skipped, failed });
   return NextResponse.json({ eligible: eligible.length, sent, skipped, failed });
-}
+});
 
 function escape(s: string) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));

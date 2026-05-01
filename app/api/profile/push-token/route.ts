@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
@@ -26,7 +27,7 @@ function admin() {
   });
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("profile.push-token.post", async (req: NextRequest) => {
   try {
     const supabase = await createServerClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -67,9 +68,9 @@ export async function POST(req: NextRequest) {
     const msg = err instanceof Error ? err.message : "unknown";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
-}
+});
 
-export async function DELETE(req: NextRequest) {
+export const DELETE = withRouteLog("profile.push-token.delete", async (req: NextRequest) => {
   try {
     const supabase = await createServerClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -94,4 +95,4 @@ export async function DELETE(req: NextRequest) {
     const msg = err instanceof Error ? err.message : "unknown";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
-}
+});

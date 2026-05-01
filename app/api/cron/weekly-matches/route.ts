@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@supabase/supabase-js";
 import { dispatchPushToUsers } from "@/lib/push/dispatch";
 import { dispatchNotification } from "@/lib/notifications/dispatch";
@@ -15,7 +16,7 @@ export const maxDuration = 300;
  *
  * 환경변수: CRON_SECRET, SUPABASE_SERVICE_ROLE
  */
-export async function GET(req: Request) {
+export const GET = withRouteLog("cron.weekly-matches", async (req: Request) => {
   const auth = req.headers.get("authorization") || "";
   if (process.env.CRON_SECRET && auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -90,7 +91,7 @@ export async function GET(req: Request) {
   }
 
   return NextResponse.json({ sent, skipped, week: runWeekStr });
-}
+});
 
 async function pickTopBolts(supabase: any, userId: string, specialty: string | null) {
   // 1차: pgvector RPC (있으면) — 없으면 keyword fallback

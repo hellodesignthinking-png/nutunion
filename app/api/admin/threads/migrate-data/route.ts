@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
@@ -203,7 +204,7 @@ async function migrate(admin: any, source: Source, batchSize: number) {
   return { processed: targets.length, inserted, skipped };
 }
 
-export async function GET(_req: NextRequest) {
+export const GET = withRouteLog("admin.threads.migrate-data.get", async (_req: NextRequest) => {
   const auth = await authAdmin();
   if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
@@ -216,9 +217,9 @@ export async function GET(_req: NextRequest) {
     log.error(e, "admin.threads.migrate-data.failed");
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
-}
+});
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("admin.threads.migrate-data.post", async (req: NextRequest) => {
   const auth = await authAdmin();
   if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
   const body = await req.json().catch(() => null);
@@ -232,4 +233,4 @@ export async function POST(req: NextRequest) {
     log.error(e, "admin.threads.migrate-data.failed");
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
-}
+});

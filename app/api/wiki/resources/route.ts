@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { rateLimit } from "@/lib/rate-limit";
@@ -55,7 +56,7 @@ function detectResourceType(fileType: string | null, url: string): string {
 
 // GET: Fetch resources for a group, optionally filtered by week
 // Merges wiki_weekly_resources AND file_attachments into one unified list
-export async function GET(request: NextRequest) {
+export const GET = withRouteLog("wiki.resources.get", async (request: NextRequest) => {
   const { searchParams } = new URL(request.url);
   const groupId = searchParams.get("groupId");
   const weekStart = searchParams.get("weekStart");
@@ -164,11 +165,11 @@ export async function GET(request: NextRequest) {
   );
 
   return NextResponse.json({ resources: merged.slice(0, limit) });
-}
+});
 
 // POST: Share a new resource
 // Also registers it in file_attachments so it appears in 자료실
-export async function POST(request: NextRequest) {
+export const POST = withRouteLog("wiki.resources.post", async (request: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -267,10 +268,10 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ id: resultId, resourceType: detectedType });
-}
+});
 
 // PATCH: Link a resource to a wiki page
-export async function PATCH(request: NextRequest) {
+export const PATCH = withRouteLog("wiki.resources.patch", async (request: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "로그인 필요" }, { status: 401 });
@@ -302,10 +303,10 @@ export async function PATCH(request: NextRequest) {
   }
 
   return NextResponse.json({ success: true });
-}
+});
 
 // DELETE: Remove a resource (only the sharer or group host can delete)
-export async function DELETE(request: NextRequest) {
+export const DELETE = withRouteLog("wiki.resources.delete", async (request: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -378,4 +379,4 @@ export async function DELETE(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ success: true });
-}
+});

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { generateObjectForUser, generateTextForUser } from "@/lib/ai/vault";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { kstTodayStartISO, kstTodayEndISO } from "@/lib/time-kst";
 
 export const dynamic = "force-dynamic";
@@ -714,7 +715,7 @@ async function writeCache(supabase: any, userId: string, date: string, payload: 
 // ─────────────────────────────────────────────────────────────────────────
 // GET — 캐시 있으면 반환, 없으면 생성+저장+반환. ?refresh=1 → 재생성
 // ─────────────────────────────────────────────────────────────────────────
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("dashboard.morning-briefing.get", async (req: NextRequest) => {
   const span = log.span("dashboard.morning_briefing");
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -742,12 +743,12 @@ export async function GET(req: NextRequest) {
   await writeCache(supabase, user.id, todayDate, result);
   span.end({ cached: false, has_model: !!result.model_used, weather: !!result.weather });
   return NextResponse.json({ ...result, cached: false });
-}
+});
 
 // ─────────────────────────────────────────────────────────────────────────
 // POST — 명시적 재생성 (client 의 "다시 브리핑" 버튼)
 // ─────────────────────────────────────────────────────────────────────────
-export async function POST() {
+export const POST = withRouteLog("dashboard.morning-briefing.post", async () => {
   const span = log.span("dashboard.morning_briefing.refresh");
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -761,4 +762,4 @@ export async function POST() {
   await writeCache(supabase, user.id, todayDate, result);
   span.end({ refreshed: true, has_model: !!result.model_used });
   return NextResponse.json({ ...result, cached: false });
-}
+});

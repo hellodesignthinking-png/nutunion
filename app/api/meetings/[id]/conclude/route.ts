@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { dispatchEvent } from "@/lib/automation/engine";
@@ -30,7 +31,7 @@ function adminClient() {
  *     createDoc?: boolean,        // if true → create Google Doc
  *   }
  */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const POST = withRouteLog("meetings.id.conclude", async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   const { id: meetingId } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -200,7 +201,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     google_doc_id,
     aiResult,
   });
-}
+});
 
 /**
  * Convert AI meeting-summary JSON result into a clean markdown document.

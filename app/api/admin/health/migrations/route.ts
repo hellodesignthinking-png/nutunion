@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -22,7 +23,7 @@ interface Check {
   detail?: string;
 }
 
-export async function GET() {
+export const GET = withRouteLog("admin.health.migrations", async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -59,7 +60,7 @@ export async function GET() {
     summary: { total: checks.length, applied, missing, errors },
     checks,
   });
-}
+});
 
 // ── 체크 헬퍼 ──────────────────────────────────────
 async function checkTable(

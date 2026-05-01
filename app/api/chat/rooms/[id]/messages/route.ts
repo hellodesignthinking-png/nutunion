@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { dispatchEvent } from "@/lib/automation/engine";
@@ -20,7 +21,7 @@ function getAdminClient() {
  * GET /api/chat/rooms/[id]/messages?before=ISO&limit=50
  *  — 최신부터 N개 (역순), before 가 있으면 그 이전
  */
-export async function GET(req: NextRequest, { params }: Ctx) {
+export const GET = withRouteLog("chat.rooms.id.messages.get", async (req: NextRequest, { params }: Ctx) => {
   const { id } = await params;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -138,13 +139,13 @@ export async function GET(req: NextRequest, { params }: Ctx) {
     .eq("user_id", auth.user.id);
 
   return NextResponse.json({ messages: (enriched || []).reverse() });
-}
+});
 
 /**
  * POST /api/chat/rooms/[id]/messages
  *  Body: { content?, attachment_url?, attachment_type?, attachment_name?, attachment_size?, reply_to? }
  */
-export async function POST(req: NextRequest, { params }: Ctx) {
+export const POST = withRouteLog("chat.rooms.id.messages.post", async (req: NextRequest, { params }: Ctx) => {
   const { id } = await params;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -394,4 +395,4 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   }
 
   return NextResponse.json({ message: result.data });
-}
+});

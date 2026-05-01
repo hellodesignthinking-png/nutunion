@@ -14,13 +14,14 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { dispatchEvent } from "@/lib/automation/engine";
 import { runInsights } from "../insights-weekly/route";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("cron.daily-master.get", async (req: NextRequest) => {
   log.info("cron.daily-master.invoked", {});
   const secret = process.env.CRON_SECRET;
   if (secret) {
@@ -92,8 +93,8 @@ export async function GET(req: NextRequest) {
 
   log.info("cron.daily-master.completed", summary);
   return NextResponse.json({ ok: true, ...summary });
-}
+});
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("cron.daily-master.post", async (req: NextRequest) => {
   return GET(req);
-}
+});

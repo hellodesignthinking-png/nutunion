@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 
@@ -13,7 +14,7 @@ import { createClient as createServiceClient } from "@supabase/supabase-js";
  *
  * GET /api/b2b/[id]/match — 저장된 추천 조회
  */
-export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export const POST = withRouteLog("b2b.id.match.post", async (_req: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id: requestId } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -141,9 +142,9 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   }
 
   return NextResponse.json({ matches, method, saved });
-}
+});
 
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = withRouteLog("b2b.id.match.get", async (_req: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id: requestId } = await params;
   const supabase = await createClient();
 
@@ -154,4 +155,4 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     .order("rank");
 
   return NextResponse.json({ matches: data || [] });
-}
+});

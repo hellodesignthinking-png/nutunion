@@ -8,12 +8,13 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { runInsights } from "../insights-weekly/route";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("cron.insights-monthly.get", async (req: NextRequest) => {
   log.info("cron.insights-monthly.invoked", { method: "GET" });
   const secret = process.env.CRON_SECRET;
   if (secret) {
@@ -29,9 +30,9 @@ export async function GET(req: NextRequest) {
     log.error(e, "cron.insights-monthly.failed", {});
     return NextResponse.json({ ok: false, error: e?.message }, { status: 500 });
   }
-}
+});
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("cron.insights-monthly.post", async (req: NextRequest) => {
   log.info("cron.insights-monthly.invoked", { method: "POST" });
   return GET(req);
-}
+});
