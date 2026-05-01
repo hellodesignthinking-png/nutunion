@@ -1,7 +1,7 @@
 "use client";
 
 import { Handle, Position } from "reactflow";
-import { Users, Briefcase, Calendar, AlertTriangle, Sparkles, User, BookOpen, Lightbulb, ListTodo, Plus } from "lucide-react";
+import { Users, Briefcase, Calendar, AlertTriangle, Sparkles, User, BookOpen, Lightbulb, ListTodo, Plus, File } from "lucide-react";
 import type { NodeKind, MindMapNodeData } from "@/lib/dashboard/mindmap-types";
 import { NODE_COLORS } from "@/lib/dashboard/mindmap-types";
 
@@ -13,6 +13,7 @@ const ICONS: Record<NodeKind, typeof Users> = {
   issue: AlertTriangle,
   washer: User,
   topic: BookOpen,
+  file: File,
   "ai-role": Lightbulb,
   "ai-task": ListTodo,
   empty: Plus,

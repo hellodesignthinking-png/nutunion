@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
-import { Camera, Search, X, Filter, Radio } from "lucide-react";
+import { Camera, Search, X, Filter, Radio, Clock, Network } from "lucide-react";
 import { toast } from "sonner";
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import ReactFlow, {
@@ -17,11 +17,20 @@ import "reactflow/dist/style.css";
 import { NodeCard } from "./node-card";
 import { NodeDrawer } from "./node-drawer";
 import { CenterGenesisNode } from "./center-genesis-node";
+import { CursorOverlay } from "./cursor-overlay";
+import { FileHoverPreview } from "./file-hover-preview";
 import type { MindMapData, MindMapNodeData, NodeKind } from "@/lib/dashboard/mindmap-types";
 import { NODE_COLORS } from "@/lib/dashboard/mindmap-types";
 
 const nodeTypes = { card: NodeCard, center: CenterGenesisNode };
 const LAYOUT_KEY = "dashboard.mindmap.layout";
+const VIEW_MODE_KEY = "dashboard.mindmap.viewMode";
+
+type ViewMode = "radial" | "timeline";
+
+// Timeline 모드 — 7일 시간축 (now → +168h). schedule 노드만 시간순 배치.
+const TIMELINE_HOURS = 168; // 7일
+const TIMELINE_WIDTH = 800; // x 범위 -400 ~ +400
 
 // MiniMap 노드 색상 — kind 별 hex (Tailwind class 못 씀)
 const MINIMAP_COLOR: Record<NodeKind, string> = {
@@ -32,6 +41,7 @@ const MINIMAP_COLOR: Record<NodeKind, string> = {
   issue: "#EF4444",
   washer: "#7C3AED",
   topic: "#0EA5E9",
+  file: "#78716C",
   "ai-role": "#EAB308",
   "ai-task": "#F97316",
   empty: "#A8A29E",
@@ -45,6 +55,7 @@ const FILTERABLE_KINDS: { kind: NodeKind; label: string }[] = [
   { kind: "issue", label: "이슈" },
   { kind: "topic", label: "탭" },
   { kind: "washer", label: "와셔" },
+  { kind: "file", label: "파일" },
 ];
 
 // 방사형 레이아웃 — 중앙에서 12시 방향부터 360°/N 각도로 배치.
@@ -56,6 +67,7 @@ const RADIUS: Record<string, number> = {
   bolt: 340,
   topic: 380,
   schedule: 380,
+  file: 420,
   washer: 460,
 };
 
@@ -82,8 +94,31 @@ export function MindMapDashboard({ nickname, data, userId }: Props) {
   const [aiSuggestion, setAiSuggestion] = useState<AiSuggestion | null>(null);
   const [filterText, setFilterText] = useState("");
   const [filterKinds, setFilterKinds] = useState<Set<NodeKind>>(new Set());
+  const [viewMode, setViewMode] = useState<ViewMode>("radial");
   const flowRef = useRef<HTMLDivElement | null>(null);
   const [exporting, setExporting] = useState(false);
+
+  // viewMode 복원/저장 — localStorage 즉시 캐시 + 클라우드 디바운스 동기화 (cloudHydrated 후만)
+  const [cloudHydrated, setCloudHydrated] = useState(false);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(VIEW_MODE_KEY);
+      if (raw === "timeline" || raw === "radial") setViewMode(raw);
+    } catch { /* ignore */ }
+  }, []);
+  useEffect(() => {
+    try { localStorage.setItem(VIEW_MODE_KEY, viewMode); } catch { /* ignore */ }
+    if (!cloudHydrated) return;
+    // 디바운스 — 빠른 토글 시 한 번만 PUT
+    const t = setTimeout(() => {
+      void fetch("/api/dashboard/mindmap-layout", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ viewMode }),
+      }).catch(() => undefined);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [viewMode, cloudHydrated]);
 
   // ref 로 최신 data 보관 — onAnswer 가 deps 변화 없이 항상 최신 데이터로 매칭
   const dataRef = useRef(data);
@@ -136,21 +171,51 @@ export function MindMapDashboard({ nickname, data, userId }: Props) {
     }
   }, [exporting]);
 
-  // 저장된 노드 위치 — 사용자가 드래그한 후 다음 방문 시 복원
+  // 저장된 노드 위치 — localStorage 즉시 복원 → 클라우드 fetch 로 덮어쓰기 (다기기 동기화)
   useEffect(() => {
     try {
       const raw = localStorage.getItem(LAYOUT_KEY);
       if (raw) setSavedPositions(JSON.parse(raw));
     } catch { /* ignore */ }
+    // 클라우드 hydration — 인증 안 됐거나 fetch 실패 시 그냥 localStorage 만 사용
+    let cancelled = false;
+    fetch("/api/dashboard/mindmap-layout", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { layout?: Record<string, { x: number; y: number }>; viewMode?: ViewMode } | null) => {
+        if (cancelled || !j) return;
+        if (j.layout && Object.keys(j.layout).length > 0) {
+          setSavedPositions(j.layout);
+          try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(j.layout)); } catch { /* ignore */ }
+        }
+        if (j.viewMode === "timeline" || j.viewMode === "radial") setViewMode(j.viewMode);
+        setCloudHydrated(true);
+      })
+      .catch(() => setCloudHydrated(true));
+    return () => { cancelled = true; };
   }, []);
+
+  // 클라우드 PUT 디바운스 — 드래그 연속 시 마지막 위치만 저장
+  const layoutPutTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const queueLayoutSync = useCallback((next: Record<string, { x: number; y: number }>) => {
+    if (!cloudHydrated) return;
+    if (layoutPutTimer.current) clearTimeout(layoutPutTimer.current);
+    layoutPutTimer.current = setTimeout(() => {
+      void fetch("/api/dashboard/mindmap-layout", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ layout: next }),
+      }).catch(() => undefined);
+    }, 600);
+  }, [cloudHydrated]);
 
   const onNodeDragStop: NodeDragHandler = useCallback((_, node) => {
     setSavedPositions((prev) => {
       const next = { ...prev, [node.id]: { x: node.position.x, y: node.position.y } };
       try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      queueLayoutSync(next);
       return next;
     });
-  }, []);
+  }, [queueLayoutSync]);
 
   const onAnswer = useCallback((result: {
     text: string;
@@ -190,8 +255,10 @@ export function MindMapDashboard({ nickname, data, userId }: Props) {
   }, []);
 
   const { nodes: baseNodes, edges } = useMemo(
-    () => buildGraph(nickname, data, onAnswer, aiSuggestion),
-    [nickname, data, onAnswer, aiSuggestion],
+    () => viewMode === "timeline"
+      ? buildTimelineGraph(nickname, data, onAnswer)
+      : buildGraph(nickname, data, onAnswer, aiSuggestion),
+    [nickname, data, onAnswer, aiSuggestion, viewMode],
   );
 
   // 하이라이트 + 필터 매칭 + 저장된 위치 복원
@@ -215,9 +282,13 @@ export function MindMapDashboard({ nickname, data, userId }: Props) {
       const tid = hoverNodeId.slice("topic-".length);
       const t = data.topics.find((x) => x.id === tid);
       if (t) ids.add(`nut-${t.groupId}`);
+    } else if (hoverNodeId.startsWith("file-")) {
+      const fid = hoverNodeId.slice("file-".length);
+      const f = data.files.find((x) => x.id === fid);
+      if (f?.projectId) ids.add(`bolt-${f.projectId}`);
     }
     return ids;
-  }, [hoverNodeId, data.washers, data.topics]);
+  }, [hoverNodeId, data.washers, data.topics, data.files]);
 
   const nodes = useMemo(
     () => baseNodes.map((n) => {
@@ -235,14 +306,15 @@ export function MindMapDashboard({ nickname, data, userId }: Props) {
       if (focusNodeIds && !focusNodeIds.has(n.id)) {
         isDimmed = true;
       }
-      const pos = savedPositions[n.id];
+      // timeline 모드에서는 saved 위치를 적용하지 않음 — 시간축 정합성 유지
+      const pos = viewMode === "radial" ? savedPositions[n.id] : undefined;
       return {
         ...n,
         ...(pos ? { position: pos } : {}),
         data: { ...data, highlighted: isHighlighted, dimmed: isDimmed },
       };
     }),
-    [baseNodes, highlighted, savedPositions, filterActive, filterLower, filterKinds, focusNodeIds],
+    [baseNodes, highlighted, savedPositions, filterActive, filterLower, filterKinds, focusNodeIds, viewMode],
   );
 
   // 필터 매칭 결과 — 안내 오버레이 + 엣지 dimming 에 사용
@@ -274,7 +346,7 @@ export function MindMapDashboard({ nickname, data, userId }: Props) {
 
   const onNodeClick: NodeMouseHandler = useCallback((_, node) => {
     if (node.id === "center") return;
-    setSelected(node.data as MindMapNodeData);
+    setSelected({ ...(node.data as MindMapNodeData), id: node.id });
   }, []);
 
   // realtime — 새 멘션 알림 시 해당 노드 펄스 강조 + 토스트
@@ -301,16 +373,23 @@ export function MindMapDashboard({ nickname, data, userId }: Props) {
     return () => { void supa.removeChannel(channel); };
   }, [userId]);
 
-  // hover 핸들러 (focusNodeIds/state 는 위에서 이미 선언됨)
+  // hover 핸들러 — washer/topic 은 focus dim, file 은 프리뷰 카드
+  const [hoveredFile, setHoveredFile] = useState<typeof data.files[number] | null>(null);
   const onNodeMouseEnter: NodeMouseHandler = useCallback((_, node) => {
     const kind = (node.data as MindMapNodeData).kind;
-    if (kind === "washer" || kind === "topic") setHoverNodeId(node.id);
+    if (kind === "washer" || kind === "topic" || kind === "file") setHoverNodeId(node.id);
+    if (kind === "file") {
+      const fid = node.id.startsWith("file-") ? node.id.slice("file-".length) : null;
+      const f = fid ? dataRef.current.files.find((x) => x.id === fid) : null;
+      if (f) setHoveredFile(f);
+    }
   }, []);
   const onNodeMouseLeave: NodeMouseHandler = useCallback(() => {
     setHoverNodeId(null);
+    setHoveredFile(null);
   }, []);
 
-  const total = data.nuts.length + data.bolts.length + data.schedule.length + data.issues.length;
+  const total = data.nuts.length + data.bolts.length + data.schedule.length + data.issues.length + data.files.length;
 
   return (
     <div className="border-[3px] border-nu-ink bg-nu-cream/20 shadow-[4px_4px_0_0_#0D0F14] overflow-hidden">
@@ -355,6 +434,27 @@ export function MindMapDashboard({ nickname, data, userId }: Props) {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* 보기 모드 토글 — 방사형(기본) / 타임라인(7일 시간축) */}
+          <div className="inline-flex border-[2px] border-nu-ink" role="group" aria-label="마인드맵 보기 모드">
+            <button
+              type="button"
+              onClick={() => setViewMode("radial")}
+              aria-pressed={viewMode === "radial"}
+              title="방사형 — 모든 노드 펼치기"
+              className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 flex items-center gap-1 ${viewMode === "radial" ? "bg-nu-ink text-nu-cream" : "text-nu-ink hover:bg-nu-cream"}`}
+            >
+              <Network size={11} /> 방사형
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("timeline")}
+              aria-pressed={viewMode === "timeline"}
+              title="타임라인 — 일정만 시간축에 배치"
+              className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 flex items-center gap-1 border-l-[2px] border-nu-ink ${viewMode === "timeline" ? "bg-nu-ink text-nu-cream" : "text-nu-ink hover:bg-nu-cream"}`}
+            >
+              <Clock size={11} /> 타임라인
+            </button>
+          </div>
           <button
             type="button"
             onClick={handleExport}
@@ -370,6 +470,13 @@ export function MindMapDashboard({ nickname, data, userId }: Props) {
               onClick={() => {
                 setSavedPositions({});
                 try { localStorage.removeItem(LAYOUT_KEY); } catch { /* ignore */ }
+                if (cloudHydrated) {
+                  void fetch("/api/dashboard/mindmap-layout", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ layout: {} }),
+                  }).catch(() => undefined);
+                }
               }}
               className="font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 border border-nu-ink/30 hover:bg-nu-cream"
               title="드래그한 노드 위치 초기화"
@@ -479,6 +586,8 @@ export function MindMapDashboard({ nickname, data, userId }: Props) {
             className="!border-[2px] !border-nu-ink !shadow-[2px_2px_0_0_#0D0F14]"
           />
         </ReactFlow>
+        <CursorOverlay userId={userId} nickname={nickname} containerRef={flowRef} />
+        <FileHoverPreview file={hoveredFile} />
       </div>
       <NodeDrawer
         node={selected}
@@ -487,6 +596,17 @@ export function MindMapDashboard({ nickname, data, userId }: Props) {
       />
     </div>
   );
+}
+
+function shortMime(mime: string): string {
+  if (mime.startsWith("image/")) return mime.slice(6).toUpperCase();
+  if (mime.startsWith("video/")) return "비디오";
+  if (mime.startsWith("audio/")) return "오디오";
+  if (mime === "application/pdf") return "PDF";
+  if (mime.includes("spreadsheet") || mime.includes("excel")) return "스프레드시트";
+  if (mime.includes("presentation") || mime.includes("powerpoint")) return "프레젠테이션";
+  if (mime.includes("word") || mime.includes("document")) return "문서";
+  return mime.split("/").pop()?.toUpperCase() || mime;
 }
 
 function buildGraph(
@@ -594,6 +714,23 @@ function buildGraph(
         },
       };
     }),
+    ...data.files.map((f) => ({
+      id: `file-${f.id}`,
+      kind: "file" as const,
+      data: {
+        kind: "file" as const,
+        title: f.name,
+        subtitle: f.fileType ? `📎 ${shortMime(f.fileType)}` : "📎 파일",
+        href: f.projectId ? `/projects/${f.projectId}` : f.url || undefined,
+        meta: {
+          종류: f.fileType || "알 수 없음",
+          저장소: f.storageType || "supabase",
+          크기: f.sizeBytes ? `${Math.round(f.sizeBytes / 1024)} KB` : "-",
+          소속_볼트: f.projectId || "-",
+          URL: f.url || "-",
+        },
+      },
+    })),
   ];
 
   if (all.length === 0) {
@@ -632,8 +769,8 @@ function buildGraph(
       data: entry.data,
     });
 
-    // 중앙→가지 기본 엣지 (washer/topic 은 cross-ref 만으로 연결되도록 생략)
-    if (entry.kind !== "washer" && entry.kind !== "topic") {
+    // 중앙→가지 기본 엣지 — washer/topic/file 은 cross-ref 만으로 연결되도록 생략
+    if (entry.kind !== "washer" && entry.kind !== "topic" && entry.kind !== "file") {
       edges.push({
         id: `e-${entry.id}`,
         source: "center",
@@ -677,6 +814,17 @@ function buildGraph(
           style: { stroke: "#F59E0B", strokeWidth: 1, opacity: 0.5 },
         });
       }
+    }
+  }
+  // 파일 ↔ 볼트 — 점선 stone (소속 표시)
+  for (const f of data.files) {
+    if (f.projectId && data.bolts.some((b) => b.id === f.projectId)) {
+      edges.push({
+        id: `e-cr-file-${f.id}`,
+        source: `bolt-${f.projectId}`,
+        target: `file-${f.id}`,
+        style: { stroke: "#78716C", strokeWidth: 1.2, strokeDasharray: "3 3", opacity: 0.55 },
+      });
     }
   }
   // 너트 ↔ 볼트 (공유 와셔 ≥1) — 굵은 검정 점선 (강한 협업 신호)
@@ -742,6 +890,136 @@ function buildGraph(
         animated: true,
         style: { stroke: entry.data.kind === "ai-role" ? "#EAB308" : "#F97316", strokeWidth: 2 },
       });
+    });
+  }
+
+  return { nodes, edges };
+}
+
+/**
+ * Timeline 모드 — schedule 노드만 7일 시간축에 배치.
+ * x: 시간 (지금=-400, +7일=+400),  y: 인덱스 짝홀 stagger.
+ * center 는 좌측 외부에 두고, 시간 마커 4개 (지금/+2/+5/+7) 를 axis 라벨로 표시.
+ */
+function buildTimelineGraph(
+  nickname: string,
+  data: MindMapData,
+  onAnswer: (r: {
+    text: string;
+    keywords: string[];
+    roles: Array<{ name: string; tags?: string[]; why?: string }>;
+    tasks: string[];
+  }) => void,
+): { nodes: RFNode[]; edges: RFEdge[] } {
+  const nodes: RFNode[] = [];
+  const edges: RFEdge[] = [];
+  const now = Date.now();
+  const timelineHalf = TIMELINE_WIDTH / 2;
+  const xForHours = (h: number) => {
+    const clamped = Math.min(TIMELINE_HOURS, Math.max(0, h));
+    return -timelineHalf + (clamped / TIMELINE_HOURS) * TIMELINE_WIDTH;
+  };
+
+  // center — 좌측 위에 고정 (시간축의 시작점 표지)
+  nodes.push({
+    id: "center",
+    type: "center",
+    position: { x: -timelineHalf - 220, y: -40 },
+    data: {
+      kind: "center",
+      title: `${nickname}님의 7일`,
+      subtitle: "타임라인 — 일정 중심",
+      onAnswer,
+    },
+  });
+
+  // 시간축 마커 — empty kind 카드로 ghost 라벨
+  const markers: Array<{ id: string; label: string; sub: string; hours: number }> = [
+    { id: "t-now",   label: "지금",  sub: "0h",   hours: 0 },
+    { id: "t-d2",    label: "+2일",  sub: "48h",  hours: 48 },
+    { id: "t-d5",    label: "+5일",  sub: "120h", hours: 120 },
+    { id: "t-end",   label: "+7일",  sub: "168h", hours: TIMELINE_HOURS },
+  ];
+  for (const m of markers) {
+    nodes.push({
+      id: m.id,
+      type: "card",
+      position: { x: xForHours(m.hours), y: -180 },
+      data: {
+        kind: "empty",
+        title: m.label,
+        subtitle: m.sub,
+      },
+      draggable: false,
+      selectable: false,
+    });
+  }
+
+  // schedule 정렬 + 배치 — 같은 시간대 stagger
+  const sorted = [...data.schedule].sort((a, b) => a.at.localeCompare(b.at));
+  if (sorted.length === 0) {
+    nodes.push({
+      id: "empty",
+      type: "card",
+      position: { x: 0, y: 0 },
+      data: {
+        kind: "empty",
+        title: "예정된 일정 없음",
+        subtitle: "7일 안에 회의·이벤트가 없어요",
+        href: "/calendar",
+      },
+    });
+    edges.push({
+      id: "e-empty",
+      source: "center",
+      target: "empty",
+      style: { strokeWidth: 2, strokeDasharray: "4 4", opacity: 0.4 },
+    });
+    return { nodes, edges };
+  }
+
+  sorted.forEach((s, idx) => {
+    const dueMs = new Date(s.at).getTime();
+    const hours = (dueMs - now) / (1000 * 60 * 60);
+    const x = xForHours(hours);
+    // 같은 시각 충돌 방지 — 짝/홀 인덱스로 위/아래 stagger
+    const y = (idx % 2 === 0 ? -1 : 1) * 60;
+    const id = `sched-${s.id}`;
+    nodes.push({
+      id,
+      type: "card",
+      position: { x, y },
+      data: {
+        kind: "schedule",
+        title: s.title,
+        subtitle: new Date(s.at).toLocaleString("ko", {
+          month: "short", day: "numeric", weekday: "short",
+          hour: "2-digit", minute: "2-digit", hour12: false,
+        }),
+        href: "/calendar",
+        meta: {
+          시간: new Date(s.at).toLocaleString("ko"),
+          종류: s.source === "meeting" ? "회의" : "이벤트",
+          남은시간: hours < 1 ? "1시간 미만" : `${Math.round(hours)}시간 후`,
+        },
+      },
+    });
+    // 점선 — center → 일정 (시간축 흐름 시각화)
+    edges.push({
+      id: `e-${id}`,
+      source: "center",
+      target: id,
+      style: { stroke: "#10B981", strokeWidth: 1, strokeDasharray: "3 4", opacity: 0.4 },
+    });
+  });
+
+  // 인접 일정 연결선 — 시간 흐름 강조 (동일 y 라인)
+  for (let i = 0; i < sorted.length - 1; i++) {
+    edges.push({
+      id: `e-flow-${i}`,
+      source: `sched-${sorted[i].id}`,
+      target: `sched-${sorted[i + 1].id}`,
+      style: { stroke: "#0D0F14", strokeWidth: 1.5, opacity: 0.6 },
     });
   }
 

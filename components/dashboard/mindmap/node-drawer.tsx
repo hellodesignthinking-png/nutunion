@@ -6,6 +6,10 @@ import { X, ExternalLink, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { MindMapNodeData } from "@/lib/dashboard/mindmap-types";
 import { NODE_COLORS } from "@/lib/dashboard/mindmap-types";
+import { NodeNotes } from "./node-notes";
+
+// 노트가 의미 있는 노드 종류 — center/empty/ai-* 는 ephemeral 이라 제외
+const NOTABLE_KINDS = new Set(["nut", "bolt", "schedule", "issue", "topic", "washer", "file"]);
 
 interface BoltOption { id: string; title: string }
 
@@ -113,6 +117,10 @@ export function NodeDrawer({
             );
           })}
         </div>
+
+        {node.id && NOTABLE_KINDS.has(node.kind) && (
+          <NodeNotes nodeId={node.id} />
+        )}
 
         {node.kind === "ai-task" && bolts.length > 0 && (
           <div className="px-4 py-3 border-t-[2px] border-nu-ink/10 bg-orange-50/40">

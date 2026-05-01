@@ -176,6 +176,27 @@ export async function fetchMindMapData(
     .sort((a, b) => (b.nutIds.length + b.boltIds.length) - (a.nutIds.length + a.boltIds.length))
     .slice(0, 12);
 
+  // ── 파일 — 사용자가 속한 볼트의 최근 첨부 (최대 6개)
+  let files: MindMapData["files"] = [];
+  if (boltIds.length > 0) {
+    const { data: fileRows } = await supabase
+      .from("file_attachments")
+      .select("id, file_name, file_type, file_url, target_id, storage_type, file_size")
+      .eq("target_type", "project")
+      .in("target_id", boltIds)
+      .order("created_at", { ascending: false })
+      .limit(6);
+    files = (fileRows ?? []).map((f: any) => ({
+      id: f.id as string,
+      name: f.file_name as string,
+      fileType: f.file_type as string | null,
+      url: f.file_url as string | null,
+      projectId: f.target_id as string | null,
+      storageType: f.storage_type as MindMapData["files"][number]["storageType"],
+      sizeBytes: f.file_size as number | null,
+    }));
+  }
+
   // ── 탭(wiki_topics) — 사용자 너트들의 토픽 (최대 8개)
   let topics: MindMapData["topics"] = [];
   if (nutIds.length > 0) {
@@ -192,5 +213,5 @@ export async function fetchMindMapData(
     }));
   }
 
-  return { nuts, bolts, schedule, issues, washers, topics };
+  return { nuts, bolts, schedule, issues, washers, topics, files };
 }

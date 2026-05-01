@@ -103,6 +103,10 @@ export default function HomeScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>빠른 실행</Text>
           <QuickAction
+            label="🌐 마인드맵 (생태계 미러)"
+            onPress={() => router.push("/mindmap" as never)}
+          />
+          <QuickAction
             label="📝 새 노트"
             onPress={() => router.push("/notes" as never)}
           />

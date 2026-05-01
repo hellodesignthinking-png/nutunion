@@ -73,7 +73,7 @@ export default async function DashboardPage() {
 
   // 마인드맵 데이터 — 뷰 전환 시 클라이언트에서 사용
   const mindmapData = await fetchMindMapData(supabase, user.id).catch(() => ({
-    nuts: [], bolts: [], schedule: [], issues: [], washers: [], topics: [],
+    nuts: [], bolts: [], schedule: [], issues: [], washers: [], topics: [], files: [],
   }));
 
   const nickname = profile?.nickname?.trim() || user?.email?.split("@")[0] || "사용자";
