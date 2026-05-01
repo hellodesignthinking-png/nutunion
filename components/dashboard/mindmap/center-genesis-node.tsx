@@ -46,6 +46,8 @@ export function CenterGenesisNode({ data }: { data: CenterNodeData }) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 45_000);
 
+    // 디버깅: 사용자 측 정확한 진단을 위해 콘솔에 자세히 — preload 경고와 섞이지 않게 prefix.
+    console.info("[Genesis] 요청 시작:", trimmed);
     try {
       const res = await fetch("/api/genesis/plan", {
         method: "POST",
@@ -57,17 +59,23 @@ export function CenterGenesisNode({ data }: { data: CenterNodeData }) {
         signal: controller.signal,
       });
       const text = await res.text();
+      console.info(`[Genesis] HTTP ${res.status} body length=${text.length}`);
       let json: Record<string, unknown> | null = null;
-      try { json = text ? JSON.parse(text) : null; } catch { /* HTML 에러 페이지일 수도 */ }
+      try { json = text ? JSON.parse(text) : null; } catch {
+        console.error("[Genesis] JSON 파싱 실패. 응답 본문:", text.slice(0, 500));
+      }
 
       if (!res.ok) {
         const apiErr = (json?.error as string | undefined)
           || (json?.code as string | undefined)
           || `HTTP ${res.status}`;
+        const detail = (json?.detail as string | undefined) || "";
+        console.error(`[Genesis] 서버 거부 ${res.status}:`, apiErr, detail || json);
         // 사용자가 줌 아웃되어 노드 안 에러가 안 보일 때를 대비해 toast 도 함께
-        toast.error(`Genesis 답변 실패: ${apiErr}`, { duration: 6000 });
-        throw new Error(apiErr);
+        toast.error(`Genesis 실패 (${res.status}): ${apiErr}${detail ? ` — ${detail}` : ""}`, { duration: 8000 });
+        throw new Error(`${res.status} ${apiErr}`);
       }
+      console.info("[Genesis] 응답 성공", { keys: json ? Object.keys(json) : [] });
 
       const plan = (json?.plan ?? {}) as Record<string, unknown>;
       const summary: string = (plan.summary as string) || (plan.title as string) || "응답 생성됨";
@@ -99,10 +107,11 @@ export function CenterGenesisNode({ data }: { data: CenterNodeData }) {
       const msg = err instanceof Error
         ? (err.name === "AbortError" ? "AI 응답 45초 초과 — 다시 시도해주세요" : err.message)
         : "알 수 없는 오류";
+      console.error("[Genesis] 예외:", err);
       setError(msg);
       // 노드 안 에러 박스 + toast 둘 다 — 어느 줌 레벨에서도 보이게
-      if (!msg.includes("Genesis 답변 실패")) {
-        toast.error(msg, { duration: 6000 });
+      if (!msg.startsWith("Genesis 실패")) {
+        toast.error(msg, { duration: 8000 });
       }
     } finally {
       clearTimeout(timeoutId);
