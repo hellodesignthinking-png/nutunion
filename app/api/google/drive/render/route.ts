@@ -1,5 +1,6 @@
 import { google } from "googleapis";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 
@@ -7,7 +8,7 @@ import { asGoogleErr } from "@/lib/google/error-helpers";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("google.drive.render", async (req: NextRequest) => {
   const userId = await getCurrentUserId();
   if (!userId) {
     return new NextResponse("Unauthorized. Please log in.", { status: 401 });
@@ -47,4 +48,4 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

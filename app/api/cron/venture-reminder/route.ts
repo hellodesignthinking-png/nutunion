@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { dispatchPushToUsers } from "@/lib/push/dispatch";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ export const maxDuration = 60;
  */
 const REMINDER_NOTE_PREFIX = "[auto-reminder]";
 
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("cron.venture-reminder", async (req: NextRequest) => {
   const auth = req.headers.get("authorization");
   if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -182,4 +183,4 @@ export async function GET(req: NextRequest) {
     errors,
     results: results.slice(0, 50),
   });
-}
+});

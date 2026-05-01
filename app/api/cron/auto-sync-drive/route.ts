@@ -27,6 +27,7 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getR2Client, isR2Configured } from "@/lib/storage/r2";
 import { getGoogleClient } from "@/lib/google/auth";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { tryAcquireLease, releaseLease } from "@/lib/locks/lease";
 
 // 잡 단위 lock 식별자 — 어떤 사용자도 아닌 cron 자신을 식별. lease 행의 acquired_by 컬럼이
@@ -56,7 +57,7 @@ const EXPORT_TARGET: Record<string, { mime: string; ext: string }> = {
   },
 };
 
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("cron.auto-sync-drive", async (req: NextRequest) => {
   const auth = req.headers.get("authorization");
   const expected = process.env.CRON_SECRET;
   if (!expected) {
@@ -243,4 +244,4 @@ export async function GET(req: NextRequest) {
   } finally {
     await releaseLease(supabase, jobLockKey, CRON_OWNER_UUID);
   }
-}
+});

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { calculatePayroll } from "@/lib/finance/payroll-calc";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
@@ -11,7 +12,7 @@ import { PayrollUpsertSchema, formatZodError } from "@/lib/finance/validators";
  * Body: { employee_id, year_month, overtime_hours?, bonus_pay?, annual_leave_pay?, other_pay?, memo? }
  * 직원 정보를 바탕으로 계산하여 upsert
  */
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("finance.payroll", async (req: NextRequest) => {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -113,4 +114,4 @@ export async function POST(req: NextRequest) {
     console.error("[Payroll POST]", err);
     return NextResponse.json({ error: "서버 오류" }, { status: 500 });
   }
-}
+});

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
@@ -24,7 +25,7 @@ async function checkPermission() {
  * POST /api/finance/contracts/[employeeId]
  * action: "send" | "sign" | "cancel"
  */
-export async function POST(req: NextRequest, context: { params: Promise<{ employeeId: string }> }) {
+export const POST = withRouteLog("finance.contracts.employeeId", async (req: NextRequest, context: { params: Promise<{ employeeId: string }> }) => {
   const { employeeId } = await context.params;
   const check = await checkPermission();
   if (!check.ok) return NextResponse.json({ error: check.message }, { status: check.status });
@@ -171,4 +172,4 @@ export async function POST(req: NextRequest, context: { params: Promise<{ employ
   }
 
   return NextResponse.json({ error: "지원하지 않는 action입니다" }, { status: 400 });
-}
+});

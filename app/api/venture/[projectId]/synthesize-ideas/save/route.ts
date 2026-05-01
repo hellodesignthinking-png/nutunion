@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { aiError } from "@/lib/ai/error";
@@ -25,7 +26,7 @@ const BodySchema = z.object({
   ).min(1).max(10),
 });
 
-export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) {
+export const POST = withRouteLog("venture.projectId.synthesize-ideas.save", async (req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) => {
   const { projectId } = await ctx.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -86,4 +87,4 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId:
   }
 
   return NextResponse.json({ success: true, inserted: data?.length ?? 0, ids: data?.map((r) => r.id) ?? [] });
-}
+});

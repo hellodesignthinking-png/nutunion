@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { dispatchEvent } from "@/lib/automation/engine";
@@ -22,7 +23,7 @@ function getAdminClient() {
   return createAdminClient(url, key, { auth: { persistSession: false } });
 }
 
-export async function PATCH(req: NextRequest, { params }: Ctx) {
+export const PATCH = withRouteLog("groups.id.members.memberId", async (req: NextRequest, { params }: Ctx) => {
   const { id: groupId, memberId: applicantId } = await params;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -95,4 +96,4 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   }
 
   return NextResponse.json({ ok: true, action });
-}
+});

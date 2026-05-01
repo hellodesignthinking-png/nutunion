@@ -15,6 +15,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { google } from "googleapis";
@@ -24,7 +25,7 @@ export const maxDuration = 30;
 
 type PickFile = { id: string; name: string; mimeType: string; url: string };
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("google.drive.pick-register", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -138,4 +139,4 @@ export async function POST(req: NextRequest) {
     errors,
     total: files.length,
   });
-}
+});

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { compileTsxToHtml } from "@/lib/threads/sandbox-compile";
 
@@ -44,7 +45,7 @@ export function getPreview(token: string): string | null {
   return entry.html;
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("threads.sandbox-preview", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -73,4 +74,4 @@ export async function POST(req: NextRequest) {
     token,
     url: `/api/threads/sandbox-preview/serve?token=${encodeURIComponent(token)}`,
   });
-}
+});

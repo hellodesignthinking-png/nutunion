@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -10,7 +11,7 @@ export const maxDuration = 60;
  * Vercel Cron (매일 00:05 UTC = 09:05 KST) 에서 호출.
  * pg_cron 이 이미 활성이면 중복 upsert 되지만 on conflict 처리로 안전.
  */
-export async function GET(req: Request) {
+export const GET = withRouteLog("cron.daily-metrics", async (req: Request) => {
   const auth = req.headers.get("authorization") || "";
   if (process.env.CRON_SECRET && auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -40,4 +41,4 @@ export async function GET(req: Request) {
     log.error(err, "cron.daily_metrics.failed", { target_date: targetDate });
     return NextResponse.json({ error: err.message || "unknown", targetDate }, { status: 500 });
   }
-}
+});

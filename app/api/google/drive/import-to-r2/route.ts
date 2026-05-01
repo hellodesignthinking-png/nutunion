@@ -13,12 +13,13 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { getR2Client, isR2Configured, getPublicUrl } from "@/lib/storage/r2";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 const MAX_SIZE = 100 * 1024 * 1024; // 100 MB
 
 const ALLOWED_PREFIXES = new Set(["chat", "resources", "avatars", "uploads"]);
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("google.drive.import-to-r2", async (req: NextRequest) => {
   const span = log.span("drive.import_to_r2");
   const userId = await getCurrentUserId();
   if (!userId) {
@@ -204,4 +205,4 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

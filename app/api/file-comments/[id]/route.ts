@@ -6,13 +6,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const dynamic = "force-dynamic";
 
-export async function DELETE(
+export const DELETE = withRouteLog("file-comments.id", async (
   _req: NextRequest,
   ctx: { params: Promise<{ id: string }> },
-) {
+) => {
   const { id } = await ctx.params;
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
@@ -31,4 +32,4 @@ export async function DELETE(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return NextResponse.json({ ok: true });
-}
+});

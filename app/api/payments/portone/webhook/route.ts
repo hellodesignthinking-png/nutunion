@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -15,7 +16,7 @@ import { createClient } from "@/lib/supabase/server";
  * Payload (V1):
  *   { imp_uid: string, merchant_uid: string, status: 'paid'|'ready'|'failed'|'cancelled' }
  */
-export async function POST(req: Request) {
+export const POST = withRouteLog("payments.portone.webhook", async (req: Request) => {
   const raw = await req.text();
   let payload: any;
   try { payload = JSON.parse(raw); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
@@ -119,4 +120,4 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ ok: true, status: normalizedStatus });
-}
+});

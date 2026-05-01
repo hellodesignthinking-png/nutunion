@@ -1,5 +1,6 @@
 import { google } from "googleapis";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -12,7 +13,7 @@ import { getSharedFolderId, getDriveOwnerUserId } from "@/lib/google/drive-confi
  * Creates a Google Doc with meeting notes content and archives it to Drive.
  * Optionally registers the doc in group file_attachments or project_resources.
  */
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("google.docs.create", async (req: NextRequest) => {
   const userId = await getCurrentUserId();
   if (!userId) {
     return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
@@ -210,4 +211,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

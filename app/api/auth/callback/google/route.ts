@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createOAuth2Client } from "@/lib/google/auth";
 import { createClient } from "@/lib/supabase/server";
 
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("auth.callback.google", async (req: NextRequest) => {
   const code = req.nextUrl.searchParams.get("code");
   const error = req.nextUrl.searchParams.get("error");
   const state = req.nextUrl.searchParams.get("state");
@@ -77,4 +78,4 @@ export async function GET(req: NextRequest) {
       new URL(`${returnTo}${separator}google=error&reason=token_exchange`, req.nextUrl.origin)
     );
   }
-}
+});

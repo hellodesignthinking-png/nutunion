@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { generateText } from "ai";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
@@ -40,7 +41,7 @@ const CONTENT_TEMPLATES: Record<string, { label: string; systemPrefix: string; i
   },
 };
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("finance.marketing", async (req: NextRequest) => {
   try {
     // 권한 체크
     const supabase = await createClient();
@@ -190,4 +191,4 @@ ${template.instructionFormat}`;
       : "AI 콘텐츠 생성에 실패했습니다. 잠시 후 다시 시도해주세요.";
     return NextResponse.json({ error: userMessage }, { status: 500 });
   }
-}
+});

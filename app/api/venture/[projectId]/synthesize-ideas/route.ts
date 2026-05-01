@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { aiError } from "@/lib/ai/error";
@@ -50,10 +51,10 @@ const BodySchema = z.object({
   problem_ids: z.array(z.string().uuid()).min(1).max(5).optional(),
 });
 
-export async function POST(
+export const POST = withRouteLog("venture.projectId.synthesize-ideas", async (
   req: NextRequest,
   ctx: { params: Promise<{ projectId: string }> }
-) {
+) => {
   if (!GEMINI_API_KEY) return aiError("server_error", "venture/synthesize-ideas", { internal: "GEMINI_API_KEY missing" });
 
   const { projectId } = await ctx.params;
@@ -189,4 +190,4 @@ export async function POST(
     log.error(err, "venture.projectId.synthesize-ideas.failed");
     return aiError("server_error", "venture/synthesize-ideas", { internal: err });
   }
-}
+});

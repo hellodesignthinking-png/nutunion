@@ -4,12 +4,13 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { saveIntegration } from "@/lib/integrations/tokens";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("integrations.github.callback", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.redirect(new URL("/login", req.url));
@@ -64,4 +65,4 @@ export async function GET(req: NextRequest) {
     console.error("[github callback]", e);
     return NextResponse.redirect(new URL(`/settings/integrations?error=exception`, req.url));
   }
-}
+});

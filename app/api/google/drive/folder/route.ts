@@ -12,11 +12,12 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { getCurrentUserId } from "@/lib/google/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getSharedFolderId } from "@/lib/google/drive-config";
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("google.drive.folder", async (req: NextRequest) => {
   const userId = await getCurrentUserId();
   if (!userId) {
     return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
@@ -110,4 +111,4 @@ export async function POST(req: NextRequest) {
     console.error("Drive folder (shared) update error:", err);
     return NextResponse.json({ error: "폴더 URL 저장 실패" }, { status: 500 });
   }
-}
+});

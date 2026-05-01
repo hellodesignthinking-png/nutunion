@@ -13,6 +13,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
@@ -34,7 +35,7 @@ const ALLOWED_TYPES = [
   "image/gif",
 ];
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("profile.avatar", async (req: NextRequest) => {
   const supabase = await createServerClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -93,4 +94,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ url: publicUrl, storage: "supabase" });
-}
+});

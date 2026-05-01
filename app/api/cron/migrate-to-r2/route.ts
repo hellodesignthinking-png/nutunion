@@ -13,6 +13,7 @@
 
 import { NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@supabase/supabase-js";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getR2Client, getPublicUrl, isR2Configured, r2Key } from "@/lib/storage/r2";
@@ -53,7 +54,7 @@ const TARGETS: Target[] = [
   },
 ];
 
-export async function GET(req: Request) {
+export const GET = withRouteLog("cron.migrate-to-r2", async (req: Request) => {
   const auth = req.headers.get("authorization") || "";
   if (process.env.CRON_SECRET && auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -151,4 +152,4 @@ export async function GET(req: Request) {
     cleanup: CLEANUP,
     report,
   });
-}
+});

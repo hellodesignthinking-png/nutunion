@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { z } from "zod";
 import { google } from "googleapis";
 import { createClient } from "@/lib/supabase/server";
@@ -32,7 +33,7 @@ function kindFromMime(mime: string): "drive_doc" | "pdf" | "link" {
  * 선택된 Drive 파일들을 venture_sources 로 일괄 import.
  * Google Docs 인 경우 본문을 pull 해서 content_text 에 저장 (최대 10KB, 향후 AI 요약 용도).
  */
-export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) {
+export const POST = withRouteLog("venture.projectId.sources.import-drive", async (req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) => {
   const { projectId } = await ctx.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -119,4 +120,4 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId:
     imported: data?.length ?? 0,
     sources: data ?? [],
   });
-}
+});

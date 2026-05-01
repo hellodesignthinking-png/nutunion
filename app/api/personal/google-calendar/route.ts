@@ -1,5 +1,6 @@
 import { google } from "googleapis";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { asGoogleErr } from "@/lib/google/error-helpers";
@@ -15,7 +16,7 @@ const TTL_MS = 5 * 60 * 1000;
  * GET /api/personal/google-calendar?since=ISO&until=ISO
  * Returns normalized events for unified calendar
  */
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("personal.google-calendar", async (req: NextRequest) => {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -74,4 +75,4 @@ export async function GET(req: NextRequest) {
     console.error("[personal/google-calendar] error:", err);
     return NextResponse.json({ events: [], error: "google_calendar_error" }, { status: 200 });
   }
-}
+});

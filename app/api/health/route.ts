@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
  * 업타임 모니터 (UptimeRobot, BetterUptime 등) 에서 주기 호출.
  * 민감 정보 비노출.
  */
-export async function GET() {
+export const GET = withRouteLog("health", async () => {
   const startedAt = Date.now();
   const checks: Record<string, { ok: boolean; duration_ms?: number; error?: string }> = {};
 
@@ -58,4 +59,4 @@ export async function GET() {
       },
     }
   );
-}
+});

@@ -5,6 +5,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { generateObjectForUser } from "@/lib/ai/vault";
 import { aiError } from "@/lib/ai/error";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const maxDuration = 60;
 
@@ -86,7 +87,7 @@ const SYSTEM_PROMPT = `당신은 NutUnion 너트의 **주간 지식 다이제스
 - 이전 다이제스트가 있다면 그 맥락을 이어서 작성
 - digest는 모든 참석자가 5초 안에 맥락을 파악할 수 있도록 간결하게`;
 
-export async function POST(request: NextRequest) {
+export const POST = withRouteLog("ai.weekly-digest", async (request: NextRequest) => {
   try {
     const body = await request.json();
     const { groupId, periodStart, periodEnd, previousDigest } = body;
@@ -279,4 +280,4 @@ export async function POST(request: NextRequest) {
     log.error(error, "ai.weekly_digest.failed");
     return aiError("server_error", "ai/weekly-digest", { internal: error });
   }
-}
+});

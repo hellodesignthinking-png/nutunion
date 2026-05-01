@@ -1,5 +1,6 @@
 import { google } from "googleapis";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -22,7 +23,7 @@ const ALLOWED_TYPES = [
   "audio/wav", "audio/webm", "audio/ogg", "audio/flac",
 ];
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("google.drive.upload", async (req: NextRequest) => {
   const userId = await getCurrentUserId();
   if (!userId) {
     return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
@@ -316,4 +317,4 @@ export async function POST(req: NextRequest) {
     console.error("Drive upload error:", error);
     return NextResponse.json({ error: "파일 업로드 실패: " + error.message }, { status: 500 });
   }
-}
+});

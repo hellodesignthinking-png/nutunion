@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit } from "@/lib/rate-limit";
@@ -17,7 +18,7 @@ const BodySchema = z.object({
  * 현재 단계에서 이전 단계로 되돌림. venture_stage_history 에 is_revert=true 로 기록.
  * 호스트 / admin / staff 만 가능.
  */
-export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) {
+export const POST = withRouteLog("venture.projectId.revert", async (req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) => {
   const { projectId } = await ctx.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -81,4 +82,4 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId:
   }
 
   return NextResponse.json({ success: true, from: currentStage, to: parsed.data.to_stage });
-}
+});

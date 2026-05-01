@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -10,7 +11,7 @@ import { createClient } from "@/lib/supabase/server";
  * 이 라우트는 웹훅과 중복 호출되므로 상태 조회만 하고 UI 로 리다이렉트.
  * 실제 확정은 /api/payments/portone/webhook 에서 처리.
  */
-export async function GET(req: Request) {
+export const GET = withRouteLog("payments.portone.callback", async (req: Request) => {
   const url = new URL(req.url);
   const imp_uid = url.searchParams.get("imp_uid");
   const merchant_uid = url.searchParams.get("merchant_uid");
@@ -41,4 +42,4 @@ export async function GET(req: Request) {
   }
 
   return NextResponse.redirect(redirect);
-}
+});

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 // POST /api/threads/builder/save
@@ -43,7 +44,7 @@ function slugify(name: string): string {
   return `${base || "thread"}-${rand}`.slice(0, 60);
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("threads.builder.save", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -220,4 +221,4 @@ export async function POST(req: NextRequest) {
     thread_id: threadRow.id,
     project_id: projectId,
   });
-}
+});

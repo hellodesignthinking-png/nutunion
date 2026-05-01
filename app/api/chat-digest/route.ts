@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
@@ -35,7 +36,7 @@ const RequestSchema = z.object({
  * POST /api/chat-digest
  * 대화 로그를 AI 로 회의록 형태로 요약해 저장.
  */
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("chat-digest", async (req: NextRequest) => {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -179,4 +180,4 @@ export async function POST(req: NextRequest) {
     console.error("[chat-digest]", err);
     return NextResponse.json({ error: "서버 오류" }, { status: 500 });
   }
-}
+});

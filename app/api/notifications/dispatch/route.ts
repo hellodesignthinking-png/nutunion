@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { dispatchNotification } from "@/lib/notifications/dispatch";
 
@@ -22,7 +23,7 @@ export const dynamic = "force-dynamic";
  *    channels?: ("inapp"|"email"|"kakao"|"push")[],
  *  }
  */
-export async function POST(req: Request) {
+export const POST = withRouteLog("notifications.dispatch", async (req: Request) => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) {
@@ -81,4 +82,4 @@ export async function POST(req: Request) {
     console.error("[notifications.dispatch POST]", e);
     return NextResponse.json({ error: e?.message || "dispatch_failed" }, { status: 500 });
   }
-}
+});

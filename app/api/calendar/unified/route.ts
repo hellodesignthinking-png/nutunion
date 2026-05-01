@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { getGoogleClient } from "@/lib/google/auth";
 import { google } from "googleapis";
@@ -20,7 +21,7 @@ export interface UnifiedEvent {
   attendees?: { email: string; responseStatus: string }[];
 }
 
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("calendar.unified", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -272,4 +273,4 @@ export async function GET(req: NextRequest) {
     googleConnected,
     totalEvents: allEvents.length,
   });
-}
+});

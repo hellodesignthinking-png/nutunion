@@ -25,6 +25,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { generatePresignedPutUrl, getPublicUrl, isR2Configured, r2Key } from "@/lib/storage/r2";
 
@@ -33,7 +34,7 @@ export const dynamic = "force-dynamic";
 const ALLOWED_PREFIXES = new Set(["chat", "avatars", "resources", "taps", "uploads"]);
 const MAX_SIZE_BYTES = 200 * 1024 * 1024;
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("storage.r2.presign", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -126,4 +127,4 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

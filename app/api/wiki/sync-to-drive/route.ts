@@ -3,6 +3,7 @@
 // user's personal Drive (explicit button click only — never auto-called).
 import { google } from "googleapis";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -16,7 +17,7 @@ import { getSharedFolderId, getDriveOwnerUserId } from "@/lib/google/drive-confi
  *
  * [Phase 3b] Opt-in manual export only. Do not call automatically.
  */
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("wiki.sync-to-drive", async (req: NextRequest) => {
   const userId = await getCurrentUserId();
   if (!userId) {
     return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
@@ -208,4 +209,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

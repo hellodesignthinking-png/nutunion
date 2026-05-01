@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
@@ -75,7 +76,7 @@ function buildFeedbackPrompt(fb: { score: number | null; note: string; tester_na
   ].join("\n");
 }
 
-export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) {
+export const POST = withRouteLog("venture.projectId.summarize", async (req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) => {
   const { projectId } = await ctx.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -151,4 +152,4 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId:
   });
 
   return NextResponse.json({ success: true, kind, summary: object });
-}
+});

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
 import { EmployeeCreateSchema, formatZodError } from "@/lib/finance/validators";
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("finance.employees", async (req: NextRequest) => {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -90,4 +91,4 @@ export async function POST(req: NextRequest) {
     console.error("[Employees POST]", err);
     return NextResponse.json({ error: "서버 오류" }, { status: 500 });
   }
-}
+});

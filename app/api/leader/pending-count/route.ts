@@ -11,6 +11,7 @@
 
 import { NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
@@ -23,7 +24,7 @@ function getAdmin() {
   return createAdminClient(url, key, { auth: { persistSession: false } });
 }
 
-export async function GET() {
+export const GET = withRouteLog("leader.pending-count", async () => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) {
@@ -92,4 +93,4 @@ export async function GET() {
     project_applications,
     settlements,
   });
-}
+});

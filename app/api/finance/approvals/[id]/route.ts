@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
@@ -9,7 +10,7 @@ import { ApprovalActionSchema, formatZodError } from "@/lib/finance/validators";
  * POST /api/finance/approvals/[id]
  * action: approve | reject | cancel
  */
-export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+export const POST = withRouteLog("finance.approvals.id", async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   try {
     const { id } = await context.params;
     const supabase = await createClient();
@@ -113,4 +114,4 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     console.error("[Approvals action]", err);
     return NextResponse.json({ error: "서버 오류" }, { status: 500 });
   }
-}
+});

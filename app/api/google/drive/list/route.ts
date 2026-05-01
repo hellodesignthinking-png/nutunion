@@ -6,8 +6,9 @@ import { google } from "googleapis";
 import { NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
-export async function GET() {
+export const GET = withRouteLog("google.drive.list", async () => {
   const span = log.span("drive.list");
   const userId = await getCurrentUserId();
   if (!userId) {
@@ -58,4 +59,4 @@ export async function GET() {
     log.error(err, "drive.list.failed", { userId });
     return NextResponse.json({ error: "Drive 목록 조회 실패: " + msg }, { status: 500 });
   }
-}
+});

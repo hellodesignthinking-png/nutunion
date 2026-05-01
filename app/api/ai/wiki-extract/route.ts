@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { generateObjectForUser } from "@/lib/ai/vault";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const maxDuration = 60;
 
@@ -42,7 +43,7 @@ const SYSTEM_PROMPT = `당신은 NutUnion 플랫폼의 AI 지식 추출 어시�
 - suggestedTags는 이 미팅 내용과 관련된 분류 태그
 - 내용이 부족하면 있는 만큼만 정리`;
 
-export async function POST(request: NextRequest) {
+export const POST = withRouteLog("ai.wiki-extract", async (request: NextRequest) => {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -85,4 +86,4 @@ export async function POST(request: NextRequest) {
     const msg = error instanceof Error ? error.message : "탭 추출 중 오류가 발생했습니다";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
-}
+});

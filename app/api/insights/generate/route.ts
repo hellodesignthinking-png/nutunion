@@ -11,12 +11,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { runInsights } from "@/app/api/cron/insights-weekly/route";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("insights.generate", async (req: NextRequest) => {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -36,4 +37,4 @@ export async function POST(req: NextRequest) {
     log.error(e, "insights.generate.failed", {});
     return NextResponse.json({ ok: false, error: e?.message }, { status: 500 });
   }
-}
+});

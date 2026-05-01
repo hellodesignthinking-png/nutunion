@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { aiError } from "@/lib/ai/error";
@@ -59,7 +60,7 @@ const BodySchema = z.object({
   question: z.string().min(1).max(2000),
 });
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("dashboard.ask", async (req: NextRequest) => {
   if (!GEMINI_API_KEY) return aiError("server_error", "dashboard/ask", { internal: "GEMINI_API_KEY missing" });
 
   const supabase = await createClient();
@@ -223,4 +224,4 @@ export async function POST(req: NextRequest) {
     log.error(err, "dashboard.ask.failed");
     return aiError("server_error", "dashboard/ask", { internal: err });
   }
-}
+});

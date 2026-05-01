@@ -1,9 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("admin.update-user", async (req: NextRequest) => {
   try {
     // ── 1. 세션 인증 ────────────────────────────────────────────────
     const supabase = await createClient();
@@ -103,4 +104,4 @@ export async function POST(req: NextRequest) {
     log.error(e, "admin.update-user.failed");
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
-}
+});

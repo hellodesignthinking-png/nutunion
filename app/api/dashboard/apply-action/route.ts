@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
@@ -26,7 +27,7 @@ const BodySchema = z.object({ actions: z.array(ActionSchema).min(1).max(10) });
  * - event + nut  → events
  * - event + bolt → project_meetings 또는 project_tasks 로 저장
  */
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("dashboard.apply-action", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -114,4 +115,4 @@ export async function POST(req: NextRequest) {
 
   const successCount = results.filter((r) => r.success).length;
   return NextResponse.json({ success: successCount > 0, applied: successCount, results });
-}
+});

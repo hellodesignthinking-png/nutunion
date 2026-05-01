@@ -14,10 +14,11 @@ import { CopyObjectCommand } from "@aws-sdk/client-s3";
 import { createClient } from "@/lib/supabase/server";
 import { getR2Client, isR2Configured } from "@/lib/storage/r2";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("files.versions.restore", async (req: NextRequest) => {
   const span = log.span("files.versions.restore");
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -149,4 +150,4 @@ export async function POST(req: NextRequest) {
     span.end({ status: 500 });
     return NextResponse.json({ error: e.message || "복원 실패" }, { status: 500 });
   }
-}
+});

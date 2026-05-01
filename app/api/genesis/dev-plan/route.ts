@@ -10,6 +10,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { generateObjectForUser, generateTextForUser } from "@/lib/ai/vault";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { DevPlanSchema, type DevPlan } from "@/lib/genesis/dev-plan-schema";
 
 export const maxDuration = 90;
@@ -55,7 +56,7 @@ function aggregateSkills(talents: any[] | null | undefined): Array<{ skill: stri
     .map(([skill, count]) => ({ skill, count }));
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withRouteLog("genesis.dev-plan", async (request: NextRequest) => {
   try {
     const supabase = await createClient();
     const {
@@ -239,4 +240,4 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

@@ -1,11 +1,12 @@
 import { google } from "googleapis";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 
 import { asGoogleErr } from "@/lib/google/error-helpers";
 
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("google.docs", async (req: NextRequest) => {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -63,4 +64,4 @@ export async function GET(req: NextRequest) {
     console.error("Docs API error:", err);
     return NextResponse.json({ error: "Docs API 오류" }, { status: 500 });
   }
-}
+});

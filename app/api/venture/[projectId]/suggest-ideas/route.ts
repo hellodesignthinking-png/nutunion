@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
@@ -42,7 +43,7 @@ const SYSTEM = `당신은 디자인 씽킹 퍼실리테이터입니다.
  * 현재까지 수집된 insights + selected problem 기반으로 AI 가 아이디어 3~6개 제안.
  * 제안된 아이디어는 DB 에 저장하지 않고 그대로 반환 — 사용자가 마음에 드는 것만 수동으로 추가.
  */
-export async function POST(_req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) {
+export const POST = withRouteLog("venture.projectId.suggest-ideas", async (_req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) => {
   const { projectId } = await ctx.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -117,4 +118,4 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ projectId
   });
 
   return NextResponse.json({ success: true, suggestions: object.ideas });
-}
+});

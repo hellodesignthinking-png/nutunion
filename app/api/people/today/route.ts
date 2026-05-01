@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
  * GET /api/people/today
  * 오늘의 생일/기념일, D-1~D-3, 오랜만인 인연을 반환.
  */
-export async function GET(_req: NextRequest) {
+export const GET = withRouteLog("people.today", async (_req: NextRequest) => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -103,4 +104,4 @@ export async function GET(_req: NextRequest) {
   }, {
     headers: { "Cache-Control": "private, max-age=120, must-revalidate" },
   });
-}
+});

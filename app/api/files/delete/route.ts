@@ -19,6 +19,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { google } from "googleapis";
 import { createClient } from "@/lib/supabase/server";
 import { deleteObject as deleteR2Object, isR2Configured } from "@/lib/storage/r2";
@@ -28,7 +29,7 @@ export const dynamic = "force-dynamic";
 
 type Table = "file_attachments" | "project_resources";
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("files.delete", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -184,4 +185,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true, storage_warnings: storageWarnings });
-}
+});

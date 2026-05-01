@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { generateTextForUser } from "@/lib/ai/vault";
@@ -9,7 +10,7 @@ export const maxDuration = 60;
 
 // POST: Generate AI summary for a single resource — model.ts/vault 통해 자동 fallback
 // (Gateway > 직접 Gemini > OpenAI > Anthropic), 유저 AI 환경설정 존중.
-export async function POST(request: NextRequest) {
+export const POST = withRouteLog("ai.resource-summary", async (request: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "로그인 필요" }, { status: 401 });
@@ -97,4 +98,4 @@ ${resource.description ? `설명: ${resource.description}` : ""}
     log.error(e, "ai.resource-summary.failed");
     return aiError("server_error", "ai/resource-summary", { internal: e });
   }
-}
+});

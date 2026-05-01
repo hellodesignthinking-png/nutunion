@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { aiError } from "@/lib/ai/error";
 import { rateLimit } from "@/lib/rate-limit";
@@ -32,10 +33,10 @@ const SYSTEM_PROMPT = `당신은 창업 기획자가 수집한 원천 자료를 
 - 근거 없는 추정 금지 — 자료에 명시된 내용만 기반
 - quotes 는 원본 문장 그대로 (왜곡 금지)`;
 
-export async function POST(
+export const POST = withRouteLog("venture.projectId.sources.sourceId.summarize", async (
   _req: NextRequest,
   ctx: { params: Promise<{ projectId: string; sourceId: string }> }
-) {
+) => {
   if (!GEMINI_API_KEY) return aiError("server_error", "venture/sources/summarize", { internal: "GEMINI_API_KEY missing" });
 
   const { projectId, sourceId } = await ctx.params;
@@ -140,4 +141,4 @@ export async function POST(
     }).eq("id", sourceId);
     return aiError("server_error", "venture/sources/summarize", { internal: err });
   }
-}
+});

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { generateObject } from "ai";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
@@ -17,7 +18,7 @@ const MODEL_LABEL = NU_AI_MODEL_LABEL;
  * 현재까지 수집된 5단계 데이터를 AI 가 종합해 사업계획서 초안 생성.
  * 새 버전을 저장하고 기존 is_current 는 false 처리.
  */
-export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) {
+export const POST = withRouteLog("venture.projectId.plan", async (req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) => {
   const { projectId } = await ctx.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -122,4 +123,4 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId:
   });
 
   return NextResponse.json({ success: true, plan: inserted });
-}
+});

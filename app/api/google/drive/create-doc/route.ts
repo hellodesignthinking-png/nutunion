@@ -12,6 +12,7 @@ import { google } from "googleapis";
 import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { getSharedFolderId, getDriveOwnerUserId } from "@/lib/google/drive-config";
 
@@ -39,7 +40,7 @@ const TYPE_TO_MIME: Record<string, string> = {
   drawing: "application/vnd.google-apps.drawing",
 };
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("google.drive.create-doc", async (req: NextRequest) => {
   const userId = await getCurrentUserId();
   if (!userId) {
     return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
@@ -161,4 +162,4 @@ export async function POST(req: NextRequest) {
     log.error(e, "drive.create_doc.failed", { user_id: userId, type });
     return NextResponse.json({ error: e.message || "Drive 생성 실패" }, { status: 500 });
   }
-}
+});

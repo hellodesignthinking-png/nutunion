@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("threads.ai-copilot.feedback", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -27,4 +28,4 @@ export async function POST(req: NextRequest) {
   } catch { /* migration 121 may be missing */ }
 
   return NextResponse.json({ ok: true });
-}
+});

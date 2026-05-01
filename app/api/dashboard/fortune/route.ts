@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateTextForUser } from "@/lib/ai/vault";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ function kstToday(): string {
 interface FortuneEntry { text: string; model_used: string | null; date: string }
 const fortuneCache = new Map<string, FortuneEntry>();
 
-export async function GET() {
+export const GET = withRouteLog("dashboard.fortune", async () => {
   const span = log.span("dashboard.fortune");
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -102,4 +103,4 @@ ${personalLines.join("\n")}
   fortuneCache.set(key, entry);
   span.end({ cache: "miss" });
   return NextResponse.json({ ...entry, cached: false });
-}
+});

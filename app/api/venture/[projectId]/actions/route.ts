@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 import { dispatchPushToUsers } from "@/lib/push/dispatch";
@@ -17,7 +18,7 @@ const ActionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("set_stage"),       stage: z.enum(["empathize","define","ideate","prototype","plan","completed"]) }),
 ]);
 
-export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) {
+export const POST = withRouteLog("venture.projectId.actions", async (req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) => {
   const { projectId } = await ctx.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -115,4 +116,4 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId:
     log.error(err, "venture.projectId.actions.failed");
     return NextResponse.json({ error: err instanceof Error ? err.message : "실패" }, { status: 500 });
   }
-}
+});

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { aiError } from "@/lib/ai/error";
 import { rateLimit } from "@/lib/rate-limit";
@@ -49,10 +50,10 @@ const SYSTEM_PROMPT = `당신은 창업 팀의 **문제 정의 컨설턴트** AI
 - HMW 는 구체적이고 실행 가능하게 (추상적 "~를 개선하려면" 금지)
 - 기존 insights / meeting memo 도 함께 참고해 정제`;
 
-export async function POST(
+export const POST = withRouteLog("venture.projectId.synthesize-problems", async (
   _req: NextRequest,
   ctx: { params: Promise<{ projectId: string }> }
-) {
+) => {
   if (!GEMINI_API_KEY) return aiError("server_error", "venture/synthesize-problems", { internal: "GEMINI_API_KEY missing" });
 
   const { projectId } = await ctx.params;
@@ -181,4 +182,4 @@ export async function POST(
     log.error(err, "venture.projectId.synthesize-problems.failed");
     return aiError("server_error", "venture/synthesize-problems", { internal: err });
   }
-}
+});

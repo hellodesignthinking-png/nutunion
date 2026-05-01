@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { dispatchEvent } from "@/lib/automation/engine";
@@ -26,7 +27,7 @@ function getAdminClient() {
   return createAdminClient(url, key, { auth: { persistSession: false } });
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("resources.group", async (req: NextRequest) => {
   const supabase = await createServerClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -150,4 +151,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ id: (data as any)?.id, url: fileUrl, storage_type: storageType });
-}
+});

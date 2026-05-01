@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 // POST /api/wiki/topics/[topicId]/restore
 // Body: { version_number: number }
 // 호스트만. 지정한 버전의 content_snapshot 을 현재 콘텐츠로 복원하면서 새 버전을 생성한다.
-export async function POST(
+export const POST = withRouteLog("wiki.topics.topicId.restore", async (
   request: NextRequest,
   { params }: { params: Promise<{ topicId: string }> },
-) {
+) => {
   const { topicId } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -94,4 +95,4 @@ export async function POST(
     current_version: newVersion,
     restored_from: versionNumber,
   });
-}
+});

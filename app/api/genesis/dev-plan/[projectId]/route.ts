@@ -6,13 +6,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const maxDuration = 30;
 
-export async function PATCH(
+export const PATCH = withRouteLog("genesis.dev-plan.projectId", async (
   request: NextRequest,
   ctx: { params: Promise<{ projectId: string }> },
-) {
+) => {
   try {
     const { projectId } = await ctx.params;
     const supabase = await createClient();
@@ -64,4 +65,4 @@ export async function PATCH(
     log.error(err, "genesis.devplan.patch.exception");
     return NextResponse.json({ error: err?.message || "편집 실패" }, { status: 500 });
   }
-}
+});

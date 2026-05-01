@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { calcVibeResult, getDailySeedGenre } from "@/lib/brand/genre-engine";
 
 export const revalidate = 300; // 5분 캐시
 
-export async function GET() {
+export const GET = withRouteLog("todays-vibe", async () => {
   try {
     const supabase = await createClient();
 
@@ -62,4 +63,4 @@ export async function GET() {
       fallback: true,
     });
   }
-}
+});

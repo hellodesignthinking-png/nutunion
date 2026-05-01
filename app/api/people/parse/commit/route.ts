@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,7 +12,7 @@ const ALLOWED_KINDS = ["birthday","anniversary","founding_day","memorial","miles
  * POST /api/people/parse/commit
  * body: { person_id?: string, new_person_name?: string, events: [...], notes: string[] }
  */
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("people.parse.commit", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -92,4 +93,4 @@ export async function POST(req: NextRequest) {
     events_saved: insertedEvents.length,
     notes_saved: insertedNotes.length,
   });
-}
+});

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { generateTextForUser } from "@/lib/ai/vault";
 
@@ -7,7 +8,7 @@ const SYSTEM = `You are recommending Thread modules for a community/project tool
 Output STRICT JSON only with shape: {"recommendations":[{"slug":"...","reason":"<2-3 sentence Korean reason>"}]}.
 Pick at most 3 from the provided candidates. No prose outside JSON.`;
 
-export async function POST(_req: NextRequest) {
+export const POST = withRouteLog("threads.recommend", async (_req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -87,4 +88,4 @@ export async function POST(_req: NextRequest) {
     log.error(e, "threads.recommend.failed");
     return NextResponse.json({ recommendations: [], error: `ai_failed: ${e?.message || e}` });
   }
-}
+});

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
@@ -19,7 +20,7 @@ const MAX_RECEIPT_SIZE = 1_000_000; // 1MB base64 (~750KB raw)
  *   · data: URL 을 받으면 Supabase Storage 에 업로드 후 참조 저장
  *   · null 이면 기존 Storage 객체 삭제 + DB null 처리
  */
-export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+export const PUT = withRouteLog("finance.transactions.id.receipt", async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   try {
     const { id } = await context.params;
     const supabase = await createClient();
@@ -113,4 +114,4 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
     console.error("[Receipt PUT]", err);
     return NextResponse.json({ error: "서버 오류" }, { status: 500 });
   }
-}
+});

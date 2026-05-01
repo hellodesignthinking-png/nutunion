@@ -10,6 +10,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
@@ -24,7 +25,7 @@ function getAdminClient() {
   return createAdminClient(url, key, { auth: { persistSession: false } });
 }
 
-export async function GET(_req: NextRequest, { params }: Ctx) {
+export const GET = withRouteLog("chat.rooms.id.members", async (_req: NextRequest, { params }: Ctx) => {
   const { id } = await params;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -86,4 +87,4 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   });
 
   return NextResponse.json({ members, presence_supported: lastSeenMap.size > 0 });
-}
+});

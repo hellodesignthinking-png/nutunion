@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@supabase/supabase-js";
 
 /**
  * POST /api/contracts/esign/webhook
  * 모두싸인 / eformsign 웹훅 수신 — 서명 진행 이벤트 업데이트.
  */
-export async function POST(req: Request) {
+export const POST = withRouteLog("contracts.esign.webhook", async (req: Request) => {
   const raw = await req.text();
   let payload: any;
   try { payload = JSON.parse(raw); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
@@ -49,4 +50,4 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ ok: true });
-}
+});

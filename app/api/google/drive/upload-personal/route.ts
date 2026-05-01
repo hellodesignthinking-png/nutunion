@@ -17,6 +17,7 @@ import { Readable } from "stream";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { createClient } from "@/lib/supabase/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -51,7 +52,7 @@ function extOf(name: string): string {
   return (name.split(".").pop() || "").toLowerCase();
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("google.drive.upload-personal", async (req: NextRequest) => {
   const userId = await getCurrentUserId();
   if (!userId) {
     return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
@@ -237,4 +238,4 @@ export async function POST(req: NextRequest) {
     log.error(e, "drive.upload_personal.failed", { user_id: userId });
     return NextResponse.json({ error: e.message || "업로드 실패" }, { status: 500 });
   }
-}
+});

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { askClaude } from "@/lib/ai/client";
 
@@ -18,7 +19,7 @@ export const maxDuration = 30;
  *   summary: "이번 주 요약 1문장"
  * }
  */
-export async function POST(req: Request) {
+export const POST = withRouteLog("ai.anchor-insights", async (req: Request) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -99,4 +100,4 @@ severity: info | warning | alert`;
   } catch {
     return NextResponse.json({ insights: [], raw: result.text, error: "JSON parse 실패" });
   }
-}
+});

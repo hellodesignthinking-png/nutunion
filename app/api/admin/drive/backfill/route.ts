@@ -32,6 +32,7 @@ import {
   driveRequestOptions,
 } from "@/lib/google/drive-config";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300; // 5분 — 많은 너트/볼트 처리
@@ -53,7 +54,7 @@ interface BackfillItemResult {
   error?: string;
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("admin.drive.backfill", async (req: NextRequest) => {
   // [Drive shared-folder mode — 2026-04 rewire]
   // 단일 공유 폴더 모드에서는 그룹/프로젝트별 폴더 백필이 무의미하다.
   // env 가 설정돼 있으면 즉시 종료.
@@ -295,4 +296,4 @@ export async function POST(req: NextRequest) {
       : "⚠ GOOGLE_SHARED_DRIVE_ID 가 설정되지 않아 관리자 개인 Drive 에 생성됐습니다. 멤버 접근을 위해 공유 드라이브 설정을 권장합니다.",
     details: results,
   });
-}
+});

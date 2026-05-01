@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 import { aiError, mapGeminiError } from "@/lib/ai/error";
@@ -8,7 +9,7 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 export const maxDuration = 30;
 
-export async function POST(request: NextRequest) {
+export const POST = withRouteLog("ai.ask-wiki", async (request: NextRequest) => {
   if (!GEMINI_API_KEY) {
     return NextResponse.json({ error: "GEMINI_API_KEY가 설정되지 않았습니다." }, { status: 500 });
   }
@@ -144,4 +145,4 @@ ${meetingContext || "기록된 회의가 없습니다."}`;
     log.error(e, "ai.ask-wiki.failed");
     return aiError("server_error", "ai/ask-wiki", { internal: e });
   }
-}
+});

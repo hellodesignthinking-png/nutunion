@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -14,7 +15,7 @@ import { createClient } from "@/lib/supabase/server";
  *
  * Docs: https://help.modusign.co.kr/hc/ko/articles/360050116831
  */
-export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export const POST = withRouteLog("contracts.id.esign", async (_req: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -105,4 +106,4 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     log.error(err, "contracts.id.esign.failed");
     return NextResponse.json({ error: err.message || "eSign request failed" }, { status: 500 });
   }
-}
+});

@@ -20,11 +20,12 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { getGoogleClient } from "@/lib/google/auth";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("admin.storage.cleanup-drive-edits", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -121,4 +122,4 @@ export async function POST(req: NextRequest) {
     db_cleaned: dbCleaned,
     errors_sample: errors.slice(0, 5),
   });
-}
+});

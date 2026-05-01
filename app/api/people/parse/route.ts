@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { generateObjectForUser } from "@/lib/ai/vault";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,7 +29,7 @@ const ParseSchema = z.object({
  * 카톡/문자 대화 원문을 AI 로 분석 — 인물/이벤트/맥락 단서 추출.
  * SECURITY: 원문은 메모리에서만 처리, 절대 저장/로그하지 않음.
  */
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("people.parse", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -71,4 +72,4 @@ ${raw}`;
     log.error(err, "people.parse.failed", { user_id: auth.user.id, text_len: raw.length });
     return NextResponse.json({ error: "parse_failed", detail: err?.message || "" }, { status: 500 });
   }
-}
+});

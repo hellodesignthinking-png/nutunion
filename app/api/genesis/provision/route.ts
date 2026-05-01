@@ -17,6 +17,7 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient, type SupabaseClient } from "@supabase/supabase-js";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { getR2Client, getPublicUrl, isR2Configured } from "@/lib/storage/r2";
 import { dispatchEvent } from "@/lib/automation/engine";
 import { dispatchNotification } from "@/lib/notifications/dispatch";
@@ -83,7 +84,7 @@ async function putR2Text(key: string, body: string, contentType = "text/plain; c
 
 type StepFailure = { step: string; error: string };
 
-export async function POST(request: NextRequest) {
+export const POST = withRouteLog("genesis.provision", async (request: NextRequest) => {
   // 1) 인증은 anon/쿠키 기반 client
   const authClient = await createServerClient();
   const { data: { user } } = await authClient.auth.getUser();
@@ -674,4 +675,4 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

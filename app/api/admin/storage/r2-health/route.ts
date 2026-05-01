@@ -19,6 +19,7 @@
 
 import { NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { HeadBucketCommand, ListObjectsV2Command, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getR2Client, getPublicUrl, generatePresignedPutUrl, isR2Configured } from "@/lib/storage/r2";
@@ -33,7 +34,7 @@ const REQUIRED_VARS = [
   "R2_PUBLIC_URL",
 ] as const;
 
-export async function GET() {
+export const GET = withRouteLog("admin.storage.r2-health", async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -141,4 +142,4 @@ export async function GET() {
     public_url_example,
     advice,
   });
-}
+});

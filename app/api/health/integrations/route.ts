@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -7,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
  * 모든 외부 서비스 연결 상태를 한눈에.
  * 각 서비스: { name, envPresent, connected?, note }
  */
-export async function GET() {
+export const GET = withRouteLog("health.integrations", async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -168,4 +169,4 @@ export async function GET() {
     },
     ts: new Date().toISOString(),
   });
-}
+});

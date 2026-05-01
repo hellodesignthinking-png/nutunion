@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const maxDuration = 30;
 
@@ -17,7 +18,7 @@ interface Role {
   why: string;
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withRouteLog("genesis.match-team", async (request: NextRequest) => {
   try {
     const supabase = await createClient();
     const {
@@ -115,4 +116,4 @@ export async function POST(request: NextRequest) {
     log.error(err, "genesis.match.failed");
     return NextResponse.json({ error: err?.message || "팀매칭 실패" }, { status: 500 });
   }
-}
+});

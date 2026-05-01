@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -18,7 +19,7 @@ export const runtime = "nodejs";
  *
  * 호스트 / admin / staff 만 가능. rate limit 10/분.
  */
-export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) {
+export const POST = withRouteLog("venture.projectId.cleanup-placeholders", async (req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) => {
   const { projectId } = await ctx.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -152,4 +153,4 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId:
     total: deleted.problems + deleted.ideas + deleted.tasks,
     errors: errors.length > 0 ? errors : undefined,
   });
-}
+});

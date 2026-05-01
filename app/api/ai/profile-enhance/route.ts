@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { askClaude } from "@/lib/ai/client";
 
@@ -10,7 +11,7 @@ export const maxDuration = 30;
  * → 참여 볼트 히스토리 + 탭 작성 기반으로 스킬 태그 10개 + 한 줄 소개 3버전 제안.
  */
 
-export async function POST() {
+export const POST = withRouteLog("ai.profile-enhance", async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -72,4 +73,4 @@ ${bolts}
   } catch {
     return NextResponse.json({ enhancement: null, raw: result.text });
   }
-}
+});

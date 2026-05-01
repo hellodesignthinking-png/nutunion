@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { generateTextForUser } from "@/lib/ai/vault";
 
@@ -76,7 +77,7 @@ function validate(source: string): { ok: true } | { ok: false; reason: string } 
   return { ok: true };
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("threads.builder.code-generate", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -128,4 +129,4 @@ export async function POST(req: NextRequest) {
     }
   }
   return NextResponse.json({ error: `code_generation_failed: ${lastError}` }, { status: 500 });
-}
+});

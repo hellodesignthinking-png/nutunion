@@ -20,6 +20,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { experimental_transcribe as transcribe } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 
@@ -28,7 +29,7 @@ export const maxDuration = 300;
 
 const MAX_BYTES = 25 * 1024 * 1024;
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("ai.transcribe", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -129,4 +130,4 @@ export async function POST(req: NextRequest) {
     log.error(e, "ai.transcribe.failed", { user_id: auth.user.id });
     return NextResponse.json({ error: e?.message || "전사 실패" }, { status: 500 });
   }
-}
+});

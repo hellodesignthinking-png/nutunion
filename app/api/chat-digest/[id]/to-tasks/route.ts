@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,7 @@ interface ActionItem {
   due: string | null;
 }
 
-export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export const POST = withRouteLog("chat_digest.to_tasks", async (req: NextRequest, ctx: { params: Promise<{ id: string }> }) => {
   const { id: digestId } = await ctx.params;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -160,4 +161,4 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     with_assignee: withAssignee,
     unmatched_assignees: rows.filter((r) => !r.assigned_to).length,
   });
-}
+});

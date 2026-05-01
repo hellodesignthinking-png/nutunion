@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { askClaude } from "@/lib/ai/client";
 
@@ -11,7 +12,7 @@ export const maxDuration = 30;
  * → 역할 슬롯 4-5개 / 마일스톤 3-5개 / 리워드 가이드 제안 (JSON).
  */
 
-export async function POST(req: Request) {
+export const POST = withRouteLog("ai.bolt-scoping", async (req: Request) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -55,4 +56,4 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ scoping: null, raw: result.text, error: "JSON parse 실패 — raw 참고" });
   }
-}
+});

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 // POST /api/threads/install
 //   body: { slug, target_type: 'nut'|'bolt', target_id, config? }
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("threads.install", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -102,4 +103,4 @@ export async function POST(req: NextRequest) {
   } catch { /* noop */ }
 
   return NextResponse.json({ installation: inserted });
-}
+});

@@ -15,6 +15,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 // [Drive migration Phase 3a] content now stored on R2 — drive-mirror import removed
@@ -32,7 +33,7 @@ function getAdminClient() {
   return createAdminClient(url, key, { auth: { persistSession: false } });
 }
 
-export async function POST(req: NextRequest, { params }: Ctx) {
+export const POST = withRouteLog("chat.rooms.id.attachments", async (req: NextRequest, { params }: Ctx) => {
   const { id: roomId } = await params;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -332,4 +333,4 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     indexed: autoIndexedAs,
     linked_resource_id: linkedResourceId,
   });
-}
+});

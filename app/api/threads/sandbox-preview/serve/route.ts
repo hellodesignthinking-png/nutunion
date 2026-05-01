@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { getPreview } from "../route";
 import { createClient } from "@/lib/supabase/server";
 import { compileTsxToHtml } from "@/lib/threads/sandbox-compile";
@@ -31,7 +32,7 @@ function htmlResponse(html: string, status = 200) {
   });
 }
 
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("threads.sandbox-preview.serve", async (req: NextRequest) => {
   const { searchParams } = new URL(req.url);
   const token = searchParams.get("token");
   const installationId = searchParams.get("installation_id");
@@ -77,4 +78,4 @@ export async function GET(req: NextRequest) {
   }
 
   return htmlResponse(`<h1>Missing token or installation_id</h1>`, 400);
-}
+});

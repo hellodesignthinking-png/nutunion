@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { finalizePoll, type PollRow } from "@/lib/chat/poll-finalize";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -24,7 +25,7 @@ function getAdmin() {
   return createAdminClient(url, key, { auth: { persistSession: false } });
 }
 
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("cron.close-polls", async (req: NextRequest) => {
   const secret = process.env.CRON_SECRET;
   if (secret) {
     const header = req.headers.get("authorization") || "";
@@ -75,4 +76,4 @@ export async function GET(req: NextRequest) {
     posted,
     errors,
   });
-}
+});

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { aiError } from "@/lib/ai/error";
@@ -27,7 +28,7 @@ const BodySchema = z.object({
 });
 
 /** POST — AI 가 제안한 HMW 중 선택된 것들을 venture_problems 에 저장 */
-export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) {
+export const POST = withRouteLog("venture.projectId.synthesize-problems.save", async (req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) => {
   const { projectId } = await ctx.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -90,4 +91,4 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId:
   }
 
   return NextResponse.json({ success: true, inserted: data?.length ?? 0, ids: data?.map((r) => r.id) ?? [] });
-}
+});

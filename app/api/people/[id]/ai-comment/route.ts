@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateTextForUser } from "@/lib/ai/vault";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,7 +17,7 @@ function dayKey(userId: string, personId: string): string {
   return `${userId}:${personId}:${ymd}`;
 }
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const GET = withRouteLog("people.id.ai-comment", async (_req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -81,4 +82,4 @@ ${events || "- (없음)"}
     log.error(err, "people.ai_comment.failed", { user_id: auth.user.id, person_id: id });
     return NextResponse.json({ comment: "", error: "ai_failed" }, { status: 500 });
   }
-}
+});

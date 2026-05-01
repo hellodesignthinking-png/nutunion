@@ -6,6 +6,7 @@ import { z } from "zod";
 import { getUserModel } from "@/lib/ai/vault";
 import { NU_AI_MODEL, NU_AI_MODEL_LABEL } from "@/lib/ai/model";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -29,7 +30,7 @@ interface ActionLog {
   result: { ok: boolean; id?: string; message: string; href?: string };
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("dashboard.ai-agent", async (req: NextRequest) => {
   const span = log.span("dashboard.ai_agent");
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -538,4 +539,4 @@ export async function POST(req: NextRequest) {
 
   span.end({ actions: actions.length, model: modelLabel });
   return NextResponse.json({ reply: replyText, actions, model_used: modelLabel });
-}
+});

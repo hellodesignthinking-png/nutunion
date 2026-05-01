@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export const maxDuration = 30;
  *   · ALERT_WEBHOOK_URL (선택 — 없으면 console.log 만)
  *   · ALERT_MENTION (선택 — Slack 의 <!channel> 등 prefix)
  */
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("cron.health-watch", async (req: NextRequest) => {
   const auth = req.headers.get("authorization");
   if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -91,4 +92,4 @@ export async function GET(req: NextRequest) {
     body,
     error,
   });
-}
+});

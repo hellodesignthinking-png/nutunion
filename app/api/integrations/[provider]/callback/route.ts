@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { PROVIDERS, verifyState, exchangeCodeForToken, saveIntegration } from "@/lib/oauth/integrations";
 
 /**
  * GET /api/integrations/[provider]/callback?code=...&state=...
  * 공급자에서 code 수신 → 토큰 교환 → external_integrations 저장 → returnTo 로 리다이렉트.
  */
-export async function GET(req: Request, { params }: { params: Promise<{ provider: string }> }) {
+export const GET = withRouteLog("integrations.provider.callback", async (req: Request, { params }: { params: Promise<{ provider: string }> }) => {
   const { provider } = await params;
   if (!(provider in PROVIDERS)) {
     return NextResponse.redirect(new URL("/profile?integration=unsupported", req.url));
@@ -49,4 +50,4 @@ export async function GET(req: Request, { params }: { params: Promise<{ provider
   redirect.searchParams.set("status", "connected");
   if (payload.projectId) redirect.searchParams.set("projectId", payload.projectId);
   return NextResponse.redirect(redirect);
-}
+});

@@ -21,6 +21,7 @@ import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { getR2Client, isR2Configured } from "@/lib/storage/r2";
 import { createClient } from "@/lib/supabase/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { tryAcquireLease, releaseLease } from "@/lib/locks/lease";
 
 const VERSION_LIMIT = 5;
@@ -48,7 +49,7 @@ const EXPORT_TARGET: Record<string, { mime: string; ext: string }> = {
 
 type LinkTable = "file_attachments" | "project_resources";
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("files.sync-from-drive", async (req: NextRequest) => {
   const span = log.span("files.sync_from_drive");
   const userId = await getCurrentUserId();
   if (!userId) {
@@ -389,4 +390,4 @@ export async function POST(req: NextRequest) {
   } finally {
     await releaseLease(supabase, lockKey, userId);
   }
-}
+});

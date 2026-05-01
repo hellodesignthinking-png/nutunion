@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
@@ -29,7 +30,7 @@ function toIsoStart(iso?: string): string {
   return new Date(iso).toISOString();
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("dashboard.ai-secretary.register", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -219,4 +220,4 @@ export async function POST(req: NextRequest) {
     log.error(err, "dashboard.ai-secretary.register.failed");
     return NextResponse.json({ error: err?.message || "등록 실패" }, { status: 500 });
   }
-}
+});

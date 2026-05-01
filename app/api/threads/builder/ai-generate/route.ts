@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { generateObjectForUser } from "@/lib/ai/vault";
 import { z } from "zod";
@@ -59,7 +60,7 @@ const SYSTEM_PROMPT = `당신은 Thread Builder Assistant입니다.
 
 응답은 반드시 정해진 JSON 스키마를 따라야 합니다.`;
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("threads.builder.ai-generate", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -86,4 +87,4 @@ export async function POST(req: NextRequest) {
     log.error(e, "threads.builder.ai-generate.failed");
     return NextResponse.json({ error: e?.message || "ai_generation_failed" }, { status: 500 });
   }
-}
+});
