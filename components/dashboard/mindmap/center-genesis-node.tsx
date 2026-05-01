@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Handle, Position } from "reactflow";
 import { Sparkles, Send, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface CenterNodeData {
   kind: "center";
@@ -41,6 +42,10 @@ export function CenterGenesisNode({ data }: { data: CenterNodeData }) {
     setError("");
     setAnswer("");
 
+    // 45초 timeout — Genesis 는 평균 10~25초지만 가끔 hang. AbortController 로 안전.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 45_000);
+
     try {
       const res = await fetch("/api/genesis/plan", {
         method: "POST",
@@ -49,34 +54,58 @@ export function CenterGenesisNode({ data }: { data: CenterNodeData }) {
           "X-Idempotency-Key": `mindmap:${trimmed.slice(0, 50)}`,
         },
         body: JSON.stringify({ intent: trimmed, kind: "group" }),
+        signal: controller.signal,
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || "AI 응답 실패");
+      const text = await res.text();
+      let json: Record<string, unknown> | null = null;
+      try { json = text ? JSON.parse(text) : null; } catch { /* HTML 에러 페이지일 수도 */ }
 
-      const summary: string = json?.plan?.summary || json?.plan?.title || "응답 생성됨";
+      if (!res.ok) {
+        const apiErr = (json?.error as string | undefined)
+          || (json?.code as string | undefined)
+          || `HTTP ${res.status}`;
+        // 사용자가 줌 아웃되어 노드 안 에러가 안 보일 때를 대비해 toast 도 함께
+        toast.error(`Genesis 답변 실패: ${apiErr}`, { duration: 6000 });
+        throw new Error(apiErr);
+      }
+
+      const plan = (json?.plan ?? {}) as Record<string, unknown>;
+      const summary: string = (plan.summary as string) || (plan.title as string) || "응답 생성됨";
       setAnswer(summary.slice(0, 140));
 
       // 키워드 추출 — phases.name + first_tasks 의 명사·동사 (하이라이트용)
       const keywords = new Set<string>();
-      (json?.plan?.phases || []).forEach((p: any) => {
+      ((plan.phases as Array<Record<string, unknown>> | undefined) ?? []).forEach((p) => {
         if (p?.name) keywords.add(String(p.name).toLowerCase());
       });
-      const tasks: string[] = (json?.plan?.first_tasks || []).slice(0, 4).map((t: any) => String(t));
+      const tasks: string[] = ((plan.first_tasks as unknown[] | undefined) ?? [])
+        .slice(0, 4)
+        .map((t) => String(t));
       tasks.forEach((t) => {
         t.toLowerCase().split(/\s+/).slice(0, 3).forEach((w: string) => {
           if (w.length > 2) keywords.add(w);
         });
       });
-      // suggested_roles → ai-role 임시 노드용
-      const roles = ((json?.plan?.suggested_roles || []) as any[]).slice(0, 4).map((r) => ({
-        name: String(r?.role_name || r?.name || "역할"),
-        tags: Array.isArray(r?.specialty_tags) ? r.specialty_tags.map(String) : [],
-        why: r?.why ? String(r.why) : undefined,
-      }));
+      const roles = (((plan.suggested_roles as Array<Record<string, unknown>> | undefined) ?? [])
+        .slice(0, 4)
+        .map((r) => ({
+          name: String(r?.role_name || r?.name || "역할"),
+          tags: Array.isArray(r?.specialty_tags) ? (r.specialty_tags as unknown[]).map(String) : [],
+          why: r?.why ? String(r.why) : undefined,
+        })));
       data.onAnswer({ text: summary, keywords: Array.from(keywords), roles, tasks });
+      toast.success(`💡 매칭 ${keywords.size}개 · 역할 ${roles.length}개 · 액션 ${tasks.length}개`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "오류");
+      const msg = err instanceof Error
+        ? (err.name === "AbortError" ? "AI 응답 45초 초과 — 다시 시도해주세요" : err.message)
+        : "알 수 없는 오류";
+      setError(msg);
+      // 노드 안 에러 박스 + toast 둘 다 — 어느 줌 레벨에서도 보이게
+      if (!msg.includes("Genesis 답변 실패")) {
+        toast.error(msg, { duration: 6000 });
+      }
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   }
@@ -141,13 +170,13 @@ export function CenterGenesisNode({ data }: { data: CenterNodeData }) {
       )}
 
       {answer && !loading && (
-        <div className="mt-2 text-[11px] text-nu-ink/80 bg-nu-cream/50 border border-nu-ink/10 px-2 py-1.5">
+        <div className="relative z-10 mt-2 text-[11px] text-nu-ink/80 bg-white border-[2px] border-nu-ink/30 px-2 py-1.5 shadow-[1px_1px_0_0_#0D0F14]">
           💡 {answer}
         </div>
       )}
       {error && (
-        <div className="mt-2 text-[11px] text-red-700 bg-red-50 border border-red-200 px-2 py-1">
-          {error}
+        <div className="relative z-10 mt-2 text-[11px] text-red-800 bg-red-50 border-[2px] border-red-700 px-2 py-1.5 shadow-[1px_1px_0_0_#0D0F14]">
+          ⚠ {error}
         </div>
       )}
     </div>

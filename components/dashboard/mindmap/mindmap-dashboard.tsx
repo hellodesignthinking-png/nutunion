@@ -348,14 +348,19 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
     }
     setHighlighted(matchedIds);
     if (matchedIds.size > 0) {
-      // 매칭 노드들로 카메라 줌 — Genesis "내비게이터" UX
+      // 매칭 노드 + center 함께 줌 — Genesis 답변 박스가 카메라 밖으로 나가지 않게.
       if (rfRef.current) {
-        const targets = Array.from(matchedIds).map((id) => ({ id }));
+        const targets = [{ id: "center" }, ...Array.from(matchedIds).map((id) => ({ id }))];
         try {
-          rfRef.current.fitView({ nodes: targets, padding: 0.25, duration: 800, maxZoom: 1.6 });
+          rfRef.current.fitView({ nodes: targets, padding: 0.3, duration: 800, maxZoom: 1.4 });
         } catch { /* SSR 또는 노드 미마운트 — 무시 */ }
       }
       setTimeout(() => setHighlighted(new Set()), 6000);
+    } else if (rfRef.current) {
+      // 매칭 0 + AI 제안만 있을 때 — center 자체로 살짝 줌 인 (답변 박스가 잘 보이게)
+      try {
+        rfRef.current.fitView({ nodes: [{ id: "center" }], padding: 0.5, duration: 600, maxZoom: 1.2 });
+      } catch { /* ignore */ }
     }
 
     // AI 제안 임시 노드 추가 — 30초 후 자동 사라짐 (또는 dismiss 버튼)
