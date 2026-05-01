@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Plus, Trash2, GripVertical, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import type { SpaceBlock, BlockType } from "./space-pages-types";
 import { SLASH_COMMANDS } from "./space-pages-types";
 import { SpaceBlockRenderer } from "./space-block-renderer";
@@ -32,8 +33,15 @@ const SAVE_DEBOUNCE = 600;
  * - "+" 버튼 = 블록 사이 삽입
  * - 드래그-드롭 순서 변경
  */
+// 같은 탭에서 보낸 broadcast 를 자기가 다시 받지 않도록 탭 고유 id
+const TAB_ID = typeof window !== "undefined"
+  ? `${Math.random().toString(36).slice(2, 10)}`
+  : "ssr";
+
 export function SpacePageBlocks({ pageId, legacyContent, ownerType, ownerId, currentUserId, onSaveStateChange }: Props) {
   const [openCommentsFor, setOpenCommentsFor] = useState<string | null>(null);
+  // 다른 사용자가 편집 중인 블록 — 노란 펄스 외곽
+  const [remoteEditing, setRemoteEditing] = useState<Record<string, { tab: string; expiresAt: number }>>({});
   const [blocks, setBlocks] = useState<SpaceBlock[]>([]);
   const [loading, setLoading] = useState(true);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -66,6 +74,65 @@ export function SpacePageBlocks({ pageId, legacyContent, ownerType, ownerId, cur
     return () => { cancelled = true; };
   }, [pageId, legacyContent]);
 
+  // ── Realtime 동시 편집 ──────────────────────────────────────────
+  // 같은 페이지를 보는 다른 클라이언트로 블록 변경을 broadcast.
+  // CRDT 가 아니라 last-write-wins. 현재 편집 중인 블록은 노란 펄스 표시.
+  const channelRef = useRef<ReturnType<ReturnType<typeof createBrowserClient>["channel"]> | null>(null);
+  useEffect(() => {
+    if (!pageId) return;
+    const supa = createBrowserClient();
+    const ch = supa.channel(`space-page-blocks:${pageId}`, {
+      config: { broadcast: { self: false } },
+    });
+    ch.on("broadcast", { event: "block-change" }, ({ payload }) => {
+      const p = payload as { tab: string; block_id: string; patch: Partial<SpaceBlock> };
+      if (!p?.block_id || p.tab === TAB_ID) return;
+      setBlocks((prev) => prev.map((b) => b.id === p.block_id ? { ...b, ...p.patch } : b));
+      // 다른 사용자가 편집 중 — 5초간 펄스
+      setRemoteEditing((prev) => ({ ...prev, [p.block_id]: { tab: p.tab, expiresAt: Date.now() + 5000 } }));
+    });
+    ch.on("broadcast", { event: "block-add" }, ({ payload }) => {
+      const p = payload as { tab: string; block: SpaceBlock };
+      if (!p?.block || p.tab === TAB_ID) return;
+      setBlocks((prev) => prev.some((b) => b.id === p.block.id) ? prev : [...prev, p.block].sort((a, b) => a.position - b.position));
+    });
+    ch.on("broadcast", { event: "block-delete" }, ({ payload }) => {
+      const p = payload as { tab: string; block_id: string };
+      if (!p?.block_id || p.tab === TAB_ID) return;
+      setBlocks((prev) => prev.filter((b) => b.id !== p.block_id));
+    });
+    ch.subscribe();
+    channelRef.current = ch;
+    return () => {
+      void supa.removeChannel(ch);
+      channelRef.current = null;
+      setRemoteEditing({});
+    };
+  }, [pageId]);
+
+  // remoteEditing GC — 만료된 항목 청소
+  useEffect(() => {
+    const t = setInterval(() => {
+      const now = Date.now();
+      setRemoteEditing((prev) => {
+        let changed = false;
+        const next: typeof prev = {};
+        for (const [k, v] of Object.entries(prev)) {
+          if (v.expiresAt > now) next[k] = v;
+          else changed = true;
+        }
+        return changed ? next : prev;
+      });
+    }, 1500);
+    return () => clearInterval(t);
+  }, []);
+
+  const broadcast = useCallback((event: string, payload: Record<string, unknown>) => {
+    const ch = channelRef.current;
+    if (!ch) return;
+    void ch.send({ type: "broadcast", event, payload: { ...payload, tab: TAB_ID } }).catch(() => undefined);
+  }, []);
+
   const queueSave = useCallback((id: string, patch: Partial<SpaceBlock>) => {
     const prev = saveTimers.current.get(id);
     if (prev) clearTimeout(prev);
@@ -89,7 +156,8 @@ export function SpacePageBlocks({ pageId, legacyContent, ownerType, ownerId, cur
   const updateBlock = useCallback((id: string, patch: Partial<SpaceBlock>) => {
     setBlocks((prev) => prev.map((b) => b.id === id ? { ...b, ...patch } : b));
     queueSave(id, patch);
-  }, [queueSave]);
+    broadcast("block-change", { block_id: id, patch });
+  }, [queueSave, broadcast]);
 
   const insertBlock = useCallback(async (type: BlockType, afterId: string | null) => {
     let position: number;
@@ -110,6 +178,7 @@ export function SpacePageBlocks({ pageId, legacyContent, ownerType, ownerId, cur
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "블록 추가 실패");
       setBlocks((prev) => [...prev, json.block].sort((a, b) => a.position - b.position));
+      broadcast("block-add", { block: json.block });
       // 새 블록에 포커스
       setTimeout(() => {
         const el = document.querySelector(`[data-block-id="${json.block.id}"] textarea, [data-block-id="${json.block.id}"] input`) as HTMLElement | null;
@@ -118,17 +187,18 @@ export function SpacePageBlocks({ pageId, legacyContent, ownerType, ownerId, cur
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "블록 추가 실패");
     }
-  }, [pageId, blocks]);
+  }, [pageId, blocks, broadcast]);
 
   const deleteBlock = useCallback(async (id: string) => {
     setBlocks((prev) => prev.filter((b) => b.id !== id));
+    broadcast("block-delete", { block_id: id });
     try {
       const res = await fetch(`/api/spaces/blocks/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("삭제 실패");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "삭제 실패");
     }
-  }, []);
+  }, [broadcast]);
 
   const reorder = useCallback((sourceId: string, targetId: string) => {
     if (sourceId === targetId) return;
@@ -188,7 +258,7 @@ export function SpacePageBlocks({ pageId, legacyContent, ownerType, ownerId, cur
                 setDropTargetId(null);
               }}
               onDragEnd={() => { setDraggingId(null); setDropTargetId(null); }}
-              className={`group flex items-start gap-1 relative ${draggingId === b.id ? "opacity-40" : ""}`}
+              className={`group flex items-start gap-1 relative ${draggingId === b.id ? "opacity-40" : ""} ${remoteEditing[b.id] ? "ring-2 ring-yellow-400 ring-offset-1 animate-pulse rounded-sm" : ""}`}
             >
               <div className="flex flex-col items-center pt-1.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                 <button

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
 import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
+import { dispatchWebhook } from "@/lib/spaces/webhook-dispatcher";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -61,9 +62,23 @@ export const POST = withRouteLog("spaces.pages.share.post", async (req: NextRequ
     .from("space_pages")
     .update({ share_token: token, shared_at: new Date().toISOString() })
     .eq("id", id)
-    .select("share_token, shared_at")
+    .select("share_token, shared_at, owner_type, owner_id, title")
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // 외부 webhook 발송 — fire-and-forget
+  void dispatchWebhook({
+    ownerType: data.owner_type as "nut" | "bolt",
+    ownerId: data.owner_id as string,
+    event: "page.shared",
+    payload: {
+      page_id: id,
+      title: data.title,
+      share_url: `${req.nextUrl.origin}/shared/${data.share_token}`,
+      actor_id: user.id,
+    },
+    fireAndForget: true,
+  });
 
   return NextResponse.json({
     share_token: data.share_token,

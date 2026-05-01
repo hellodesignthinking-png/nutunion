@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Loader2, FileText, Star, Clock, Layers, Activity, BarChart3, Menu } from "lucide-react";
+import { Plus, Loader2, FileText, Star, Clock, Layers, Activity, BarChart3, Menu, Webhook } from "lucide-react";
 import { toast } from "sonner";
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import type { SpacePage } from "./space-pages-types";
@@ -14,6 +14,7 @@ import { AiPageModal } from "./ai-page-modal";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 import { ActivityFeed } from "./activity-feed";
 import { AnalyticsPanel } from "./analytics-panel";
+import { WebhooksPanel } from "./webhooks-panel";
 import type { PageTemplate } from "./templates";
 
 interface Props {
@@ -47,6 +48,7 @@ export function SpacePages({ ownerType, ownerId, ownerName, currentUserId, curre
   const [templateOpen, setTemplateOpen] = useState(false);
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
+  const [webhooksOpen, setWebhooksOpen] = useState(false);
   // 모바일 — 사이드바 collapse (md+ 항상 노출, 모바일 토글)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   // 권한 — 너트/볼트 역할 → capability. UI 가드 (viewer 면 편집/공유 버튼 숨김).
@@ -307,6 +309,16 @@ export function SpacePages({ ownerType, ownerId, ownerName, currentUserId, curre
             >
               <BarChart3 size={10} />
             </button>
+            {permissions?.role === "admin" && (
+              <button
+                type="button"
+                onClick={() => setWebhooksOpen(true)}
+                title="외부 통합 / Webhooks (admin 전용)"
+                className="font-mono-nu text-[10px] uppercase tracking-widest px-1 py-0.5 border border-nu-ink/30 hover:bg-nu-cream"
+              >
+                <Webhook size={10} />
+              </button>
+            )}
             {canCreate && (
               <button
                 type="button"
@@ -511,6 +523,12 @@ export function SpacePages({ ownerType, ownerId, ownerName, currentUserId, curre
         ownerId={ownerId}
         onClose={() => setAnalyticsOpen(false)}
         onJumpToPage={(pid) => setSelectedId(pid)}
+      />
+      <WebhooksPanel
+        open={webhooksOpen}
+        ownerType={ownerType}
+        ownerId={ownerId}
+        onClose={() => setWebhooksOpen(false)}
       />
     </div>
   );
