@@ -8,8 +8,13 @@ interface CenterNodeData {
   kind: "center";
   title: string;
   subtitle?: string;
-  /** 응답 후 호출 — 부모에서 관련 노드 하이라이트 */
-  onAnswer: (result: { text: string; keywords: string[] }) => void;
+  /** 응답 후 호출 — 부모에서 관련 노드 하이라이트 + 임시 노드 추가 */
+  onAnswer: (result: {
+    text: string;
+    keywords: string[];
+    roles: Array<{ name: string; tags?: string[]; why?: string }>;
+    tasks: string[];
+  }) => void;
 }
 
 /**
@@ -51,17 +56,24 @@ export function CenterGenesisNode({ data }: { data: CenterNodeData }) {
       const summary: string = json?.plan?.summary || json?.plan?.title || "응답 생성됨";
       setAnswer(summary.slice(0, 140));
 
-      // 키워드 추출 — phases.name + first_tasks 의 명사·동사
+      // 키워드 추출 — phases.name + first_tasks 의 명사·동사 (하이라이트용)
       const keywords = new Set<string>();
       (json?.plan?.phases || []).forEach((p: any) => {
         if (p?.name) keywords.add(String(p.name).toLowerCase());
       });
-      (json?.plan?.first_tasks || []).forEach((t: any) => {
-        String(t).toLowerCase().split(/\s+/).slice(0, 3).forEach((w: string) => {
+      const tasks: string[] = (json?.plan?.first_tasks || []).slice(0, 4).map((t: any) => String(t));
+      tasks.forEach((t) => {
+        t.toLowerCase().split(/\s+/).slice(0, 3).forEach((w: string) => {
           if (w.length > 2) keywords.add(w);
         });
       });
-      data.onAnswer({ text: summary, keywords: Array.from(keywords) });
+      // suggested_roles → ai-role 임시 노드용
+      const roles = ((json?.plan?.suggested_roles || []) as any[]).slice(0, 4).map((r) => ({
+        name: String(r?.role_name || r?.name || "역할"),
+        tags: Array.isArray(r?.specialty_tags) ? r.specialty_tags.map(String) : [],
+        why: r?.why ? String(r.why) : undefined,
+      }));
+      data.onAnswer({ text: summary, keywords: Array.from(keywords), roles, tasks });
     } catch (err) {
       setError(err instanceof Error ? err.message : "오류");
     } finally {

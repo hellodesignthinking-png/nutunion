@@ -118,5 +118,79 @@ export async function fetchMindMapData(
   }));
   const issues = [...overdue, ...mentions].slice(0, 5);
 
-  return { nuts, bolts, schedule, issues };
+  // ── 와셔(동료) — 같은 너트·볼트에 속한 다른 사용자 (자기 자신 제외, 최대 12명)
+  const nutIds = nuts.map((n) => n.id);
+  const boltIds = bolts.map((b) => b.id);
+  const washerMap = new Map<string, { nickname: string; avatar_url?: string | null; nutIds: Set<string>; boltIds: Set<string> }>();
+
+  if (nutIds.length > 0) {
+    const { data: nutCoMembers } = await supabase
+      .from("group_members")
+      .select("group_id, user_id, profile:profiles(id, nickname, avatar_url)")
+      .in("group_id", nutIds)
+      .eq("status", "active")
+      .neq("user_id", userId)
+      .limit(50);
+    for (const m of (nutCoMembers ?? []) as any[]) {
+      if (!m.profile) continue;
+      const w = washerMap.get(m.user_id) ?? {
+        nickname: m.profile.nickname,
+        avatar_url: m.profile.avatar_url,
+        nutIds: new Set<string>(),
+        boltIds: new Set<string>(),
+      };
+      w.nutIds.add(m.group_id);
+      washerMap.set(m.user_id, w);
+    }
+  }
+
+  if (boltIds.length > 0) {
+    const { data: boltCoMembers } = await supabase
+      .from("project_members")
+      .select("project_id, user_id, profile:profiles(id, nickname, avatar_url)")
+      .in("project_id", boltIds)
+      .neq("user_id", userId)
+      .limit(50);
+    for (const m of (boltCoMembers ?? []) as any[]) {
+      if (!m.profile) continue;
+      const w = washerMap.get(m.user_id) ?? {
+        nickname: m.profile.nickname,
+        avatar_url: m.profile.avatar_url,
+        nutIds: new Set<string>(),
+        boltIds: new Set<string>(),
+      };
+      w.boltIds.add(m.project_id);
+      washerMap.set(m.user_id, w);
+    }
+  }
+
+  // 가장 많이 겹치는 사람 우선 — 12명 상한 (그래프 가독성)
+  const washers = Array.from(washerMap.entries())
+    .map(([id, w]) => ({
+      id,
+      nickname: w.nickname,
+      avatar_url: w.avatar_url,
+      nutIds: Array.from(w.nutIds),
+      boltIds: Array.from(w.boltIds),
+    }))
+    .sort((a, b) => (b.nutIds.length + b.boltIds.length) - (a.nutIds.length + a.boltIds.length))
+    .slice(0, 12);
+
+  // ── 탭(wiki_topics) — 사용자 너트들의 토픽 (최대 8개)
+  let topics: MindMapData["topics"] = [];
+  if (nutIds.length > 0) {
+    const { data: topicRows } = await supabase
+      .from("wiki_topics")
+      .select("id, name, group_id")
+      .in("group_id", nutIds)
+      .order("created_at", { ascending: false })
+      .limit(8);
+    topics = (topicRows ?? []).map((t: any) => ({
+      id: t.id as string,
+      name: t.name as string,
+      groupId: t.group_id as string,
+    }));
+  }
+
+  return { nuts, bolts, schedule, issues, washers, topics };
 }

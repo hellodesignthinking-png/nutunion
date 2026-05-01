@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useCallback, useEffect, useRef } from "react";
+import { Camera } from "lucide-react";
+import { toast } from "sonner";
 import ReactFlow, {
   Background,
   Controls,
@@ -27,15 +29,22 @@ const MINIMAP_COLOR: Record<NodeKind, string> = {
   bolt: "#F59E0B",
   schedule: "#10B981",
   issue: "#EF4444",
+  washer: "#7C3AED",
+  topic: "#0EA5E9",
+  "ai-role": "#EAB308",
+  "ai-task": "#F97316",
 };
 
 // 방사형 레이아웃 — 중앙에서 12시 방향부터 360°/N 각도로 배치.
 // kind 별로 반경을 약간 다르게 줘서 종류별 그룹이 자연스럽게 형성.
+// 외곽으로 갈수록 "더 멀리 연결된" 의미 — 동료(washer) 가 가장 바깥.
 const RADIUS: Record<string, number> = {
-  nut: 280,
-  bolt: 320,
-  schedule: 360,
-  issue: 240,
+  issue: 220,
+  nut: 300,
+  bolt: 340,
+  topic: 380,
+  schedule: 380,
+  washer: 460,
 };
 
 interface Props {
@@ -47,10 +56,49 @@ interface Props {
  * Phase B 정적 마인드맵 — 중앙 Genesis + 너트/볼트/일정/이슈 가지.
  * Phase C 에서 중앙 노드를 입력 가능한 형태로 교체 예정.
  */
+interface AiSuggestion {
+  roles: Array<{ name: string; tags?: string[]; why?: string }>;
+  tasks: string[];
+}
+
 export function MindMapDashboard({ nickname, data }: Props) {
   const [selected, setSelected] = useState<MindMapNodeData | null>(null);
   const [highlighted, setHighlighted] = useState<Set<string>>(new Set());
   const [savedPositions, setSavedPositions] = useState<Record<string, { x: number; y: number }>>({});
+  const [aiSuggestion, setAiSuggestion] = useState<AiSuggestion | null>(null);
+  const flowRef = useRef<HTMLDivElement | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = useCallback(async () => {
+    if (!flowRef.current || exporting) return;
+    setExporting(true);
+    try {
+      const { toPng } = await import("html-to-image");
+      // reactflow viewport — pan/zoom 까지 포함된 렌더링 영역
+      const viewport = flowRef.current.querySelector<HTMLElement>(".react-flow__viewport");
+      const target = (viewport?.parentElement as HTMLElement) || flowRef.current;
+      const dataUrl = await toPng(target, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: "#FFFCF6", // nu-cream tone
+        filter: (node) => {
+          // MiniMap, Controls 는 제외 — 깨끗한 마인드맵만
+          if (node?.classList?.contains("react-flow__minimap")) return false;
+          if (node?.classList?.contains("react-flow__controls")) return false;
+          return true;
+        },
+      });
+      const link = document.createElement("a");
+      link.download = `mindmap-${new Date().toISOString().slice(0, 10)}.png`;
+      link.href = dataUrl;
+      link.click();
+      toast.success("마인드맵 PNG 저장됨");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "내보내기 실패");
+    } finally {
+      setExporting(false);
+    }
+  }, [exporting]);
 
   // 저장된 노드 위치 — 사용자가 드래그한 후 다음 방문 시 복원
   useEffect(() => {
@@ -68,10 +116,15 @@ export function MindMapDashboard({ nickname, data }: Props) {
     });
   }, []);
 
-  const onAnswer = useCallback((result: { text: string; keywords: string[] }) => {
-    // 키워드와 노드 title/subtitle 매칭 → 5초간 ring 강조
+  const onAnswer = useCallback((result: {
+    text: string;
+    keywords: string[];
+    roles: Array<{ name: string; tags?: string[]; why?: string }>;
+    tasks: string[];
+  }) => {
+    // 키워드와 노드 title/subtitle 매칭 → 6초간 ring 강조
     const matchedIds = new Set<string>();
-    const allNodes = buildGraph(nickname, data, onAnswer).nodes;
+    const allNodes = buildGraph(nickname, data, onAnswer, null).nodes;
     for (const n of allNodes) {
       if (n.id === "center") continue;
       const text = `${(n.data as MindMapNodeData).title} ${(n.data as MindMapNodeData).subtitle ?? ""}`.toLowerCase();
@@ -86,11 +139,17 @@ export function MindMapDashboard({ nickname, data }: Props) {
     if (matchedIds.size > 0) {
       setTimeout(() => setHighlighted(new Set()), 6000);
     }
+
+    // AI 제안 임시 노드 추가 — 30초 후 자동 사라짐 (또는 사용자가 다른 질문 시 교체)
+    if (result.roles.length > 0 || result.tasks.length > 0) {
+      setAiSuggestion({ roles: result.roles, tasks: result.tasks });
+      setTimeout(() => setAiSuggestion(null), 30_000);
+    }
   }, [nickname, data]);
 
   const { nodes: baseNodes, edges } = useMemo(
-    () => buildGraph(nickname, data, onAnswer),
-    [nickname, data, onAnswer],
+    () => buildGraph(nickname, data, onAnswer, aiSuggestion),
+    [nickname, data, onAnswer, aiSuggestion],
   );
 
   // 하이라이트 적용 + 저장된 위치 복원
@@ -119,6 +178,15 @@ export function MindMapDashboard({ nickname, data }: Props) {
           Genesis Mind Map · 노드 {total + 1}개
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={exporting}
+            className="font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 border border-nu-ink/30 hover:bg-nu-cream disabled:opacity-50 flex items-center gap-1"
+            title="현재 마인드맵을 PNG 로 저장"
+          >
+            <Camera size={11} /> {exporting ? "저장 중…" : "PNG 저장"}
+          </button>
           {Object.keys(savedPositions).length > 0 && (
             <button
               type="button"
@@ -135,7 +203,7 @@ export function MindMapDashboard({ nickname, data }: Props) {
           <div className="font-mono-nu text-[10px] text-nu-muted">드래그 · 휠 줌</div>
         </div>
       </div>
-      <div style={{ width: "100%", height: 600 }} className="touch-pan-y">
+      <div ref={flowRef} style={{ width: "100%", height: 600 }} className="touch-pan-y">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -177,7 +245,13 @@ export function MindMapDashboard({ nickname, data }: Props) {
 function buildGraph(
   nickname: string,
   data: MindMapData,
-  onAnswer: (r: { text: string; keywords: string[] }) => void,
+  onAnswer: (r: {
+    text: string;
+    keywords: string[];
+    roles: Array<{ name: string; tags?: string[]; why?: string }>;
+    tasks: string[];
+  }) => void,
+  aiSuggestion: AiSuggestion | null,
 ): { nodes: RFNode[]; edges: RFEdge[] } {
   const nodes: RFNode[] = [
     {
@@ -245,6 +319,34 @@ function buildGraph(
         meta: { 종류: i.kind === "overdue_task" ? "마감 지난 태스크" : "읽지 않은 멘션" },
       },
     })),
+    ...data.topics.map((t) => ({
+      id: `topic-${t.id}`,
+      kind: "topic" as const,
+      data: {
+        kind: "topic" as const,
+        title: t.name,
+        subtitle: "📚 wiki 탭",
+        href: `/groups/${t.groupId}/wiki/topics/${t.id}`,
+        meta: { 소속_너트: t.groupId },
+      },
+    })),
+    ...data.washers.map((w) => {
+      const total = w.nutIds.length + w.boltIds.length;
+      return {
+        id: `washer-${w.id}`,
+        kind: "washer" as const,
+        data: {
+          kind: "washer" as const,
+          title: w.nickname,
+          subtitle: `🔗 ${total}개 공간 공유`,
+          href: `/people/${w.id}`,
+          meta: {
+            너트: w.nutIds.length,
+            볼트: w.boltIds.length,
+          },
+        },
+      };
+    }),
   ];
 
   if (all.length === 0) {
@@ -277,13 +379,117 @@ function buildGraph(
       position: { x, y },
       data: entry.data,
     });
-    edges.push({
-      id: `e-${entry.id}`,
-      source: "center",
-      target: entry.id,
-      style: { stroke: "#0D0F14", strokeWidth: 2 },
-    });
+
+    // 중앙→가지 기본 엣지 (washer/topic 은 cross-ref 만으로 연결되도록 생략)
+    if (entry.kind !== "washer" && entry.kind !== "topic") {
+      edges.push({
+        id: `e-${entry.id}`,
+        source: "center",
+        target: entry.id,
+        style: { stroke: "#0D0F14", strokeWidth: 2 },
+      });
+    }
   });
+
+  // ── Cross-reference 엣지 ─────────────────────────────────────────
+  // 너트 ↔ 탭 (소속) — 점선 sky
+  for (const t of data.topics) {
+    if (data.nuts.some((n) => n.id === t.groupId)) {
+      edges.push({
+        id: `e-cr-topic-${t.id}`,
+        source: `nut-${t.groupId}`,
+        target: `topic-${t.id}`,
+        style: { stroke: "#0EA5E9", strokeWidth: 1.5, strokeDasharray: "4 3" },
+      });
+    }
+  }
+  // 너트 ↔ 와셔 (소속) — 실선 violet 얇게
+  for (const w of data.washers) {
+    for (const nutId of w.nutIds) {
+      if (data.nuts.some((n) => n.id === nutId)) {
+        edges.push({
+          id: `e-cr-w-n-${w.id}-${nutId}`,
+          source: `nut-${nutId}`,
+          target: `washer-${w.id}`,
+          style: { stroke: "#7C3AED", strokeWidth: 1, opacity: 0.5 },
+        });
+      }
+    }
+    // 볼트 ↔ 와셔 — 실선 amber 얇게
+    for (const boltId of w.boltIds) {
+      if (data.bolts.some((b) => b.id === boltId)) {
+        edges.push({
+          id: `e-cr-w-b-${w.id}-${boltId}`,
+          source: `bolt-${boltId}`,
+          target: `washer-${w.id}`,
+          style: { stroke: "#F59E0B", strokeWidth: 1, opacity: 0.5 },
+        });
+      }
+    }
+  }
+  // 너트 ↔ 볼트 (공유 와셔 ≥1) — 굵은 검정 점선 (강한 협업 신호)
+  for (const nut of data.nuts) {
+    for (const bolt of data.bolts) {
+      const sharedWashers = data.washers.filter(
+        (w) => w.nutIds.includes(nut.id) && w.boltIds.includes(bolt.id),
+      );
+      if (sharedWashers.length > 0) {
+        edges.push({
+          id: `e-cr-n-b-${nut.id}-${bolt.id}`,
+          source: `nut-${nut.id}`,
+          target: `bolt-${bolt.id}`,
+          style: { stroke: "#0D0F14", strokeWidth: 1.5, strokeDasharray: "6 4", opacity: 0.4 },
+          label: sharedWashers.length > 1 ? `${sharedWashers.length}명 공유` : undefined,
+          labelStyle: { fontSize: 10, fontFamily: "ui-monospace, monospace" },
+        });
+      }
+    }
+  }
+
+  // ── AI 임시 노드 (suggested_roles + first_tasks) ─────────────────
+  // 중앙 위쪽 (12시 방향) 가까이 작은 호 형태로 배치 — 30초 후 사라짐
+  if (aiSuggestion) {
+    const aiItems: Array<{ id: string; data: MindMapNodeData }> = [
+      ...aiSuggestion.roles.map((r, i) => ({
+        id: `ai-role-${i}`,
+        data: {
+          kind: "ai-role" as const,
+          title: r.name,
+          subtitle: r.tags?.length ? r.tags.slice(0, 3).join(" · ") : "💡 추천 역할",
+          meta: { 이유: r.why || "Genesis AI 추천" },
+        },
+      })),
+      ...aiSuggestion.tasks.map((t, i) => ({
+        id: `ai-task-${i}`,
+        data: {
+          kind: "ai-task" as const,
+          title: t.length > 30 ? t.slice(0, 30) + "…" : t,
+          subtitle: "🎯 첫 액션",
+          meta: { 전체: t, 출처: "Genesis 첫 액션 제안" },
+        },
+      })),
+    ];
+    const M = aiItems.length;
+    aiItems.forEach((entry, idx) => {
+      // 12시 방향 위쪽 호 (-90° ± 60° 범위)
+      const angleSpan = (Math.PI * 2) / 3; // 120°
+      const angle = -Math.PI / 2 - angleSpan / 2 + (M > 1 ? (idx / (M - 1)) * angleSpan : 0);
+      const radius = 180; // 중앙에 가깝게
+      nodes.push({
+        id: entry.id,
+        type: "card",
+        position: { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius },
+        data: entry.data,
+      });
+      edges.push({
+        id: `e-${entry.id}`,
+        source: "center",
+        target: entry.id,
+        animated: true,
+        style: { stroke: entry.data.kind === "ai-role" ? "#EAB308" : "#F97316", strokeWidth: 2 },
+      });
+    });
+  }
 
   return { nodes, edges };
 }
