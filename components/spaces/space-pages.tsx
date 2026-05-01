@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Loader2, FileText, Star, Clock, Layers } from "lucide-react";
+import { Plus, Loader2, FileText, Star, Clock, Layers, Activity, BarChart3, Menu } from "lucide-react";
 import { toast } from "sonner";
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import type { SpacePage } from "./space-pages-types";
@@ -12,6 +12,8 @@ import { TemplatePicker } from "./template-picker";
 import { PageSearch } from "./page-search";
 import { AiPageModal } from "./ai-page-modal";
 import { WorkspaceSwitcher } from "./workspace-switcher";
+import { ActivityFeed } from "./activity-feed";
+import { AnalyticsPanel } from "./analytics-panel";
 import type { PageTemplate } from "./templates";
 
 interface Props {
@@ -25,7 +27,7 @@ interface Props {
   currentUserNickname?: string;
 }
 
-type SidebarMode = "tree" | "favorites" | "recent";
+type SidebarMode = "tree" | "favorites" | "recent" | "activity";
 
 /**
  * 노션 스타일 자유 페이지 관리자.
@@ -44,6 +46,9 @@ export function SpacePages({ ownerType, ownerId, ownerName, currentUserId, curre
   const [snippetsOpen, setSnippetsOpen] = useState(false);
   const [templateOpen, setTemplateOpen] = useState(false);
   const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
+  // 모바일 — 사이드바 collapse (md+ 항상 노출, 모바일 토글)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   // 실시간 presence — 같은 페이지를 보고 있는 다른 사용자
   const [presenceUsers, setPresenceUsers] = useState<Array<{ id: string; nickname: string }>>([]);
 
@@ -245,8 +250,16 @@ export function SpacePages({ ownerType, ownerId, ownerName, currentUserId, curre
 
   return (
     <div className="border-[3px] border-nu-ink bg-white shadow-[3px_3px_0_0_#0D0F14] flex flex-col md:flex-row" style={{ minHeight: 480 }}>
-      {/* 사이드바 — 페이지 트리 + 즐겨찾기 + 타임라인 + 스니펫 */}
-      <aside className="md:w-[280px] shrink-0 border-b-[2px] md:border-b-0 md:border-r-[2px] border-nu-ink/15 bg-nu-cream/20 flex flex-col">
+      {/* 모바일 햄버거 — 사이드바 토글 */}
+      <button
+        type="button"
+        onClick={() => setMobileSidebarOpen((v) => !v)}
+        className="md:hidden absolute top-2 right-2 z-30 font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 border-[2px] border-nu-ink bg-white shadow-[2px_2px_0_0_#0D0F14] flex items-center gap-1"
+      >
+        <Menu size={11} /> {mobileSidebarOpen ? "닫기" : "메뉴"}
+      </button>
+      {/* 사이드바 — 페이지 트리 + 즐겨찾기 + 타임라인 + 활동 + 스니펫 */}
+      <aside className={`md:w-[280px] shrink-0 border-b-[2px] md:border-b-0 md:border-r-[2px] border-nu-ink/15 bg-nu-cream/20 flex flex-col ${mobileSidebarOpen ? "block" : "hidden md:flex"}`}>
         {/* 워크스페이스 스위처 — 다른 너트/볼트로 점프 */}
         {ownerName && (
           <div className="border-b border-nu-ink/10 bg-white">
@@ -266,6 +279,14 @@ export function SpacePages({ ownerType, ownerId, ownerName, currentUserId, curre
               className="font-mono-nu text-[10px] uppercase tracking-widest px-1 py-0.5 border border-nu-pink hover:bg-nu-pink/10 text-nu-pink"
             >
               🪄
+            </button>
+            <button
+              type="button"
+              onClick={() => setAnalyticsOpen(true)}
+              title="분석 (30일)"
+              className="font-mono-nu text-[10px] uppercase tracking-widest px-1 py-0.5 border border-nu-ink/30 hover:bg-nu-cream"
+            >
+              <BarChart3 size={10} />
             </button>
             <button
               type="button"
@@ -323,6 +344,13 @@ export function SpacePages({ ownerType, ownerId, ownerName, currentUserId, curre
           >
             <Clock size={10} /> 최근
           </button>
+          <button
+            type="button"
+            onClick={() => setSidebarMode("activity")}
+            className={`flex-1 px-2 py-1.5 flex items-center justify-center gap-1 border-l border-nu-ink/10 ${sidebarMode === "activity" ? "bg-nu-ink text-nu-paper" : "hover:bg-nu-cream text-nu-ink"}`}
+          >
+            <Activity size={10} /> 활동
+          </button>
         </div>
         <div className="flex-1 overflow-auto p-2 space-y-0.5">
           {loading ? (
@@ -353,6 +381,12 @@ export function SpacePages({ ownerType, ownerId, ownerName, currentUserId, curre
             [...pages].sort((a, b) => b.updated_at.localeCompare(a.updated_at)).slice(0, 30).map((p) => (
               <FlatPageRow key={p.id} page={p} selected={selectedId === p.id} onSelect={() => setSelectedId(p.id)} starred={favorites.has(p.id)} onToggleStar={() => toggleFavorite(p.id)} showTime={p.updated_at} />
             ))
+          ) : sidebarMode === "activity" ? (
+            <ActivityFeed
+              ownerType={ownerType}
+              ownerId={ownerId}
+              onJumpToPage={(pid) => { setSelectedId(pid); setMobileSidebarOpen(false); }}
+            />
           ) : (
             (tree.get(null) ?? []).map((p) => (
               <SpacePageTreeNode
@@ -438,6 +472,13 @@ export function SpacePages({ ownerType, ownerId, ownerName, currentUserId, curre
           await load();
           setSelectedId(pageId);
         }}
+      />
+      <AnalyticsPanel
+        open={analyticsOpen}
+        ownerType={ownerType}
+        ownerId={ownerId}
+        onClose={() => setAnalyticsOpen(false)}
+        onJumpToPage={(pid) => setSelectedId(pid)}
       />
     </div>
   );
