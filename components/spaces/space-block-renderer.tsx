@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Sparkles, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import type { SpaceBlock, BlockType } from "./space-pages-types";
 import { SLASH_COMMANDS } from "./space-pages-types";
 
@@ -13,16 +15,122 @@ interface Props {
   onBackspaceEmpty: () => void;
   /** 슬래시 메뉴에서 type 선택 시 — 부모가 type 변경 */
   onSlashSelect: (type: BlockType) => void;
+  /** mention 자동완성용 — 부모가 owner 정보 전달 */
+  ownerType?: "nut" | "bolt";
+  ownerId?: string;
 }
 
-export function SpaceBlockRenderer({ block, onChange, onEnter, onBackspaceEmpty, onSlashSelect }: Props) {
+interface MentionItem {
+  kind: "user" | "nut" | "bolt" | "page" | "topic";
+  id: string;
+  label: string;
+  sub?: string;
+  icon?: string;
+}
+
+// `# ` `## ` `### ` `- ` `1. ` `[] ` `> ` 자동 변환 — Notion 풍 인라인 단축키
+const MARKDOWN_SHORTCUTS: Array<{ pattern: RegExp; type: BlockType; data?: Record<string, unknown> }> = [
+  { pattern: /^#\s$/, type: "h1" },
+  { pattern: /^##\s$/, type: "h2" },
+  { pattern: /^###\s$/, type: "h3" },
+  { pattern: /^-\s$/, type: "bullet" },
+  { pattern: /^\*\s$/, type: "bullet" },
+  { pattern: /^1\.\s$/, type: "numbered" },
+  { pattern: /^\[\]\s$/, type: "todo" },
+  { pattern: /^\[ \]\s$/, type: "todo" },
+  { pattern: /^>\s$/, type: "quote" },
+  { pattern: /^```\s$/, type: "code" },
+  { pattern: /^---$/, type: "divider" },
+  { pattern: /^\/\/\/\s$/, type: "callout" },
+];
+
+export function SpaceBlockRenderer({ block, onChange, onEnter, onBackspaceEmpty, onSlashSelect, ownerType, ownerId }: Props) {
   const [draft, setDraft] = useState(block.content);
   const [slashOpen, setSlashOpen] = useState(false);
   const [slashIdx, setSlashIdx] = useState(0);
+  // mention 자동완성
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionResults, setMentionResults] = useState<MentionItem[]>([]);
+  const [mentionIdx, setMentionIdx] = useState(0);
+  // AI 메뉴 (Cmd+I)
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiPreview, setAiPreview] = useState<string | null>(null);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
 
   // block prop 이 바뀌면 (다른 블록으로) draft 동기화
-  useEffect(() => { setDraft(block.content); }, [block.id]);
+  useEffect(() => { setDraft(block.content); setAiPreview(null); }, [block.id]);
+
+  // mention 검색 — 디바운스 200ms
+  useEffect(() => {
+    if (mentionQuery == null || mentionQuery.length === 0) {
+      setMentionResults([]);
+      return;
+    }
+    const t = setTimeout(() => {
+      const params = new URLSearchParams({ q: mentionQuery });
+      if (ownerType && ownerId) {
+        params.set("owner_type", ownerType);
+        params.set("owner_id", ownerId);
+      }
+      fetch(`/api/spaces/mention-search?${params.toString()}`)
+        .then((r) => r.ok ? r.json() : Promise.resolve({ results: [] }))
+        .then((j) => setMentionResults(j.results ?? []))
+        .catch(() => setMentionResults([]));
+    }, 200);
+    return () => clearTimeout(t);
+  }, [mentionQuery, ownerType, ownerId]);
+
+  function insertMention(item: MentionItem) {
+    const ta = taRef.current;
+    if (!ta) return;
+    const pos = ta.selectionStart;
+    // @로부터 현재까지 영역을 mention chip 마크다운으로 치환
+    // syntax: @[label](kind:id)
+    const before = draft.slice(0, pos);
+    const after = draft.slice(pos);
+    // 마지막 @ 위치 찾기
+    const atIdx = before.lastIndexOf("@");
+    if (atIdx < 0) return;
+    const newBefore = before.slice(0, atIdx);
+    const chip = `@[${item.label}](${item.kind}:${item.id})`;
+    const next = newBefore + chip + " " + after;
+    setDraft(next);
+    onChange({ content: next });
+    setMentionQuery(null);
+    setTimeout(() => {
+      ta.focus();
+      const caret = (newBefore + chip + " ").length;
+      ta.setSelectionRange(caret, caret);
+    }, 0);
+  }
+
+  async function runAi(action: "rewrite" | "summarize" | "expand" | "continue" | "improve" | "translate", instruction?: string) {
+    setAiBusy(true);
+    setAiPreview(null);
+    try {
+      const res = await fetch(`/api/spaces/blocks/${block.id}/ai`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, instruction }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || "AI 호출 실패");
+      setAiPreview(json.suggestion ?? "");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "AI 호출 실패");
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  function applyAi() {
+    if (aiPreview == null) return;
+    setDraft(aiPreview);
+    onChange({ content: aiPreview });
+    setAiPreview(null);
+    setAiOpen(false);
+  }
 
   // 슬래시 메뉴 — 빈 블록에서 "/" 만 입력했을 때 + 그 후 타이핑하는 검색어로 필터
   const slashQuery = draft.startsWith("/") ? draft.slice(1).toLowerCase() : "";
@@ -38,18 +146,53 @@ export function SpaceBlockRenderer({ block, onChange, onEnter, onBackspaceEmpty,
 
   function handleChange(v: string) {
     setDraft(v);
+
+    // 슬래시 메뉴
     if (v === "/") {
       setSlashOpen(true);
       setSlashIdx(0);
     } else if (!v.startsWith("/") && slashOpen) {
       setSlashOpen(false);
     }
+
+    // 마크다운 단축키 — 빈 블록(text/h1-3 만)에서 시작 부분 패턴 매칭
+    if (block.type === "text") {
+      for (const sc of MARKDOWN_SHORTCUTS) {
+        if (sc.pattern.test(v)) {
+          // type 변경 + 본문 비우기
+          onSlashSelect(sc.type);
+          setDraft("");
+          return;
+        }
+      }
+    }
+
+    // mention 디텍션 — 커서 직전에 "@..." 가 있으면 검색 모드
+    const ta = taRef.current;
+    if (ta) {
+      const pos = ta.selectionStart;
+      const before = v.slice(0, pos);
+      const m = before.match(/@([^\s@\[]{0,30})$/);
+      if (m) {
+        setMentionQuery(m[1]);
+        setMentionIdx(0);
+      } else if (mentionQuery !== null) {
+        setMentionQuery(null);
+      }
+    }
+
     if (!v.startsWith("/")) {
       onChange({ content: v });
     }
   }
 
   function handleKey(e: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) {
+    // Cmd/Ctrl+I — AI 메뉴 토글
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "i") {
+      e.preventDefault();
+      setAiOpen((v) => !v);
+      return;
+    }
     if (showSlash) {
       if (e.key === "ArrowDown") { e.preventDefault(); setSlashIdx((i) => Math.min(filtered.length - 1, i + 1)); return; }
       if (e.key === "ArrowUp")   { e.preventDefault(); setSlashIdx((i) => Math.max(0, i - 1)); return; }
@@ -64,6 +207,17 @@ export function SpaceBlockRenderer({ block, onChange, onEnter, onBackspaceEmpty,
         return;
       }
       if (e.key === "Escape") { e.preventDefault(); setSlashOpen(false); setDraft(""); onChange({ content: "" }); return; }
+    } else if (mentionQuery !== null && mentionResults.length > 0) {
+      // mention 자동완성 활성 — ↑↓/Enter/Esc 처리
+      if (e.key === "ArrowDown") { e.preventDefault(); setMentionIdx((i) => Math.min(mentionResults.length - 1, i + 1)); return; }
+      if (e.key === "ArrowUp")   { e.preventDefault(); setMentionIdx((i) => Math.max(0, i - 1)); return; }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        const item = mentionResults[mentionIdx];
+        if (item) insertMention(item);
+        return;
+      }
+      if (e.key === "Escape") { e.preventDefault(); setMentionQuery(null); return; }
     } else {
       // code/quote/callout 은 multiline — 그 외 enter = 새 블록
       const multiline = block.type === "code" || block.type === "quote" || block.type === "callout";
@@ -235,11 +389,172 @@ export function SpaceBlockRenderer({ block, onChange, onEnter, onBackspaceEmpty,
           block.type === "h1" ? "제목 1" :
           block.type === "h2" ? "제목 2" :
           block.type === "h3" ? "제목 3" :
-          "텍스트… (/ 입력으로 블록 변경)"
+          "텍스트… ( / 블록 · @ 멘션 · ⌘I AI )"
         }
         className={`${textareaClass} ${sizeCls} text-nu-ink`}
       />
       {showSlash && <SlashMenu items={filtered} active={slashIdx} onPick={(type) => { setSlashOpen(false); setDraft(""); onSlashSelect(type); }} />}
+      {mentionQuery !== null && mentionResults.length > 0 && (
+        <MentionMenu items={mentionResults} active={mentionIdx} onPick={insertMention} />
+      )}
+      {aiOpen && (
+        <AiPopover
+          busy={aiBusy}
+          preview={aiPreview}
+          onAction={runAi}
+          onApply={applyAi}
+          onClose={() => { setAiOpen(false); setAiPreview(null); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function MentionMenu({
+  items,
+  active,
+  onPick,
+}: {
+  items: MentionItem[];
+  active: number;
+  onPick: (item: MentionItem) => void;
+}) {
+  return (
+    <div className="absolute top-full left-0 mt-1 z-30 bg-white border-[2px] border-nu-ink shadow-[3px_3px_0_0_#0D0F14] min-w-[260px] max-h-[280px] overflow-auto">
+      <div className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted px-2 py-1 border-b border-nu-ink/10">
+        멘션 (↑↓ Enter)
+      </div>
+      {items.map((item, i) => {
+        const KIND_LABEL: Record<string, string> = {
+          user: "동료", nut: "너트", bolt: "볼트", page: "페이지", topic: "탭",
+        };
+        return (
+          <button
+            key={`${item.kind}-${item.id}`}
+            type="button"
+            onMouseDown={(e) => { e.preventDefault(); onPick(item); }}
+            className={`w-full text-left flex items-center gap-2 px-2 py-1.5 ${i === active ? "bg-nu-cream" : "hover:bg-nu-cream/50"}`}
+          >
+            <span className="font-mono-nu text-[8px] uppercase tracking-widest bg-nu-ink text-nu-paper px-1 py-0.5">
+              {KIND_LABEL[item.kind] || item.kind}
+            </span>
+            <span className="text-[12px] font-bold text-nu-ink truncate flex-1">{item.label}</span>
+            {item.sub && (
+              <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted shrink-0">{item.sub}</span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function AiPopover({
+  busy,
+  preview,
+  onAction,
+  onApply,
+  onClose,
+}: {
+  busy: boolean;
+  preview: string | null;
+  onAction: (action: "rewrite" | "summarize" | "expand" | "continue" | "improve" | "translate", instruction?: string) => void;
+  onApply: () => void;
+  onClose: () => void;
+}) {
+  const [customInstr, setCustomInstr] = useState("");
+  const QUICK = [
+    { action: "improve" as const,    label: "다듬기",   icon: "✨", hint: "문법·표현·가독성" },
+    { action: "rewrite" as const,    label: "다시 쓰기", icon: "🔄", hint: "표현 바꿈" },
+    { action: "summarize" as const,  label: "요약",     icon: "📝", hint: "1~2문장" },
+    { action: "expand" as const,     label: "확장",     icon: "📖", hint: "3~5문장" },
+    { action: "continue" as const,   label: "이어쓰기", icon: "➡️", hint: "1~3문장 추가" },
+    { action: "translate" as const,  label: "영문 번역", icon: "🌐", hint: "→ English" },
+  ];
+  return (
+    <div className="absolute top-full left-0 mt-1 z-40 bg-white border-[2px] border-nu-pink shadow-[3px_3px_0_0_rgba(255,61,136,0.4)] min-w-[320px] max-w-[420px]">
+      <div className="px-2 py-1 border-b border-nu-pink/30 flex items-center justify-between">
+        <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-pink flex items-center gap-1">
+          <Sparkles size={10} /> Genesis AI · 이 블록
+        </span>
+        <button type="button" onClick={onClose} className="text-nu-muted hover:text-nu-ink text-[12px]">×</button>
+      </div>
+      {preview ? (
+        <div>
+          <div className="px-2 py-1 font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted">미리보기</div>
+          <pre className="px-2.5 py-2 max-h-[180px] overflow-auto text-[12px] text-nu-ink whitespace-pre-wrap font-sans bg-nu-cream/40 border-y border-nu-ink/10">
+            {preview}
+          </pre>
+          <div className="flex items-center gap-1 px-2 py-1.5">
+            <button
+              type="button"
+              onClick={onApply}
+              className="flex-1 font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 border-[2px] border-nu-ink bg-nu-ink text-nu-paper"
+            >
+              적용
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 border-[2px] border-nu-ink/30 hover:bg-nu-cream"
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="p-2 space-y-2">
+          <div className="grid grid-cols-2 gap-1">
+            {QUICK.map((q) => (
+              <button
+                key={q.action}
+                type="button"
+                disabled={busy}
+                onClick={() => onAction(q.action)}
+                className="font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1.5 border-[2px] border-nu-ink/20 hover:border-nu-ink hover:bg-nu-cream disabled:opacity-40 text-left flex flex-col gap-0.5"
+                title={q.hint}
+              >
+                <span className="flex items-center gap-1">
+                  <span className="text-[12px]">{q.icon}</span>
+                  <span>{q.label}</span>
+                </span>
+                <span className="text-[8px] text-nu-muted normal-case tracking-normal">{q.hint}</span>
+              </button>
+            ))}
+          </div>
+          <div className="border-t border-nu-ink/10 pt-2">
+            <div className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-1">커스텀 지시</div>
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                value={customInstr}
+                onChange={(e) => setCustomInstr(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && customInstr.trim()) {
+                    e.preventDefault();
+                    onAction("rewrite", customInstr.trim());
+                  }
+                }}
+                placeholder="예: 더 친근한 말투로"
+                className="flex-1 px-1.5 py-1 text-[12px] border-[2px] border-nu-ink/20 focus:border-nu-ink outline-none"
+              />
+              <button
+                type="button"
+                disabled={busy || !customInstr.trim()}
+                onClick={() => onAction("rewrite", customInstr.trim())}
+                className="font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 border-[2px] border-nu-pink bg-nu-pink text-white disabled:opacity-40"
+              >
+                실행
+              </button>
+            </div>
+          </div>
+          {busy && (
+            <div className="flex items-center gap-1.5 text-[11px] text-nu-muted px-1">
+              <Loader2 size={11} className="animate-spin" /> Genesis 가 작업 중…
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

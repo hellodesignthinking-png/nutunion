@@ -11,6 +11,9 @@ interface Props {
   pageId: string;
   /** L1 의 page.content (단일 마크다운). 블록이 0개일 때 자동으로 첫 text 블록으로 마이그레이션. */
   legacyContent?: string;
+  /** mention 자동완성에 owner 정보 전달용 */
+  ownerType?: "nut" | "bolt";
+  ownerId?: string;
 }
 
 const SAVE_DEBOUNCE = 600;
@@ -24,7 +27,7 @@ const SAVE_DEBOUNCE = 600;
  * - "+" 버튼 = 블록 사이 삽입
  * - 드래그-드롭 순서 변경
  */
-export function SpacePageBlocks({ pageId, legacyContent }: Props) {
+export function SpacePageBlocks({ pageId, legacyContent, ownerType, ownerId }: Props) {
   const [blocks, setBlocks] = useState<SpaceBlock[]>([]);
   const [loading, setLoading] = useState(true);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -194,6 +197,8 @@ export function SpacePageBlocks({ pageId, legacyContent }: Props) {
                   onEnter={() => insertBlock("text", b.id)}
                   onBackspaceEmpty={() => deleteBlock(b.id)}
                   onSlashSelect={(type) => updateBlock(b.id, { type, content: "" })}
+                  ownerType={ownerType}
+                  ownerId={ownerId}
                 />
               </div>
               <button

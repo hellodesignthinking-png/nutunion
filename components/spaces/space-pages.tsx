@@ -199,6 +199,8 @@ export function SpacePages({ ownerType, ownerId }: Props) {
             onUpdateTitle={(title) => updatePage(selected.id, { title })}
             onUpdateIcon={(icon) => updatePage(selected.id, { icon })}
             onUpdateContent={(content) => updatePage(selected.id, { content })}
+            ownerType={ownerType}
+            ownerId={ownerId}
           />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-nu-muted">

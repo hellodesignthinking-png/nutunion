@@ -11,6 +11,8 @@ interface Props {
   onUpdateTitle: (title: string) => void;
   onUpdateIcon: (icon: string) => void;
   onUpdateContent: (content: string) => void;
+  ownerType?: "nut" | "bolt";
+  ownerId?: string;
 }
 
 const TITLE_DEBOUNCE = 500;
@@ -23,7 +25,7 @@ const TITLE_DEBOUNCE = 500;
  *
  * 페이지가 처음엔 비어있고 (블록 0개), 첫 키 입력 시 자동으로 text 블록 1개 생성.
  */
-export function SpacePageEditor({ page, onUpdateTitle, onUpdateIcon }: Props) {
+export function SpacePageEditor({ page, onUpdateTitle, onUpdateIcon, ownerType, ownerId }: Props) {
   const [titleDraft, setTitleDraft] = useState(page.title);
 
   // page 가 바뀌면 (다른 페이지로 jump) draft 초기화
@@ -67,7 +69,7 @@ export function SpacePageEditor({ page, onUpdateTitle, onUpdateIcon }: Props) {
 
       {/* 블록 본문 */}
       <div className="flex-1 overflow-auto">
-        <SpacePageBlocks pageId={page.id} legacyContent={page.content} />
+        <SpacePageBlocks pageId={page.id} legacyContent={page.content} ownerType={ownerType} ownerId={ownerId} />
       </div>
     </div>
   );
