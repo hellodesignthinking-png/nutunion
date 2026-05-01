@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
-import { Camera, Search, X, Filter, Radio, Clock, Network, Wand2, ArrowDown, ArrowRight, ChevronDown, Trash2, Focus, Keyboard, Info } from "lucide-react";
+import { Camera, Search, X, Filter, Radio, Clock, Network, Wand2, ArrowDown, ArrowRight, ChevronDown, Trash2, Focus, Keyboard, Info, List, Route, Command } from "lucide-react";
 import { dagreLayout, type LayoutDirection } from "@/lib/dashboard/auto-layout";
 import { toast } from "sonner";
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
@@ -29,6 +29,8 @@ import { ContextMenu, type ContextMenuTarget } from "./context-menu";
 import { EdgeLabelEditor } from "./edge-label-editor";
 import { GenesisPlanPanel, type GenesisPlan } from "./genesis-plan-panel";
 import { HelpOverlay } from "./help-overlay";
+import { OutlineView } from "./outline-view";
+import { CommandPalette, type PaletteAction } from "./command-palette";
 import type { MindMapData, MindMapNodeData, NodeKind } from "@/lib/dashboard/mindmap-types";
 import { NODE_COLORS } from "@/lib/dashboard/mindmap-types";
 
@@ -36,7 +38,7 @@ const nodeTypes = { card: NodeCard, center: CenterGenesisNode, sector: SectorHal
 const LAYOUT_KEY = "dashboard.mindmap.layout";
 const VIEW_MODE_KEY = "dashboard.mindmap.viewMode";
 
-type ViewMode = "radial" | "timeline";
+type ViewMode = "radial" | "timeline" | "outline";
 
 // Timeline 모드 — 7일 시간축 (now → +168h). schedule 노드만 시간순 배치.
 const TIMELINE_HOURS = 168; // 7일
@@ -134,6 +136,10 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
   // 키보드 단축키 도움말 / Legend 오버레이
   const [showHelp, setShowHelp] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
+  // 경로 찾기 모드 — null 이면 비활성, source 정해지면 다음 클릭이 target.
+  const [pathMode, setPathMode] = useState<{ source: string | null; target: string | null } | null>(null);
+  // 명령 팔레트 (Cmd+P)
+  const [showPalette, setShowPalette] = useState(false);
   const [filterText, setFilterText] = useState("");
   const [filterKinds, setFilterKinds] = useState<Set<NodeKind>>(new Set());
   const [viewMode, setViewMode] = useState<ViewMode>("radial");
@@ -184,7 +190,7 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
   useEffect(() => {
     try {
       const raw = localStorage.getItem(VIEW_MODE_KEY);
-      if (raw === "timeline" || raw === "radial") setViewMode(raw);
+      if (raw === "timeline" || raw === "radial" || raw === "outline") setViewMode(raw);
     } catch { /* ignore */ }
   }, []);
   useEffect(() => {
@@ -229,7 +235,15 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
         setShowLegend((v) => !v);
         return;
       }
+      // Cmd/Ctrl+P — 명령 팔레트
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        setShowPalette((v) => !v);
+        return;
+      }
       if (e.key === "Escape") {
+        if (showPalette) { setShowPalette(false); return; }
+        if (pathMode) { setPathMode(null); return; }
         if (focusedNodeId) { setFocusedNodeId(null); return; }
         if (showHelp) { setShowHelp(false); return; }
         if (showLegend) { setShowLegend(false); return; }
@@ -245,7 +259,7 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [focusedNodeId, selected, showHelp, showLegend]);
+  }, [focusedNodeId, selected, showHelp, showLegend, showPalette, pathMode]);
 
   const handleExport = useCallback(async () => {
     if (!flowRef.current || exporting) return;
@@ -294,7 +308,7 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
           setSavedPositions(j.layout);
           try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(j.layout)); } catch { /* ignore */ }
         }
-        if (j.viewMode === "timeline" || j.viewMode === "radial") setViewMode(j.viewMode);
+        if (j.viewMode === "timeline" || j.viewMode === "radial" || j.viewMode === "outline") setViewMode(j.viewMode);
         setCloudHydrated(true);
       })
       .catch(() => setCloudHydrated(true));
@@ -490,10 +504,57 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
   }, [focusedNodeId, edges, userEdges]);
 
   const aiActive = highlighted.size > 0;
+
+  // 경로 찾기 — pathMode source+target 설정 시 BFS 로 최단 경로의 노드/엣지 id 계산.
+  // (선언 위치: nodes useMemo 가 deps 로 참조하므로 그 앞에.)
+  const pathResult = useMemo<{ nodeIds: Set<string>; edgeIds: Set<string> } | null>(() => {
+    if (!pathMode?.source || !pathMode.target) return null;
+    const adj = new Map<string, Array<{ neighbor: string; edgeId: string }>>();
+    const addEdge = (s: string, t: string, id: string) => {
+      if (!adj.has(s)) adj.set(s, []);
+      if (!adj.has(t)) adj.set(t, []);
+      adj.get(s)!.push({ neighbor: t, edgeId: id });
+      adj.get(t)!.push({ neighbor: s, edgeId: id });
+    };
+    for (const e of edges) addEdge(e.source, e.target, e.id);
+    for (const ue of userEdges) addEdge(ue.source_id, ue.target_id, `user-${ue.id}`);
+
+    const start = pathMode.source;
+    const goal = pathMode.target;
+    if (start === goal) return { nodeIds: new Set([start]), edgeIds: new Set() };
+
+    const visited = new Map<string, { prev: string; edgeId: string } | null>();
+    visited.set(start, null);
+    const queue: string[] = [start];
+    while (queue.length > 0) {
+      const cur = queue.shift()!;
+      if (cur === goal) break;
+      for (const { neighbor, edgeId } of (adj.get(cur) ?? [])) {
+        if (!visited.has(neighbor)) {
+          visited.set(neighbor, { prev: cur, edgeId });
+          queue.push(neighbor);
+        }
+      }
+    }
+    if (!visited.has(goal)) return { nodeIds: new Set([start, goal]), edgeIds: new Set() };
+
+    const nodeIds = new Set<string>();
+    const edgeIds = new Set<string>();
+    let cursor: string | undefined = goal;
+    while (cursor) {
+      nodeIds.add(cursor);
+      const step: { prev: string; edgeId: string } | null = visited.get(cursor) ?? null;
+      if (!step) break;
+      edgeIds.add(step.edgeId);
+      cursor = step.prev;
+    }
+    return { nodeIds, edgeIds };
+  }, [pathMode, edges, userEdges]);
+
   const nodes = useMemo(
     () => baseNodes.map((n) => {
       const data = n.data as MindMapNodeData;
-      const isHighlighted = highlighted.has(n.id);
+      let isHighlighted = highlighted.has(n.id);
       let isDimmed = false;
       if (filterActive && data.kind !== "center") {
         const matchesText = !filterLower
@@ -510,6 +571,15 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
       if (focusModeIds && !focusModeIds.has(n.id)) {
         isDimmed = true;
       }
+      // 경로 강조 — path 노드 외 모두 dim, path 노드는 highlighted
+      if (pathResult && pathResult.nodeIds.size > 0 && data.kind !== "center") {
+        if (pathResult.nodeIds.has(n.id)) {
+          isHighlighted = true;
+          isDimmed = false;
+        } else {
+          isDimmed = true;
+        }
+      }
       // AI 답변 활성 — 매칭 안 된 노드는 dim (center/sector 제외, 매칭은 강조)
       if (aiActive && data.kind !== "center" && (data as unknown as { kind: string }).kind !== "sector" && !isHighlighted) {
         isDimmed = true;
@@ -522,7 +592,7 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
         data: { ...data, highlighted: isHighlighted, dimmed: isDimmed },
       };
     }),
-    [baseNodes, highlighted, aiActive, savedPositions, filterActive, filterLower, filterKinds, focusNodeIds, focusModeIds, viewMode],
+    [baseNodes, highlighted, aiActive, savedPositions, filterActive, filterLower, filterKinds, focusNodeIds, focusModeIds, pathResult, viewMode],
   );
 
   // 필터 매칭 결과 — 안내 오버레이 + 엣지 dimming 에 사용
@@ -552,10 +622,29 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
     return [...edges, ...ue];
   }, [edges, userEdges]);
 
-  // 엣지도 양 끝 노드가 dimmed 면 같이 dim — 고아 엣지 방지 (filter + hover 통합)
+  // 엣지도 양 끝 노드가 dimmed 면 같이 dim — 고아 엣지 방지 (filter + hover + path 통합)
   const styledEdges = useMemo(() => {
-    if (!filterActive && !focusNodeIds) return allEdges;
+    const pathActive = pathResult && pathResult.edgeIds.size > 0;
+    if (!filterActive && !focusNodeIds && !pathActive) return allEdges;
     return allEdges.map((e) => {
+      // 경로 강조 — path 안 엣지는 굵은 핑크, 그 외 모두 dim
+      if (pathActive) {
+        const baseStyle = (e.style ?? {}) as React.CSSProperties;
+        if (pathResult!.edgeIds.has(e.id)) {
+          return {
+            ...e,
+            animated: true,
+            style: { ...baseStyle, stroke: "#FF3D88", strokeWidth: 3.5, opacity: 1 },
+          };
+        }
+        const baseOpacity = typeof baseStyle.opacity === "number" ? baseStyle.opacity : 1;
+        return {
+          ...e,
+          style: { ...baseStyle, opacity: baseOpacity * 0.1 },
+          labelStyle: e.labelStyle ? { ...e.labelStyle, opacity: 0.2 } : undefined,
+          labelBgStyle: e.labelBgStyle ? { ...e.labelBgStyle, fillOpacity: 0.15 } : undefined,
+        };
+      }
       const sDim = dimmedIds.has(e.source);
       const tDim = dimmedIds.has(e.target);
       if (!sDim && !tDim) return e;
@@ -568,12 +657,26 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
         labelBgStyle: e.labelBgStyle ? { ...e.labelBgStyle, fillOpacity: 0.2 } : undefined,
       };
     });
-  }, [allEdges, dimmedIds, filterActive, focusNodeIds]);
+  }, [allEdges, dimmedIds, filterActive, focusNodeIds, pathResult]);
 
   const onNodeClick: NodeMouseHandler = useCallback((_, node) => {
     if (node.id === "center") return;
+    // 경로 모드 — 첫 클릭은 source, 두 번째는 target
+    if (pathMode) {
+      if (!pathMode.source) {
+        setPathMode({ source: node.id, target: null });
+        toast.info("두 번째 노드를 클릭해서 경로 보기", { duration: 4000 });
+      } else if (!pathMode.target && node.id !== pathMode.source) {
+        setPathMode({ source: pathMode.source, target: node.id });
+      } else {
+        // 이미 둘 다 정해진 상태에서 또 클릭 — 새 source 로 reset
+        setPathMode({ source: node.id, target: null });
+        toast.info("새 경로 — 두 번째 노드를 클릭", { duration: 3000 });
+      }
+      return;
+    }
     setSelected({ ...(node.data as MindMapNodeData), id: node.id });
-  }, []);
+  }, [pathMode]);
 
   // 다중 선택 핸들러 — reactflow 가 shift+drag/click 으로 다중 선택할 때 갱신.
   const onSelectionChange = useCallback((sel: { nodes: RFNode[]; edges: RFEdge[] }) => {
@@ -844,13 +947,13 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
         </div>
 
         <div className="flex items-center gap-2">
-          {/* 보기 모드 토글 — 방사형(기본) / 타임라인(7일 시간축) */}
+          {/* 보기 모드 토글 — 방사형 / 타임라인 / 아웃라인 */}
           <div className="inline-flex border-[2px] border-nu-ink" role="group" aria-label="마인드맵 보기 모드">
             <button
               type="button"
               onClick={() => setViewMode("radial")}
               aria-pressed={viewMode === "radial"}
-              title="방사형 — 모든 노드 펼치기"
+              title="방사형 — 모든 노드 그래프"
               className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 flex items-center gap-1 ${viewMode === "radial" ? "bg-nu-ink text-nu-cream" : "text-nu-ink hover:bg-nu-cream"}`}
             >
               <Network size={11} /> 방사형
@@ -863,6 +966,15 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
               className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 flex items-center gap-1 border-l-[2px] border-nu-ink ${viewMode === "timeline" ? "bg-nu-ink text-nu-cream" : "text-nu-ink hover:bg-nu-cream"}`}
             >
               <Clock size={11} /> 타임라인
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("outline")}
+              aria-pressed={viewMode === "outline"}
+              title="아웃라인 — 계층형 텍스트 트리 (스캔/공유용)"
+              className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 flex items-center gap-1 border-l-[2px] border-nu-ink ${viewMode === "outline" ? "bg-nu-ink text-nu-cream" : "text-nu-ink hover:bg-nu-cream"}`}
+            >
+              <List size={11} /> 아웃라인
             </button>
           </div>
           <button
@@ -968,6 +1080,24 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
               💡 답변 패널
             </button>
           )}
+          {viewMode === "radial" && (
+            <button
+              type="button"
+              onClick={() => setPathMode(pathMode ? null : { source: null, target: null })}
+              className={`font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 border flex items-center gap-1 ${pathMode ? "border-nu-pink bg-nu-pink/10 text-nu-pink" : "border-nu-ink/30 hover:bg-nu-cream"}`}
+              title="두 노드 사이 최단 경로 강조"
+            >
+              <Route size={11} /> 경로
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setShowPalette(true)}
+            className="font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-1 border border-nu-ink/30 hover:bg-nu-cream flex items-center gap-1"
+            title="명령 팔레트 (⌘P)"
+          >
+            <Command size={11} />
+          </button>
           <button
             type="button"
             onClick={() => setShowLegend(true)}
@@ -1045,6 +1175,30 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
           </div>
         )}
 
+        {/* 경로 찾기 배너 */}
+        {pathMode && (
+          <div className="absolute top-3 left-3 z-30 bg-nu-pink text-white border-[3px] border-nu-ink shadow-[3px_3px_0_0_#0D0F14] flex items-center gap-2 px-3 py-1.5">
+            <Route size={12} />
+            <span className="font-mono-nu text-[10px] uppercase tracking-widest">
+              {!pathMode.source
+                ? "경로 — 첫 노드 클릭"
+                : !pathMode.target
+                  ? "경로 — 두 번째 노드 클릭"
+                  : pathResult && pathResult.edgeIds.size > 0
+                    ? `경로 ${pathResult.edgeIds.size}홉`
+                    : "경로 없음"}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPathMode(null)}
+              className="font-mono-nu text-[10px] uppercase tracking-widest border border-white/40 px-1.5 py-0.5 hover:bg-white/10"
+              title="경로 종료 (ESC)"
+            >
+              <X size={10} />
+            </button>
+          </div>
+        )}
+
         {/* 다중 선택 액션바 — 2개 이상 선택 시 캔버스 상단 가운데 떠오름 */}
         {(selection.nodes.length + selection.edges.length) > 1 && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 bg-white border-[3px] border-nu-ink shadow-[3px_3px_0_0_#0D0F14] flex items-center gap-1 px-2 py-1.5">
@@ -1100,6 +1254,24 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
             </div>
           </div>
         )}
+        {viewMode === "outline" ? (
+          <OutlineView
+            data={data}
+            onJumpToNode={(nodeId) => {
+              setViewMode("radial");
+              // 다음 tick 에서 fitView — viewMode 전환 + nodes 재빌드 후
+              setTimeout(() => {
+                const inst = rfRef.current;
+                const target = inst?.getNode(nodeId);
+                if (target) {
+                  setSelected({ ...(target.data as MindMapNodeData), id: target.id });
+                  try { inst?.fitView({ nodes: [{ id: nodeId }, { id: "center" }], padding: 0.3, duration: 700, maxZoom: 1.4 }); }
+                  catch { /* ignore */ }
+                }
+              }, 80);
+            }}
+          />
+        ) : (
         <ReactFlow
           nodes={nodes}
           edges={styledEdges}
@@ -1148,6 +1320,7 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
             className="!border-[2px] !border-nu-ink !shadow-[2px_2px_0_0_#0D0F14]"
           />
         </ReactFlow>
+        )}
         <CursorOverlay userId={userId} nickname={nickname} containerRef={flowRef} />
         <FileHoverPreview file={hoveredFile} />
       </div>
@@ -1188,6 +1361,32 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
       <HelpOverlay
         mode={showHelp ? "help" : showLegend ? "legend" : null}
         onClose={() => { setShowHelp(false); setShowLegend(false); }}
+      />
+      <CommandPalette
+        open={showPalette}
+        data={data}
+        onClose={() => setShowPalette(false)}
+        onJumpToNode={(targetId) => {
+          if (viewMode !== "radial") setViewMode("radial");
+          setTimeout(() => {
+            const inst = rfRef.current;
+            const target = inst?.getNode(targetId);
+            if (target) {
+              setSelected({ ...(target.data as MindMapNodeData), id: target.id });
+              try { inst?.fitView({ nodes: [{ id: targetId }, { id: "center" }], padding: 0.3, duration: 700, maxZoom: 1.4 }); }
+              catch { /* ignore */ }
+            }
+          }, 80);
+        }}
+        actions={[
+          { id: "view-radial",   label: "방사형 뷰",        icon: Network,  hint: "그래프", run: () => setViewMode("radial") },
+          { id: "view-timeline", label: "타임라인 뷰",      icon: Clock,    hint: "시간축", run: () => setViewMode("timeline") },
+          { id: "view-outline",  label: "아웃라인 뷰",      icon: List,     hint: "텍스트", run: () => setViewMode("outline") },
+          { id: "auto-layout",   label: `정렬 (${layoutDir})`, icon: Wand2, hint: "Dagre", run: () => handleAutoLayout() },
+          { id: "path-mode",     label: "경로 찾기",        icon: Route,    hint: "두 노드 사이", run: () => setPathMode({ source: null, target: null }) },
+          { id: "help",          label: "단축키 도움말",    icon: Keyboard, hint: "?", run: () => setShowHelp(true) },
+          { id: "legend",        label: "Legend",           icon: Info,     hint: "I", run: () => setShowLegend(true) },
+        ] satisfies PaletteAction[]}
       />
     </div>
   );

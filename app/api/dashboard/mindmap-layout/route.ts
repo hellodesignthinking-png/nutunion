@@ -5,13 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 /**
  * 마인드맵 노드 위치 + 보기 모드 영속 — 다기기 동기화.
  *
- * GET   → { layout: { [id]: {x,y} }, viewMode: "radial"|"timeline" }
+ * GET   → { layout: { [id]: {x,y} }, viewMode: "radial"|"timeline"|"outline" }
  * PUT   body: { layout?, viewMode? } — 부분 업데이트 (둘 다 옵션)
  */
 
 interface DashboardSettings {
   mindmap_layout?: Record<string, { x: number; y: number }>;
-  mindmap_view_mode?: "radial" | "timeline";
+  mindmap_view_mode?: "radial" | "timeline" | "outline";
 }
 
 export const GET = withRouteLog("dashboard.mindmap-layout.get", async () => {
@@ -39,7 +39,7 @@ export const PUT = withRouteLog("dashboard.mindmap-layout.put", async (req: Next
 
   const body = await req.json().catch(() => null) as {
     layout?: Record<string, { x: number; y: number }>;
-    viewMode?: "radial" | "timeline";
+    viewMode?: "radial" | "timeline" | "outline";
   } | null;
   if (!body) return NextResponse.json({ error: "invalid_body" }, { status: 400 });
 
@@ -57,7 +57,7 @@ export const PUT = withRouteLog("dashboard.mindmap-layout.put", async (req: Next
       }
     }
   }
-  if (body.viewMode && body.viewMode !== "radial" && body.viewMode !== "timeline") {
+  if (body.viewMode && body.viewMode !== "radial" && body.viewMode !== "timeline" && body.viewMode !== "outline") {
     return NextResponse.json({ error: "invalid_view_mode" }, { status: 400 });
   }
 
