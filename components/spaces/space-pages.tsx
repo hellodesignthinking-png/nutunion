@@ -8,6 +8,8 @@ import type { SpacePage } from "./space-pages-types";
 import { SpacePageTreeNode } from "./space-page-tree-node";
 import { SpacePageEditor } from "./space-page-editor";
 import { SnippetsPanel } from "./snippets-panel";
+import { TemplatePicker } from "./template-picker";
+import type { PageTemplate } from "./templates";
 
 interface Props {
   ownerType: "nut" | "bolt";
@@ -35,6 +37,7 @@ export function SpacePages({ ownerType, ownerId, currentUserId, currentUserNickn
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [sidebarMode, setSidebarMode] = useState<SidebarMode>("tree");
   const [snippetsOpen, setSnippetsOpen] = useState(false);
+  const [templateOpen, setTemplateOpen] = useState(false);
   // 실시간 presence — 같은 페이지를 보고 있는 다른 사용자
   const [presenceUsers, setPresenceUsers] = useState<Array<{ id: string; nickname: string }>>([]);
 
@@ -138,6 +141,28 @@ export function SpacePages({ ownerType, ownerId, currentUserId, currentUserNickn
 
   const selected = useMemo(() => pages.find((p) => p.id === selectedId) ?? null, [pages, selectedId]);
 
+  // 템플릿으로 페이지 생성 — 빈 페이지 + 블록 일괄 POST.
+  const createFromTemplate = useCallback(async (template: PageTemplate) => {
+    const res = await fetch(`/api/spaces/${ownerType}/${ownerId}/pages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parent_page_id: null, title: template.title, icon: template.icon }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.page) throw new Error(json?.error || "페이지 생성 실패");
+    setPages((prev) => [...prev, json.page]);
+    setSelectedId(json.page.id);
+    // 블록 순차 삽입
+    for (const b of template.blocks) {
+      await fetch(`/api/spaces/pages/${json.page.id}/blocks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: b.type, content: b.content || "", data: b.data || {} }),
+      });
+    }
+    toast.success(`"${template.title}" 템플릿 적용`);
+  }, [ownerType, ownerId]);
+
   const addPage = useCallback(async (parentId: string | null) => {
     try {
       const res = await fetch(`/api/spaces/${ownerType}/${ownerId}/pages`, {
@@ -229,6 +254,14 @@ export function SpacePages({ ownerType, ownerId, currentUserId, currentUserNickn
               className="font-mono-nu text-[10px] uppercase tracking-widest px-1 py-0.5 border border-nu-ink/30 hover:bg-nu-cream"
             >
               <Layers size={10} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setTemplateOpen(true)}
+              title="템플릿"
+              className="font-mono-nu text-[10px] uppercase tracking-widest px-1 py-0.5 border border-nu-ink/30 hover:bg-nu-cream"
+            >
+              ✨
             </button>
             <button
               type="button"
@@ -360,6 +393,11 @@ export function SpacePages({ ownerType, ownerId, currentUserId, currentUserNickn
         open={snippetsOpen}
         onClose={() => setSnippetsOpen(false)}
         currentPageId={selectedId}
+      />
+      <TemplatePicker
+        open={templateOpen}
+        onClose={() => setTemplateOpen(false)}
+        onPick={createFromTemplate}
       />
     </div>
   );

@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles, Loader2, Palette, AlignLeft, AlignCenter, AlignRight } from "lucide-react";
 import { toast } from "sonner";
-import type { SpaceBlock, BlockType } from "./space-pages-types";
-import { SLASH_COMMANDS } from "./space-pages-types";
+import type { SpaceBlock, BlockType, BlockColor, BlockAlign } from "./space-pages-types";
+import { SLASH_COMMANDS, BLOCK_COLOR_CLASSES } from "./space-pages-types";
+import { TableBlock } from "./blocks/table-block";
+import { EmbedBlock } from "./blocks/embed-block";
+import { AudioBlock } from "./blocks/audio-block";
 
 interface Props {
   block: SpaceBlock;
@@ -56,6 +59,8 @@ export function SpaceBlockRenderer({ block, onChange, onEnter, onBackspaceEmpty,
   const [aiOpen, setAiOpen] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiPreview, setAiPreview] = useState<string | null>(null);
+  // 스타일 메뉴 (Cmd+.)
+  const [styleOpen, setStyleOpen] = useState(false);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
 
   // block prop 이 바뀌면 (다른 블록으로) draft 동기화
@@ -193,6 +198,12 @@ export function SpaceBlockRenderer({ block, onChange, onEnter, onBackspaceEmpty,
       setAiOpen((v) => !v);
       return;
     }
+    // Cmd/Ctrl+. — 스타일 메뉴 토글
+    if ((e.metaKey || e.ctrlKey) && e.key === ".") {
+      e.preventDefault();
+      setStyleOpen((v) => !v);
+      return;
+    }
     if (showSlash) {
       if (e.key === "ArrowDown") { e.preventDefault(); setSlashIdx((i) => Math.min(filtered.length - 1, i + 1)); return; }
       if (e.key === "ArrowUp")   { e.preventDefault(); setSlashIdx((i) => Math.max(0, i - 1)); return; }
@@ -242,6 +253,21 @@ export function SpaceBlockRenderer({ block, onChange, onEnter, onBackspaceEmpty,
       </div>
     );
   }
+  if (block.type === "table") {
+    return <TableBlock block={block} onChange={onChange} />;
+  }
+  if (block.type === "embed") {
+    return <EmbedBlock block={block} onChange={onChange} />;
+  }
+  if (block.type === "audio") {
+    return <AudioBlock block={block} onChange={onChange} />;
+  }
+
+  // 스타일 데이터 — color / align (text/h1-3/quote/callout 만 유효)
+  const blockColor = ((block.data as { color?: BlockColor } | undefined)?.color) || "default";
+  const blockAlign = ((block.data as { align?: BlockAlign } | undefined)?.align) || "left";
+  const colorCls = BLOCK_COLOR_CLASSES[blockColor];
+  const alignCls = blockAlign === "center" ? "text-center" : blockAlign === "right" ? "text-right" : "";
 
   // 공통 textarea — 한 줄 → 자동 높이
   const textareaClass = "w-full bg-transparent outline-none border-0 resize-none placeholder:text-nu-muted/60 leading-relaxed";
@@ -377,7 +403,7 @@ export function SpaceBlockRenderer({ block, onChange, onEnter, onBackspaceEmpty,
     "text-[14px]";
 
   return (
-    <div className="relative py-0.5">
+    <div className={`relative py-0.5 ${colorCls.bg ? `${colorCls.bg} -mx-2 px-2 rounded` : ""}`}>
       <textarea
         ref={taRef}
         rows={1}
@@ -389,9 +415,9 @@ export function SpaceBlockRenderer({ block, onChange, onEnter, onBackspaceEmpty,
           block.type === "h1" ? "제목 1" :
           block.type === "h2" ? "제목 2" :
           block.type === "h3" ? "제목 3" :
-          "텍스트… ( / 블록 · @ 멘션 · ⌘I AI )"
+          "텍스트… ( / 블록 · @ 멘션 · ⌘I AI · ⌘. 스타일 )"
         }
-        className={`${textareaClass} ${sizeCls} text-nu-ink`}
+        className={`${textareaClass} ${sizeCls} ${colorCls.text} ${alignCls}`}
       />
       {showSlash && <SlashMenu items={filtered} active={slashIdx} onPick={(type) => { setSlashOpen(false); setDraft(""); onSlashSelect(type); }} />}
       {mentionQuery !== null && mentionResults.length > 0 && (
@@ -404,6 +430,15 @@ export function SpaceBlockRenderer({ block, onChange, onEnter, onBackspaceEmpty,
           onAction={runAi}
           onApply={applyAi}
           onClose={() => { setAiOpen(false); setAiPreview(null); }}
+        />
+      )}
+      {styleOpen && (
+        <StylePopover
+          color={blockColor}
+          align={blockAlign}
+          onColorChange={(c) => onChange({ data: { ...(block.data || {}), color: c } })}
+          onAlignChange={(a) => onChange({ data: { ...(block.data || {}), align: a } })}
+          onClose={() => setStyleOpen(false)}
         />
       )}
     </div>
@@ -445,6 +480,77 @@ function MentionMenu({
           </button>
         );
       })}
+    </div>
+  );
+}
+
+function StylePopover({
+  color,
+  align,
+  onColorChange,
+  onAlignChange,
+  onClose,
+}: {
+  color: BlockColor;
+  align: BlockAlign;
+  onColorChange: (c: BlockColor) => void;
+  onAlignChange: (a: BlockAlign) => void;
+  onClose: () => void;
+}) {
+  const colors: Array<{ key: BlockColor; bg: string; label: string }> = [
+    { key: "default", bg: "bg-white border-nu-ink/30",   label: "기본" },
+    { key: "red",     bg: "bg-red-200",     label: "빨강" },
+    { key: "amber",   bg: "bg-amber-200",   label: "앰버" },
+    { key: "emerald", bg: "bg-emerald-200", label: "에메랄드" },
+    { key: "sky",     bg: "bg-sky-200",     label: "스카이" },
+    { key: "violet",  bg: "bg-violet-200",  label: "바이올렛" },
+    { key: "pink",    bg: "bg-pink-200",    label: "핑크" },
+  ];
+  return (
+    <div className="absolute top-full left-0 mt-1 z-30 bg-white border-[2px] border-nu-ink shadow-[3px_3px_0_0_#0D0F14] min-w-[260px]">
+      <div className="px-2 py-1 border-b border-nu-ink/10 flex items-center justify-between">
+        <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted flex items-center gap-1">
+          <Palette size={10} /> 스타일
+        </span>
+        <button type="button" onClick={onClose} className="text-nu-muted hover:text-nu-ink text-[12px]">×</button>
+      </div>
+      <div className="p-2 space-y-2">
+        <div>
+          <div className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-1">색상</div>
+          <div className="flex flex-wrap gap-1">
+            {colors.map((c) => (
+              <button
+                key={c.key}
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); onColorChange(c.key); }}
+                className={`w-6 h-6 ${c.bg} border-[2px] ${color === c.key ? "border-nu-pink" : "border-nu-ink/20"}`}
+                title={c.label}
+                aria-label={c.label}
+              />
+            ))}
+          </div>
+        </div>
+        <div>
+          <div className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted mb-1">정렬</div>
+          <div className="flex gap-1">
+            {([
+              { key: "left" as BlockAlign,   icon: AlignLeft },
+              { key: "center" as BlockAlign, icon: AlignCenter },
+              { key: "right" as BlockAlign,  icon: AlignRight },
+            ]).map((a) => (
+              <button
+                key={a.key}
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); onAlignChange(a.key); }}
+                className={`p-1.5 border-[2px] ${align === a.key ? "border-nu-ink bg-nu-cream" : "border-nu-ink/20 hover:bg-nu-cream"}`}
+                title={a.key}
+              >
+                <a.icon size={11} />
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

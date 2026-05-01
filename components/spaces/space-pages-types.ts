@@ -30,7 +30,24 @@ export type BlockType =
   | "code"
   | "divider"
   | "quote"
-  | "callout";
+  | "callout"
+  | "table"
+  | "audio"
+  | "embed";
+
+/** 블록 스타일 커스텀 — data.color / data.align 으로 공통 적용 */
+export type BlockColor = "default" | "red" | "amber" | "emerald" | "sky" | "violet" | "pink";
+export type BlockAlign = "left" | "center" | "right";
+
+export const BLOCK_COLOR_CLASSES: Record<BlockColor, { text: string; bg: string }> = {
+  default:  { text: "text-nu-ink",      bg: "" },
+  red:      { text: "text-red-700",     bg: "bg-red-50" },
+  amber:    { text: "text-amber-800",   bg: "bg-amber-50" },
+  emerald:  { text: "text-emerald-700", bg: "bg-emerald-50" },
+  sky:      { text: "text-sky-700",     bg: "bg-sky-50" },
+  violet:   { text: "text-violet-700",  bg: "bg-violet-50" },
+  pink:     { text: "text-nu-pink",     bg: "bg-pink-50" },
+};
 
 export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   text:     "텍스트",
@@ -44,6 +61,9 @@ export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   divider:  "구분선",
   quote:    "인용",
   callout:  "강조 박스",
+  table:    "표",
+  audio:    "음성 메모",
+  embed:    "임베드",
 };
 
 export const SLASH_COMMANDS: Array<{ type: BlockType; label: string; sub: string; keys: string[] }> = [
@@ -58,4 +78,7 @@ export const SLASH_COMMANDS: Array<{ type: BlockType; label: string; sub: string
   { type: "callout",  label: "강조 박스",  sub: "💡 콜아웃",     keys: ["callout", "강조"] },
   { type: "code",     label: "코드",       sub: "```코드```",     keys: ["code", "코드"] },
   { type: "divider",  label: "구분선",     sub: "—",             keys: ["divider", "구분", "hr"] },
+  { type: "table",    label: "표",         sub: "미니 테이블",   keys: ["table", "표", "데이터"] },
+  { type: "audio",    label: "음성 메모",  sub: "🎙 녹음",       keys: ["audio", "음성", "녹음"] },
+  { type: "embed",    label: "임베드",     sub: "YouTube/Drive/Figma", keys: ["embed", "임베드", "youtube", "drive", "figma"] },
 ];
