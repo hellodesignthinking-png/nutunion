@@ -61,6 +61,7 @@
     "react-grid-layout": "^2.2.3",
     "react-markdown": "^10.1.0",
     "react-window": "^2.2.7",
+    "reactflow": "^11.11.4",
     "recharts": "^3.8.1",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",

@@ -7,6 +7,8 @@ import { getGrade, GRADE_CONFIG } from "@/lib/constants";
 import { OnboardingCoach } from "@/components/dashboard/onboarding-coach";
 import { DashboardTabs } from "@/components/dashboard/dashboard-tabs";
 import { MorningBriefing } from "@/components/dashboard/morning-briefing";
+import { DashboardViewSwitcher } from "@/components/dashboard/dashboard-view-switcher";
+import { fetchMindMapData } from "@/lib/dashboard/mindmap-data";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +70,11 @@ export default async function DashboardPage() {
   } catch (err) {
     console.error("Dashboard data fetch error:", err);
   }
+
+  // 마인드맵 데이터 — 뷰 전환 시 클라이언트에서 사용
+  const mindmapData = await fetchMindMapData(supabase, user.id).catch(() => ({
+    nuts: [], bolts: [], schedule: [], issues: [],
+  }));
 
   const nickname = profile?.nickname?.trim() || user?.email?.split("@")[0] || "사용자";
   const gradeInfo = profile ? getGrade(profile) : GRADE_CONFIG.bronze;
@@ -133,18 +140,20 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* ── 탭 기반 대시보드 ─────────────────────────────────── */}
-      <Suspense fallback={<div className="h-64 bg-nu-cream/30 animate-pulse" />}>
-        <DashboardTabs
-          userId={user.id}
-          nickname={nickname}
-          gradeLabel={gradeInfo.label}
-          nutPoints={nutPoints}
-          groupCount={groupCount}
-          projectCount={projectCount}
-          pendingCount={pendingCount}
-        />
-      </Suspense>
+      {/* ── 뷰 전환 (리스트 ⇄ 마인드맵) ───────────────────── */}
+      <DashboardViewSwitcher nickname={nickname} mindmapData={mindmapData}>
+        <Suspense fallback={<div className="h-64 bg-nu-cream/30 animate-pulse" />}>
+          <DashboardTabs
+            userId={user.id}
+            nickname={nickname}
+            gradeLabel={gradeInfo.label}
+            nutPoints={nutPoints}
+            groupCount={groupCount}
+            projectCount={projectCount}
+            pendingCount={pendingCount}
+          />
+        </Suspense>
+      </DashboardViewSwitcher>
     </div>
   );
 }
