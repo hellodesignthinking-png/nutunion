@@ -87,8 +87,36 @@ export async function fetchMindMapData(
         title: p.title as string,
         status: p.status as string,
         daysLeft,
+        leadNickname: null as string | null,
+        leadAvatarUrl: null as string | null,
       };
     });
+
+  // ── 볼트 담당자 (lead) — 카드 칩에 사용. 한 번의 IN 쿼리로 N+1 방지.
+  if (bolts.length > 0) {
+    const { data: leads } = await supabase
+      .from("project_members")
+      .select("project_id, user_id, profile:profiles(nickname, avatar_url)")
+      .in("project_id", bolts.map((b) => b.id))
+      .eq("role", "lead")
+      .limit(50);
+    const byProject = new Map<string, { nickname: string | null; avatar: string | null }>();
+    for (const row of (leads ?? []) as any[]) {
+      if (!byProject.has(row.project_id) && row.profile) {
+        byProject.set(row.project_id, {
+          nickname: row.profile.nickname ?? null,
+          avatar: row.profile.avatar_url ?? null,
+        });
+      }
+    }
+    for (const b of bolts) {
+      const lead = byProject.get(b.id);
+      if (lead) {
+        b.leadNickname = lead.nickname;
+        b.leadAvatarUrl = lead.avatar;
+      }
+    }
+  }
 
   const meetings = (meetingsRes.data ?? []).map((m: any) => ({
     id: m.id as string,

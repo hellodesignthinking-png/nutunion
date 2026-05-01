@@ -36,7 +36,7 @@ export interface MindMapNodeData {
 
 export interface MindMapData {
   nuts: Array<{ id: string; name: string; role: string; memberCount?: number }>;
-  bolts: Array<{ id: string; title: string; status: string; daysLeft?: number }>;
+  bolts: Array<{ id: string; title: string; status: string; daysLeft?: number; leadNickname?: string | null; leadAvatarUrl?: string | null }>;
   schedule: Array<{ id: string; title: string; at: string; source: "meeting" | "event" }>;
   issues: Array<{ id: string; title: string; kind: "overdue_task" | "mention" }>;
   /** 동료 — 같은 너트·볼트에 속한 다른 사용자. nutIds/boltIds 로 어디서 만났는지 표시 */

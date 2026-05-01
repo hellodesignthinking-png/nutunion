@@ -681,7 +681,12 @@ function buildGraph(
           ? (b.daysLeft >= 0 ? `D-${b.daysLeft}` : `${-b.daysLeft}일 지남`)
           : b.status,
         href: `/projects/${b.id}`,
-        meta: { 상태: b.status, "남은 일수": b.daysLeft ?? "정해지지 않음" },
+        meta: {
+          상태: b.status,
+          "남은 일수": b.daysLeft ?? "정해지지 않음",
+          담당: b.leadNickname || "미지정",
+          담당_avatar: b.leadAvatarUrl || "",
+        },
       },
     })),
     ...data.schedule.map((s) => ({
@@ -733,6 +738,7 @@ function buildGraph(
           meta: {
             너트: w.nutIds.length,
             볼트: w.boltIds.length,
+            avatar: w.avatar_url || "",
           },
         },
       };
@@ -877,15 +883,26 @@ function buildGraph(
   }
 
   // ── Cross-reference 엣지 ─────────────────────────────────────────
-  // 너트 ↔ 탭 (소속) — 점선 sky + "지식" 라벨
+  // 너트 ↔ 탭 (소속) — 점선 sky + "지식" 라벨 (탭당 1개만 표시 — 노이즈 줄임)
+  const topicLabelShown = new Set<string>();
   for (const t of data.topics) {
     if (data.nuts.some((n) => n.id === t.groupId)) {
+      const showLabel = !topicLabelShown.has(t.groupId);
+      topicLabelShown.add(t.groupId);
       edges.push({
         id: `e-cr-topic-${t.id}`,
         source: `nut-${t.groupId}`,
         target: `topic-${t.id}`,
         type: "bezier",
         style: { stroke: "#0EA5E9", strokeWidth: 1.5, strokeDasharray: "4 3" },
+        ...(showLabel
+          ? {
+              label: "지식",
+              labelStyle: { fontSize: 9, fontFamily: "ui-monospace, monospace", fill: "#0369A1" },
+              labelBgStyle: { fill: "#FFFCF6", fillOpacity: 0.9 },
+              labelBgPadding: [3, 1] as [number, number],
+            }
+          : {}),
       });
     }
   }
@@ -913,14 +930,25 @@ function buildGraph(
       }
     }
   }
-  // 파일 ↔ 볼트 — 점선 stone (소속 표시)
+  // 파일 ↔ 볼트 — 점선 stone (소속 표시) + "첨부" 라벨 (볼트당 1번만)
+  const fileLabelShown = new Set<string>();
   for (const f of data.files) {
     if (f.projectId && data.bolts.some((b) => b.id === f.projectId)) {
+      const showLabel = !fileLabelShown.has(f.projectId);
+      fileLabelShown.add(f.projectId);
       edges.push({
         id: `e-cr-file-${f.id}`,
         source: `bolt-${f.projectId}`,
         target: `file-${f.id}`,
         style: { stroke: "#78716C", strokeWidth: 1.2, strokeDasharray: "3 3", opacity: 0.55 },
+        ...(showLabel
+          ? {
+              label: "첨부",
+              labelStyle: { fontSize: 9, fontFamily: "ui-monospace, monospace", fill: "#57534E" },
+              labelBgStyle: { fill: "#FFFCF6", fillOpacity: 0.9 },
+              labelBgPadding: [3, 1] as [number, number],
+            }
+          : {}),
       });
     }
   }

@@ -82,7 +82,24 @@ export function CenterGenesisNode({ data }: { data: CenterNodeData }) {
   }
 
   return (
-    <div className="bg-white border-[3px] border-nu-ink shadow-[3px_3px_0_0_#0D0F14] px-4 py-3 min-w-[260px] max-w-[320px]">
+    <div
+      className="relative bg-white border-[3px] border-nu-ink px-4 py-3 min-w-[260px] max-w-[320px]"
+      style={{
+        // 다층 그림자 — 브루탈리스트 offset + 핑크 발광
+        boxShadow:
+          "3px 3px 0 0 #0D0F14, 0 0 0 4px rgba(255,61,136,0.12), 0 0 32px 8px rgba(255,61,136,0.35), 0 0 64px 16px rgba(255,184,46,0.18)",
+      }}
+    >
+      {/* 회전하는 글로우 링 — 항상 살아있음 */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -inset-1 -z-10 opacity-60 animate-pulse"
+        style={{
+          background:
+            "conic-gradient(from 0deg, rgba(255,61,136,0.4), rgba(255,184,46,0.4), rgba(46,91,255,0.4), rgba(255,61,136,0.4))",
+          filter: "blur(12px)",
+        }}
+      />
       <Handle type="source" position={Position.Top} style={{ opacity: 0 }} />
       <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
       <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />

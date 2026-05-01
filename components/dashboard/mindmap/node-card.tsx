@@ -46,10 +46,10 @@ export function NodeCard({ data }: { data: MindMapNodeData }) {
         border-[3px] ${colors.border}
         ${isCenter ? "px-5 py-4 min-w-[180px]" : "px-3 py-2 min-w-[160px] max-w-[220px]"}
         shadow-[3px_3px_0_0_#0D0F14]
-        ${highlighted ? `ring-4 ring-offset-2 ${colors.pulse} animate-pulse` : ""}
+        ${highlighted ? `ring-4 ring-offset-2 ${colors.pulse} scale-110 z-10 relative` : ""}
         ${dimmed ? "opacity-30" : ""}
         ${data.kind === "issue" ? "relative overflow-hidden" : ""}
-        transition-all
+        transition-all duration-300 ease-out
         focus:outline-none focus-visible:ring-4 focus-visible:ring-nu-ink/50
       `}
     >
@@ -96,6 +96,9 @@ function Accent({ data }: { data: MindMapNodeData }) {
       const pct = boltStatusPct(status);
       const daysLeft = data.meta?.["남은 일수"];
       const isOverdue = typeof daysLeft === "number" && daysLeft < 0;
+      const leadName = String(data.meta?.["담당"] || "");
+      const leadAvatar = String(data.meta?.["담당_avatar"] || "");
+      const hasLead = leadName && leadName !== "미지정";
       return (
         <div className="mt-1.5">
           <div className="h-1.5 bg-white/70 border border-nu-ink overflow-hidden">
@@ -108,6 +111,25 @@ function Accent({ data }: { data: MindMapNodeData }) {
             <span>{statusLabel(status)}</span>
             <span>{pct}%</span>
           </div>
+          {hasLead && (
+            <div className="mt-1.5 inline-flex items-center gap-1 bg-white/80 border border-nu-ink/30 px-1 py-0.5">
+              {leadAvatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={leadAvatar}
+                  alt=""
+                  className="w-3.5 h-3.5 rounded-full object-cover"
+                />
+              ) : (
+                <span className="w-3.5 h-3.5 rounded-full bg-nu-pink text-white font-mono-nu text-[8px] flex items-center justify-center">
+                  {leadName[0]}
+                </span>
+              )}
+              <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-ink/80">
+                {leadName}
+              </span>
+            </div>
+          )}
         </div>
       );
     }
@@ -155,10 +177,25 @@ function Accent({ data }: { data: MindMapNodeData }) {
     case "washer": {
       const nuts = Number(data.meta?.["너트"] || 0);
       const bolts = Number(data.meta?.["볼트"] || 0);
+      const avatar = String(data.meta?.["avatar"] || "");
       return (
-        <div className="mt-1.5 flex items-center gap-1 font-mono-nu text-[9px] uppercase tracking-widest opacity-70">
-          <span className="px-1 border border-nu-pink/40 text-nu-pink">N {nuts}</span>
-          <span className="px-1 border border-nu-amber/60 text-nu-ink">B {bolts}</span>
+        <div className="mt-1.5 flex items-center gap-1.5">
+          {avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatar}
+              alt=""
+              className="w-7 h-7 rounded-full object-cover border-[2px] border-violet-700"
+            />
+          ) : (
+            <div className="w-7 h-7 rounded-full bg-violet-200 border-[2px] border-violet-700 flex items-center justify-center font-head font-extrabold text-[12px] text-violet-900">
+              {data.title[0] || "?"}
+            </div>
+          )}
+          <div className="flex flex-col gap-0.5 font-mono-nu text-[9px] uppercase tracking-widest opacity-70">
+            <span className="px-1 border border-nu-pink/40 text-nu-pink">N {nuts}</span>
+            <span className="px-1 border border-nu-amber/60 text-nu-ink">B {bolts}</span>
+          </div>
         </div>
       );
     }
