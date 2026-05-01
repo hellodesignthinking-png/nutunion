@@ -41,18 +41,28 @@ export function NodeCard({ data }: { data: MindMapNodeData }) {
       role="button"
       aria-label={`${data.kind}: ${data.title}`}
       tabIndex={isCenter ? -1 : 0}
-      className={`
+      className={`group relative
         ${colors.bg} ${colors.ink}
         border-[3px] ${colors.border}
         ${isCenter ? "px-5 py-4 min-w-[180px]" : "px-3 py-2 min-w-[160px] max-w-[220px]"}
         shadow-[3px_3px_0_0_#0D0F14]
-        ${highlighted ? `ring-4 ring-offset-2 ${colors.pulse} scale-110 z-10 relative` : ""}
+        ${highlighted ? `ring-4 ring-offset-2 ${colors.pulse} scale-110 z-10` : ""}
         ${dimmed ? "opacity-30" : ""}
-        ${data.kind === "issue" ? "relative overflow-hidden" : ""}
+        ${data.kind === "issue" ? "overflow-hidden" : ""}
         transition-all duration-300 ease-out
+        ${!isCenter ? "hover:shadow-[5px_5px_0_0_#0D0F14] hover:-translate-y-0.5 cursor-pointer" : ""}
         focus:outline-none focus-visible:ring-4 focus-visible:ring-nu-ink/50
       `}
     >
+      {/* hover 시 "상세" 칩 — center/empty/ai-* 제외 */}
+      {!isCenter && data.kind !== "empty" && !data.kind.startsWith("ai-") && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-nu-ink text-nu-paper font-mono-nu text-[8px] uppercase tracking-widest px-1.5 py-0.5 border-[2px] border-nu-ink shadow-[1px_1px_0_0_#0D0F14] z-20"
+        >
+          상세
+        </span>
+      )}
       {/* issue 좌측 빨간 경고 띠 */}
       {data.kind === "issue" && (
         <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-700" aria-hidden />

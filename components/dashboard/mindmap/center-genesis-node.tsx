@@ -19,6 +19,8 @@ interface CenterNodeData {
     plan?: Record<string, unknown>;
     intent?: string;
   }) => void;
+  /** 컨텍스트 제안 칩 — 사용자 데이터 기반으로 부모가 만들어 보냄. 입력 비어있을 때 표시. */
+  suggestions?: string[];
 }
 
 /**
@@ -185,6 +187,22 @@ export function CenterGenesisNode({ data }: { data: CenterNodeData }) {
           {loading ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
         </button>
       </form>
+      {/* 컨텍스트 제안 칩 — 사용자가 무엇을 물어볼지 모를 때 */}
+      {!intent && !loading && !answer && data.suggestions && data.suggestions.length > 0 && (
+        <div className="relative z-10 mt-2 flex flex-wrap gap-1">
+          {data.suggestions.slice(0, 4).map((s, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setIntent(s)}
+              className="font-mono-nu text-[10px] tracking-wide bg-nu-cream/70 hover:bg-nu-cream border border-nu-ink/20 hover:border-nu-ink px-1.5 py-0.5 text-nu-ink/80 hover:text-nu-ink"
+              title="입력창에 채우기"
+            >
+              💬 {s}
+            </button>
+          ))}
+        </div>
+      )}
       {intent.length > 400 && (
         <div className={`mt-1 font-mono-nu text-[10px] text-right ${intent.length >= 500 ? "text-red-700" : "text-nu-muted"}`}>
           {intent.length} / 500

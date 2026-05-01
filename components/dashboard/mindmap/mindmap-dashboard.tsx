@@ -425,11 +425,33 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
     }
   }, []);
 
+  // Genesis 입력창 컨텍스트 제안 — 사용자가 가진 데이터 기반으로 무엇을 물어볼지 가이드
+  const aiSuggestions = useMemo<string[]>(() => {
+    const list: string[] = [];
+    const overdueCount = data.issues.filter((i) => i.kind === "overdue_task").length;
+    if (overdueCount > 0) list.push(`마감 지난 ${overdueCount}개 어떻게 정리할까`);
+    const upcoming = data.schedule.filter((s) => {
+      const h = (new Date(s.at).getTime() - Date.now()) / (1000 * 60 * 60);
+      return h >= 0 && h < 48;
+    });
+    if (upcoming.length > 0) list.push(`이번 주 ${upcoming[0].title} 준비할 것`);
+    if (data.bolts.some((b) => b.status === "draft")) list.push("이 새 프로젝트 어떻게 시작");
+    if (data.nuts.length > 0 && data.washers.length === 0) list.push("이 너트에 어울릴 사람 추천");
+    if (data.bolts.length > 1) list.push("이번 분기 우선순위 정리");
+    if (list.length === 0) {
+      // 빈 상태 — 신규 사용자 시작 질문
+      list.push("독서 모임 만들고 싶어");
+      list.push("브랜딩 프로젝트 시작");
+      list.push("이번 주 시급한 일은");
+    }
+    return list.slice(0, 4);
+  }, [data]);
+
   const { nodes: baseNodes, edges } = useMemo(
     () => viewMode === "timeline"
-      ? buildTimelineGraph(nickname, data, onAnswer)
-      : buildGraph(nickname, data, onAnswer, aiSuggestion, collapsedKinds, toggleSectorCollapse),
-    [nickname, data, onAnswer, aiSuggestion, viewMode, collapsedKinds, toggleSectorCollapse],
+      ? buildTimelineGraph(nickname, data, onAnswer, aiSuggestions)
+      : buildGraph(nickname, data, onAnswer, aiSuggestion, collapsedKinds, toggleSectorCollapse, aiSuggestions),
+    [nickname, data, onAnswer, aiSuggestion, viewMode, collapsedKinds, toggleSectorCollapse, aiSuggestions],
   );
 
   // 하이라이트 + 필터 매칭 + 저장된 위치 복원
@@ -977,6 +999,8 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
               <List size={11} /> 아웃라인
             </button>
           </div>
+          {/* 시각 구분선 — 보기 그룹과 정렬/AI/도움말 그룹 분리 */}
+          <span className="w-px h-5 bg-nu-ink/15" aria-hidden />
           <button
             type="button"
             onClick={handleExport}
@@ -1080,6 +1104,8 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
               💡 답변 패널
             </button>
           )}
+          {/* 구분선 — 정렬/AI 그룹과 탐색/도움말 그룹 사이 */}
+          <span className="w-px h-5 bg-nu-ink/15" aria-hidden />
           {viewMode === "radial" && (
             <button
               type="button"
@@ -1415,6 +1441,7 @@ function buildGraph(
   aiSuggestion: AiSuggestion | null,
   collapsedKinds: Set<NodeKind>,
   onToggleSector: (k: NodeKind) => void,
+  centerSuggestions: string[],
 ): { nodes: RFNode[]; edges: RFEdge[] } {
   const nodes: RFNode[] = [
     {
@@ -1428,6 +1455,7 @@ function buildGraph(
         title: `${nickname}님의 공간`,
         subtitle: "Genesis AI 에 물어보세요",
         onAnswer,
+        suggestions: centerSuggestions,
       },
     },
   ];
@@ -1555,24 +1583,63 @@ function buildGraph(
   ];
 
   if (all.length === 0) {
-    // 빈 상태 — 안내 노드 (empty kind, 중립 색상)
-    nodes.push({
-      id: "empty",
-      type: "card",
-      position: { x: 0, y: 220 },
-      data: {
-        kind: "empty",
-        title: "아직 비어 있어요",
-        subtitle: "너트·볼트를 만들면 가지가 자라요",
-        href: "/groups/create",
-      } satisfies MindMapNodeData,
-    });
-    edges.push({
-      id: "e-empty",
-      source: "center",
-      target: "empty",
-      style: { strokeWidth: 2, strokeDasharray: "4 4", opacity: 0.4 },
-    });
+    // 빈 상태 — 행동 가능한 3개 CTA 노드를 중앙 주변에 배치 + Genesis 자체 안내.
+    // 단순 "비어 있어요" 대신 사용자가 다음 한 걸음을 즉시 결정할 수 있게.
+    const ctaItems: Array<{ id: string; data: MindMapNodeData; angle: number }> = [
+      {
+        id: "empty-nut",
+        angle: -Math.PI / 2 - 0.6, // ~10시
+        data: {
+          kind: "nut",
+          title: "첫 너트 만들기",
+          subtitle: "사람들과 모일 그룹",
+          href: "/groups/create",
+          meta: { 안내: "너트 = 소모임/팀. 정기 모임이나 관심사를 같이하는 그룹." },
+        },
+      },
+      {
+        id: "empty-bolt",
+        angle: -Math.PI / 2 + 0.6, // ~2시
+        data: {
+          kind: "bolt",
+          title: "첫 볼트 만들기",
+          subtitle: "마감과 결과가 있는 일",
+          href: "/projects/create",
+          meta: { 안내: "볼트 = 프로젝트. 마감일과 결과물이 있는 일." },
+        },
+      },
+      {
+        id: "empty-genesis",
+        angle: Math.PI / 2, // 6시
+        data: {
+          kind: "ai-task",
+          title: "Genesis 에 물어보기",
+          subtitle: "위쪽 입력창에 한 줄로",
+          meta: { 예시: "예: '독서 모임 만들고 싶어' / '브랜딩 프로젝트 시작'" },
+        },
+      },
+    ];
+    for (const item of ctaItems) {
+      const r = 220;
+      nodes.push({
+        id: item.id,
+        type: "card",
+        position: { x: Math.cos(item.angle) * r, y: Math.sin(item.angle) * r },
+        data: item.data,
+      });
+      edges.push({
+        id: `e-${item.id}`,
+        source: "center",
+        target: item.id,
+        animated: item.id === "empty-genesis",
+        style: {
+          stroke: item.id === "empty-genesis" ? "#FF3D88" : "#0D0F14",
+          strokeWidth: 2,
+          strokeDasharray: "4 4",
+          opacity: 0.55,
+        },
+      });
+    }
     return { nodes, edges };
   }
 
@@ -1898,6 +1965,7 @@ function buildTimelineGraph(
     roles: Array<{ name: string; tags?: string[]; why?: string }>;
     tasks: string[];
   }) => void,
+  centerSuggestions: string[],
 ): { nodes: RFNode[]; edges: RFEdge[] } {
   const nodes: RFNode[] = [];
   const edges: RFEdge[] = [];
@@ -1918,6 +1986,7 @@ function buildTimelineGraph(
       title: `${nickname}님의 7일`,
       subtitle: "타임라인 — 일정 중심",
       onAnswer,
+      suggestions: centerSuggestions,
     },
   });
 

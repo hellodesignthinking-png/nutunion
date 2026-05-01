@@ -4,6 +4,7 @@ import { useState, useEffect, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { Minimize2 } from "lucide-react";
 import { DashboardViewToggle } from "./view-toggle";
+import { OnboardingTour } from "./mindmap/onboarding-tour";
 import type { MindMapData } from "@/lib/dashboard/mindmap-types";
 
 // reactflow 는 ~30KB+ — 마인드맵 진입 시에만 로드.
@@ -93,6 +94,7 @@ export function DashboardViewSwitcher({ nickname, mindmapData, children, userId 
         <div className="flex-1 min-h-0">
           <MindMapDashboard nickname={nickname} data={mindmapData} userId={userId} fillContainer />
         </div>
+        <OnboardingTour />
       </div>
     );
   }
