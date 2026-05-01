@@ -51,7 +51,7 @@
     },
     {
       "path": "/api/cron/auto-sync-drive",
-      "schedule": "*/30 * * * *"
+      "schedule": "0 6 * * *"
     },
     {
       "path": "/api/cron/cleanup-leases",
