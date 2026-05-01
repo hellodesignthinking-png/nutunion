@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -83,6 +84,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ proposal: data });
   } catch (err: any) {
+    log.error(err, "challenges.failed");
     console.error("Challenge proposal error:", err);
     return NextResponse.json(
       { error: err.message || "서버 오류가 발생했습니다" },

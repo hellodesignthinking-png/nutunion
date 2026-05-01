@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -93,6 +94,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (err: any) {
+    log.error(err, "og.failed");
     // timeout / fetch error
     return NextResponse.json({ error: err?.message || "error" }, { status: 502 });
   }

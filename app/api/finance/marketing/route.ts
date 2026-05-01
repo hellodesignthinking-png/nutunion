@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { generateText } from "ai";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
@@ -128,6 +129,7 @@ ${template.instructionFormat}`;
         maxOutputTokens: 2000,
       });
     } catch (genErr) {
+    log.error(genErr, "finance.marketing.failed");
       // 실패도 usage log 에 기록
       await supabase.from("ai_usage_logs").insert({
         actor_id: user.id,
@@ -176,6 +178,7 @@ ${template.instructionFormat}`;
       },
     });
   } catch (err) {
+    log.error(err, "finance.marketing.failed");
     // 서버 로그에는 상세 기록, 클라이언트에는 일반 메시지
     console.error("[Marketing API]", err);
     const isRateLimit = err instanceof Error && /rate.*limit|too many|429/i.test(err.message);

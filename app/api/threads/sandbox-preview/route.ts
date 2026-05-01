@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { compileTsxToHtml } from "@/lib/threads/sandbox-compile";
 
@@ -62,6 +63,7 @@ export async function POST(req: NextRequest) {
   try {
     html = await compileTsxToHtml(source, { installationId });
   } catch (e: any) {
+    log.error(e, "threads.sandbox-preview.failed");
     return NextResponse.json({ error: "compile_failed", detail: e?.message || String(e) }, { status: 400 });
   }
 

@@ -18,6 +18,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { google } from "googleapis";
 import { createClient } from "@/lib/supabase/server";
 import { deleteObject as deleteR2Object, isR2Configured } from "@/lib/storage/r2";
@@ -100,6 +101,7 @@ export async function POST(req: NextRequest) {
       try {
         await deleteR2Object(storageKey);
       } catch (e: any) {
+    log.error(e, "files.delete.failed");
         storageWarnings.push(`R2 delete failed: ${e?.message || "unknown"}`);
       }
     }
@@ -146,6 +148,7 @@ export async function POST(req: NextRequest) {
           .delete()
           .eq("id", myCopy.id);
       } catch (e: any) {
+    log.error(e, "files.delete.failed");
         // Google 토큰 만료/미연결 등은 무시 (자료 삭제는 계속 진행)
         storageWarnings.push(`Drive 사본 정리 건너뜀: ${e?.message || "unknown"}`);
       }
@@ -176,6 +179,7 @@ export async function POST(req: NextRequest) {
         .eq("resource_id", id);
     }
   } catch (e: any) {
+    log.error(e, "files.delete.failed");
     storageWarnings.push(`file_drive_edits 정리 실패: ${e?.message || "unknown"}`);
   }
 

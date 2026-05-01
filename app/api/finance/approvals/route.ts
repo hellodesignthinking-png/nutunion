@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
@@ -74,6 +75,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, approval: inserted });
   } catch (err) {
+    log.error(err, "finance.approvals.failed");
     console.error("[Approvals POST]", err);
     return NextResponse.json({ error: "서버 오류" }, { status: 500 });
   }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 
 import { aiError, mapGeminiError } from "@/lib/ai/error";
@@ -140,6 +141,7 @@ ${meetingContext || "기록된 회의가 없습니다."}`;
 
     return NextResponse.json({ answer });
   } catch (e: unknown) {
+    log.error(e, "ai.ask-wiki.failed");
     return aiError("server_error", "ai/ask-wiki", { internal: e });
   }
 }

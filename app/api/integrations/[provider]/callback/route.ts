@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { PROVIDERS, verifyState, exchangeCodeForToken, saveIntegration } from "@/lib/oauth/integrations";
 
 /**
@@ -38,6 +39,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ provider
     });
     await saveIntegration({ userId: payload.userId, provider: provider as any, tokenRes });
   } catch (err: any) {
+    log.error(err, "integrations.provider.callback.failed");
     return NextResponse.redirect(new URL(`/profile?integration=${provider}&error=${encodeURIComponent((err.message || "exchange_failed").slice(0, 100))}`, req.url));
   }
 

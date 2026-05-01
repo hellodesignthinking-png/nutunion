@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { generateObjectWithFallback } from "@/lib/ai/model";
@@ -140,6 +141,7 @@ export async function POST(req: NextRequest) {
       projects: projects.map((p) => ({ id: p.id, title: p.title })),
     });
   } catch (err: any) {
+    log.error(err, "dashboard.ai-secretary.failed");
     return NextResponse.json({ error: err?.message || "AI 분석 실패" }, { status: 500 });
   }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -30,6 +31,7 @@ export async function GET() {
       ? { ok: false, duration_ms: Date.now() - t0, error: error.message.slice(0, 100) }
       : { ok: true, duration_ms: Date.now() - t0 };
   } catch (err) {
+    log.error(err, "health.failed");
     checks.database = { ok: false, error: err instanceof Error ? err.message.slice(0, 100) : "unknown" };
   }
 

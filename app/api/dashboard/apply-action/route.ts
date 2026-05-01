@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
@@ -106,6 +107,7 @@ export async function POST(req: NextRequest) {
         results.push({ success: false, type: a.type, error: "너트에 task 저장 불가" });
       }
     } catch (err) {
+    log.error(err, "dashboard.apply-action.failed");
       results.push({ success: false, type: a.type, error: err instanceof Error ? err.message : "unknown" });
     }
   }

@@ -1,22 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit } from "@/lib/rate-limit";
+import { generateTextForUser } from "@/lib/ai/vault";
+import { aiError } from "@/lib/ai/error";
 
 export const maxDuration = 60;
 
-import { aiError } from "@/lib/ai/error";
-
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = "gemini-2.5-flash";
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-const GEMINI_HEADERS = { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY ?? "" };
-
-// POST: Generate AI summary for a single resource
+// POST: Generate AI summary for a single resource — model.ts/vault 통해 자동 fallback
+// (Gateway > 직접 Gemini > OpenAI > Anthropic), 유저 AI 환경설정 존중.
 export async function POST(request: NextRequest) {
-  if (!GEMINI_API_KEY) {
-    return NextResponse.json({ error: "GEMINI_API_KEY 미설정" }, { status: 500 });
-  }
-
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "로그인 필요" }, { status: 401 });
@@ -82,21 +74,12 @@ ${resource.description ? `설명: ${resource.description}` : ""}
 반드시 요약 텍스트만 출력하세요 (JSON이나 마크다운 없이).`;
 
   try {
-    const res = await fetch(GEMINI_URL, {
-      method: "POST",
-      headers: GEMINI_HEADERS,
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 256 },
-      }),
+    const res = await generateTextForUser(user.id, {
+      prompt,
+      maxOutputTokens: 256,
+      tier: "fast",
     });
-
-    if (!res.ok) {
-      return aiError("ai_unavailable", "ai/resource-summary");
-    }
-
-    const data = await res.json();
-    const summary = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+    const summary = (res.text || "").trim();
 
     if (summary) {
       if (resourceSource === "weekly") {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { calculatePayroll } from "@/lib/finance/payroll-calc";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
@@ -108,6 +109,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, payroll: upserted });
   } catch (err) {
+    log.error(err, "finance.payroll.failed");
     console.error("[Payroll POST]", err);
     return NextResponse.json({ error: "서버 오류" }, { status: 500 });
   }

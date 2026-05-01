@@ -1,21 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit } from "@/lib/rate-limit";
+import { generateTextWithFallback, listConfiguredProviders } from "@/lib/ai/model";
 
 // Extend serverless function timeout (default 10s is too short for AI synthesis)
 export const maxDuration = 60;
 
 import { aiError } from "@/lib/ai/error";
 import { runWikiSynthesis, WikiSynthesisError } from "@/lib/ai/wiki-synthesis-core";
-
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = "gemini-2.5-flash";
-// 키를 URL에 넣지 않음 — 아래 fetch에서 x-goog-api-key 헤더로 전송
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-const GEMINI_HEADERS = {
-  "Content-Type": "application/json",
-  "x-goog-api-key": GEMINI_API_KEY ?? "",
-};
 
 // ── Diagnostic GET endpoint ─ production에서는 차단 ──────────────
 export async function GET(request: NextRequest) {
@@ -35,29 +27,20 @@ export async function GET(request: NextRequest) {
   const checks: Record<string, string> = {};
 
   try {
-    checks.gemini_key = GEMINI_API_KEY ? `set (${GEMINI_API_KEY.slice(0, 8)}...)` : "MISSING";
-    checks.gemini_model = GEMINI_MODEL;
-    checks.gemini_url = "built (header auth)";
+    // model.ts 가 보고하는 사용 가능한 provider chain
+    const providers = listConfiguredProviders();
+    checks.providers = providers.length > 0 ? providers.join(", ") : "MISSING (Gateway/Direct provider 모두 미설정)";
 
-    // Always test Gemini (no auth needed)
+    // 가벼운 quick-test — model.ts/Gateway 통과
     try {
-      const geminiQuickTest = await fetch(GEMINI_URL, {
-        method: "POST",
-        headers: GEMINI_HEADERS,
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: "Reply with: OK" }] }],
-          generationConfig: { maxOutputTokens: 5 },
-        }),
+      const ai = await generateTextWithFallback({
+        prompt: "Reply with: OK",
+        maxOutputTokens: 5,
+        tier: "fast",
       });
-      if (geminiQuickTest.ok) {
-        const gd = await geminiQuickTest.json();
-        checks.gemini_quick_test = `ok: ${gd?.candidates?.[0]?.content?.parts?.[0]?.text || "(empty)"}`;
-      } else {
-        const errText = await geminiQuickTest.text();
-        checks.gemini_quick_test = `FAIL HTTP ${geminiQuickTest.status}: ${errText.slice(0, 300)}`;
-      }
+      checks.ai_quick_test = `ok via ${ai.model_used}: ${(ai.text || "(empty)").slice(0, 60)}`;
     } catch (e: unknown) {
-      checks.gemini_quick_test = `ERROR: ${e instanceof Error ? e.message : String(e)}`;
+      checks.ai_quick_test = `FAIL: ${e instanceof Error ? e.message : String(e)}`;
     }
 
     const supabase = await createClient();
@@ -100,25 +83,8 @@ export async function GET(request: NextRequest) {
       checks.cleanup = "ok";
     }
 
-    // Test Gemini reachability
-    try {
-      const geminiTestRes = await fetch(GEMINI_URL, {
-        method: "POST",
-        headers: GEMINI_HEADERS,
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: "Say OK" }] }],
-          generationConfig: { maxOutputTokens: 5 },
-        }),
-      });
-      if (geminiTestRes.ok) {
-        checks.gemini_api = "ok";
-      } else {
-        const errBody = await geminiTestRes.text();
-        checks.gemini_api = `HTTP ${geminiTestRes.status}: ${errBody.slice(0, 200)}`;
-      }
-    } catch (e: unknown) {
-      checks.gemini_api = `ERROR: ${e instanceof Error ? e.message : String(e)}`;
-    }
+    // 위 ai_quick_test 가 동일 역할 — 중복 제거. 호환을 위해 alias 만 남김.
+    checks.gemini_api = checks.ai_quick_test || "(skipped)";
 
     return NextResponse.json({ checks });
   } catch (e: unknown) {
@@ -222,10 +188,7 @@ const SYSTEM_PROMPT = `당신은 NutUnion 너트의 **회의록 기반 통합 �
 - knowledgeGaps는 구체적 행동 제안 포함`;
 
 export async function POST(request: NextRequest) {
-  if (!GEMINI_API_KEY) {
-    return aiError("server_error", "ai/wiki-synthesis", { internal: "GEMINI_API_KEY missing" });
-  }
-
+  // model.ts buildChain 이 사용 가능한 provider 0개면 알아서 throw → catch 가 처리.
   try {
     const body = await request.json();
     const { groupId } = body as { groupId?: string };

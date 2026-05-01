@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
@@ -120,6 +121,7 @@ export async function POST(req: NextRequest) {
       object = result.object;
       usage = result.usage;
     } catch (genErr) {
+    log.error(genErr, "chat-digest.failed");
       console.error("[chat-digest]", genErr);
       return NextResponse.json(
         { error: "AI 요약 생성 실패. 잠시 후 다시 시도해주세요." },
@@ -173,6 +175,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, digest: inserted });
   } catch (err) {
+    log.error(err, "chat-digest.failed");
     console.error("[chat-digest]", err);
     return NextResponse.json({ error: "서버 오류" }, { status: 500 });
   }

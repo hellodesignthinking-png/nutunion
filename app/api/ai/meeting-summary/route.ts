@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -156,6 +157,7 @@ export async function POST(request: NextRequest) {
         audioFileMime = audioMimeType;
         finalAudioBase64 = null; // Files API 사용 시 inline 제거
       } catch (e: any) {
+    log.error(e, "ai.meeting-summary.failed");
         console.warn("[meeting-summary] Files API 업로드 실패, inline base64 로 진행", e?.message);
       }
     }
@@ -200,6 +202,7 @@ export async function POST(request: NextRequest) {
         audioFileUri = await uploadAudioToGemini(buf, mime);
         audioFileMime = mime;
       } catch (e: any) {
+    log.error(e, "ai.meeting-summary.failed");
         console.warn("[meeting-summary] Files API 업로드 실패, inline base64 fallback", e?.message);
         // 2차 fallback: inline base64
         finalAudioBase64 = buf.toString("base64");
@@ -302,6 +305,7 @@ export async function POST(request: NextRequest) {
         }
         break; // Don't retry on 4xx client errors
       } catch (fetchErr: unknown) {
+    log.error(fetchErr, "ai.meeting-summary.failed");
         lastError = fetchErr instanceof Error ? fetchErr.message : "Network error";
         await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
       }
@@ -464,6 +468,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(normalized);
   } catch (error: unknown) {
+    log.error(error, "ai.meeting-summary.failed");
     console.error("Meeting summary error:", error);
     const msg = error instanceof Error ? error.message : "회의록 생성 중 오류가 발생했습니다";
     return NextResponse.json({ error: msg }, { status: 500 });

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { dispatchEvent } from "@/lib/automation/engine";
@@ -133,6 +134,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         .update({ ai_result: aiResult, next_topics: nextTopics } as any)
         .eq("id", meetingId);
     } catch (e: any) {
+    log.error(e, "meetings.id.conclude.failed");
       console.warn("[conclude] ai_result/next_topics 저장 실패 (마이그레이션 129 미실행?)", e?.message);
     }
   }
@@ -173,6 +175,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         console.warn("[conclude] Google Docs 생성 실패", await docRes.text());
       }
     } catch (e: any) {
+    log.error(e, "meetings.id.conclude.failed");
       console.warn("[conclude] Google Docs 실패 (무시하고 진행)", e?.message);
     }
   }
@@ -186,6 +189,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       has_summary: !!summaryMd,
     });
   } catch (e: any) {
+    log.error(e, "meetings.id.conclude.failed");
     console.warn("[conclude] automation dispatch failed", e?.message);
   }
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
@@ -99,6 +100,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ employ
           });
           signatureRef = upload.ref;
         } catch (uploadErr) {
+    log.error(uploadErr, "finance.contracts.employeeId.failed");
           console.error("[Contract sign upload]", uploadErr);
           return NextResponse.json(
             { error: uploadErr instanceof Error ? uploadErr.message : "서명 업로드 실패" },

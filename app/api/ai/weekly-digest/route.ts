@@ -1,15 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit } from "@/lib/rate-limit";
+import { generateObjectForUser } from "@/lib/ai/vault";
+import { aiError } from "@/lib/ai/error";
+import { log } from "@/lib/observability/logger";
 
 export const maxDuration = 60;
 
-import { aiError } from "@/lib/ai/error";
-
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = "gemini-2.5-flash";
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-const GEMINI_HEADERS = { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY ?? "" };
+const DigestSchema = z.object({
+  digest: z.string().default(""),
+  carryOverItems: z.array(z.string()).default([]),
+  resolvedItems: z.array(z.string()).default([]),
+  keyDecisions: z.array(z.string()).default([]),
+  openQuestions: z.array(z.string()).default([]),
+  knowledgeGrowth: z.array(z.string()).default([]),
+  nextMeetingContext: z.string().default(""),
+  suggestedAgenda: z.array(z.string()).default([]),
+  tokenSavings: z.string().default(""),
+  memberGrowth: z.array(z.string()).default([]),
+  learningJourney: z.object({
+    topicsExplored: z.array(z.string()).default([]),
+    recommendedReading: z.array(z.string()).default([]),
+    skillsSharpened: z.array(z.string()).default([]),
+  }).default({ topicsExplored: [], recommendedReading: [], skillsSharpened: [] }),
+  weeklyReflection: z.object({
+    whatWentWell: z.string().default(""),
+    whatToImprove: z.string().default(""),
+    discussionEvolution: z.string().default(""),
+  }).default({ whatWentWell: "", whatToImprove: "", discussionEvolution: "" }),
+  encouragement: z.string().default(""),
+});
 
 /**
  * Weekly Digest API
@@ -66,13 +87,6 @@ const SYSTEM_PROMPT = `당신은 NutUnion 너트의 **주간 지식 다이제스
 - digest는 모든 참석자가 5초 안에 맥락을 파악할 수 있도록 간결하게`;
 
 export async function POST(request: NextRequest) {
-  if (!GEMINI_API_KEY) {
-    return NextResponse.json(
-      { error: "GEMINI_API_KEY가 설정되지 않았습니다." },
-      { status: 500 }
-    );
-  }
-
   try {
     const body = await request.json();
     const { groupId, periodStart, periodEnd, previousDigest } = body;
@@ -243,84 +257,16 @@ export async function POST(request: NextRequest) {
     userPrompt += `위 한 주간의 데이터를 분석하여 주간 다이제스트를 JSON 형식으로 생성해주세요.\n`;
     userPrompt += `특히 nextMeetingContext는 다음 회의 AI의 시작 컨텍스트로 사용되므로 핵심만 200자 이내로 압축해주세요.`;
 
-    // ── 3. Call Gemini ─────────────────────────────────────────────────
+    // ── 3. AI 호출 — model.ts/vault 자동 fallback chain
+    const ai = await generateObjectForUser(user.id, DigestSchema, {
+      system: SYSTEM_PROMPT,
+      prompt: userPrompt,
+      maxOutputTokens: 2048,
+      tier: "fast",
+    });
 
-    const geminiBody = {
-      contents: [{
-        parts: [
-          { text: SYSTEM_PROMPT },
-          { text: userPrompt },
-        ],
-      }],
-      generationConfig: {
-        temperature: 0.3,
-        topP: 0.8,
-        maxOutputTokens: 2048,
-        responseMimeType: "application/json",
-      },
-    };
-
-    // Retry logic with exponential backoff
-    let response: Response | null = null;
-    let lastError = "";
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        response = await fetch(GEMINI_URL, {
-          method: "POST",
-          headers: GEMINI_HEADERS,
-          body: JSON.stringify(geminiBody),
-        });
-        if (response.ok) break;
-        lastError = `HTTP ${response.status}`;
-        if (response.status === 429 || response.status >= 500) {
-          await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
-          continue;
-        }
-        break;
-      } catch (fetchErr: unknown) {
-        lastError = fetchErr instanceof Error ? fetchErr.message : "Network error";
-        await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
-      }
-    }
-
-    if (!response || !response.ok) {
-      const errorText = response ? await response.text() : lastError;
-      console.error("Gemini API error after retries:", errorText);
-      return aiError("ai_unavailable", "ai/weekly-digest", { internal: lastError });
-    }
-
-    const data = await response.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-
-    let result;
-    try {
-      result = JSON.parse(text);
-    } catch {
-      const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (jsonMatch) result = JSON.parse(jsonMatch[1].trim());
-      else {
-        const braceMatch = text.match(/\{[\s\S]*\}/);
-        if (braceMatch) result = JSON.parse(braceMatch[0]);
-        else throw new Error("AI 응답에서 JSON을 파싱할 수 없습니다");
-      }
-    }
-
-    // Normalize
-    const normalized = {
-      digest: result.digest || "",
-      carryOverItems: Array.isArray(result.carryOverItems) ? result.carryOverItems : [],
-      resolvedItems: Array.isArray(result.resolvedItems) ? result.resolvedItems : [],
-      keyDecisions: Array.isArray(result.keyDecisions) ? result.keyDecisions : [],
-      openQuestions: Array.isArray(result.openQuestions) ? result.openQuestions : [],
-      knowledgeGrowth: Array.isArray(result.knowledgeGrowth) ? result.knowledgeGrowth : [],
-      nextMeetingContext: result.nextMeetingContext || "",
-      suggestedAgenda: Array.isArray(result.suggestedAgenda) ? result.suggestedAgenda : [],
-      tokenSavings: result.tokenSavings || "",
-      // Growth facilitation
-      memberGrowth: Array.isArray(result.memberGrowth) ? result.memberGrowth : [],
-      learningJourney: result.learningJourney || { topicsExplored: [], recommendedReading: [], skillsSharpened: [] },
-      weeklyReflection: result.weeklyReflection || { whatWentWell: "", whatToImprove: "", discussionEvolution: "" },
-      encouragement: result.encouragement || "",
+    return NextResponse.json({
+      ...(ai.object as Record<string, unknown>),
       // Metadata
       periodStart: startISO,
       periodEnd: endISO,
@@ -328,10 +274,9 @@ export async function POST(request: NextRequest) {
       noteCount: notes.length,
       resourceCount: resources.length,
       wikiUpdateCount: wikiUpdates.length,
-    };
-
-    return NextResponse.json(normalized);
+    });
   } catch (error: unknown) {
+    log.error(error, "ai.weekly_digest.failed");
     return aiError("server_error", "ai/weekly-digest", { internal: error });
   }
 }

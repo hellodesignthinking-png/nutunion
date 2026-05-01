@@ -66,6 +66,7 @@ import { relTime, prettySize } from "@/lib/file-preview/format";
 import { ExternalCard } from "./file-preview/external-card";
 import { VersionsModal } from "./file-preview/versions-modal";
 import { EmbedRenderer } from "./file-preview/embed-renderer";
+import { saveTextToR2 } from "@/lib/file-preview/save-text";
 
 // Re-export for back-compat (외부 caller 들이 file-preview-panel 에서 import 중)
 export { _isTextEditableFile as isTextEditableFile };
@@ -571,46 +572,9 @@ export function FilePreviewPanel({
     }
     setSaving(true);
     try {
-      const mime = guessMime(file.name, file.mime);
-      const bytes = new TextEncoder().encode(textContent);
-      // 1) presign with overwrite_key
-      const presignRes = await fetch("/api/storage/r2/presign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prefix: "resources",
-          fileName: file.name,
-          contentType: mime,
-          size: bytes.byteLength,
-          overwrite_key: file.storage_key,
-        }),
-      });
-      const presign = await presignRes.json();
-      if (!presignRes.ok || !presign.configured || !presign.url) {
-        throw new Error(presign.error || "presign 실패");
-      }
-      // 2) PUT
-      const putRes = await fetch(presign.url, {
-        method: "PUT",
-        headers: { "Content-Type": mime },
-        body: bytes,
-      });
-      if (!putRes.ok) throw new Error(`PUT 실패 ${putRes.status}`);
-
-      // 3) Update DB row updated_at + file_size
       const supabase = createClient();
-      const updates: Record<string, unknown> = {
-        updated_at: new Date().toISOString(),
-      };
-      if (targetTable === "file_attachments") {
-        updates.file_size = bytes.byteLength;
-      }
-      const { error } = await supabase.from(targetTable).update(updates).eq("id", file.id);
-      if (error) {
-        // Not fatal — file saved to R2 already
-        console.warn("[FilePreviewPanel] DB update failed:", error.message);
-      }
-
+      const result = await saveTextToR2({ file, targetTable, textContent, supabase });
+      if (result.warning) console.warn("[FilePreviewPanel]", result.warning);
       setOriginalText(textContent);
       setEditing(false);
       setVersion(Date.now());

@@ -11,6 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
@@ -62,6 +63,7 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ ok: true });
   } catch (err: unknown) {
+    log.error(err, "profile.push-token.failed");
     const msg = err instanceof Error ? err.message : "unknown";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
@@ -88,6 +90,7 @@ export async function DELETE(req: NextRequest) {
     }
     return NextResponse.json({ ok: true });
   } catch (err: unknown) {
+    log.error(err, "profile.push-token.failed");
     const msg = err instanceof Error ? err.message : "unknown";
     return NextResponse.json({ error: msg }, { status: 500 });
   }

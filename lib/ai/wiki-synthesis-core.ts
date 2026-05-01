@@ -2,11 +2,7 @@
 // 인증/rate-limit은 호출자(route)가 담당. 이 함수는 "이미 검증된" 요청을 처리.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = "gemini-2.5-flash";
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-const GEMINI_HEADERS = { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY ?? "" };
+import { generateTextWithFallback } from "./model";
 
 export const WIKI_SYNTHESIS_SYSTEM_PROMPT = `당신은 NutUnion 너트의 **회의록 기반 통합 탭 강화 엔진** AI입니다.
 
@@ -84,10 +80,7 @@ export async function runWikiSynthesis(
   groupId: string,
   userId: string
 ): Promise<WikiSynthesisOutput> {
-  if (!GEMINI_API_KEY) {
-    throw new WikiSynthesisError("config", "init", "GEMINI_API_KEY 미설정");
-  }
-
+  // model.ts buildChain 이 사용 가능한 provider 가 0개면 throw — 그때 config 에러.
   let step = "init";
   try {
     // ── 1. 마지막 통합 시점 ──
@@ -314,52 +307,24 @@ export async function runWikiSynthesis(
 
     prompt += `위 **새 데이터만** 분석하여 통합 문서를 고도화할 결과를 JSON으로 생성하세요. 이전 정리는 반복 금지.\n`;
 
-    // ── 4. Gemini 호출 ──
-    step = "call-gemini";
-    const geminiBody = {
-      contents: [{ parts: [{ text: WIKI_SYNTHESIS_SYSTEM_PROMPT }, { text: prompt }] }],
-      generationConfig: {
-        temperature: 0.3,
-        topP: 0.8,
+    // ── 4. AI 호출 — model.ts/vault 자동 fallback chain (Gateway 우선)
+    step = "call-ai";
+    let aiText = "";
+    try {
+      const ai = await generateTextWithFallback({
+        system: WIKI_SYNTHESIS_SYSTEM_PROMPT,
+        prompt,
         maxOutputTokens: 16384,
-        responseMimeType: "application/json",
-      },
-    };
-
-    let response: Response | null = null;
-    let lastError = "";
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        response = await fetch(GEMINI_URL, {
-          method: "POST",
-          headers: GEMINI_HEADERS,
-          body: JSON.stringify(geminiBody),
-        });
-        if (response.ok) break;
-        const errBody = await response.text();
-        lastError = `HTTP ${response.status}: ${errBody.slice(0, 200)}`;
-        if (response.status === 429 || response.status >= 500) {
-          await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
-          continue;
-        }
-        break;
-      } catch (e: unknown) {
-        lastError = e instanceof Error ? e.message : "Network error";
-        await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
-      }
-    }
-
-    if (!response || !response.ok) {
-      throw new WikiSynthesisError("ai", step, lastError || "Gemini unreachable");
+        tier: "fast",
+      });
+      aiText = ai.text || "";
+    } catch (e: unknown) {
+      throw new WikiSynthesisError("ai", step, e instanceof Error ? e.message : "AI 호출 실패");
     }
 
     // ── 5. 파싱 ──
-    step = "parse-gemini";
-    const data = await response.json();
-    if (data?.promptFeedback?.blockReason) {
-      throw new WikiSynthesisError("blocked", step, `blocked: ${data.promptFeedback.blockReason}`);
-    }
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    step = "parse-ai";
+    const text = aiText;
     if (!text) {
       throw new WikiSynthesisError("ai", step, "empty response");
     }

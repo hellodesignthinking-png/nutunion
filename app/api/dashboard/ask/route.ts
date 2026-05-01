@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { aiError } from "@/lib/ai/error";
@@ -219,6 +220,7 @@ export async function POST(req: NextRequest) {
       actions: cleanedActions,
     });
   } catch (err) {
+    log.error(err, "dashboard.ask.failed");
     return aiError("server_error", "dashboard/ask", { internal: err });
   }
 }

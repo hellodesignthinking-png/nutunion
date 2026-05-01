@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
@@ -108,6 +109,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
 
     return NextResponse.json({ error: "지원하지 않는 action" }, { status: 400 });
   } catch (err) {
+    log.error(err, "finance.approvals.id.failed");
     console.error("[Approvals action]", err);
     return NextResponse.json({ error: "서버 오류" }, { status: 500 });
   }

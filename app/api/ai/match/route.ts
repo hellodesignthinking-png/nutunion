@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -28,6 +29,7 @@ export async function GET(req: Request) {
     if (kind === "washers") return NextResponse.json(await matchWashers(supabase, projectId!, limit));
     return NextResponse.json({ error: "Invalid kind" }, { status: 400 });
   } catch (err: any) {
+    log.error(err, "ai.match.failed");
     return NextResponse.json({ error: err.message || "Match failed", items: [] }, { status: 500 });
   }
 }

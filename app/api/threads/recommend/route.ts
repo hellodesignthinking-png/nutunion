@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { generateTextForUser } from "@/lib/ai/vault";
 
@@ -83,6 +84,7 @@ export async function POST(_req: NextRequest) {
 
     return NextResponse.json({ recommendations: filtered, model_used: result.model_used });
   } catch (e: any) {
+    log.error(e, "threads.recommend.failed");
     return NextResponse.json({ recommendations: [], error: `ai_failed: ${e?.message || e}` });
   }
 }

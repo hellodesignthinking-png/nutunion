@@ -3,6 +3,7 @@
  *  → exchange code for token, save encrypted, redirect to /settings/integrations.
  */
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { saveIntegration } from "@/lib/integrations/tokens";
 
@@ -59,6 +60,7 @@ export async function GET(req: NextRequest) {
     res.cookies.delete("gh_oauth_state");
     return res;
   } catch (e: any) {
+    log.error(e, "integrations.github.callback.failed");
     console.error("[github callback]", e);
     return NextResponse.redirect(new URL(`/settings/integrations?error=exception`, req.url));
   }
