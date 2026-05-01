@@ -6,7 +6,6 @@ import { Plus, Zap } from "lucide-react";
 import { getGrade, GRADE_CONFIG } from "@/lib/constants";
 import { OnboardingCoach } from "@/components/dashboard/onboarding-coach";
 import { DashboardTabs } from "@/components/dashboard/dashboard-tabs";
-import { MorningBriefing } from "@/components/dashboard/morning-briefing";
 import { DashboardViewSwitcher } from "@/components/dashboard/dashboard-view-switcher";
 import { fetchMindMapData } from "@/lib/dashboard/mindmap-data";
 
@@ -119,12 +118,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* ── AI Morning Briefing ─────────────────────────────── */}
-      {profile?.onboarded_at && (
-        <div className="mb-5">
-          <MorningBriefing />
-        </div>
-      )}
+      {/* ── AI Morning Briefing 은 DashboardTabs 의 "오늘" 탭 안에서 렌더 ─── */}
 
       {/* ── 온보딩 ──────────────────────────────────────────── */}
       {!profile?.onboarded_at && (
