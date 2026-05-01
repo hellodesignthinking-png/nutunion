@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import ReactFlow, {
   Background,
+  BackgroundVariant,
   Controls,
   MiniMap,
   type Node as RFNode,
@@ -20,10 +21,11 @@ import { NodeDrawer } from "./node-drawer";
 import { CenterGenesisNode } from "./center-genesis-node";
 import { CursorOverlay } from "./cursor-overlay";
 import { FileHoverPreview } from "./file-hover-preview";
+import { SectorHalo } from "./sector-halo";
 import type { MindMapData, MindMapNodeData, NodeKind } from "@/lib/dashboard/mindmap-types";
 import { NODE_COLORS } from "@/lib/dashboard/mindmap-types";
 
-const nodeTypes = { card: NodeCard, center: CenterGenesisNode };
+const nodeTypes = { card: NodeCard, center: CenterGenesisNode, sector: SectorHalo };
 const LAYOUT_KEY = "dashboard.mindmap.layout";
 const VIEW_MODE_KEY = "dashboard.mindmap.viewMode";
 
@@ -92,6 +94,17 @@ const KIND_DISPLAY_ORDER = [
   "washer",
 ] as const;
 
+const KIND_LABEL: Record<string, string> = {
+  nut: "너트 · 그룹",
+  bolt: "볼트 · 프로젝트",
+  schedule: "일정",
+  issue: "이슈",
+  topic: "위키 탭",
+  file: "파일",
+  washer: "와셔 · 동료",
+};
+const COLLAPSED_KEY = "dashboard.mindmap.collapsed";
+
 /**
  * Phase B 정적 마인드맵 — 중앙 Genesis + 너트/볼트/일정/이슈 가지.
  * Phase C 에서 중앙 노드를 입력 가능한 형태로 교체 예정.
@@ -109,6 +122,29 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
   const [filterText, setFilterText] = useState("");
   const [filterKinds, setFilterKinds] = useState<Set<NodeKind>>(new Set());
   const [viewMode, setViewMode] = useState<ViewMode>("radial");
+  const [collapsedKinds, setCollapsedKinds] = useState<Set<NodeKind>>(new Set());
+
+  // collapsed 복원/저장 — localStorage 만 (서버 영속은 과한 비용)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(COLLAPSED_KEY);
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) setCollapsedKinds(new Set(arr));
+      }
+    } catch { /* ignore */ }
+  }, []);
+  useEffect(() => {
+    try { localStorage.setItem(COLLAPSED_KEY, JSON.stringify(Array.from(collapsedKinds))); } catch { /* ignore */ }
+  }, [collapsedKinds]);
+
+  const toggleSectorCollapse = useCallback((kind: NodeKind) => {
+    setCollapsedKinds((prev) => {
+      const next = new Set(prev);
+      if (next.has(kind)) next.delete(kind); else next.add(kind);
+      return next;
+    });
+  }, []);
   const flowRef = useRef<HTMLDivElement | null>(null);
   const rfRef = useRef<ReactFlowInstance | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -279,8 +315,8 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
   const { nodes: baseNodes, edges } = useMemo(
     () => viewMode === "timeline"
       ? buildTimelineGraph(nickname, data, onAnswer)
-      : buildGraph(nickname, data, onAnswer, aiSuggestion),
-    [nickname, data, onAnswer, aiSuggestion, viewMode],
+      : buildGraph(nickname, data, onAnswer, aiSuggestion, collapsedKinds, toggleSectorCollapse),
+    [nickname, data, onAnswer, aiSuggestion, viewMode, collapsedKinds, toggleSectorCollapse],
   );
 
   // 하이라이트 + 필터 매칭 + 저장된 위치 복원
@@ -312,6 +348,7 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
     return ids;
   }, [hoverNodeId, data.washers, data.topics, data.files]);
 
+  const aiActive = highlighted.size > 0;
   const nodes = useMemo(
     () => baseNodes.map((n) => {
       const data = n.data as MindMapNodeData;
@@ -328,6 +365,10 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
       if (focusNodeIds && !focusNodeIds.has(n.id)) {
         isDimmed = true;
       }
+      // AI 답변 활성 — 매칭 안 된 노드는 dim (center/sector 제외, 매칭은 강조)
+      if (aiActive && data.kind !== "center" && (data as unknown as { kind: string }).kind !== "sector" && !isHighlighted) {
+        isDimmed = true;
+      }
       // timeline 모드에서는 saved 위치를 적용하지 않음 — 시간축 정합성 유지
       const pos = viewMode === "radial" ? savedPositions[n.id] : undefined;
       return {
@@ -336,7 +377,7 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
         data: { ...data, highlighted: isHighlighted, dimmed: isDimmed },
       };
     }),
-    [baseNodes, highlighted, savedPositions, filterActive, filterLower, filterKinds, focusNodeIds, viewMode],
+    [baseNodes, highlighted, aiActive, savedPositions, filterActive, filterLower, filterKinds, focusNodeIds, viewMode],
   );
 
   // 필터 매칭 결과 — 안내 오버레이 + 엣지 dimming 에 사용
@@ -590,7 +631,8 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
           zoomOnScroll
           proOptions={{ hideAttribution: true }}
         >
-          <Background gap={24} size={1} color="#0D0F14" style={{ opacity: 0.06 }} />
+          {/* Miro 풍 점 격자 — variant=Dots 가 reactflow 기본값이지만 명시. */}
+          <Background variant={BackgroundVariant.Dots} gap={28} size={1.5} color="#0D0F14" style={{ opacity: 0.08 }} />
           <Controls
             position="bottom-left"
             showInteractive={false}
@@ -642,12 +684,16 @@ function buildGraph(
     tasks: string[];
   }) => void,
   aiSuggestion: AiSuggestion | null,
+  collapsedKinds: Set<NodeKind>,
+  onToggleSector: (k: NodeKind) => void,
 ): { nodes: RFNode[]; edges: RFEdge[] } {
   const nodes: RFNode[] = [
     {
       id: "center",
       type: "center",
       position: { x: 0, y: 0 },
+      // 중앙 컨트롤러는 항상 최상단 — sector halo / dim 위에
+      zIndex: 100,
       data: {
         kind: "center",
         title: `${nickname}님의 공간`,
@@ -812,22 +858,67 @@ function buildGraph(
   const sectorAngles = normalizedShares.map((s) => s * remaining);
 
   let cursor = -Math.PI / 2 - sectorAngles[0] / 2; // 첫 섹터 중앙이 12시 방향
+  // 카드 평균 사이즈 — bbox padding 산정용
+  const CARD_W = 200;
+  const CARD_H = 110;
+  const HALO_PAD = 30;
   for (let s = 0; s < presentKinds.length; s++) {
     const kind = presentKinds[s];
     const items = byKind.get(kind)!;
     const sector = sectorAngles[s];
     const M = items.length;
+    const collapsed = collapsedKinds.has(kind as NodeKind);
     // 섹터 안 가장자리 padding — 노드끼리 너무 붙지 않게
     const padding = sector * 0.08;
     const innerSpan = sector - padding * 2;
     const baseRadius = RADIUS[kind] ?? 300;
+
+    // 1패스: item 위치 계산 + bbox 누적
+    const placed: Array<{ entry: typeof items[number]; x: number; y: number }> = [];
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     items.forEach((entry, idx) => {
       const t = M === 1 ? 0.5 : idx / (M - 1);
       const angle = cursor + padding + t * innerSpan;
-      // 같은 kind 안에서 살짝 stagger — 짝홀로 +/- 25 px 반경 변동
       const r = baseRadius + (idx % 2 === 0 ? -25 : 25);
       const x = Math.cos(angle) * r;
       const y = Math.sin(angle) * r;
+      placed.push({ entry, x, y });
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    });
+
+    // halo 노드 — 섹터 박스 시각화. collapsed 일 때도 라벨은 표시.
+    if (placed.length > 0) {
+      const halo = {
+        x: minX - CARD_W / 2 - HALO_PAD,
+        y: minY - CARD_H / 2 - HALO_PAD,
+        w: (maxX - minX) + CARD_W + HALO_PAD * 2,
+        h: (maxY - minY) + CARD_H + HALO_PAD * 2,
+      };
+      nodes.push({
+        id: `halo-${kind}`,
+        type: "sector",
+        position: { x: halo.x, y: halo.y },
+        // reactflow 는 width/height 를 style 로 전달해야 노드 박스가 정확히 잡힘
+        style: { width: halo.w, height: halo.h, zIndex: -1 },
+        zIndex: -1,
+        selectable: false,
+        draggable: false,
+        data: {
+          kind: "sector",
+          groupKind: kind as NodeKind,
+          label: KIND_LABEL[kind] || kind,
+          count: items.length,
+          collapsed,
+          onToggle: onToggleSector,
+        },
+      });
+    }
+
+    // 2패스: collapsed 면 자식 카드는 그리지 않음 — halo 만 남김
+    if (!collapsed) placed.forEach(({ entry, x, y }, idx) => {
       nodes.push({
         id: entry.id,
         type: "card",
@@ -883,9 +974,11 @@ function buildGraph(
   }
 
   // ── Cross-reference 엣지 ─────────────────────────────────────────
+  // collapsed 된 kind 의 노드는 사라졌으므로 그쪽으로 가는 엣지도 만들지 않음
+  const isAlive = (k: NodeKind) => !collapsedKinds.has(k);
   // 너트 ↔ 탭 (소속) — 점선 sky + "지식" 라벨 (탭당 1개만 표시 — 노이즈 줄임)
   const topicLabelShown = new Set<string>();
-  for (const t of data.topics) {
+  if (isAlive("nut") && isAlive("topic")) for (const t of data.topics) {
     if (data.nuts.some((n) => n.id === t.groupId)) {
       const showLabel = !topicLabelShown.has(t.groupId);
       topicLabelShown.add(t.groupId);
@@ -907,8 +1000,8 @@ function buildGraph(
     }
   }
   // 너트 ↔ 와셔 (소속) — 실선 violet 얇게
-  for (const w of data.washers) {
-    for (const nutId of w.nutIds) {
+  if (isAlive("washer")) for (const w of data.washers) {
+    if (isAlive("nut")) for (const nutId of w.nutIds) {
       if (data.nuts.some((n) => n.id === nutId)) {
         edges.push({
           id: `e-cr-w-n-${w.id}-${nutId}`,
@@ -919,7 +1012,7 @@ function buildGraph(
       }
     }
     // 볼트 ↔ 와셔 — 실선 amber 얇게
-    for (const boltId of w.boltIds) {
+    if (isAlive("bolt")) for (const boltId of w.boltIds) {
       if (data.bolts.some((b) => b.id === boltId)) {
         edges.push({
           id: `e-cr-w-b-${w.id}-${boltId}`,
@@ -932,7 +1025,7 @@ function buildGraph(
   }
   // 파일 ↔ 볼트 — 점선 stone (소속 표시) + "첨부" 라벨 (볼트당 1번만)
   const fileLabelShown = new Set<string>();
-  for (const f of data.files) {
+  if (isAlive("file") && isAlive("bolt")) for (const f of data.files) {
     if (f.projectId && data.bolts.some((b) => b.id === f.projectId)) {
       const showLabel = !fileLabelShown.has(f.projectId);
       fileLabelShown.add(f.projectId);
@@ -953,7 +1046,7 @@ function buildGraph(
     }
   }
   // 너트 ↔ 볼트 (공유 와셔 ≥1) — 굵은 검정 점선 (강한 협업 신호)
-  for (const nut of data.nuts) {
+  if (isAlive("nut") && isAlive("bolt")) for (const nut of data.nuts) {
     for (const bolt of data.bolts) {
       const sharedWashers = data.washers.filter(
         (w) => w.nutIds.includes(nut.id) && w.boltIds.includes(bolt.id),
