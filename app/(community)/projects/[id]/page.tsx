@@ -546,7 +546,7 @@ async function ProjectTabsWrapper({ id, userId, isAdmin, project }: any) {
               볼트 멤버 누구나 추가·편집·삭제 가능
             </span>
           </div>
-          <SpacePages ownerType="bolt" ownerId={id} currentUserId={userId || undefined} />
+          <SpacePages ownerType="bolt" ownerId={id} ownerName={project.title} currentUserId={userId || undefined} />
         </div>
       )}
 

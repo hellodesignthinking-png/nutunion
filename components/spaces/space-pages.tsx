@@ -10,11 +10,15 @@ import { SpacePageEditor } from "./space-page-editor";
 import { SnippetsPanel } from "./snippets-panel";
 import { TemplatePicker } from "./template-picker";
 import { PageSearch } from "./page-search";
+import { AiPageModal } from "./ai-page-modal";
+import { WorkspaceSwitcher } from "./workspace-switcher";
 import type { PageTemplate } from "./templates";
 
 interface Props {
   ownerType: "nut" | "bolt";
   ownerId: string;
+  /** 현재 owner 의 표시 이름 — 워크스페이스 스위처 헤더에 */
+  ownerName?: string;
   /** 사용자 닉네임 — created_by 표시 등 */
   currentUserId?: string;
   /** 닉네임 — realtime presence broadcast 시 라벨 */
@@ -30,7 +34,7 @@ type SidebarMode = "tree" | "favorites" | "recent";
  * - 우측: 선택된 페이지 에디터 (블록 기반 — text/h1-3/todo/code 등 슬래시 명령).
  * - 모든 멤버가 추가/편집/삭제 가능 (RLS).
  */
-export function SpacePages({ ownerType, ownerId, currentUserId, currentUserNickname }: Props) {
+export function SpacePages({ ownerType, ownerId, ownerName, currentUserId, currentUserNickname }: Props) {
   const [pages, setPages] = useState<SpacePage[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -39,6 +43,7 @@ export function SpacePages({ ownerType, ownerId, currentUserId, currentUserNickn
   const [sidebarMode, setSidebarMode] = useState<SidebarMode>("tree");
   const [snippetsOpen, setSnippetsOpen] = useState(false);
   const [templateOpen, setTemplateOpen] = useState(false);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
   // 실시간 presence — 같은 페이지를 보고 있는 다른 사용자
   const [presenceUsers, setPresenceUsers] = useState<Array<{ id: string; nickname: string }>>([]);
 
@@ -242,12 +247,26 @@ export function SpacePages({ ownerType, ownerId, currentUserId, currentUserNickn
     <div className="border-[3px] border-nu-ink bg-white shadow-[3px_3px_0_0_#0D0F14] flex flex-col md:flex-row" style={{ minHeight: 480 }}>
       {/* 사이드바 — 페이지 트리 + 즐겨찾기 + 타임라인 + 스니펫 */}
       <aside className="md:w-[280px] shrink-0 border-b-[2px] md:border-b-0 md:border-r-[2px] border-nu-ink/15 bg-nu-cream/20 flex flex-col">
+        {/* 워크스페이스 스위처 — 다른 너트/볼트로 점프 */}
+        {ownerName && (
+          <div className="border-b border-nu-ink/10 bg-white">
+            <WorkspaceSwitcher currentKind={ownerType} currentId={ownerId} currentName={ownerName} />
+          </div>
+        )}
         <div className="px-3 py-2 border-b-[2px] border-nu-ink/15 flex items-center justify-between bg-white">
           <div className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted flex items-center gap-1.5">
             <FileText size={11} />
             페이지 {pages.length}
           </div>
           <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setAiModalOpen(true)}
+              title="AI 페이지 자동 생성"
+              className="font-mono-nu text-[10px] uppercase tracking-widest px-1 py-0.5 border border-nu-pink hover:bg-nu-pink/10 text-nu-pink"
+            >
+              🪄
+            </button>
             <button
               type="button"
               onClick={() => setSnippetsOpen(true)}
@@ -408,6 +427,17 @@ export function SpacePages({ ownerType, ownerId, currentUserId, currentUserNickn
         open={templateOpen}
         onClose={() => setTemplateOpen(false)}
         onPick={createFromTemplate}
+      />
+      <AiPageModal
+        open={aiModalOpen}
+        ownerType={ownerType}
+        ownerId={ownerId}
+        onClose={() => setAiModalOpen(false)}
+        onCreated={async (pageId) => {
+          // 페이지 목록 갱신 + 새 페이지 select
+          await load();
+          setSelectedId(pageId);
+        }}
       />
     </div>
   );

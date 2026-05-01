@@ -413,6 +413,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
         <SpacePages
           ownerType="nut"
           ownerId={id}
+          ownerName={group.name}
           currentUserId={user?.id}
         />
       </div>

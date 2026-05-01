@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, Download, Check, Loader2 } from "lucide-react";
+import { ChevronRight, Download, Check, Loader2, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import type { SpacePage } from "./space-pages-types";
 import { SpacePageBlocks } from "./space-page-blocks";
 import { BacklinksPanel } from "./backlinks-panel";
 import { exportPageAsMarkdown } from "./export-markdown";
+import { ShareToggle } from "./share-toggle";
 
 interface Props {
   page: SpacePage;
@@ -44,6 +45,7 @@ export function SpacePageEditor({
   const [titleDraft, setTitleDraft] = useState(page.title);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [exporting, setExporting] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   // page 가 바뀌면 (다른 페이지로 jump) draft 초기화
   useEffect(() => {
@@ -155,16 +157,26 @@ export function SpacePageEditor({
           />
           <div className="flex flex-col items-end gap-1 shrink-0 pt-2">
             <SaveStateBadge state={saveState} updatedAt={page.updated_at} />
-            <button
-              type="button"
-              onClick={exportMarkdown}
-              disabled={exporting}
-              title="마크다운 다운로드"
-              className="font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 border border-nu-ink/30 hover:bg-nu-cream flex items-center gap-1"
-            >
-              {exporting ? <Loader2 size={10} className="animate-spin" /> : <Download size={10} />}
-              .md
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setShareOpen(true)}
+                title="외부 공유"
+                className="font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 border border-nu-ink/30 hover:bg-nu-cream flex items-center gap-1"
+              >
+                <Share2 size={10} /> 공유
+              </button>
+              <button
+                type="button"
+                onClick={exportMarkdown}
+                disabled={exporting}
+                title="마크다운 다운로드"
+                className="font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 border border-nu-ink/30 hover:bg-nu-cream flex items-center gap-1"
+              >
+                {exporting ? <Loader2 size={10} className="animate-spin" /> : <Download size={10} />}
+                .md
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -181,6 +193,7 @@ export function SpacePageEditor({
         />
         <BacklinksPanel kind="page" id={page.id} />
       </div>
+      <ShareToggle pageId={page.id} open={shareOpen} onClose={() => setShareOpen(false)} />
     </div>
   );
 }
