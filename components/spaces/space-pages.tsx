@@ -1,18 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, Loader2, FileText } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Plus, Loader2, FileText, Star, Clock, Layers } from "lucide-react";
 import { toast } from "sonner";
+import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import type { SpacePage } from "./space-pages-types";
 import { SpacePageTreeNode } from "./space-page-tree-node";
 import { SpacePageEditor } from "./space-page-editor";
+import { SnippetsPanel } from "./snippets-panel";
 
 interface Props {
   ownerType: "nut" | "bolt";
   ownerId: string;
   /** 사용자 닉네임 — created_by 표시 등 */
   currentUserId?: string;
+  /** 닉네임 — realtime presence broadcast 시 라벨 */
+  currentUserNickname?: string;
 }
+
+type SidebarMode = "tree" | "favorites" | "recent";
 
 /**
  * 노션 스타일 자유 페이지 관리자.
@@ -21,11 +27,16 @@ interface Props {
  * - 우측: 선택된 페이지 에디터 (블록 기반 — text/h1-3/todo/code 등 슬래시 명령).
  * - 모든 멤버가 추가/편집/삭제 가능 (RLS).
  */
-export function SpacePages({ ownerType, ownerId }: Props) {
+export function SpacePages({ ownerType, ownerId, currentUserId, currentUserNickname }: Props) {
   const [pages, setPages] = useState<SpacePage[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [sidebarMode, setSidebarMode] = useState<SidebarMode>("tree");
+  const [snippetsOpen, setSnippetsOpen] = useState(false);
+  // 실시간 presence — 같은 페이지를 보고 있는 다른 사용자
+  const [presenceUsers, setPresenceUsers] = useState<Array<{ id: string; nickname: string }>>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -50,6 +61,67 @@ export function SpacePages({ ownerType, ownerId }: Props) {
   }, [ownerType, ownerId]);
 
   useEffect(() => { load(); }, [load]);
+
+  // 즐겨찾기 fetch
+  useEffect(() => {
+    fetch("/api/spaces/favorites")
+      .then((r) => r.ok ? r.json() : { favorites: [] })
+      .then((j: { favorites: string[] }) => setFavorites(new Set(j.favorites ?? [])))
+      .catch(() => undefined);
+  }, []);
+
+  const toggleFavorite = useCallback(async (pageId: string) => {
+    const was = favorites.has(pageId);
+    setFavorites((prev) => {
+      const next = new Set(prev);
+      if (was) next.delete(pageId); else next.add(pageId);
+      return next;
+    });
+    try {
+      const res = await fetch("/api/spaces/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ page_id: pageId, action: was ? "remove" : "add" }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      setFavorites((prev) => {
+        const next = new Set(prev);
+        if (was) next.add(pageId); else next.delete(pageId);
+        return next;
+      });
+      toast.error("즐겨찾기 변경 실패");
+    }
+  }, [favorites]);
+
+  // 실시간 presence — 선택된 페이지에 같이 있는 다른 사용자 표시
+  useEffect(() => {
+    if (!selectedId || !currentUserId) return;
+    const supa = createBrowserClient();
+    const channel = supa.channel(`space-page:${selectedId}`, {
+      config: { presence: { key: currentUserId } },
+    });
+    channel
+      .on("presence", { event: "sync" }, () => {
+        const state = channel.presenceState() as Record<string, Array<{ nickname: string }>>;
+        const others: Array<{ id: string; nickname: string }> = [];
+        for (const [id, metas] of Object.entries(state)) {
+          if (id === currentUserId) continue;
+          const m = metas[0];
+          if (m?.nickname) others.push({ id, nickname: m.nickname });
+        }
+        setPresenceUsers(others);
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.track({ nickname: currentUserNickname || "익명" });
+        }
+      });
+    return () => {
+      void supa.removeChannel(channel);
+      setPresenceUsers([]);
+    };
+  }, [selectedId, currentUserId, currentUserNickname]);
 
   const tree = useMemo(() => {
     const byParent = new Map<string | null, SpacePage[]>();
@@ -142,20 +214,54 @@ export function SpacePages({ ownerType, ownerId }: Props) {
 
   return (
     <div className="border-[3px] border-nu-ink bg-white shadow-[3px_3px_0_0_#0D0F14] flex flex-col md:flex-row" style={{ minHeight: 480 }}>
-      {/* 사이드바 — 페이지 트리 */}
+      {/* 사이드바 — 페이지 트리 + 즐겨찾기 + 타임라인 + 스니펫 */}
       <aside className="md:w-[280px] shrink-0 border-b-[2px] md:border-b-0 md:border-r-[2px] border-nu-ink/15 bg-nu-cream/20 flex flex-col">
         <div className="px-3 py-2 border-b-[2px] border-nu-ink/15 flex items-center justify-between bg-white">
           <div className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted flex items-center gap-1.5">
             <FileText size={11} />
             페이지 {pages.length}
           </div>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setSnippetsOpen(true)}
+              title="스니펫"
+              className="font-mono-nu text-[10px] uppercase tracking-widest px-1 py-0.5 border border-nu-ink/30 hover:bg-nu-cream"
+            >
+              <Layers size={10} />
+            </button>
+            <button
+              type="button"
+              onClick={() => addPage(null)}
+              title="새 페이지"
+              className="font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 border-[2px] border-nu-ink hover:bg-nu-cream flex items-center gap-1"
+            >
+              <Plus size={10} /> 페이지
+            </button>
+          </div>
+        </div>
+        {/* 모드 토글 — 트리 / 즐겨찾기 / 최근 */}
+        <div className="flex border-b border-nu-ink/10 bg-white text-[10px] font-mono-nu uppercase tracking-widest">
           <button
             type="button"
-            onClick={() => addPage(null)}
-            title="새 페이지 추가"
-            className="font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 border-[2px] border-nu-ink hover:bg-nu-cream flex items-center gap-1"
+            onClick={() => setSidebarMode("tree")}
+            className={`flex-1 px-2 py-1.5 flex items-center justify-center gap-1 ${sidebarMode === "tree" ? "bg-nu-ink text-nu-paper" : "hover:bg-nu-cream text-nu-ink"}`}
           >
-            <Plus size={10} /> 새 페이지
+            <FileText size={10} /> 트리
+          </button>
+          <button
+            type="button"
+            onClick={() => setSidebarMode("favorites")}
+            className={`flex-1 px-2 py-1.5 flex items-center justify-center gap-1 border-l border-nu-ink/10 ${sidebarMode === "favorites" ? "bg-nu-ink text-nu-paper" : "hover:bg-nu-cream text-nu-ink"}`}
+          >
+            <Star size={10} /> 즐겨{favorites.size > 0 ? ` ${favorites.size}` : ""}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSidebarMode("recent")}
+            className={`flex-1 px-2 py-1.5 flex items-center justify-center gap-1 border-l border-nu-ink/10 ${sidebarMode === "recent" ? "bg-nu-ink text-nu-paper" : "hover:bg-nu-cream text-nu-ink"}`}
+          >
+            <Clock size={10} /> 최근
           </button>
         </div>
         <div className="flex-1 overflow-auto p-2 space-y-0.5">
@@ -173,6 +279,20 @@ export function SpacePages({ ownerType, ownerId }: Props) {
             >
               + 첫 페이지 만들기
             </button>
+          ) : sidebarMode === "favorites" ? (
+            favorites.size === 0 ? (
+              <div className="px-2 py-3 text-[11px] text-nu-muted italic">
+                즐겨찾기 없음 — 페이지의 ★ 버튼으로 추가
+              </div>
+            ) : (
+              pages.filter((p) => favorites.has(p.id)).map((p) => (
+                <FlatPageRow key={p.id} page={p} selected={selectedId === p.id} onSelect={() => setSelectedId(p.id)} starred={true} onToggleStar={() => toggleFavorite(p.id)} />
+              ))
+            )
+          ) : sidebarMode === "recent" ? (
+            [...pages].sort((a, b) => b.updated_at.localeCompare(a.updated_at)).slice(0, 30).map((p) => (
+              <FlatPageRow key={p.id} page={p} selected={selectedId === p.id} onSelect={() => setSelectedId(p.id)} starred={favorites.has(p.id)} onToggleStar={() => toggleFavorite(p.id)} showTime={p.updated_at} />
+            ))
           ) : (
             (tree.get(null) ?? []).map((p) => (
               <SpacePageTreeNode
@@ -184,6 +304,9 @@ export function SpacePages({ ownerType, ownerId }: Props) {
                 onAddChild={(parentId) => addPage(parentId)}
                 onUpdate={updatePage}
                 onDelete={deletePage}
+                onToggleStar={toggleFavorite}
+                isFavorite={favorites.has(p.id)}
+                favorites={favorites}
                 depth={0}
               />
             ))
@@ -192,7 +315,23 @@ export function SpacePages({ ownerType, ownerId }: Props) {
       </aside>
 
       {/* 에디터 영역 */}
-      <main className="flex-1 min-w-0 flex flex-col">
+      <main className="flex-1 min-w-0 flex flex-col relative">
+        {/* 실시간 presence — 같은 페이지에 있는 다른 사용자 */}
+        {selectedId && presenceUsers.length > 0 && (
+          <div className="absolute top-2 right-2 z-20 flex items-center gap-1 bg-white border-[2px] border-nu-ink shadow-[2px_2px_0_0_#0D0F14] px-1.5 py-0.5">
+            <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-pink">
+              {presenceUsers.length}명 보는 중
+            </span>
+            {presenceUsers.slice(0, 3).map((u) => (
+              <span key={u.id} className="w-5 h-5 rounded-full bg-nu-pink text-white font-mono-nu text-[9px] flex items-center justify-center" title={u.nickname}>
+                {u.nickname[0]}
+              </span>
+            ))}
+            {presenceUsers.length > 3 && (
+              <span className="font-mono-nu text-[9px] text-nu-muted">+{presenceUsers.length - 3}</span>
+            )}
+          </div>
+        )}
         {selected ? (
           <SpacePageEditor
             page={selected}
@@ -201,6 +340,7 @@ export function SpacePages({ ownerType, ownerId }: Props) {
             onUpdateContent={(content) => updatePage(selected.id, { content })}
             ownerType={ownerType}
             ownerId={ownerId}
+            currentUserId={currentUserId}
           />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-nu-muted">
@@ -216,6 +356,61 @@ export function SpacePages({ ownerType, ownerId }: Props) {
           </div>
         )}
       </main>
+      <SnippetsPanel
+        open={snippetsOpen}
+        onClose={() => setSnippetsOpen(false)}
+        currentPageId={selectedId}
+      />
     </div>
   );
+}
+
+function FlatPageRow({
+  page,
+  selected,
+  starred,
+  onSelect,
+  onToggleStar,
+  showTime,
+}: {
+  page: SpacePage;
+  selected: boolean;
+  starred: boolean;
+  onSelect: () => void;
+  onToggleStar: () => void;
+  showTime?: string;
+}) {
+  return (
+    <div
+      className={`flex items-center gap-1 px-2 py-1 cursor-pointer ${selected ? "bg-nu-ink text-nu-paper" : "hover:bg-white"}`}
+      onClick={onSelect}
+    >
+      <span className="text-[13px]">{page.icon || "📄"}</span>
+      <span className="flex-1 truncate text-[12px]">{page.title}</span>
+      {showTime && (
+        <span className={`font-mono-nu text-[9px] uppercase tracking-widest ${selected ? "text-nu-paper/70" : "text-nu-muted"} shrink-0`}>
+          {timeAgo(showTime)}
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onToggleStar(); }}
+        className={`p-0.5 ${starred ? "text-nu-yellow" : selected ? "text-nu-paper/40 hover:text-nu-yellow" : "text-nu-muted hover:text-nu-yellow"}`}
+        title={starred ? "즐겨찾기 해제" : "즐겨찾기"}
+      >
+        <Star size={11} fill={starred ? "currentColor" : "none"} />
+      </button>
+    </div>
+  );
+}
+
+function timeAgo(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const m = Math.round(ms / 60_000);
+  if (m < 1) return "방금";
+  if (m < 60) return `${m}분`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h}시간`;
+  const d = Math.round(h / 24);
+  return `${d}일`;
 }

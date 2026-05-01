@@ -410,7 +410,11 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
             그룹 멤버 누구나 추가·편집·삭제 가능
           </span>
         </div>
-        <SpacePages ownerType="nut" ownerId={id} />
+        <SpacePages
+          ownerType="nut"
+          ownerId={id}
+          currentUserId={user?.id}
+        />
       </div>
 
       {/* 🧪 Thread Beta — Module Lattice 실험 영역 */}

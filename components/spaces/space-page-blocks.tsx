@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Plus, Trash2, GripVertical } from "lucide-react";
+import { Plus, Trash2, GripVertical, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import type { SpaceBlock, BlockType } from "./space-pages-types";
 import { SLASH_COMMANDS } from "./space-pages-types";
 import { SpaceBlockRenderer } from "./space-block-renderer";
+import { BlockComments } from "./block-comments";
 
 interface Props {
   pageId: string;
@@ -14,6 +15,8 @@ interface Props {
   /** mention 자동완성에 owner 정보 전달용 */
   ownerType?: "nut" | "bolt";
   ownerId?: string;
+  /** 현재 사용자 id — 댓글 본인 표시 */
+  currentUserId?: string;
 }
 
 const SAVE_DEBOUNCE = 600;
@@ -27,7 +30,8 @@ const SAVE_DEBOUNCE = 600;
  * - "+" 버튼 = 블록 사이 삽입
  * - 드래그-드롭 순서 변경
  */
-export function SpacePageBlocks({ pageId, legacyContent, ownerType, ownerId }: Props) {
+export function SpacePageBlocks({ pageId, legacyContent, ownerType, ownerId, currentUserId }: Props) {
+  const [openCommentsFor, setOpenCommentsFor] = useState<string | null>(null);
   const [blocks, setBlocks] = useState<SpaceBlock[]>([]);
   const [loading, setLoading] = useState(true);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -200,7 +204,19 @@ export function SpacePageBlocks({ pageId, legacyContent, ownerType, ownerId }: P
                   ownerType={ownerType}
                   ownerId={ownerId}
                 />
+                {openCommentsFor === b.id && (
+                  <BlockComments blockId={b.id} currentUserId={currentUserId} />
+                )}
               </div>
+              <button
+                type="button"
+                onClick={() => setOpenCommentsFor(openCommentsFor === b.id ? null : b.id)}
+                className={`opacity-0 group-hover:opacity-100 transition-opacity p-1 shrink-0 ${openCommentsFor === b.id ? "text-nu-pink !opacity-100" : "text-nu-muted hover:text-nu-pink"}`}
+                title="댓글"
+                aria-label="블록 댓글 토글"
+              >
+                <MessageSquare size={11} />
+              </button>
               <button
                 type="button"
                 onClick={() => deleteBlock(b.id)}

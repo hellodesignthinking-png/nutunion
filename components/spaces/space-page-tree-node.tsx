@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronRight, ChevronDown, Plus, MoreHorizontal, Trash2 } from "lucide-react";
+import { ChevronRight, ChevronDown, Plus, MoreHorizontal, Trash2, Star } from "lucide-react";
 import type { SpacePage } from "./space-pages-types";
 
 interface Props {
@@ -13,6 +13,11 @@ interface Props {
   onAddChild: (parentId: string) => void;
   onUpdate: (id: string, patch: Partial<Pick<SpacePage, "title" | "icon" | "parent_page_id" | "position">>) => void;
   onDelete: (id: string) => void;
+  /** 즐겨찾기 토글 */
+  onToggleStar?: (pageId: string) => void;
+  isFavorite?: boolean;
+  /** 자식들의 즐겨찾기 상태 — 재귀 전달 */
+  favorites?: Set<string>;
 }
 
 /**
@@ -32,6 +37,9 @@ export function SpacePageTreeNode({
   onAddChild,
   onUpdate,
   onDelete,
+  onToggleStar,
+  isFavorite,
+  favorites,
 }: Props) {
   const children = tree.get(page.id) ?? [];
   const [expanded, setExpanded] = useState(true);
@@ -85,6 +93,16 @@ export function SpacePageTreeNode({
         <span className="flex-1 truncate text-[12px]" title={page.title}>
           {page.title}
         </span>
+        {onToggleStar && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onToggleStar(page.id); }}
+            title={isFavorite ? "즐겨찾기 해제" : "즐겨찾기 추가"}
+            className={`p-0.5 ${isFavorite ? "text-nu-yellow opacity-100" : `opacity-0 group-hover:opacity-100 ${isSelected ? "text-nu-paper hover:bg-nu-paper/10" : "text-nu-muted hover:text-nu-yellow"}`}`}
+          >
+            <Star size={11} fill={isFavorite ? "currentColor" : "none"} />
+          </button>
+        )}
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onAddChild(page.id); }}
@@ -166,6 +184,9 @@ export function SpacePageTreeNode({
               onAddChild={onAddChild}
               onUpdate={onUpdate}
               onDelete={onDelete}
+              onToggleStar={onToggleStar}
+              isFavorite={favorites?.has(c.id) ?? false}
+              favorites={favorites}
             />
           ))}
         </div>
