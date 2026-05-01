@@ -37,6 +37,7 @@ export function SpacePageBlocks({ pageId, legacyContent, ownerType, ownerId, cur
   const [blocks, setBlocks] = useState<SpaceBlock[]>([]);
   const [loading, setLoading] = useState(true);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const saveTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   // 페이지 변경 시 — 블록 fetch
@@ -173,15 +174,21 @@ export function SpacePageBlocks({ pageId, legacyContent, ownerType, ownerId, cur
                 e.dataTransfer.effectAllowed = "move";
                 e.dataTransfer.setData("text/block-id", b.id);
               }}
-              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                if (draggingId && draggingId !== b.id) setDropTargetId(b.id);
+              }}
+              onDragLeave={() => setDropTargetId((cur) => cur === b.id ? null : cur)}
               onDrop={(e) => {
                 e.preventDefault();
                 const sourceId = e.dataTransfer.getData("text/block-id");
                 if (sourceId) reorder(sourceId, b.id);
                 setDraggingId(null);
+                setDropTargetId(null);
               }}
-              onDragEnd={() => setDraggingId(null)}
-              className={`group flex items-start gap-1 ${draggingId === b.id ? "opacity-40" : ""}`}
+              onDragEnd={() => { setDraggingId(null); setDropTargetId(null); }}
+              className={`group flex items-start gap-1 relative ${draggingId === b.id ? "opacity-40" : ""}`}
             >
               <div className="flex flex-col items-center pt-1.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                 <button
@@ -216,6 +223,13 @@ export function SpacePageBlocks({ pageId, legacyContent, ownerType, ownerId, cur
                   <BlockComments blockId={b.id} currentUserId={currentUserId} />
                 )}
               </div>
+              {dropTargetId === b.id && draggingId && draggingId !== b.id && (
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute -bottom-0.5 left-0 right-0 h-[3px] bg-nu-pink"
+                  style={{ boxShadow: "0 0 6px rgba(255, 61, 136, 0.6)" }}
+                />
+              )}
               <button
                 type="button"
                 onClick={() => setOpenCommentsFor(openCommentsFor === b.id ? null : b.id)}

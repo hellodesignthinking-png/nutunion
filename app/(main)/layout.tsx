@@ -4,6 +4,7 @@ import { AuthNav } from "@/components/shared/auth-nav";
 import { AppSidebar, AppSidebarGutter } from "@/components/shared/app-sidebar";
 import { AppBottomTabs } from "@/components/shared/app-bottom-tabs";
 import { CommandPalette } from "@/components/shared/command-palette";
+import { SpacesGlobalSearch } from "@/components/spaces/spaces-global-search";
 import { OnlineStatusBanner } from "@/components/shared/online-status-banner";
 import { PushPromptBanner } from "@/components/shared/push-prompt-banner";
 import { Footer } from "@/components/landing/footer";
@@ -58,6 +59,7 @@ export default async function MainLayout({
       <OnlineStatusBanner />
       <AuthNav profile={userProfile} />
       <CommandPalette isAdmin={isAdmin} />
+      <SpacesGlobalSearch />
       <AppSidebar isStaff={isStaff} isAdmin={isAdmin} />
       <AppSidebarGutter>
         <div className="flex-1 pt-[60px] pb-[64px] md:pb-0">

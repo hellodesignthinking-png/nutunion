@@ -49,6 +49,23 @@ export function SpacePages({ ownerType, ownerId, ownerName, currentUserId, curre
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   // 모바일 — 사이드바 collapse (md+ 항상 노출, 모바일 토글)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  // 권한 — 너트/볼트 역할 → capability. UI 가드 (viewer 면 편집/공유 버튼 숨김).
+  const [permissions, setPermissions] = useState<{
+    role: "admin" | "editor" | "viewer";
+    can_create: boolean; can_edit: boolean; can_share: boolean;
+    can_delete_others: boolean; can_manage_permissions: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/spaces/role?owner_type=${ownerType}&owner_id=${ownerId}`)
+      .then((r) => r.json())
+      .then((j) => setPermissions(j.permissions ?? null))
+      .catch(() => undefined);
+  }, [ownerType, ownerId]);
+
+  const canCreate = permissions?.can_create ?? true;  // 권한 fetch 전엔 낙관적
+  const canShare = permissions?.can_share ?? false;
+  const canEdit = permissions?.can_edit ?? true;
   // 실시간 presence — 같은 페이지를 보고 있는 다른 사용자
   const [presenceUsers, setPresenceUsers] = useState<Array<{ id: string; nickname: string }>>([]);
 
@@ -272,14 +289,16 @@ export function SpacePages({ ownerType, ownerId, ownerName, currentUserId, curre
             페이지 {pages.length}
           </div>
           <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setAiModalOpen(true)}
-              title="AI 페이지 자동 생성"
-              className="font-mono-nu text-[10px] uppercase tracking-widest px-1 py-0.5 border border-nu-pink hover:bg-nu-pink/10 text-nu-pink"
-            >
-              🪄
-            </button>
+            {canCreate && (
+              <button
+                type="button"
+                onClick={() => setAiModalOpen(true)}
+                title="AI 페이지 자동 생성"
+                className="font-mono-nu text-[10px] uppercase tracking-widest px-1 py-0.5 border border-nu-pink hover:bg-nu-pink/10 text-nu-pink"
+              >
+                🪄
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setAnalyticsOpen(true)}
@@ -288,30 +307,41 @@ export function SpacePages({ ownerType, ownerId, ownerName, currentUserId, curre
             >
               <BarChart3 size={10} />
             </button>
-            <button
-              type="button"
-              onClick={() => setSnippetsOpen(true)}
-              title="스니펫"
-              className="font-mono-nu text-[10px] uppercase tracking-widest px-1 py-0.5 border border-nu-ink/30 hover:bg-nu-cream"
-            >
-              <Layers size={10} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setTemplateOpen(true)}
-              title="템플릿"
-              className="font-mono-nu text-[10px] uppercase tracking-widest px-1 py-0.5 border border-nu-ink/30 hover:bg-nu-cream"
-            >
-              ✨
-            </button>
-            <button
-              type="button"
-              onClick={() => addPage(null)}
-              title="새 페이지"
-              className="font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 border-[2px] border-nu-ink hover:bg-nu-cream flex items-center gap-1"
-            >
-              <Plus size={10} /> 페이지
-            </button>
+            {canCreate && (
+              <button
+                type="button"
+                onClick={() => setSnippetsOpen(true)}
+                title="스니펫"
+                className="font-mono-nu text-[10px] uppercase tracking-widest px-1 py-0.5 border border-nu-ink/30 hover:bg-nu-cream"
+              >
+                <Layers size={10} />
+              </button>
+            )}
+            {canCreate && (
+              <button
+                type="button"
+                onClick={() => setTemplateOpen(true)}
+                title="템플릿"
+                className="font-mono-nu text-[10px] uppercase tracking-widest px-1 py-0.5 border border-nu-ink/30 hover:bg-nu-cream"
+              >
+                ✨
+              </button>
+            )}
+            {canCreate && (
+              <button
+                type="button"
+                onClick={() => addPage(null)}
+                title="새 페이지"
+                className="font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 border-[2px] border-nu-ink hover:bg-nu-cream flex items-center gap-1"
+              >
+                <Plus size={10} /> 페이지
+              </button>
+            )}
+            {permissions && permissions.role !== "admin" && (
+              <span className="font-mono-nu text-[9px] uppercase tracking-widest text-nu-muted px-1" title={`역할: ${permissions.role}`}>
+                {permissions.role === "viewer" ? "👁 뷰어" : "✏ 편집자"}
+              </span>
+            )}
           </div>
         </div>
         {/* 페이지 간 검색 */}
@@ -437,6 +467,8 @@ export function SpacePages({ ownerType, ownerId, ownerName, currentUserId, curre
             ownerType={ownerType}
             ownerId={ownerId}
             currentUserId={currentUserId}
+            canShare={canShare}
+            canEdit={canEdit}
           />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-nu-muted">

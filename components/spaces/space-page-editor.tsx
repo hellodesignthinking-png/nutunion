@@ -21,6 +21,9 @@ interface Props {
   ownerType?: "nut" | "bolt";
   ownerId?: string;
   currentUserId?: string;
+  /** 권한 가드 — viewer 면 공유/편집 버튼 숨김 */
+  canShare?: boolean;
+  canEdit?: boolean;
 }
 
 const TITLE_DEBOUNCE = 500;
@@ -41,6 +44,8 @@ export function SpacePageEditor({
   ownerType,
   ownerId,
   currentUserId,
+  canShare = true,
+  canEdit = true,
 }: Props) {
   const [titleDraft, setTitleDraft] = useState(page.title);
   const [saveState, setSaveState] = useState<SaveState>("idle");
@@ -158,14 +163,16 @@ export function SpacePageEditor({
           <div className="flex flex-col items-end gap-1 shrink-0 pt-2">
             <SaveStateBadge state={saveState} updatedAt={page.updated_at} />
             <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => setShareOpen(true)}
-                title="외부 공유"
-                className="font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 border border-nu-ink/30 hover:bg-nu-cream flex items-center gap-1"
-              >
-                <Share2 size={10} /> 공유
-              </button>
+              {canShare && (
+                <button
+                  type="button"
+                  onClick={() => setShareOpen(true)}
+                  title="외부 공유"
+                  className="font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 border border-nu-ink/30 hover:bg-nu-cream flex items-center gap-1"
+                >
+                  <Share2 size={10} /> 공유
+                </button>
+              )}
               <button
                 type="button"
                 onClick={exportMarkdown}
