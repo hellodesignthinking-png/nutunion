@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { claimPendingJobs, completeJob, failJob, type WorkflowJob } from "@/lib/workflow/queue";
+import { log } from "@/lib/observability/logger";
 import { runWikiSynthesis } from "@/lib/ai/wiki-synthesis-core";
 
 export const runtime = "nodejs";
@@ -49,7 +50,7 @@ export async function GET(req: NextRequest) {
       const willRetry = job.attempts < job.max_attempts;
       await failJob(admin, job.id, msg, willRetry);
       results.push({ jobId: job.id, status: willRetry ? "retry" : "failed", error: msg });
-      console.error("[process-jobs] job failed", { jobId: job.id, error: msg });
+      log.warn("cron.process_jobs.job_failed", { job_id: job.id, will_retry: willRetry, error_message: msg });
     }
   }
 

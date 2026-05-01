@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { log } from "@/lib/observability/logger";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -30,11 +31,13 @@ export async function GET(req: Request) {
   try {
     const { error } = await db.rpc("compute_daily_metrics", { target_date: targetDate });
     if (error) {
-      console.warn("[cron/daily-metrics] RPC failed:", error.message);
+      log.warn("cron.daily_metrics.rpc_failed", { target_date: targetDate, error_message: error.message });
       return NextResponse.json({ error: error.message, targetDate }, { status: 500 });
     }
+    log.info("cron.daily_metrics.ok", { target_date: targetDate });
     return NextResponse.json({ ok: true, targetDate });
   } catch (err: any) {
+    log.error(err, "cron.daily_metrics.failed", { target_date: targetDate });
     return NextResponse.json({ error: err.message || "unknown", targetDate }, { status: 500 });
   }
 }

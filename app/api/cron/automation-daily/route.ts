@@ -8,6 +8,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { dispatchEvent } from "@/lib/automation/engine";
+import { log } from "@/lib/observability/logger";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
     await dispatchEvent("schedule.daily_9am", { fired_at: startedAt });
     return NextResponse.json({ ok: true, fired_at: startedAt });
   } catch (e: any) {
-    console.warn("[cron.automation-daily] failed", e?.message);
+    log.error(e, "cron.automation_daily.failed", { fired_at: startedAt });
     return NextResponse.json({ ok: false, error: e?.message }, { status: 500 });
   }
 }

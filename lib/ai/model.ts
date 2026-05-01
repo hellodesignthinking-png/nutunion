@@ -19,11 +19,25 @@
 import { google, createGoogleGenerativeAI } from "@ai-sdk/google";
 import { openai, createOpenAI } from "@ai-sdk/openai";
 import { anthropic, createAnthropic } from "@ai-sdk/anthropic";
-import { generateText, generateObject } from "ai";
+import { generateText, generateObject, gateway, createGateway } from "ai";
 import type { z } from "zod";
 
 // ──────────────────────────────────────────────
+// Vercel AI Gateway 우선 — AI_GATEWAY_API_KEY 가 있으면 모든 호출이 Gateway 통과.
+// 장점: 단일 키로 다중 provider, 비용 가시성, 자동 failover, OIDC 자동.
+// 미설정 시 기존 직접 키 fallback chain 으로 graceful degrade.
+// ──────────────────────────────────────────────
+const GATEWAY_KEY = process.env.AI_GATEWAY_API_KEY;
+const USE_GATEWAY = !!GATEWAY_KEY || process.env.VERCEL_OIDC_TOKEN; // Vercel deploy시 OIDC 자동
+const gatewayProvider = GATEWAY_KEY
+  ? createGateway({ apiKey: GATEWAY_KEY })
+  : USE_GATEWAY
+  ? gateway // OIDC 자동 인증
+  : null;
+
+// ──────────────────────────────────────────────
 // 환경변수 이름 3중 fallback — 유저가 GEMINI_API_KEY 로 등록했어도 작동
+// (Gateway 미설정 환경의 직접 호출용 fallback)
 // ──────────────────────────────────────────────
 const GOOGLE_KEY =
   process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
@@ -62,10 +76,31 @@ interface ModelCandidate {
   envKey: string;
 }
 
-/** tier: "fast" (flash/mini) | "pro" (pro/opus) */
+/** tier: "fast" (flash/mini) | "pro" (pro/opus)
+ *
+ * Gateway 우선 — gatewayProvider 가 활성화돼 있으면 gateway 모델 3개를 chain 으로.
+ * Gateway model id 는 dot 표기(`anthropic/claude-sonnet-4.5`), 직접 SDK 는 hyphen 표기.
+ * Gateway 미설정 시 직접 provider 키로 fallback.
+ */
 function buildChain(tier: "fast" | "pro" = "fast"): ModelCandidate[] {
   const chain: ModelCandidate[] = [];
 
+  // ─ Gateway 모드 ─ AI_GATEWAY_API_KEY 또는 OIDC 자동
+  if (gatewayProvider) {
+    const ids = tier === "pro"
+      ? ["google/gemini-2.5-pro", "openai/gpt-4.1", "anthropic/claude-sonnet-4.5"]
+      : ["google/gemini-2.5-flash", "openai/gpt-4.1-mini", "anthropic/claude-haiku-4.5"];
+    for (const id of ids) {
+      chain.push({
+        label: id,
+        model: gatewayProvider.languageModel(id),
+        envKey: "AI_GATEWAY_API_KEY (or OIDC)",
+      });
+    }
+    return chain;
+  }
+
+  // ─ Direct provider 모드 ─ 개별 키로 fallback chain
   // Google (GEMINI_API_KEY / GOOGLE_GENERATIVE_AI_API_KEY 둘 다 인식)
   if (googleProvider) {
     chain.push({
@@ -82,7 +117,7 @@ function buildChain(tier: "fast" | "pro" = "fast"): ModelCandidate[] {
       envKey: "OPENAI_API_KEY",
     });
   }
-  // Anthropic
+  // Anthropic — 직접 SDK 는 hyphen 표기 (claude-sonnet-4-5)
   if (anthropicProvider) {
     chain.push({
       label: tier === "pro" ? "anthropic/claude-sonnet-4-5" : "anthropic/claude-haiku-4-5",

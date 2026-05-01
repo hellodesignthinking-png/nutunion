@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { log } from "@/lib/observability/logger";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -94,10 +95,14 @@ export async function GET(req: Request) {
         }),
       });
       if (res.ok) sent++;
-      else failed++;
-    } catch { failed++; }
+      else { failed++; log.warn("cron.notifications_digest.send_http_error", { status: res.status, user_id: p.user_id }); }
+    } catch (err) {
+      failed++;
+      log.warn("cron.notifications_digest.send_failed", { user_id: p.user_id, error_message: err instanceof Error ? err.message : String(err) });
+    }
   }
 
+  log.info("cron.notifications_digest.done", { eligible: eligible.length, sent, skipped, failed });
   return NextResponse.json({ eligible: eligible.length, sent, skipped, failed });
 }
 

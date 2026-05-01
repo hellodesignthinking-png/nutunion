@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
+import { log } from "@/lib/observability/logger";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -57,7 +58,8 @@ async function embed(text: string, apiKey: string): Promise<number[] | null> {
     });
     const data = await res.json();
     return data.data?.[0]?.embedding || null;
-  } catch {
+  } catch (err) {
+    log.warn("cron.embeddings_refresh.openai_failed", { error_message: err instanceof Error ? err.message : String(err) });
     return null;
   }
 }

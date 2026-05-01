@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { dispatchPushToUsers } from "@/lib/push/dispatch";
+import { log } from "@/lib/observability/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -169,7 +170,7 @@ export async function GET(req: NextRequest) {
       results.push({ project_id: proj.id, last_activity: lastActivity, reminded: true, members: userIds.length });
     } catch (err) {
       errors += 1;
-      console.error("[venture-reminder] project failed", proj.id, err);
+      log.warn("cron.venture_reminder.project_failed", { project_id: proj.id, error_message: err instanceof Error ? err.message : String(err) });
       results.push({ project_id: proj.id, last_activity: null, reminded: false, members: 0, skipReason: "error" });
     }
   }

@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { finalizePoll, type PollRow } from "@/lib/chat/poll-finalize";
+import { log } from "@/lib/observability/logger";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -63,6 +64,7 @@ export async function GET(req: NextRequest) {
       if (r.posted) posted++;
     } catch (err: any) {
       errors.push({ id: p.id, msg: err?.message || "unknown" });
+      log.warn("cron.close_polls.entry_failed", { poll_id: p.id, error_message: err?.message });
     }
   }
 

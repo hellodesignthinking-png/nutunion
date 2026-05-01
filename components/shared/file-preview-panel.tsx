@@ -64,6 +64,8 @@ import {
 } from "@/lib/file-preview/detect-kind";
 import { relTime, prettySize } from "@/lib/file-preview/format";
 import { ExternalCard } from "./file-preview/external-card";
+import { VersionsModal } from "./file-preview/versions-modal";
+import { EmbedRenderer } from "./file-preview/embed-renderer";
 
 // Re-export for back-compat (외부 caller 들이 file-preview-panel 에서 import 중)
 export { _isTextEditableFile as isTextEditableFile };
@@ -172,20 +174,9 @@ export function FilePreviewPanel({
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // 버전 히스토리 모달
+  // 버전 히스토리 모달 — VersionsModal 컴포넌트가 자체 state 관리
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [pdfAnnotating, setPdfAnnotating] = useState(false);
-  const [versions, setVersions] = useState<Array<{
-    id: string;
-    backup_storage_key: string;
-    bytes: number | null;
-    content_type: string | null;
-    created_by: string | null;
-    created_at: string;
-    label: string | null;
-  }>>([]);
-  const [versionsLoading, setVersionsLoading] = useState(false);
-  const [restoring, setRestoring] = useState<string | null>(null);
 
   // Image zoom
   const [zoomed, setZoomed] = useState(false);
@@ -472,59 +463,7 @@ export function FilePreviewPanel({
     }
   }
 
-  /** 버전 목록 조회 — 모달 열 때 호출 */
-  async function loadVersions() {
-    if (!file.id) return;
-    setVersionsLoading(true);
-    try {
-      const r = await fetch(
-        `/api/files/versions?table=${encodeURIComponent(targetTable)}&id=${encodeURIComponent(file.id)}`,
-        { cache: "no-store" },
-      );
-      const json = await r.json();
-      if (!r.ok) {
-        if (json?.code === "MIGRATION_MISSING") {
-          toast.error("버전 기능이 활성화되지 않았어요 (마이그레이션 132 필요)");
-        } else {
-          toast.error(json?.error || "버전 조회 실패");
-        }
-        setVersions([]);
-        return;
-      }
-      setVersions(json.versions || []);
-    } catch (e: unknown) {
-      toast.error((e as Error).message || "버전 조회 실패");
-    } finally {
-      setVersionsLoading(false);
-    }
-  }
-
-  async function restoreVersion(versionId: string) {
-    if (!confirm("이 백업본으로 되돌릴까요? 현재 콘텐츠는 새 백업으로 보관돼요.")) return;
-    setRestoring(versionId);
-    try {
-      const r = await fetch("/api/files/versions/restore", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ version_id: versionId }),
-      });
-      const json = await r.json();
-      if (!r.ok) {
-        toast.error(json?.error || "복원 실패");
-        return;
-      }
-      toast.success("이전 버전으로 복원했어요");
-      setVersion(Date.now()); // iframe/이미지 캐시 버스트
-      setVersionsOpen(false);
-      onUpdated?.({ url: file.url });
-      // 목록 새로고침 (복원 직전 자동 백업이 추가됨)
-      await loadVersions();
-    } catch (e: unknown) {
-      toast.error((e as Error).message || "복원 실패");
-    } finally {
-      setRestoring(null);
-    }
-  }
+  // loadVersions / restoreVersion 은 VersionsModal 내부로 이동.
 
   /** Drive 에서 편집한 변경사항을 같은 R2 키에 덮어쓰기 — 자료실 카드 그대로 갱신.
    *  Drive 변경 없으면 no-op + 안내 토스트. R2 PUT 실패 시 명확한 에러 (Drive 사본은 보존됨). */
@@ -794,7 +733,6 @@ export function FilePreviewPanel({
                       onClick={() => {
                         setMenuOpen(false);
                         setVersionsOpen(true);
-                        loadVersions();
                       }}
                       className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-nu-ink hover:bg-nu-cream/40 text-left"
                     >
@@ -1252,317 +1190,7 @@ export function FilePreviewPanel({
             </div>
           )}
 
-          {kind === "youtube" && (() => {
-            const embed = toYoutubeEmbed(file.url);
-            if (embed) {
-              return (
-                <div className="w-full h-full flex items-center justify-center bg-black">
-                  <iframe
-                    src={embed}
-                    title={file.name}
-                    className="w-full h-full border-0"
-                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                  />
-                </div>
-              );
-            }
-            return (
-              <div className="w-full h-full flex flex-col items-center justify-center p-8 gap-4 text-center bg-nu-cream/20">
-                <div className="w-20 h-20 border-[3px] border-nu-ink bg-nu-paper flex items-center justify-center text-3xl">
-                  ▶️
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-nu-ink mb-1">YouTube 채널 / 플레이리스트</p>
-                  <p className="text-[12px] text-nu-muted max-w-md break-all">
-                    이 URL 은 YouTube 정책상 사이트 내 미리보기를 차단합니다 (X-Frame-Options).
-                  </p>
-                </div>
-                <a
-                  href={file.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2 border-[2px] border-nu-ink bg-nu-ink text-nu-paper no-underline hover:bg-nu-pink transition-all flex items-center gap-2"
-                >
-                  <ExternalLink size={13} /> YouTube 에서 열기
-                </a>
-              </div>
-            );
-          })()}
-
-          {kind === "gdrive" && (() => {
-            const embed = toGdriveEmbed(file.url);
-            if (embed) {
-              return (
-                <div className="w-full h-full flex flex-col">
-                  <iframe
-                    src={embed}
-                    title={file.name}
-                    className="w-full flex-1 border-0"
-                    allow="autoplay"
-                  />
-                  <div className="border-t-[2px] border-nu-ink bg-nu-cream/30 px-3 py-2 flex items-center justify-between gap-2">
-                    <p className="text-[11px] text-nu-muted">
-                      Google Drive 미리보기 — 편집은 새 탭에서
-                    </p>
-                    <a
-                      href={file.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-ink bg-nu-ink text-nu-paper no-underline hover:bg-nu-pink transition-all flex items-center gap-1.5"
-                    >
-                      <ExternalLink size={12} /> Drive 에서 편집
-                    </a>
-                  </div>
-                </div>
-              );
-            }
-            // fallback — embed 변환 실패
-            return (
-              <div className="w-full h-full flex flex-col items-center justify-center p-8 gap-4 text-center">
-                <div className="w-20 h-20 border-[3px] border-nu-ink bg-nu-cream/40 flex items-center justify-center text-3xl">📁</div>
-                <p className="text-sm font-bold text-nu-ink">Google Drive 파일</p>
-                <a
-                  href={file.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2 border-[2px] border-nu-ink bg-nu-ink text-nu-paper no-underline hover:bg-nu-pink transition-all flex items-center gap-2"
-                >
-                  <ExternalLink size={13} /> Drive 에서 열기
-                </a>
-              </div>
-            );
-          })()}
-
-          {kind === "vimeo" && (() => {
-            const m = file.url.match(/vimeo\.com\/(?:video\/)?(\d+)/) || file.url.match(/player\.vimeo\.com\/video\/(\d+)/);
-            if (!m) {
-              return (
-                <ExternalCard url={file.url} name={file.name} icon="🎬" label="Vimeo" />
-              );
-            }
-            return (
-              <div className="w-full h-full flex items-center justify-center bg-black">
-                <iframe
-                  src={`https://player.vimeo.com/video/${m[1]}`}
-                  title={file.name}
-                  className="w-full h-full border-0"
-                  allow="autoplay; fullscreen; picture-in-picture"
-                  allowFullScreen
-                />
-              </div>
-            );
-          })()}
-
-          {kind === "loom" && (() => {
-            const m = file.url.match(/loom\.com\/(?:share|embed)\/([a-zA-Z0-9]+)/);
-            if (!m) return <ExternalCard url={file.url} name={file.name} icon="📹" label="Loom" />;
-            return (
-              <div className="w-full h-full flex items-center justify-center bg-black">
-                <iframe
-                  src={`https://www.loom.com/embed/${m[1]}`}
-                  title={file.name}
-                  className="w-full h-full border-0"
-                  allow="autoplay; fullscreen"
-                  allowFullScreen
-                />
-              </div>
-            );
-          })()}
-
-          {kind === "figma" && (
-            <div className="w-full h-full flex flex-col">
-              <iframe
-                src={`https://www.figma.com/embed?embed_host=nutunion&url=${encodeURIComponent(file.url)}`}
-                title={file.name}
-                className="w-full flex-1 border-0"
-                allow="fullscreen"
-                allowFullScreen
-              />
-              <div className="border-t-[2px] border-nu-ink bg-nu-cream/30 px-3 py-2 flex items-center justify-between gap-2">
-                <p className="text-[11px] text-nu-muted">Figma 미리보기 — 편집은 새 탭에서</p>
-                <a
-                  href={file.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-ink bg-nu-ink text-nu-paper no-underline hover:bg-nu-pink transition-all flex items-center gap-1.5"
-                >
-                  <ExternalLink size={12} /> Figma 에서 열기
-                </a>
-              </div>
-            </div>
-          )}
-
-          {kind === "tweet" && (
-            <div className="w-full h-full flex flex-col bg-nu-cream/20">
-              <iframe
-                src={`https://twitframe.com/show?url=${encodeURIComponent(file.url)}`}
-                title={file.name}
-                className="w-full flex-1 border-0"
-                sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox"
-              />
-              <div className="border-t-[2px] border-nu-ink bg-nu-paper px-3 py-2 flex items-center justify-between gap-2">
-                <p className="text-[11px] text-nu-muted">트윗 미리보기 (twitframe)</p>
-                <a
-                  href={file.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-ink bg-nu-ink text-nu-paper no-underline hover:bg-nu-pink transition-all flex items-center gap-1.5"
-                >
-                  <ExternalLink size={12} /> X 에서 열기
-                </a>
-              </div>
-            </div>
-          )}
-
-          {kind === "spotify" && (() => {
-            // /track/X /album/X /playlist/X /episode/X /show/X /artist/X → /embed/{type}/{id}
-            const m = file.url.match(/open\.spotify\.com\/(?:embed\/)?(track|album|playlist|episode|show|artist)\/([a-zA-Z0-9]+)/);
-            if (!m) return <ExternalCard url={file.url} name={file.name} icon="🎵" label="Spotify" />;
-            const isTrack = m[1] === "track" || m[1] === "episode";
-            return (
-              <div className={`w-full h-full ${isTrack ? "flex items-center justify-center p-4 bg-nu-cream/20" : ""}`}>
-                <iframe
-                  src={`https://open.spotify.com/embed/${m[1]}/${m[2]}`}
-                  title={file.name}
-                  className={isTrack ? "w-full max-w-2xl border-0" : "w-full h-full border-0"}
-                  style={isTrack ? { height: 232 } : undefined}
-                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                  loading="lazy"
-                />
-              </div>
-            );
-          })()}
-
-          {kind === "soundcloud" && (
-            <div className="w-full h-full p-4 bg-nu-cream/20 flex items-center justify-center">
-              <iframe
-                src={`https://w.soundcloud.com/player/?url=${encodeURIComponent(file.url)}&color=%23ff5500&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false`}
-                title={file.name}
-                className="w-full max-w-3xl border-0"
-                style={{ height: 166 }}
-                allow="autoplay"
-                loading="lazy"
-              />
-            </div>
-          )}
-
-          {kind === "gist" && (() => {
-            // gist.github.com/{user}/{id} → raw 콘텐츠 fetch + hljs 하이라이트.
-            // gist 는 공식 임베드가 <script> 태그 의존이라 iframe 비호환 → text 모드 재사용.
-            const m = file.url.match(/gist\.github\.com\/([^/]+)\/([\w]+)/);
-            if (!m) return <ExternalCard url={file.url} name={file.name} icon="📝" label="GitHub Gist" og={ogMeta} ogLoading={ogLoading} />;
-            const rawUrl = `https://gist.githubusercontent.com/${m[1]}/${m[2]}/raw`;
-            return (
-              <div className="w-full h-full flex flex-col">
-                <iframe
-                  src={`https://gist.github.com/${m[1]}/${m[2]}.pibb`}
-                  title={file.name}
-                  className="w-full flex-1 border-0 bg-white"
-                  sandbox="allow-scripts allow-same-origin"
-                  loading="lazy"
-                />
-                <div className="border-t-[2px] border-nu-ink bg-nu-cream/30 px-3 py-2 flex items-center justify-between gap-2">
-                  <p className="text-[11px] text-nu-muted">GitHub Gist · 코드 임베드</p>
-                  <a
-                    href={rawUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-ink bg-nu-paper hover:bg-nu-ink hover:text-nu-paper transition-all flex items-center gap-1.5"
-                  >
-                    <ExternalLink size={12} /> Raw 보기
-                  </a>
-                </div>
-              </div>
-            );
-          })()}
-
-          {kind === "codepen" && (() => {
-            // codepen.io/{user}/pen/{slug} → /embed/{slug}
-            const m = file.url.match(/codepen\.io\/([^/]+)\/(?:pen|embed)\/([^/?#]+)/);
-            if (!m) return <ExternalCard url={file.url} name={file.name} icon="✨" label="CodePen" og={ogMeta} ogLoading={ogLoading} />;
-            return (
-              <iframe
-                src={`https://codepen.io/${m[1]}/embed/${m[2]}?default-tab=result&theme-id=light`}
-                title={file.name}
-                className="w-full h-full border-0"
-                allowFullScreen
-                loading="lazy"
-              />
-            );
-          })()}
-
-          {kind === "tiktok" && (() => {
-            // tiktok.com/@user/video/{id} → tiktok.com/embed/v2/{id}
-            const m = file.url.match(/tiktok\.com\/@[^/]+\/video\/(\d+)/) || file.url.match(/tiktok\.com\/v\/(\d+)/);
-            if (!m) return <ExternalCard url={file.url} name={file.name} icon="🎬" label="TikTok" og={ogMeta} ogLoading={ogLoading} />;
-            return (
-              <div className="w-full h-full flex items-center justify-center bg-black p-4">
-                <iframe
-                  src={`https://www.tiktok.com/embed/v2/${m[1]}`}
-                  title={file.name}
-                  className="w-full max-w-md h-full border-0"
-                  allow="encrypted-media; fullscreen"
-                  loading="lazy"
-                />
-              </div>
-            );
-          })()}
-
-          {kind === "instagram" && (() => {
-            // instagram.com/p/{shortcode}/ → /p/{shortcode}/embed/captioned/
-            const m = file.url.match(/instagram\.com\/(p|reel|tv)\/([^/?#]+)/);
-            if (!m) return <ExternalCard url={file.url} name={file.name} icon="📸" label="Instagram" og={ogMeta} ogLoading={ogLoading} />;
-            return (
-              <div className="w-full h-full flex items-center justify-center bg-nu-cream/20 p-4 overflow-y-auto">
-                <iframe
-                  src={`https://www.instagram.com/${m[1]}/${m[2]}/embed/captioned/`}
-                  title={file.name}
-                  className="w-full max-w-md border-0 bg-white"
-                  style={{ height: 700 }}
-                  scrolling="no"
-                  loading="lazy"
-                />
-              </div>
-            );
-          })()}
-
-          {kind === "miro" && (() => {
-            // miro.com/app/board/{id}=/?... → embed
-            const m = file.url.match(/miro\.com\/app\/board\/([^/?#=]+)/);
-            if (!m) return <ExternalCard url={file.url} name={file.name} icon="🧩" label="Miro" og={ogMeta} ogLoading={ogLoading} />;
-            return (
-              <iframe
-                src={`https://miro.com/app/live-embed/${m[1]}/?embedMode=view_only_without_ui`}
-                title={file.name}
-                className="w-full h-full border-0"
-                allow="fullscreen; clipboard-read; clipboard-write"
-                loading="lazy"
-              />
-            );
-          })()}
-
-          {kind === "slideshare" && (
-            <div className="w-full h-full">
-              {/* SlideShare 는 oEmbed 가 필요해서 정확한 embed URL 추출이 어려움 →
-                  OG 카드 + 새 탭 열기로 폴백 (대부분 사례 충분). */}
-              <ExternalCard url={file.url} name={file.name} icon="🖼️" label="SlideShare" og={ogMeta} ogLoading={ogLoading} />
-            </div>
-          )}
-
-          {(kind === "notion" || kind === "github") && (
-            <ExternalCard
-              url={file.url}
-              name={file.name}
-              icon={kind === "notion" ? "📓" : "🐙"}
-              label={kind === "notion" ? "Notion" : "GitHub"}
-              og={ogMeta}
-              ogLoading={ogLoading}
-              note={kind === "notion"
-                ? "Notion 페이지는 보안 정책상 임베드 미리보기를 차단합니다"
-                : "GitHub 페이지는 임베드를 차단합니다"}
-            />
-          )}
+          <EmbedRenderer kind={kind} url={file.url} name={file.name} og={ogMeta} ogLoading={ogLoading} />
 
           {kind === "other" && (
             <ExternalCard
@@ -1608,74 +1236,17 @@ export function FilePreviewPanel({
         />
       )}
 
-      {versionsOpen && (
-        <div
-          className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4"
-          onClick={() => setVersionsOpen(false)}
-        >
-          <div
-            className="bg-nu-paper border-[3px] border-nu-ink shadow-[6px_6px_0_0_#0D0F14] w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="px-4 py-3 border-b-[2px] border-nu-ink flex items-center justify-between bg-nu-cream/30">
-              <div className="flex items-center gap-2">
-                <History size={14} className="text-nu-pink" />
-                <span className="font-head text-[13px] font-black text-nu-ink">이전 버전</span>
-              </div>
-              <button
-                onClick={() => setVersionsOpen(false)}
-                className="p-1 text-nu-muted hover:text-nu-ink"
-                aria-label="닫기"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="flex-1 overflow-auto">
-              {versionsLoading ? (
-                <div className="flex items-center justify-center py-10">
-                  <Loader2 size={20} className="animate-spin text-nu-muted" />
-                </div>
-              ) : versions.length === 0 ? (
-                <div className="px-4 py-6 text-center text-[12px] text-nu-muted">
-                  아직 백업된 버전이 없어요. Drive 동기화 시점에 자동으로 백업됩니다.
-                </div>
-              ) : (
-                <ul className="divide-y divide-nu-ink/10">
-                  {versions.map((v) => (
-                    <li key={v.id} className="px-4 py-3 flex items-center gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[12px] font-bold text-nu-ink truncate">
-                          {v.label || "백업"}
-                        </p>
-                        <p className="font-mono-nu text-[10px] text-nu-muted">
-                          {new Date(v.created_at).toLocaleString("ko-KR")}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => restoreVersion(v.id)}
-                        disabled={restoring === v.id}
-                        className="font-mono-nu text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-ink text-nu-ink hover:bg-nu-ink hover:text-nu-paper transition-all flex items-center gap-1.5 disabled:opacity-50"
-                      >
-                        {restoring === v.id ? (
-                          <Loader2 size={11} className="animate-spin" />
-                        ) : (
-                          <RotateCcw size={11} />
-                        )}
-                        복원
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div className="px-4 py-2 border-t-[2px] border-nu-ink bg-nu-cream/20">
-              <p className="text-[10px] text-nu-muted">
-                자료당 최대 5개 보관 · Drive 동기화 직전·복원 직전 자동 백업
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <VersionsModal
+        open={versionsOpen}
+        fileId={file.id}
+        targetTable={targetTable}
+        onClose={() => setVersionsOpen(false)}
+        onRestored={() => {
+          setVersion(Date.now()); // iframe/이미지 캐시 버스트
+          onUpdated?.({ url: file.url });
+        }}
+      />
+
     </div>
   );
 }
