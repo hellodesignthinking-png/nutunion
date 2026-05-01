@@ -34,6 +34,7 @@ import { DriveR2MigrationBanner } from "@/components/shared/drive-r2-migration-b
 import { OnboardingChecklist } from "@/components/groups/onboarding-checklist";
 import { getCategory } from "@/lib/constants";
 import { ThreadBetaSection } from "@/components/threads/thread-beta-section";
+import { SpacePages } from "@/components/spaces/space-pages";
 import { MeetingArchiveTimeline } from "@/components/meetings/meeting-archive-timeline";
 
 // Lazy-load heavy below-fold components
@@ -399,6 +400,18 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
 
       {/* Related Groups Recommendation */}
       <RelatedGroups groupId={id} category={group.category} />
+
+      {/* 📄 자유 페이지 — 노션 스타일 */}
+      <div className="max-w-[1200px] mx-auto px-4 md:px-6 pb-6">
+        <div className="mb-2 flex items-center gap-2">
+          <FileText size={14} className="text-nu-pink" />
+          <h2 className="font-head text-[16px] font-extrabold text-nu-ink">페이지</h2>
+          <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">
+            그룹 멤버 누구나 추가·편집·삭제 가능
+          </span>
+        </div>
+        <SpacePages ownerType="nut" ownerId={id} />
+      </div>
 
       {/* 🧪 Thread Beta — Module Lattice 실험 영역 */}
       {user?.id && (
