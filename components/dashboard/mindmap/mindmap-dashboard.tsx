@@ -148,6 +148,21 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
   const [layoutMenuOpen, setLayoutMenuOpen] = useState(false);
   // 다중 선택 — reactflow onSelectionChange 가 갱신.
   const [selection, setSelection] = useState<{ nodes: RFNode[]; edges: RFEdge[] }>({ nodes: [], edges: [] });
+  // L11 — owner(nut/bolt) 별 미확인 활동 카운트. /api/activity/global?summary=1 폴링.
+  const [unreadByOwner, setUnreadByOwner] = useState<Record<string, number>>({});
+  useEffect(() => {
+    let alive = true;
+    const fetchUnread = async () => {
+      try {
+        const r = await fetch("/api/activity/global?summary=1&limit=1");
+        const j = await r.json();
+        if (alive && j?.summary?.unread) setUnreadByOwner(j.summary.unread);
+      } catch { /* ignore */ }
+    };
+    fetchUnread();
+    const t = setInterval(fetchUnread, 90_000);
+    return () => { alive = false; clearInterval(t); };
+  }, []);
 
   // collapsed 복원/저장 — localStorage 만 (서버 영속은 과한 비용)
   useEffect(() => {
@@ -608,13 +623,20 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
       }
       // timeline 모드에서는 saved 위치를 적용하지 않음 — 시간축 정합성 유지
       const pos = viewMode === "radial" ? savedPositions[n.id] : undefined;
+      // L11 — nut-{id} / bolt-{id} prefix 분리 후 unreadByOwner 매핑.
+      let unreadCount = 0;
+      if (data.kind === "nut" && n.id.startsWith("nut-")) {
+        unreadCount = unreadByOwner[`nut:${n.id.slice(4)}`] || 0;
+      } else if (data.kind === "bolt" && n.id.startsWith("bolt-")) {
+        unreadCount = unreadByOwner[`bolt:${n.id.slice(5)}`] || 0;
+      }
       return {
         ...n,
         ...(pos ? { position: pos } : {}),
-        data: { ...data, highlighted: isHighlighted, dimmed: isDimmed },
+        data: { ...data, highlighted: isHighlighted, dimmed: isDimmed, unreadCount },
       };
     }),
-    [baseNodes, highlighted, aiActive, savedPositions, filterActive, filterLower, filterKinds, focusNodeIds, focusModeIds, pathResult, viewMode],
+    [baseNodes, highlighted, aiActive, savedPositions, filterActive, filterLower, filterKinds, focusNodeIds, focusModeIds, pathResult, viewMode, unreadByOwner],
   );
 
   // 필터 매칭 결과 — 안내 오버레이 + 엣지 dimming 에 사용

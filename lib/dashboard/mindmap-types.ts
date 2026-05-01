@@ -32,6 +32,8 @@ export interface MindMapNodeData {
   highlighted?: boolean;
   /** 검색·필터로 dim 처리 — 매칭 안 된 노드 50% opacity */
   dimmed?: boolean;
+  /** L11 — 통합 활동 피드의 미확인 카운트. >0 이면 노드 우상단 분홍 배지. */
+  unreadCount?: number;
 }
 
 export interface MindMapData {

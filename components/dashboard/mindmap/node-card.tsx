@@ -63,6 +63,15 @@ export function NodeCard({ data }: { data: MindMapNodeData }) {
           상세
         </span>
       )}
+      {/* L11 — 통합 활동 미확인 배지 (nut/bolt 만, hover 시 숨겨짐) */}
+      {!isCenter && (data.kind === "nut" || data.kind === "bolt") && (data.unreadCount || 0) > 0 && (
+        <span
+          aria-label={`미확인 활동 ${data.unreadCount}건`}
+          className="pointer-events-none absolute -top-2 -left-2 group-hover:opacity-0 transition-opacity bg-nu-pink text-nu-paper font-mono-nu text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 border-[2px] border-nu-ink shadow-[1px_1px_0_0_#0D0F14] z-20 animate-pulse"
+        >
+          {data.unreadCount! > 99 ? "99+" : `+${data.unreadCount}`}
+        </span>
+      )}
       {/* issue 좌측 빨간 경고 띠 */}
       {data.kind === "issue" && (
         <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-700" aria-hidden />

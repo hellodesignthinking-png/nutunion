@@ -7,6 +7,7 @@ import { CommandPalette } from "@/components/shared/command-palette";
 import { SpacesGlobalSearch } from "@/components/spaces/spaces-global-search";
 import { OnlineStatusBanner } from "@/components/shared/online-status-banner";
 import { PushPromptBanner } from "@/components/shared/push-prompt-banner";
+import { GlobalActivityRail } from "@/components/dashboard/global-activity-rail";
 import { Footer } from "@/components/landing/footer";
 import type { Profile } from "@/lib/types";
 
@@ -66,6 +67,7 @@ export default async function MainLayout({
           {children}
         </div>
       </AppSidebarGutter>
+      <GlobalActivityRail />
       <Footer />
       <AppBottomTabs />
       <PushPromptBanner />
