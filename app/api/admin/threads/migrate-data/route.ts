@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
@@ -212,6 +213,7 @@ export async function GET(_req: NextRequest) {
     const milestones = await getStatus(auth.admin, "milestones");
     return NextResponse.json({ events, meetings, milestones });
   } catch (e: any) {
+    log.error(e, "admin.threads.migrate-data.failed");
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
@@ -227,6 +229,7 @@ export async function POST(req: NextRequest) {
     const result = await migrate(auth.admin, source, batch);
     return NextResponse.json({ ok: true, source, ...result });
   } catch (e: any) {
+    log.error(e, "admin.threads.migrate-data.failed");
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

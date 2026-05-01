@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 import { dispatchPushToUsers } from "@/lib/push/dispatch";
@@ -111,6 +112,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId:
     }
     return NextResponse.json({ success: true });
   } catch (err) {
+    log.error(err, "venture.projectId.actions.failed");
     return NextResponse.json({ error: err instanceof Error ? err.message : "실패" }, { status: 500 });
   }
 }

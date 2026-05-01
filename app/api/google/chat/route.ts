@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { google } from "googleapis";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 
@@ -58,6 +59,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ spaces });
     }
   } catch (error: unknown) {
+    log.error(error, "google.chat.failed");
     const errObj = error as { message?: string; code?: number; response?: { data?: { error?: { message?: string; code?: number } } } };
     if (errObj.message === "GOOGLE_NOT_CONNECTED" || errObj.message === "GOOGLE_TOKEN_EXPIRED") {
       return NextResponse.json({ error: "Google 계정을 연결해주세요" }, { status: 401 });
@@ -110,6 +112,7 @@ export async function POST(request: NextRequest) {
       createTime: res.data.createTime,
     });
   } catch (error: unknown) {
+    log.error(error, "google.chat.failed");
     const errObj = error as { message?: string; code?: number; response?: { data?: { error?: { message?: string; code?: number } } } };
     if (errObj.message === "GOOGLE_NOT_CONNECTED" || errObj.message === "GOOGLE_TOKEN_EXPIRED") {
       return NextResponse.json({ error: "Google 계정을 연결해주세요" }, { status: 401 });

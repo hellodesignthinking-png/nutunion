@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -64,6 +65,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId:
       }
     }
   } catch (err) {
+    log.error(err, "venture.projectId.cleanup-placeholders.failed");
     errors.push(`problems exception: ${err instanceof Error ? err.message : String(err)}`);
   }
 
@@ -95,6 +97,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId:
       }
     }
   } catch (err) {
+    log.error(err, "venture.projectId.cleanup-placeholders.failed");
     errors.push(`ideas exception: ${err instanceof Error ? err.message : String(err)}`);
   }
 
@@ -122,6 +125,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId:
       }
     }
   } catch (err) {
+    log.error(err, "venture.projectId.cleanup-placeholders.failed");
     errors.push(`tasks exception: ${err instanceof Error ? err.message : String(err)}`);
   }
 

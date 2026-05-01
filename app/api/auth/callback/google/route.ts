@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createOAuth2Client } from "@/lib/google/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -12,7 +13,8 @@ export async function GET(req: NextRequest) {
     try {
       const decoded = Buffer.from(state, "base64").toString("utf-8");
       if (decoded.startsWith("/")) returnTo = decoded;
-    } catch (e) {}
+    } catch (e) {
+    log.error(e, "auth.callback.google.failed");}
   }
 
   const separator = returnTo.includes("?") ? "&" : "?";
@@ -69,6 +71,7 @@ export async function GET(req: NextRequest) {
       new URL(`${returnTo}${separator}google=connected`, req.nextUrl.origin)
     );
   } catch (err) {
+    log.error(err, "auth.callback.google.failed");
     console.error("Google OAuth callback error:", err);
     return NextResponse.redirect(
       new URL(`${returnTo}${separator}google=error&reason=token_exchange`, req.nextUrl.origin)

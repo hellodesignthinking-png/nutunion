@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { generateTextForUser } from "@/lib/ai/vault";
@@ -93,6 +94,7 @@ ${resource.description ? `설명: ${resource.description}` : ""}
 
     return NextResponse.json({ summary });
   } catch (e: unknown) {
+    log.error(e, "ai.resource-summary.failed");
     return aiError("server_error", "ai/resource-summary", { internal: e });
   }
 }

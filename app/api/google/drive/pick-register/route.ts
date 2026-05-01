@@ -14,6 +14,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { google } from "googleapis";
@@ -47,6 +48,7 @@ export async function POST(req: NextRequest) {
     const authClient = await getGoogleClient(userId);
     drive = google.drive({ version: "v3", auth: authClient });
   } catch (err: any) {
+    log.error(err, "google.drive.pick-register.failed");
     if (err?.message === "GOOGLE_NOT_CONNECTED") {
       return NextResponse.json(
         { error: "Google 계정 연결이 필요합니다. /profile 에서 연결해주세요." },
@@ -70,6 +72,7 @@ export async function POST(req: NextRequest) {
       });
       permissionsUpdated++;
     } catch (err: any) {
+    log.error(err, "google.drive.pick-register.failed");
       // 이미 공유됐거나 팀드라이브 권한 부족 — 무시하고 메타데이터만 저장
       if (!/alreadyExists|permissionsCannotBeShared/.test(err?.message || "")) {
         console.warn("[drive perm]", f.id, err?.message);
@@ -124,6 +127,7 @@ export async function POST(req: NextRequest) {
       }
       inserted++;
     } catch (err: any) {
+    log.error(err, "google.drive.pick-register.failed");
       errors.push({ file: f.name, error: err?.message || "insert failed" });
     }
   }

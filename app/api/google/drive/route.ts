@@ -1,4 +1,5 @@
 import { google } from "googleapis";
+import { log } from "@/lib/observability/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { asGoogleErr } from "@/lib/google/error-helpers";
@@ -51,6 +52,7 @@ export async function GET(req: NextRequest) {
       nextPageToken: res.data.nextPageToken || null,
     });
   } catch (err: unknown) {
+    log.error(err, "google.drive.failed");
     const e = asGoogleErr(err);
     if (e.message === "GOOGLE_NOT_CONNECTED") {
       return NextResponse.json({ error: "Google 계정이 연결되지 않았습니다.", code: "NOT_CONNECTED" }, { status: 403 });

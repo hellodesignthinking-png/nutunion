@@ -9,6 +9,7 @@
  *   - 없으면 online: null (클라이언트에서 "접속 상태 미지원"으로 처리)
  */
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 

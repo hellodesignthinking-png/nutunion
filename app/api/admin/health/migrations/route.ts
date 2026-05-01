@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -77,6 +78,7 @@ async function checkTable(
     }
     return { id, label, status: "applied" };
   } catch (err) {
+    log.error(err, "admin.health.migrations.failed");
     return { id, label, status: "error", detail: err instanceof Error ? err.message : "unknown" };
   }
 }
@@ -98,6 +100,7 @@ async function checkColumn(
     }
     return { id, label, status: "applied" };
   } catch (err) {
+    log.error(err, "admin.health.migrations.failed");
     return { id, label, status: "error", detail: err instanceof Error ? err.message : "unknown" };
   }
 }
@@ -121,6 +124,7 @@ async function checkFunction(
     }
     return { id, label, status: "applied" };
   } catch (err) {
+    log.error(err, "admin.health.migrations.failed");
     return { id, label, status: "error", detail: err instanceof Error ? err.message : "unknown" };
   }
 }

@@ -1,4 +1,5 @@
 import { google } from "googleapis";
+import { log } from "@/lib/observability/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -117,6 +118,7 @@ export async function POST(req: NextRequest) {
         requestBody: { role: "reader", type: "anyone" },
       });
     } catch (permErr: unknown) {
+    log.error(permErr, "google.docs.create.failed");
       console.warn("Permission setting skipped:", asGoogleErr(permErr).message);
     }
 
@@ -159,6 +161,7 @@ export async function POST(req: NextRequest) {
             );
           }
         } catch (metaErr) {
+    log.error(metaErr, "google.docs.create.failed");
           console.warn(
             `[docs/create] meetings.google_doc_url update threw (meetingId=${meetingId}):`,
             (metaErr as Error)?.message,
@@ -174,6 +177,7 @@ export async function POST(req: NextRequest) {
       title: driveRes.data.name,
     });
   } catch (err: unknown) {
+    log.error(err, "google.docs.create.failed");
     const e = asGoogleErr(err);
     if (
       e.code === 403 ||

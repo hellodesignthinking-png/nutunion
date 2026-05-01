@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 
@@ -70,6 +71,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
         }
       }
     } catch (e: any) {
+    log.error(e, "b2b.id.match.failed");
       console.warn("[b2b/match] pgvector path failed:", e.message);
     }
   }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { dispatchNotification } from "@/lib/notifications/dispatch";
 
@@ -76,6 +77,7 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ ok: true, delivered: result.delivered });
   } catch (e: any) {
+    log.error(e, "notifications.dispatch.failed");
     console.error("[notifications.dispatch POST]", e);
     return NextResponse.json({ error: e?.message || "dispatch_failed" }, { status: 500 });
   }

@@ -21,6 +21,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { generateObjectForUser } from "@/lib/ai/vault";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 90;
@@ -43,7 +44,7 @@ const SYSTEM = [
 const TEXT_EXTS = ["txt", "md", "markdown", "csv", "json", "yml", "yaml", "log", "html", "htm"];
 const MAX_INPUT_CHARS = 30_000;
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("files.summarize", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -173,4 +174,4 @@ export async function POST(req: NextRequest) {
     log.error(e, "files.summarize.ai_failed");
     return NextResponse.json({ error: e?.message || "AI 요약 실패" }, { status: 502 });
   }
-}
+});

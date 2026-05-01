@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { z } from "zod";
 import { google } from "googleapis";
 import { createClient } from "@/lib/supabase/server";
@@ -91,6 +92,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId:
           .trim();
         if (txt) contentText = txt.slice(0, 10_000);
       } catch (err) {
+    log.error(err, "venture.projectId.sources.import-drive.failed");
         console.warn("[drive-import] docs fetch failed", f.id, asGoogleErr(err).message);
       }
     }

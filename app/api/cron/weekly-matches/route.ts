@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@supabase/supabase-js";
 import { dispatchPushToUsers } from "@/lib/push/dispatch";
 import { dispatchNotification } from "@/lib/notifications/dispatch";
@@ -67,7 +68,8 @@ export async function GET(req: Request) {
         body: titles,
         linkUrl: `/projects?match=weekly`,
       });
-    } catch (e: any) { console.warn("[weekly-matches] notif insert failed:", e?.message); skipped++; continue; }
+    } catch (e: any) {
+    log.error(e, "cron.weekly-matches.failed"); console.warn("[weekly-matches] notif insert failed:", e?.message); skipped++; continue; }
 
     // 웹푸시 (가능하면)
     try {

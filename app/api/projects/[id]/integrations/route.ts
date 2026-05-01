@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 
@@ -128,6 +129,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (error) return NextResponse.json({ error: error.message, resource }, { status: 500 });
     return NextResponse.json({ success: true, integration: saved });
   } catch (err: any) {
+    log.error(err, "projects.id.integrations.failed");
     return NextResponse.json({ error: err.message || "Create failed" }, { status: 500 });
   }
 }

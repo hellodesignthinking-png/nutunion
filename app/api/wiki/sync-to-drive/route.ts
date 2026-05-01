@@ -2,6 +2,7 @@
 // Wiki content is canonical on DB/R2. This route is kept for manual export to a
 // user's personal Drive (explicit button click only — never auto-called).
 import { google } from "googleapis";
+import { log } from "@/lib/observability/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -187,6 +188,7 @@ export async function POST(req: NextRequest) {
       isUpdate: !!existingDocId,
     });
   } catch (err: unknown) {
+    log.error(err, "wiki.sync-to-drive.failed");
     const errObj = err as { message?: string; code?: number; response?: { data?: { error?: { message?: string; code?: number } } } };
     if (errObj.message === "GOOGLE_NOT_CONNECTED") {
       return NextResponse.json(

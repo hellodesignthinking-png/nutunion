@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { aiError } from "@/lib/ai/error";
@@ -185,6 +186,7 @@ export async function POST(
       },
     });
   } catch (err) {
+    log.error(err, "venture.projectId.synthesize-ideas.failed");
     return aiError("server_error", "venture/synthesize-ideas", { internal: err });
   }
 }

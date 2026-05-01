@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { calcWithholding, calcVat } from "@/lib/contracts/templates";
 
@@ -120,6 +121,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
     return NextResponse.json({ success: true, mgtKey, ntsConfirmNum: data.ntsConfirmNum });
   } catch (err: any) {
+    log.error(err, "tax-invoices.id.issue.failed");
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

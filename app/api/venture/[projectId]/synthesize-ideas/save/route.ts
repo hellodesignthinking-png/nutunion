@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { aiError } from "@/lib/ai/error";
@@ -80,6 +81,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId:
       }).catch((err) => console.warn("[idea push]", err));
     }
   } catch (err) {
+    log.error(err, "venture.projectId.synthesize-ideas.save.failed");
     console.warn("[idea notify]", err);
   }
 

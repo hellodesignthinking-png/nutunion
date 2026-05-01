@@ -44,6 +44,40 @@ export function errorResponse(
  */
 import type { NextRequest } from "next/server";
 
+/**
+ * 일반 라우트 wrapper — 자동 try/catch + log.span + log.error.
+ *
+ * 사용:
+ *   export const POST = withRouteLog("files.summarize", async (req) => {
+ *     // 본문 — NextResponse 반환
+ *     const supabase = await createClient();
+ *     ...
+ *     return NextResponse.json({ ok: true });
+ *   });
+ *
+ * 호출자가 throw 하면 자동으로 500 + log.error. 4xx 거부는 직접 NextResponse.json.
+ *
+ * cron 과 다른 점: Bearer 인증 안함. 일반 사용자 라우트용.
+ */
+export function withRouteLog<TArgs extends unknown[]>(
+  event: string,
+  fn: (req: NextRequest, ...args: TArgs) => Promise<NextResponse | Response>,
+): (req: NextRequest, ...args: TArgs) => Promise<NextResponse | Response> {
+  return async (req: NextRequest, ...args: TArgs) => {
+    const span = log.span(event);
+    try {
+      const res = await fn(req, ...args);
+      span.end({ status: res.status });
+      return res;
+    } catch (err) {
+      span.end({ status: 500 });
+      log.error(err, `${event}.failed`);
+      const message = err instanceof Error ? err.message : "Unknown error";
+      return NextResponse.json({ error: message, code: "INTERNAL_ERROR" }, { status: 500 });
+    }
+  };
+}
+
 export function cronHandler<T extends Record<string, unknown>>(
   event: string,
   fn: (req: NextRequest) => Promise<T>,

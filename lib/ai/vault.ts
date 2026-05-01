@@ -175,16 +175,17 @@ export async function generateObjectForUser<T>(
   const userModel = await getUserModel(userId, opts.tier || "fast");
   if (userModel) {
     try {
-      const { generateObject } = await import("ai");
-      const res = await generateObject({
+      // v6: generateObject deprecated → generateText + Output.object
+      const { generateText, Output } = await import("ai");
+      const res = await generateText({
         model: userModel.model,
-        schema,
         system: opts.system,
         prompt: opts.prompt,
         maxOutputTokens: opts.maxOutputTokens ?? 2000,
+        output: Output.object({ schema }),
       });
       return {
-        object: res.object as T,
+        object: res.output as T,
         usage: { inputTokens: res.usage?.inputTokens, outputTokens: res.usage?.outputTokens },
         model_used: `${userModel.label} (user)`,
         fallback_index: 0,

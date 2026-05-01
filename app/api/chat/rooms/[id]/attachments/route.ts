@@ -14,6 +14,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 // [Drive migration Phase 3a] content now stored on R2 — drive-mirror import removed
@@ -135,6 +136,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
           console.warn("[chat attachment] project_resources insert error", prErr);
         }
       } catch (err) {
+    log.error(err, "chat.rooms.id.attachments.failed");
         console.warn("[chat attachment] project_resources insert failed", err);
       }
     }
@@ -173,6 +175,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
             console.warn("[chat attachment] file_attachments insert error", faErr);
           }
         } catch (err) {
+    log.error(err, "chat.rooms.id.attachments.failed");
           console.warn("[chat attachment] file_attachments insert failed", err);
         }
       }
@@ -242,6 +245,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
           .catch((e) => console.warn("[chat attachment] meeting-summary bg failed", e));
       }
     } catch (err) {
+    log.error(err, "chat.rooms.id.attachments.failed");
       console.warn("[chat attachment] meetings insert failed", err);
     }
   }

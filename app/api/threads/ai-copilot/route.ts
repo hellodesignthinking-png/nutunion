@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { generateTextForUser } from "@/lib/ai/vault";
 import { checkInstallationMembership } from "@/lib/threads/membership";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 type Action = "summarize" | "extract_actions" | "recommend" | "freeform" | "cross_thread_alert";
 
@@ -19,7 +20,7 @@ const ACTION_PROMPTS: Record<Action, string> = {
   freeform: "",
 };
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("threads.ai_copilot", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -158,4 +159,4 @@ export async function POST(req: NextRequest) {
     log.error(e, "threads.copilot.ai_failed", { user_id: user.id, installation_id, action });
     return NextResponse.json({ error: `ai_failed: ${e?.message || e}` }, { status: 500 });
   }
-}
+});

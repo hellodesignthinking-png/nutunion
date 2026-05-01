@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
@@ -215,6 +216,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: "unknown type" }, { status: 400 });
   } catch (err: any) {
+    log.error(err, "dashboard.ai-secretary.register.failed");
     return NextResponse.json({ error: err?.message || "등록 실패" }, { status: 500 });
   }
 }

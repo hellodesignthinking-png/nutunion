@@ -1,4 +1,5 @@
 import { google } from "googleapis";
+import { log } from "@/lib/observability/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -250,6 +251,7 @@ export async function POST(req: NextRequest) {
         requestBody: { role: "reader", type: "anyone" },
       });
     } catch (permErr: unknown) {
+    log.error(permErr, "google.drive.upload.failed");
       console.warn(
         "Permission setting skipped:",
         permErr instanceof Error ? permErr.message : "unknown error"
@@ -299,6 +301,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (err: unknown) {
+    log.error(err, "google.drive.upload.failed");
     const error = err instanceof Error ? err : new Error("알 수 없는 업로드 오류");
     const errorWithCode = error as Error & { code?: number };
     if (errorWithCode.code === 403 || error.message.includes("insufficient") || error.message.includes("Insufficient Permission")) {

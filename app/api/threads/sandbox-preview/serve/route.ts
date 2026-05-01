@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { getPreview } from "../route";
 import { createClient } from "@/lib/supabase/server";
 import { compileTsxToHtml } from "@/lib/threads/sandbox-compile";
@@ -66,6 +67,7 @@ export async function GET(req: NextRequest) {
       if (!parentOrigin) parentOrigin = req.nextUrl.origin;
       html = await compileTsxToHtml(source, { installationId, parentOrigin });
     } catch (e: any) {
+    log.error(e, "threads.sandbox-preview.serve.failed");
       return htmlResponse(
         `<h1>Compile error</h1><pre style="white-space:pre-wrap">${(e?.message || String(e)).replace(/[<>&]/g, (c: string) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c] || c))}</pre>`,
         500,

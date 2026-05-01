@@ -18,6 +18,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { HeadBucketCommand, ListObjectsV2Command, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getR2Client, getPublicUrl, generatePresignedPutUrl, isR2Configured } from "@/lib/storage/r2";
@@ -75,15 +76,18 @@ export async function GET() {
         await client.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET!, Key: testKey }));
       } catch {}
     } catch (putErr: any) {
+    log.error(putErr, "admin.storage.r2-health.failed");
       // PUT 도 실패하면 ListObjectsV2 / HeadBucket 으로 fallback
       try {
         await client.send(new ListObjectsV2Command({ Bucket: process.env.R2_BUCKET!, MaxKeys: 1 }));
         bucket_reachable = true;
       } catch (listErr: any) {
+    log.error(listErr, "admin.storage.r2-health.failed");
         try {
           await client.send(new HeadBucketCommand({ Bucket: process.env.R2_BUCKET! }));
           bucket_reachable = true;
         } catch (headErr: any) {
+    log.error(headErr, "admin.storage.r2-health.failed");
           bucket_reachable = false;
           bucket_error = `put: ${putErr?.name || ""}: ${putErr?.message || putErr}`.slice(0, 240);
         }
@@ -99,6 +103,7 @@ export async function GET() {
       });
       presign_ok = !!url && url.startsWith("http");
     } catch (err: any) {
+    log.error(err, "admin.storage.r2-health.failed");
       presign_ok = false;
       presign_error = err?.message || String(err);
     }

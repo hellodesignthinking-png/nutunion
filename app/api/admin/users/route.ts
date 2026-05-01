@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
@@ -64,6 +65,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, userId });
   } catch (e: any) {
+    log.error(e, "admin.users.failed");
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
@@ -126,6 +128,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ error: "알 수 없는 action" }, { status: 400 });
   } catch (e: any) {
+    log.error(e, "admin.users.failed");
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

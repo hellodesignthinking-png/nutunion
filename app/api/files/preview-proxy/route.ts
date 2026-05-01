@@ -21,6 +21,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -72,7 +73,7 @@ function isAllowed(url: URL): boolean {
   return ALLOWED_HOST_PATTERNS.some((rx) => rx.test(url.hostname));
 }
 
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("files.preview_proxy", async (req: NextRequest) => {
   // 인증 — 로그인 사용자만 (자료실 자체가 권한 게이트가 있는 영역)
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -153,4 +154,4 @@ export async function GET(req: NextRequest) {
   if (len) headers.set("Content-Length", len);
 
   return new NextResponse(upstream.body, { status: 200, headers });
-}
+});

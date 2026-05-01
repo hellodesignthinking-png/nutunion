@@ -9,6 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { dispatchEvent } from "@/lib/automation/engine";
@@ -144,6 +145,7 @@ export async function POST(req: NextRequest) {
       uploader_id: auth.user.id,
     });
   } catch (e: any) {
+    log.error(e, "resources.group.failed");
     console.warn("[resources.group] automation dispatch failed", e?.message);
   }
 

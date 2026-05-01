@@ -1,4 +1,5 @@
 import { google } from "googleapis";
+import { log } from "@/lib/observability/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 
@@ -38,6 +39,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (err: unknown) {
+    log.error(err, "google.drive.render.failed");
     const e = asGoogleErr(err);
     console.error("Drive render error:", err);
     return new NextResponse(

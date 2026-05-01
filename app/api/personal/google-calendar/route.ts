@@ -1,4 +1,5 @@
 import { google } from "googleapis";
+import { log } from "@/lib/observability/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 import { asGoogleErr } from "@/lib/google/error-helpers";
@@ -65,6 +66,7 @@ export async function GET(req: NextRequest) {
     }
     return NextResponse.json(payload);
   } catch (err: unknown) {
+    log.error(err, "personal.google-calendar.failed");
     const e = asGoogleErr(err);
     if (e.message === "GOOGLE_NOT_CONNECTED" || e.message === "GOOGLE_TOKEN_EXPIRED") {
       return NextResponse.json({ events: [], not_connected: true });

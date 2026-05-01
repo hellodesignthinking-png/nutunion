@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
@@ -130,6 +131,7 @@ export async function GET(_req: NextRequest) {
       inserts_planned: plan.inserts_planned,
     });
   } catch (e: any) {
+    log.error(e, "admin.threads.auto-install.failed");
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
@@ -175,6 +177,7 @@ export async function POST(_req: NextRequest) {
       inserts: inserted,
     });
   } catch (e: any) {
+    log.error(e, "admin.threads.auto-install.failed");
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

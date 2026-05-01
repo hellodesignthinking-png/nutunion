@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 
 // POST /api/threads/builder/save
@@ -209,6 +210,7 @@ export async function POST(req: NextRequest) {
     // Link the bolt back to the thread row
     await supabase.from("threads").update({ created_bolt_id: projectId }).eq("id", threadRow.id);
   } catch (e: any) {
+    log.error(e, "threads.builder.save.failed");
     // Bolt creation is best-effort — Thread itself was saved successfully.
     console.error("[builder/save] carriage bolt create failed:", e?.message || e);
   }

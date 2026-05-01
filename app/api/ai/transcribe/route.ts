@@ -20,6 +20,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { log } from "@/lib/observability/logger";
+import { experimental_transcribe as transcribe } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -38,6 +40,10 @@ export async function POST(req: NextRequest) {
       { status: 503 },
     );
   }
+  // ai SDK 의 experimental_transcribe 통과 — fetch + multipart 핸들링을 SDK 가 담당.
+  // Gateway transcription model 미지원이라 직접 OpenAI provider 사용. 향후 Gateway 가
+  // transcription 추가하면 gateway.transcriptionModel(...) 로 교체 가능.
+  const openai = createOpenAI({ apiKey });
 
   const ct = req.headers.get("content-type") || "";
   let audioBlob: Blob | null = null;
@@ -92,40 +98,32 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // OpenAI Whisper transcription API
-  const upstream = new FormData();
-  upstream.append("file", new File([audioBlob], fileName, { type: audioBlob.type || "audio/webm" }));
-  upstream.append("model", "whisper-1");
-  upstream.append("response_format", "verbose_json");
-  if (language) upstream.append("language", language);
-  if (prompt) upstream.append("prompt", prompt);
-
   try {
-    const resp = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}` },
-      body: upstream,
+    // ai SDK experimental_transcribe — multipart 빌드/응답 파싱 SDK 위임
+    const audioBytes = new Uint8Array(await audioBlob.arrayBuffer());
+    const result = await transcribe({
+      model: openai.transcription("whisper-1"),
+      audio: audioBytes,
+      providerOptions: {
+        openai: {
+          ...(language ? { language } : {}),
+          ...(prompt ? { prompt } : {}),
+        },
+      },
     });
-    const text = await resp.text();
-    if (!resp.ok) {
-      log.warn("ai.transcribe.upstream_error", { status: resp.status, body_preview: text.slice(0, 200) });
-      return NextResponse.json(
-        { error: `Whisper 응답 ${resp.status}`, details: text.slice(0, 500) },
-        { status: 502 },
-      );
-    }
-    const json = JSON.parse(text);
+
     log.info("ai.transcribe.ok", {
       user_id: auth.user.id,
       bytes: audioBlob.size,
-      language: json.language,
-      duration: json.duration,
+      language: result.language,
+      duration: result.durationInSeconds,
+      file_name: fileName,
     });
     return NextResponse.json({
-      text: json.text || "",
-      language: json.language || language || null,
-      duration: json.duration ?? null,
-      segments: Array.isArray(json.segments) ? json.segments.length : 0,
+      text: result.text || "",
+      language: result.language || language || null,
+      duration: result.durationInSeconds ?? null,
+      segments: Array.isArray(result.segments) ? result.segments.length : 0,
     });
   } catch (e: any) {
     log.error(e, "ai.transcribe.failed", { user_id: auth.user.id });

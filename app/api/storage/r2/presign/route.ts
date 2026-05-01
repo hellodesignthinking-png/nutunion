@@ -24,6 +24,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { generatePresignedPutUrl, getPublicUrl, isR2Configured, r2Key } from "@/lib/storage/r2";
 
@@ -117,6 +118,7 @@ export async function POST(req: NextRequest) {
     const publicUrl = getPublicUrl(key);
     return NextResponse.json({ configured: true, url, key, publicUrl });
   } catch (err: unknown) {
+    log.error(err, "storage.r2.presign.failed");
     const e = err as { message?: string; name?: string };
     console.error("[r2 presign]", err);
     return NextResponse.json(

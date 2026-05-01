@@ -12,8 +12,8 @@
  * 마이그레이션 136 미적용 환경에서는 RPC 부재로 graceful no-op.
  */
 
-import { NextRequest, NextResponse } from "next/server";
 import { tryAdminClient } from "@/lib/supabase/admin";
+import { cronHandler } from "@/lib/observability/route-handler";
 import { log } from "@/lib/observability/logger";
 
 export const runtime = "nodejs";
@@ -22,16 +22,10 @@ export const maxDuration = 30;
 
 const STALE_AFTER_MINUTES = 60;
 
-export async function GET(req: NextRequest) {
-  const auth = req.headers.get("authorization");
-  if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+// cronHandler 가 Bearer 인증 + log.span + try/catch 일체화. 본문은 결과 객체만 반환.
+export const GET = cronHandler("cron.cleanup_leases", async () => {
   const supabase = tryAdminClient();
-  if (!supabase) {
-    return NextResponse.json({ error: "Supabase admin not configured" }, { status: 500 });
-  }
+  if (!supabase) throw new Error("Supabase admin not configured");
 
   const t0 = Date.now();
   const { data, error } = await supabase.rpc("cleanup_stale_leases", {
@@ -43,13 +37,11 @@ export async function GET(req: NextRequest) {
     // RPC 미존재(42883) 또는 테이블 미존재(42P01) → 마이그레이션 136 미적용. 200 + skipped.
     if ((error as any).code === "42883" || (error as any).code === "42P01") {
       log.info("cron.cleanup_leases.skipped", { reason: "migration_136_missing" });
-      return NextResponse.json({ ok: true, skipped: true, reason: "migration_136_missing" });
+      return { ok: true, skipped: true, reason: "migration_136_missing" };
     }
-    log.error(error, "cron.cleanup_leases.failed");
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    throw new Error(error.message);
   }
 
   const deleted = typeof data === "number" ? data : 0;
-  log.info("cron.cleanup_leases.ok", { deleted, duration_ms: duration });
-  return NextResponse.json({ ok: true, deleted, duration_ms: duration });
-}
+  return { ok: true, deleted, duration_ms: duration };
+});

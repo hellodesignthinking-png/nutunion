@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -64,6 +65,7 @@ export async function POST(req: Request) {
         verifyError = "token_failed";
       }
     } catch (e: any) {
+    log.error(e, "payments.portone.webhook.failed");
       verifyError = e.message || "verify_failed";
     }
   }

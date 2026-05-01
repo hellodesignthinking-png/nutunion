@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
@@ -67,6 +68,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
           });
           newValue = upload.ref;
         } catch (uploadErr) {
+    log.error(uploadErr, "finance.transactions.id.receipt.failed");
           console.error("[Receipt upload]", uploadErr);
           return NextResponse.json(
             { error: uploadErr instanceof Error ? uploadErr.message : "업로드 실패" },
@@ -107,6 +109,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
 
     return NextResponse.json({ success: true });
   } catch (err) {
+    log.error(err, "finance.transactions.id.receipt.failed");
     console.error("[Receipt PUT]", err);
     return NextResponse.json({ error: "서버 오류" }, { status: 500 });
   }

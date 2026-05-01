@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { dispatchEvent } from "@/lib/automation/engine";
@@ -368,6 +369,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       );
     }
   } catch (e) {
+    log.error(e, "chat.rooms.id.messages.failed");
     console.warn("[chat thread/mention side-effects]", e);
   }
 

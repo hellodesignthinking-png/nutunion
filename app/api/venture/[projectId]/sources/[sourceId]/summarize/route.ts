@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { aiError } from "@/lib/ai/error";
 import { rateLimit } from "@/lib/rate-limit";
@@ -132,6 +133,7 @@ export async function POST(
       tags: mergedTags,
     });
   } catch (err) {
+    log.error(err, "venture.projectId.sources.sourceId.summarize.failed");
     await supabase.from("venture_sources").update({
       summary_status: "failed",
       summary_error: err instanceof Error ? err.message.slice(0, 300) : "unknown",

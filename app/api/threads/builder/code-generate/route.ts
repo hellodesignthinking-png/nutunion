@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { generateTextForUser } from "@/lib/ai/vault";
 
@@ -122,6 +123,7 @@ export async function POST(req: NextRequest) {
       }
       lastError = v.reason;
     } catch (e: any) {
+    log.error(e, "threads.builder.code-generate.failed");
       lastError = e?.message || "ai_failed";
     }
   }

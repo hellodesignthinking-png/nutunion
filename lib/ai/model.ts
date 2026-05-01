@@ -19,7 +19,7 @@
 import { google, createGoogleGenerativeAI } from "@ai-sdk/google";
 import { openai, createOpenAI } from "@ai-sdk/openai";
 import { anthropic, createAnthropic } from "@ai-sdk/anthropic";
-import { generateText, generateObject, gateway, createGateway } from "ai";
+import { generateText, Output, gateway, createGateway } from "ai";
 import type { z } from "zod";
 
 // ──────────────────────────────────────────────
@@ -198,19 +198,20 @@ export async function generateObjectWithFallback<T>(
   for (let i = 0; i < chain.length; i++) {
     const c = chain[i];
     try {
+      // v6: generateObject deprecated → generateText + Output.object
       const res = await withTimeout(
-        generateObject({
+        generateText({
           model: c.model,
-          schema,
           system: opts.system,
           prompt: opts.prompt,
           maxOutputTokens: opts.maxOutputTokens ?? 2000,
+          output: Output.object({ schema }),
         }),
         opts.timeoutMs ?? 60_000,
         c.label,
       );
       return {
-        object: res.object,
+        object: res.output as T,
         usage: { inputTokens: res.usage?.inputTokens, outputTokens: res.usage?.outputTokens },
         model_used: c.label,
         fallback_index: i,

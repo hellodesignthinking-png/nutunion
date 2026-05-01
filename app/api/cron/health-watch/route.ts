@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,6 +52,7 @@ export async function GET(req: NextRequest) {
       body = { raw: text.slice(0, 200) };
     }
   } catch (err) {
+    log.error(err, "cron.health-watch.failed");
     error = err instanceof Error ? err.message : String(err);
   }
 
@@ -76,6 +78,7 @@ export async function GET(req: NextRequest) {
         signal: AbortSignal.timeout(10_000),
       });
     } catch (whErr) {
+    log.error(whErr, "cron.health-watch.failed");
       console.error("[health-watch] webhook failed:", whErr);
     }
   }

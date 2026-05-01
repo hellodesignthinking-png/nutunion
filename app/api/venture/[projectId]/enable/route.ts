@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { seedVentureTemplate } from "@/lib/venture/seed-template";
@@ -48,6 +49,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId:
     const result = await seedVentureTemplate(supabase, projectId, user.id, category);
     seeded = result.seeded;
   } catch (err) {
+    log.error(err, "venture.projectId.enable.failed");
     seedError = err instanceof Error ? err.message : "seed failed";
     console.warn("[venture seed]", err);
   }

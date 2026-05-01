@@ -9,6 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { finalizePoll, type PollRow } from "@/lib/chat/poll-finalize";
@@ -107,6 +108,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     if ((summary as any).notFound) return NextResponse.json({ error: "poll not found" }, { status: 404 });
     return NextResponse.json(summary);
   } catch (err: any) {
+    log.error(err, "polls.id.failed");
     if (/relation.*polls.*does not exist|PGRST205/.test(err?.message || "")) {
       return NextResponse.json({ error: "MIGRATION_PENDING" }, { status: 501 });
     }

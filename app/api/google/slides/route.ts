@@ -1,4 +1,5 @@
 import { google } from "googleapis";
+import { log } from "@/lib/observability/logger";
 import { NextRequest, NextResponse } from "next/server";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 
@@ -60,6 +61,7 @@ export async function GET(req: NextRequest) {
       viewUrl: `https://docs.google.com/presentation/d/${presentationId}/edit`,
     });
   } catch (err: unknown) {
+    log.error(err, "google.slides.failed");
     const e = asGoogleErr(err);
     if (e.message === "GOOGLE_NOT_CONNECTED") {
       return NextResponse.json({ error: "Google 계정이 연결되지 않았습니다.", code: "NOT_CONNECTED" }, { status: 403 });

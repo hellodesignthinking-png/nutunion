@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { rateLimit } from "@/lib/rate-limit";

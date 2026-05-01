@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
@@ -131,6 +132,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId:
       usage = result.usage;
     }
   } catch (err) {
+    log.error(err, "venture.projectId.summarize.failed");
     console.error(`[venture-summarize:${kind}]`, err);
     return NextResponse.json({ error: "AI 요약 실패" }, { status: 500 });
   }

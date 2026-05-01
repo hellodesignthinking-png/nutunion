@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { dispatchEvent } from "@/lib/automation/engine";
@@ -72,6 +73,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
         user_id: applicantId,
       });
     } catch (e: any) {
+    log.error(e, "groups.id.members.memberId.failed");
       console.warn("[members.approve] automation dispatch failed", e?.message);
     }
   } else {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { generateObject } from "ai";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
@@ -74,6 +75,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId:
     object = result.object;
     usage = result.usage;
   } catch (err) {
+    log.error(err, "venture.projectId.plan.failed");
     console.error("[venture-plan]", err);
     return NextResponse.json({ error: "AI 생성 실패. 잠시 후 재시도" }, { status: 500 });
   }

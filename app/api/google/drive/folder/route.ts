@@ -11,6 +11,7 @@
  *   - { folderUrl, sharedFolder: true } 반환 — 호출자 호환
  */
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { getCurrentUserId } from "@/lib/google/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getSharedFolderId } from "@/lib/google/drive-config";
@@ -105,6 +106,7 @@ export async function POST(req: NextRequest) {
       subFolders: {},
     });
   } catch (err) {
+    log.error(err, "google.drive.folder.failed");
     console.error("Drive folder (shared) update error:", err);
     return NextResponse.json({ error: "폴더 URL 저장 실패" }, { status: 500 });
   }

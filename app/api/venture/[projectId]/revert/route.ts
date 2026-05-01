@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit } from "@/lib/rate-limit";
@@ -75,6 +76,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId:
         : `🔄 ${currentStage} → ${parsed.data.to_stage} 단계 되돌림`,
     });
   } catch (err) {
+    log.error(err, "venture.projectId.revert.failed");
     console.warn("[stage revert] history insert failed", err);
   }
 

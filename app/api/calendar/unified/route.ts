@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { getGoogleClient } from "@/lib/google/auth";
 import { google } from "googleapis";
@@ -145,6 +146,7 @@ export async function GET(req: NextRequest) {
       }
     }
   } catch (err) {
+    log.error(err, "calendar.unified.failed");
     console.error("Group meetings fetch error:", err);
   }
   })();
@@ -254,6 +256,7 @@ export async function GET(req: NextRequest) {
       }
     }
   } catch (err) {
+    log.error(err, "calendar.unified.failed");
     console.error("Project meetings fetch error:", err);
   }
   })();

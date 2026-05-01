@@ -12,6 +12,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@supabase/supabase-js";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getR2Client, getPublicUrl, isR2Configured, r2Key } from "@/lib/storage/r2";
@@ -127,6 +128,7 @@ export async function GET(req: Request) {
               await db.storage.from(sbBucket).remove([decodeURIComponent(sbPath)]);
             }
           } catch (err: any) {
+    log.error(err, "cron.migrate-to-r2.failed");
             console.warn("[migrate cleanup]", err?.message);
           }
         }
@@ -135,6 +137,7 @@ export async function GET(req: Request) {
         totalProcessed++;
         if (totalProcessed >= BATCH) break;
       } catch (err: any) {
+    log.error(err, "cron.migrate-to-r2.failed");
         report.push({ table: t.table, id: row[t.idCol], status: "error", error: err?.message });
       }
     }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { generateObjectForUser } from "@/lib/ai/vault";
 import { z } from "zod";
@@ -82,6 +83,7 @@ export async function POST(req: NextRequest) {
     );
     return NextResponse.json({ spec: result.object, model_used: result.model_used });
   } catch (e: any) {
+    log.error(e, "threads.builder.ai-generate.failed");
     return NextResponse.json({ error: e?.message || "ai_generation_failed" }, { status: 500 });
   }
 }

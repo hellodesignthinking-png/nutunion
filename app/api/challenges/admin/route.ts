@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 
 // Helper: verify admin
@@ -45,6 +46,7 @@ export async function GET() {
 
     return NextResponse.json({ proposals: data || [] });
   } catch (err: any) {
+    log.error(err, "challenges.admin.failed");
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
@@ -163,6 +165,7 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: "알 수 없는 action입니다" }, { status: 400 });
     }
   } catch (err: any) {
+    log.error(err, "challenges.admin.failed");
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

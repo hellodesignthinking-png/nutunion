@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -101,6 +102,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
     return NextResponse.json({ success: true, documentId: data.id, embedUrl: data.shortCutLink });
   } catch (err: any) {
+    log.error(err, "contracts.id.esign.failed");
     return NextResponse.json({ error: err.message || "eSign request failed" }, { status: 500 });
   }
 }

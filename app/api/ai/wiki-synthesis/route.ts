@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { generateTextWithFallback, listConfiguredProviders } from "@/lib/ai/model";
@@ -40,6 +41,7 @@ export async function GET(request: NextRequest) {
       });
       checks.ai_quick_test = `ok via ${ai.model_used}: ${(ai.text || "(empty)").slice(0, 60)}`;
     } catch (e: unknown) {
+    log.error(e, "ai.wiki-synthesis.failed");
       checks.ai_quick_test = `FAIL: ${e instanceof Error ? e.message : String(e)}`;
     }
 
@@ -88,6 +90,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ checks });
   } catch (e: unknown) {
+    log.error(e, "ai.wiki-synthesis.failed");
     const fatal = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ checks, fatal }, { status: 500 });
   }
@@ -216,6 +219,7 @@ export async function POST(request: NextRequest) {
       const output = await runWikiSynthesis(supabase, groupId, user.id);
       return NextResponse.json(output);
     } catch (err) {
+    log.error(err, "ai.wiki-synthesis.failed");
       if (err instanceof WikiSynthesisError) {
         if (err.code === "parse") return aiError("ai_bad_response", "ai/wiki-synthesis", { internal: err.message, context: { step: err.step } });
         if (err.code === "blocked") return aiError("ai_bad_response", "ai/wiki-synthesis", { internal: err.message });
@@ -224,6 +228,7 @@ export async function POST(request: NextRequest) {
       return aiError("server_error", "ai/wiki-synthesis", { internal: err });
     }
   } catch (error: unknown) {
+    log.error(error, "ai.wiki-synthesis.failed");
     return aiError("server_error", "ai/wiki-synthesis", { internal: error });
   }
 }

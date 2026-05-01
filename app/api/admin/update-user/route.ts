@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { log } from "@/lib/observability/logger";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -99,6 +100,7 @@ export async function POST(req: NextRequest) {
           });
 
   } catch (e: any) {
+    log.error(e, "admin.update-user.failed");
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

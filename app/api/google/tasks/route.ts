@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { google } from "googleapis";
 import { getGoogleClient, getCurrentUserId } from "@/lib/google/auth";
 
@@ -54,6 +55,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ taskLists: lists });
     }
   } catch (error: unknown) {
+    log.error(error, "google.tasks.failed");
     const errObj = error as { message?: string; code?: number; response?: { data?: { error?: { message?: string } } } };
     const msg = errObj?.message ?? "";
     const detail = errObj?.response?.data?.error?.message || msg || "Unknown";
@@ -103,6 +105,7 @@ export async function POST(request: NextRequest) {
       due: res.data.due,
     });
   } catch (error: unknown) {
+    log.error(error, "google.tasks.failed");
     const errMsg = error instanceof Error ? error.message : "";
     const errResp = (error as { response?: { data?: { error?: { message?: string } } }; code?: number })?.response?.data?.error?.message;
     const errCode = (error as { code?: number })?.code;
@@ -150,6 +153,7 @@ export async function PATCH(request: NextRequest) {
       due: res.data.due,
     });
   } catch (error: unknown) {
+    log.error(error, "google.tasks.failed");
     const errMsg = error instanceof Error ? error.message : "";
     const errResp = (error as { response?: { data?: { error?: { message?: string } } }; code?: number })?.response?.data?.error?.message;
     const errCode = (error as { code?: number })?.code;

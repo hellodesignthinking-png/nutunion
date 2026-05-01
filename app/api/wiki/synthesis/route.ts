@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
 import { createClient } from "@/lib/supabase/server";
 import { generateObjectForUser } from "@/lib/ai/vault";
 import { extractContent } from "@/lib/wiki/content-extractor";
@@ -249,6 +250,7 @@ ${resourceBlock}
     aiResult = result.object;
     modelLabel = result.model_used;
   } catch (err: any) {
+    log.error(err, "wiki.synthesis.failed");
     return NextResponse.json({ error: `AI 통합 실패: ${err?.message || err}` }, { status: 500 });
   }
 
