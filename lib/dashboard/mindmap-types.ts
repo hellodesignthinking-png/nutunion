@@ -37,8 +37,8 @@ export interface MindMapNodeData {
 export interface MindMapData {
   nuts: Array<{ id: string; name: string; role: string; memberCount?: number }>;
   bolts: Array<{ id: string; title: string; status: string; daysLeft?: number; leadNickname?: string | null; leadAvatarUrl?: string | null }>;
-  schedule: Array<{ id: string; title: string; at: string; source: "meeting" | "event" }>;
-  issues: Array<{ id: string; title: string; kind: "overdue_task" | "mention" }>;
+  schedule: Array<{ id: string; title: string; at: string; source: "meeting" | "event"; groupId?: string | null }>;
+  issues: Array<{ id: string; title: string; kind: "overdue_task" | "mention"; projectId?: string | null }>;
   /** 동료 — 같은 너트·볼트에 속한 다른 사용자. nutIds/boltIds 로 어디서 만났는지 표시 */
   washers: Array<{ id: string; nickname: string; avatar_url?: string | null; nutIds: string[]; boltIds: string[] }>;
   /** 위키 탭 — 너트별 지식 분류. groupId 로 소속 너트와 연결 */

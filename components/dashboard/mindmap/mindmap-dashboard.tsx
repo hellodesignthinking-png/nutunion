@@ -1072,31 +1072,48 @@ function buildGraph(
         },
       },
     })),
-    ...data.schedule.map((s) => ({
-      id: `sched-${s.id}`,
-      kind: "schedule" as const,
-      data: {
+    ...data.schedule.map((s) => {
+      const nut = s.groupId ? data.nuts.find((n) => n.id === s.groupId) : null;
+      return {
+        id: `sched-${s.id}`,
         kind: "schedule" as const,
-        title: s.title,
-        subtitle: new Date(s.at).toLocaleString("ko", {
-          month: "short", day: "numeric", weekday: "short",
-          hour: "2-digit", minute: "2-digit", hour12: false,
-        }),
-        href: s.source === "meeting" ? `/calendar` : `/calendar`,
-        meta: { 시간: new Date(s.at).toLocaleString("ko"), 종류: s.source === "meeting" ? "회의" : "이벤트" },
-      },
-    })),
-    ...data.issues.map((i) => ({
-      id: `issue-${i.id}`,
-      kind: "issue" as const,
-      data: {
+        data: {
+          kind: "schedule" as const,
+          title: s.title,
+          subtitle: new Date(s.at).toLocaleString("ko", {
+            month: "short", day: "numeric", weekday: "short",
+            hour: "2-digit", minute: "2-digit", hour12: false,
+          }),
+          href: s.source === "meeting" ? `/calendar` : `/calendar`,
+          meta: {
+            시간: new Date(s.at).toLocaleString("ko"),
+            종류: s.source === "meeting" ? "회의" : "이벤트",
+            소속_너트: nut?.name || "전체",
+          },
+        },
+      };
+    }),
+    ...data.issues.map((i) => {
+      const bolt = i.projectId ? data.bolts.find((b) => b.id === i.projectId) : null;
+      return {
+        id: `issue-${i.id}`,
         kind: "issue" as const,
-        title: i.title,
-        subtitle: i.kind === "overdue_task" ? "⏰ 마감 지남" : "💬 멘션",
-        href: i.kind === "mention" ? "/notifications" : undefined,
-        meta: { 종류: i.kind === "overdue_task" ? "마감 지난 태스크" : "읽지 않은 멘션" },
-      },
-    })),
+        data: {
+          kind: "issue" as const,
+          title: i.title,
+          subtitle: i.kind === "overdue_task"
+            ? (bolt ? `⏰ ${bolt.title}` : "⏰ 마감 지남")
+            : "💬 멘션",
+          href: i.kind === "mention"
+            ? "/notifications"
+            : (bolt ? `/projects/${bolt.id}` : undefined),
+          meta: {
+            종류: i.kind === "overdue_task" ? "마감 지난 태스크" : "읽지 않은 멘션",
+            소속_볼트: bolt?.title || "-",
+          },
+        },
+      };
+    }),
     ...data.topics.map((t) => ({
       id: `topic-${t.id}`,
       kind: "topic" as const,
@@ -1379,6 +1396,30 @@ function buildGraph(
               labelBgPadding: [3, 1] as [number, number],
             }
           : {}),
+      });
+    }
+  }
+  // 일정 ↔ 너트 (그룹 회의/이벤트) — 점선 emerald
+  if (isAlive("schedule") && isAlive("nut")) for (const s of data.schedule) {
+    if (s.groupId && data.nuts.some((n) => n.id === s.groupId)) {
+      edges.push({
+        id: `e-cr-sched-nut-${s.id}`,
+        source: `nut-${s.groupId}`,
+        target: `sched-${s.id}`,
+        type: "bezier",
+        style: { stroke: "#10B981", strokeWidth: 1.2, strokeDasharray: "3 3", opacity: 0.55 },
+      });
+    }
+  }
+  // 이슈 ↔ 볼트 (마감 지난 task) — 빨간 점선
+  if (isAlive("issue") && isAlive("bolt")) for (const i of data.issues) {
+    if (i.projectId && data.bolts.some((b) => b.id === i.projectId)) {
+      edges.push({
+        id: `e-cr-issue-bolt-${i.id}`,
+        source: `bolt-${i.projectId}`,
+        target: `issue-${i.id}`,
+        type: "bezier",
+        style: { stroke: "#DC2626", strokeWidth: 1.2, strokeDasharray: "3 3", opacity: 0.55 },
       });
     }
   }

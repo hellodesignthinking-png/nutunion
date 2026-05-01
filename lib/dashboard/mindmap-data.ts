@@ -29,28 +29,28 @@ export async function fetchMindMapData(
       .in("projects.status", ["active", "draft"])
       .limit(10),
 
-    // 일정 — 다가오는 미팅 (최대 5)
+    // 일정 — 다가오는 미팅 (최대 5) + group_id 로 너트 연동
     supabase
       .from("meetings")
-      .select("id, title, scheduled_at")
+      .select("id, title, scheduled_at, group_id")
       .gte("scheduled_at", today)
       .lte("scheduled_at", sevenDaysFromNow)
       .order("scheduled_at", { ascending: true })
       .limit(5),
 
-    // 일정 — 다가오는 이벤트 (최대 5)
+    // 일정 — 다가오는 이벤트 (최대 5) + group_id 로 너트 연동
     supabase
       .from("events")
-      .select("id, title, start_at")
+      .select("id, title, start_at, group_id")
       .gte("start_at", today)
       .lte("start_at", sevenDaysFromNow)
       .order("start_at", { ascending: true })
       .limit(5),
 
-    // 이슈 — 사용자가 담당인 마감 지난 태스크 (최대 5)
+    // 이슈 — 사용자가 담당인 마감 지난 태스크 (최대 5) + project_id 로 볼트 연동
     supabase
       .from("project_tasks")
-      .select("id, title, due_date")
+      .select("id, title, due_date, project_id")
       .eq("assigned_to", userId)
       .neq("status", "done")
       .lt("due_date", today.slice(0, 10))
@@ -123,12 +123,14 @@ export async function fetchMindMapData(
     title: m.title as string,
     at: m.scheduled_at as string,
     source: "meeting" as const,
+    groupId: (m.group_id as string | null) ?? null,
   }));
   const events = (eventsRes.data ?? []).map((e: any) => ({
     id: e.id as string,
     title: e.title as string,
     at: e.start_at as string,
     source: "event" as const,
+    groupId: (e.group_id as string | null) ?? null,
   }));
   const schedule = [...meetings, ...events]
     .sort((a, b) => a.at.localeCompare(b.at))
@@ -138,11 +140,13 @@ export async function fetchMindMapData(
     id: t.id as string,
     title: t.title as string,
     kind: "overdue_task" as const,
+    projectId: (t.project_id as string | null) ?? null,
   }));
   const mentions = (mentionsRes.data ?? []).map((n: any) => ({
     id: n.id as string,
     title: n.title as string,
     kind: "mention" as const,
+    projectId: null as string | null,
   }));
   const issues = [...overdue, ...mentions].slice(0, 5);
 

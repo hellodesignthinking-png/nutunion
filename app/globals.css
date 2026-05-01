@@ -844,3 +844,24 @@ body.nu-chat-fullscreen .pb-\[64px\] {
 .react-flow__handle.connectionindicator {
   cursor: crosshair;
 }
+
+/* ──── Mindmap fullscreen — 모든 chrome 숨기고 캔버스만 ──── */
+body.nu-mindmap-fullscreen nav.z-\[500\],
+body.nu-mindmap-fullscreen aside.z-\[400\],
+body.nu-mindmap-fullscreen footer,
+body.nu-mindmap-fullscreen [data-app-nav],
+body.nu-mindmap-fullscreen [data-app-sidebar],
+body.nu-mindmap-fullscreen [data-app-bottom-tabs],
+body.nu-mindmap-fullscreen [data-push-banner],
+body.nu-mindmap-fullscreen [data-online-banner] {
+  display: none !important;
+}
+body.nu-mindmap-fullscreen .pt-\[60px\] {
+  padding-top: 0 !important;
+}
+body.nu-mindmap-fullscreen .pb-\[64px\] {
+  padding-bottom: 0 !important;
+}
+body.nu-mindmap-fullscreen {
+  overflow: hidden;
+}
