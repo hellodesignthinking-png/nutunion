@@ -104,7 +104,9 @@ export function CenterGenesisNode({ data }: { data: CenterNodeData }) {
           onChange={(e) => setIntent(e.target.value)}
           placeholder="궁금한 점을 물어보세요"
           disabled={loading}
+          maxLength={500}
           className="flex-1 px-2 py-1.5 text-[12px] outline-none bg-transparent disabled:opacity-50"
+          aria-label="Genesis AI 에 질문하기 (최대 500자)"
         />
         <button
           type="submit"
@@ -115,6 +117,11 @@ export function CenterGenesisNode({ data }: { data: CenterNodeData }) {
           {loading ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
         </button>
       </form>
+      {intent.length > 400 && (
+        <div className={`mt-1 font-mono-nu text-[10px] text-right ${intent.length >= 500 ? "text-red-700" : "text-nu-muted"}`}>
+          {intent.length} / 500
+        </div>
+      )}
 
       {answer && !loading && (
         <div className="mt-2 text-[11px] text-nu-ink/80 bg-nu-cream/50 border border-nu-ink/10 px-2 py-1.5">

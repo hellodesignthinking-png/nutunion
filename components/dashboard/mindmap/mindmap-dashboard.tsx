@@ -87,6 +87,20 @@ export function MindMapDashboard({ nickname, data }: Props) {
   useEffect(() => { dataRef.current = data; }, [data]);
   const nicknameRef = useRef(nickname);
   useEffect(() => { nicknameRef.current = nickname; }, [nickname]);
+  const searchRef = useRef<HTMLInputElement | null>(null);
+
+  // Cmd/Ctrl+K 검색 포커스 — 표준 단축키
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        searchRef.current?.focus();
+        searchRef.current?.select();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const handleExport = useCallback(async () => {
     if (!flowRef.current || exporting) return;
@@ -204,6 +218,34 @@ export function MindMapDashboard({ nickname, data }: Props) {
     [baseNodes, highlighted, savedPositions, filterActive, filterLower, filterKinds],
   );
 
+  // 필터 매칭 결과 — 안내 오버레이 + 엣지 dimming 에 사용
+  const dimmedIds = useMemo(
+    () => new Set(nodes.filter((n) => (n.data as MindMapNodeData).dimmed).map((n) => n.id)),
+    [nodes],
+  );
+  const visibleNonCenterCount = filterActive
+    ? nodes.filter((n) => (n.data as MindMapNodeData).kind !== "center" && !(n.data as MindMapNodeData).dimmed).length
+    : Infinity;
+
+  // 엣지도 양 끝 노드가 dimmed 면 같이 dim — 고아 엣지 방지
+  const styledEdges = useMemo(() => {
+    if (!filterActive) return edges;
+    return edges.map((e) => {
+      const sDim = dimmedIds.has(e.source);
+      const tDim = dimmedIds.has(e.target);
+      if (!sDim && !tDim) return e;
+      const baseStyle = (e.style ?? {}) as React.CSSProperties;
+      const baseOpacity = typeof baseStyle.opacity === "number" ? baseStyle.opacity : 1;
+      return {
+        ...e,
+        style: { ...baseStyle, opacity: baseOpacity * 0.15 },
+        // 라벨도 함께 흐리게 — 라벨 배경/텍스트 둘 다
+        labelStyle: e.labelStyle ? { ...e.labelStyle, opacity: 0.3 } : undefined,
+        labelBgStyle: e.labelBgStyle ? { ...e.labelBgStyle, fillOpacity: 0.2 } : undefined,
+      };
+    });
+  }, [edges, dimmedIds, filterActive]);
+
   const onNodeClick: NodeMouseHandler = useCallback((_, node) => {
     if (node.id === "center") return;
     setSelected(node.data as MindMapNodeData);
@@ -223,13 +265,17 @@ export function MindMapDashboard({ nickname, data }: Props) {
           <div className="relative flex-1 min-w-0">
             <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-nu-muted" />
             <input
+              ref={searchRef}
               type="search"
               value={filterText}
               onChange={(e) => setFilterText(e.target.value)}
-              placeholder="노드 검색…"
-              className="w-full pl-7 pr-2 py-1 text-[12px] border border-nu-ink/20 focus:border-nu-ink outline-none"
-              aria-label="마인드맵 노드 검색"
+              placeholder="노드 검색 (⌘K)"
+              className="w-full pl-7 pr-12 py-1 text-[12px] border border-nu-ink/20 focus:border-nu-ink outline-none"
+              aria-label="마인드맵 노드 검색 — Cmd 또는 Ctrl+K 로 포커스"
             />
+            <kbd className="absolute right-6 top-1/2 -translate-y-1/2 font-mono-nu text-[9px] text-nu-muted border border-nu-ink/20 px-1 py-px hidden sm:inline-block">
+              ⌘K
+            </kbd>
             {filterText && (
               <button
                 type="button"
@@ -313,13 +359,28 @@ export function MindMapDashboard({ nickname, data }: Props) {
       <div
         ref={flowRef}
         style={{ width: "100%", height: 600 }}
-        className="touch-pan-y"
+        className="touch-pan-y relative"
         role="region"
         aria-label="Genesis 마인드맵 — 너트, 볼트, 일정, 이슈, 탭, 와셔 노드 그래프"
       >
+        {filterActive && visibleNonCenterCount === 0 && (
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+            <div className="pointer-events-auto bg-white border-[3px] border-nu-ink shadow-[3px_3px_0_0_#0D0F14] px-4 py-3 max-w-xs text-center">
+              <div className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">결과 없음</div>
+              <div className="font-head text-[14px] font-extrabold text-nu-ink mt-1">필터에 맞는 노드가 없어요</div>
+              <button
+                type="button"
+                onClick={() => { setFilterText(""); setFilterKinds(new Set()); }}
+                className="mt-2 font-mono-nu text-[10px] uppercase tracking-widest px-3 py-1 border-[2px] border-nu-ink hover:bg-nu-cream"
+              >
+                필터 모두 해제
+              </button>
+            </div>
+          </div>
+        )}
         <ReactFlow
           nodes={nodes}
-          edges={edges}
+          edges={styledEdges}
           nodeTypes={nodeTypes}
           onNodeClick={onNodeClick}
           onNodeDragStop={onNodeDragStop}

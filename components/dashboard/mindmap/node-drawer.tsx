@@ -43,8 +43,11 @@ export function NodeDrawer({
 
   return (
     <div className="fixed inset-0 z-[80] flex" role="dialog" aria-modal="true" aria-label={`${node.kind} 상세: ${node.title}`}>
-      <div className="absolute inset-0 bg-nu-ink/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative ml-auto w-full sm:w-[420px] h-full bg-nu-paper border-l-[3px] border-nu-ink shadow-[-4px_0_0_0_#0D0F14] flex flex-col animate-in slide-in-from-right duration-200">
+      <div
+        className="absolute inset-0 bg-nu-ink/40 backdrop-blur-sm animate-in fade-in duration-200"
+        onClick={onClose}
+      />
+      <div className="relative ml-auto w-full sm:w-[420px] max-w-full h-full bg-nu-paper border-l-0 sm:border-l-[3px] border-nu-ink sm:shadow-[-4px_0_0_0_#0D0F14] flex flex-col animate-in slide-in-from-right duration-200 ease-out">
         <div className={`flex items-center justify-between px-4 py-3 border-b-[3px] border-nu-ink ${colors.bg}`}>
           <div>
             <div className="font-mono-nu text-[10px] uppercase tracking-widest opacity-70">
