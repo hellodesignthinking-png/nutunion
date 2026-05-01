@@ -160,7 +160,12 @@
       "Bash(npm list:*)",
       "Bash(sudo npm:*)",
       "Bash(python3 /tmp/wrap_remaining.py)",
-      "Bash(echo \"EXIT=$?\")"
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(vercel --version)",
+      "Bash(vercel ls *)",
+      "Bash(vercel deploy *)",
+      "Bash(git fetch *)",
+      "Bash(vercel inspect *)"
     ]
   }
 }

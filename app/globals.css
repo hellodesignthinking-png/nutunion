@@ -828,3 +828,19 @@ body.nu-chat-fullscreen .pt-\[60px\] {
 body.nu-chat-fullscreen .pb-\[64px\] {
   padding-bottom: 0 !important;
 }
+
+/* ──── Mindmap (reactflow) handles — Miro 스타일 hover 노출 ──── */
+.react-flow__node .react-flow__handle {
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.react-flow__node:hover .react-flow__handle {
+  opacity: 0.6;
+}
+.react-flow__handle:hover {
+  opacity: 1 !important;
+  transform: scale(1.3);
+}
+.react-flow__handle.connectionindicator {
+  cursor: crosshair;
+}

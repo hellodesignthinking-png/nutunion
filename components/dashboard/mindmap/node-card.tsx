@@ -58,16 +58,27 @@ export function NodeCard({ data }: { data: MindMapNodeData }) {
         <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-700" aria-hidden />
       )}
 
-      {/* 핸들 — 중앙은 4방향, 가지는 1개 */}
+      {/* 4방향 dual 핸들 — 사용자가 어느 쪽이든 드래그로 자유 연결 가능.
+          Center 는 source-only, 나머지는 source+target 병행 (Miro 스타일).
+          핸들은 평소 거의 보이지 않다가 hover 시 약하게 노출 — 방해 최소. */}
       {isCenter ? (
         <>
-          <Handle type="source" position={Position.Top} style={{ opacity: 0 }} />
-          <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
-          <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
-          <Handle type="source" position={Position.Left} style={{ opacity: 0 }} />
+          <Handle type="source" position={Position.Top} id="t" style={{ opacity: 0 }} />
+          <Handle type="source" position={Position.Right} id="r" style={{ opacity: 0 }} />
+          <Handle type="source" position={Position.Bottom} id="b" style={{ opacity: 0 }} />
+          <Handle type="source" position={Position.Left} id="l" style={{ opacity: 0 }} />
         </>
       ) : (
-        <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
+        <>
+          <Handle type="target" position={Position.Top} id="t-in" style={handleStyle} />
+          <Handle type="source" position={Position.Top} id="t-out" style={handleStyle} />
+          <Handle type="target" position={Position.Right} id="r-in" style={handleStyle} />
+          <Handle type="source" position={Position.Right} id="r-out" style={handleStyle} />
+          <Handle type="target" position={Position.Bottom} id="b-in" style={handleStyle} />
+          <Handle type="source" position={Position.Bottom} id="b-out" style={handleStyle} />
+          <Handle type="target" position={Position.Left} id="l-in" style={handleStyle} />
+          <Handle type="source" position={Position.Left} id="l-out" style={handleStyle} />
+        </>
       )}
 
       <div className="flex items-center gap-1.5">
@@ -213,6 +224,15 @@ function Accent({ data }: { data: MindMapNodeData }) {
       return null;
   }
 }
+
+// Miro 스타일 핸들 — 평소엔 안 보이고 노드 hover 시 핑크 점 노출.
+// 노출 토글은 globals.css 의 .react-flow__handle 규칙이 담당.
+const handleStyle: React.CSSProperties = {
+  width: 8,
+  height: 8,
+  background: "#FF3D88",
+  border: "1.5px solid #0D0F14",
+};
 
 function boltStatusPct(status: string): number {
   // 상태 → 진행률 추정. 실제 진행률 컬럼이 없을 때의 발견적 기준.

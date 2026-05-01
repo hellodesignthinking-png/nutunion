@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
-import { Camera, Search, X, Filter, Radio, Clock, Network } from "lucide-react";
+import { Camera, Search, X, Filter, Radio, Clock, Network, Wand2 } from "lucide-react";
+import { dagreLayout } from "@/lib/dashboard/auto-layout";
 import { toast } from "sonner";
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import ReactFlow, {
@@ -14,6 +15,8 @@ import ReactFlow, {
   type NodeMouseHandler,
   type NodeDragHandler,
   type ReactFlowInstance,
+  type Connection,
+  type EdgeMouseHandler,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { NodeCard } from "./node-card";
@@ -22,6 +25,7 @@ import { CenterGenesisNode } from "./center-genesis-node";
 import { CursorOverlay } from "./cursor-overlay";
 import { FileHoverPreview } from "./file-hover-preview";
 import { SectorHalo } from "./sector-halo";
+import { ContextMenu, type ContextMenuTarget } from "./context-menu";
 import type { MindMapData, MindMapNodeData, NodeKind } from "@/lib/dashboard/mindmap-types";
 import { NODE_COLORS } from "@/lib/dashboard/mindmap-types";
 
@@ -259,6 +263,22 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
     }, 600);
   }, [cloudHydrated]);
 
+  // Dagre 자동 정렬 — 트리 형태로 깔끔히 재배치 + 영속.
+  const handleAutoLayout = useCallback((direction: "TB" | "LR" = "TB") => {
+    const inst = rfRef.current;
+    if (!inst) return;
+    const cur = inst.getNodes();
+    const ce = inst.getEdges();
+    if (cur.length === 0) return;
+    const positions = dagreLayout(cur, ce, direction);
+    if (Object.keys(positions).length === 0) return;
+    setSavedPositions(positions);
+    try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(positions)); } catch { /* ignore */ }
+    queueLayoutSync(positions);
+    // 새 레이아웃 보이게 카메라 fit
+    setTimeout(() => inst.fitView({ padding: 0.2, duration: 600 }), 50);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const onNodeDragStop: NodeDragHandler = useCallback((_, node) => {
     setSavedPositions((prev) => {
       const next = { ...prev, [node.id]: { x: node.position.x, y: node.position.y } };
@@ -326,6 +346,8 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
 
   // hover focus state — useMemo 들이 참조하므로 위쪽에 선언
   const [hoverNodeId, setHoverNodeId] = useState<string | null>(null);
+  // 자유 엣지 — useState 만 위쪽에. fetch/onConnect 콜백은 아래.
+  const [userEdges, setUserEdges] = useState<Array<{ id: string; source_id: string; target_id: string; label: string | null }>>([]);
   const focusNodeIds = useMemo<Set<string> | null>(() => {
     if (!hoverNodeId) return null;
     const ids = new Set<string>([hoverNodeId, "center"]);
@@ -389,10 +411,28 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
     ? nodes.filter((n) => (n.data as MindMapNodeData).kind !== "center" && !(n.data as MindMapNodeData).dimmed).length
     : Infinity;
 
+  // 사용자 자유 엣지 — 컴퓨티드 엣지에 합치기 (id 충돌 방지 위해 user- 접두사)
+  const allEdges = useMemo<RFEdge[]>(() => {
+    const ue: RFEdge[] = userEdges.map((e) => ({
+      id: `user-${e.id}`,
+      source: e.source_id,
+      target: e.target_id,
+      type: "smoothstep",
+      animated: false,
+      style: { stroke: "#FF3D88", strokeWidth: 2, strokeDasharray: "6 3" },
+      label: e.label || undefined,
+      labelStyle: e.label ? { fontSize: 10, fontFamily: "ui-monospace, monospace", fill: "#BE185D" } : undefined,
+      labelBgStyle: e.label ? { fill: "#FFFCF6", fillOpacity: 0.95 } : undefined,
+      labelBgPadding: [4, 2],
+      data: { isUser: true },
+    }));
+    return [...edges, ...ue];
+  }, [edges, userEdges]);
+
   // 엣지도 양 끝 노드가 dimmed 면 같이 dim — 고아 엣지 방지 (filter + hover 통합)
   const styledEdges = useMemo(() => {
-    if (!filterActive && !focusNodeIds) return edges;
-    return edges.map((e) => {
+    if (!filterActive && !focusNodeIds) return allEdges;
+    return allEdges.map((e) => {
       const sDim = dimmedIds.has(e.source);
       const tDim = dimmedIds.has(e.target);
       if (!sDim && !tDim) return e;
@@ -405,11 +445,41 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
         labelBgStyle: e.labelBgStyle ? { ...e.labelBgStyle, fillOpacity: 0.2 } : undefined,
       };
     });
-  }, [edges, dimmedIds, filterActive, focusNodeIds]);
+  }, [allEdges, dimmedIds, filterActive, focusNodeIds]);
 
   const onNodeClick: NodeMouseHandler = useCallback((_, node) => {
     if (node.id === "center") return;
     setSelected({ ...(node.data as MindMapNodeData), id: node.id });
+  }, []);
+
+  // 우클릭 컨텍스트 메뉴 — 노드 또는 사용자 엣지에서.
+  const [ctxMenu, setCtxMenu] = useState<ContextMenuTarget | null>(null);
+  const onNodeContextMenu: NodeMouseHandler = useCallback((e, node) => {
+    if (node.id === "center" || node.type === "sector") return;
+    e.preventDefault();
+    const d = node.data as MindMapNodeData;
+    setCtxMenu({
+      kind: "node",
+      x: e.clientX,
+      y: e.clientY,
+      targetId: node.id,
+      href: d.href,
+    });
+  }, []);
+  const onEdgeContextMenu: EdgeMouseHandler = useCallback((e, edge) => {
+    e.preventDefault();
+    const isUser = (edge.data as { isUser?: boolean } | undefined)?.isUser === true;
+    setCtxMenu({
+      kind: "edge",
+      x: e.clientX,
+      y: e.clientY,
+      targetId: edge.id,
+      isUserEdge: isUser,
+    });
+  }, []);
+  const openDrawerById = useCallback((id: string) => {
+    const n = rfRef.current?.getNode(id);
+    if (n) setSelected({ ...(n.data as MindMapNodeData), id });
   }, []);
 
   // realtime — 새 멘션 알림 시 해당 노드 펄스 강조 + 토스트
@@ -438,6 +508,61 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
 
   // hover 핸들러 — washer/topic 은 focus dim, file 은 프리뷰 카드
   const [hoveredFile, setHoveredFile] = useState<typeof data.files[number] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/dashboard/mindmap/edges")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { edges: Array<{ id: string; source_id: string; target_id: string; label: string | null }> } | null) => {
+        if (cancelled || !j) return;
+        setUserEdges(j.edges ?? []);
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, []);
+
+  const onConnect = useCallback((conn: Connection) => {
+    if (!conn.source || !conn.target || conn.source === conn.target) return;
+    // 옵티미스틱: 임시 id 로 즉시 추가 → 서버 응답 시 진짜 id 로 교체
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    setUserEdges((prev) => [
+      ...prev,
+      { id: tempId, source_id: conn.source!, target_id: conn.target!, label: null },
+    ]);
+    fetch("/api/dashboard/mindmap/edges", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source_id: conn.source, target_id: conn.target }),
+    })
+      .then((r) => r.json())
+      .then((j: { edge?: { id: string; source_id: string; target_id: string; label: string | null }; error?: string }) => {
+        if (j.edge) {
+          setUserEdges((prev) => prev.map((e) => (e.id === tempId ? j.edge! : e)));
+        } else if (j.error === "duplicate") {
+          // 중복은 서버가 거부 — UI 에서 임시 엣지 제거
+          setUserEdges((prev) => prev.filter((e) => e.id !== tempId));
+          toast.info("이미 그어진 연결이에요");
+        } else {
+          setUserEdges((prev) => prev.filter((e) => e.id !== tempId));
+          toast.error("연결 저장 실패");
+        }
+      })
+      .catch(() => {
+        setUserEdges((prev) => prev.filter((e) => e.id !== tempId));
+        toast.error("연결 저장 실패");
+      });
+  }, []);
+
+  const deleteUserEdge = useCallback((edgeId: string) => {
+    if (edgeId.startsWith("user-")) {
+      const realId = edgeId.slice("user-".length);
+      // optimistic 제거
+      setUserEdges((prev) => prev.filter((e) => e.id !== realId));
+      void fetch(`/api/dashboard/mindmap/edges?id=${encodeURIComponent(realId)}`, {
+        method: "DELETE",
+      }).catch(() => undefined);
+    }
+  }, []);
   const onNodeMouseEnter: NodeMouseHandler = useCallback((_, node) => {
     const kind = (node.data as MindMapNodeData).kind;
     if (kind === "washer" || kind === "topic" || kind === "file") setHoverNodeId(node.id);
@@ -527,6 +652,17 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
           >
             <Camera size={11} /> {exporting ? "저장 중…" : "PNG 저장"}
           </button>
+          {/* Auto-layout — Dagre 트리. radial 모드에서만 의미 있음. */}
+          {viewMode === "radial" && (
+            <button
+              type="button"
+              onClick={() => handleAutoLayout("TB")}
+              className="font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 border border-nu-ink/30 hover:bg-nu-cream flex items-center gap-1"
+              title="Dagre 트리로 자동 정렬 — 노드가 겹치지 않게 재배치"
+            >
+              <Wand2 size={11} /> 정렬
+            </button>
+          )}
           {Object.keys(savedPositions).length > 0 && (
             <button
               type="button"
@@ -624,6 +760,10 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
           onNodeMouseEnter={onNodeMouseEnter}
           onNodeMouseLeave={onNodeMouseLeave}
           onNodeDragStop={onNodeDragStop}
+          onNodeContextMenu={onNodeContextMenu}
+          onEdgeContextMenu={onEdgeContextMenu}
+          onConnect={onConnect}
+          connectionRadius={30}
           fitView
           minZoom={0.3}
           maxZoom={2}
@@ -658,6 +798,12 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
         node={selected}
         onClose={() => setSelected(null)}
         bolts={data.bolts.map((b) => ({ id: b.id, title: b.title }))}
+      />
+      <ContextMenu
+        target={ctxMenu}
+        onClose={() => setCtxMenu(null)}
+        onOpenDrawer={openDrawerById}
+        onDeleteEdge={deleteUserEdge}
       />
     </div>
   );
