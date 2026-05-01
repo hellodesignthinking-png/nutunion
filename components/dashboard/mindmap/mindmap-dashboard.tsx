@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
-import { Camera, Search, X, Filter, Radio, Clock, Network, Wand2 } from "lucide-react";
-import { dagreLayout } from "@/lib/dashboard/auto-layout";
+import { Camera, Search, X, Filter, Radio, Clock, Network, Wand2, ArrowDown, ArrowRight, ChevronDown, Trash2 } from "lucide-react";
+import { dagreLayout, type LayoutDirection } from "@/lib/dashboard/auto-layout";
 import { toast } from "sonner";
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import ReactFlow, {
@@ -26,6 +26,7 @@ import { CursorOverlay } from "./cursor-overlay";
 import { FileHoverPreview } from "./file-hover-preview";
 import { SectorHalo } from "./sector-halo";
 import { ContextMenu, type ContextMenuTarget } from "./context-menu";
+import { EdgeLabelEditor } from "./edge-label-editor";
 import type { MindMapData, MindMapNodeData, NodeKind } from "@/lib/dashboard/mindmap-types";
 import { NODE_COLORS } from "@/lib/dashboard/mindmap-types";
 
@@ -108,6 +109,7 @@ const KIND_LABEL: Record<string, string> = {
   washer: "와셔 · 동료",
 };
 const COLLAPSED_KEY = "dashboard.mindmap.collapsed";
+const LAYOUT_DIR_KEY = "dashboard.mindmap.layoutDir";
 
 /**
  * Phase B 정적 마인드맵 — 중앙 Genesis + 너트/볼트/일정/이슈 가지.
@@ -127,6 +129,10 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
   const [filterKinds, setFilterKinds] = useState<Set<NodeKind>>(new Set());
   const [viewMode, setViewMode] = useState<ViewMode>("radial");
   const [collapsedKinds, setCollapsedKinds] = useState<Set<NodeKind>>(new Set());
+  const [layoutDir, setLayoutDir] = useState<LayoutDirection>("TB");
+  const [layoutMenuOpen, setLayoutMenuOpen] = useState(false);
+  // 다중 선택 — reactflow onSelectionChange 가 갱신.
+  const [selection, setSelection] = useState<{ nodes: RFNode[]; edges: RFEdge[] }>({ nodes: [], edges: [] });
 
   // collapsed 복원/저장 — localStorage 만 (서버 영속은 과한 비용)
   useEffect(() => {
@@ -141,6 +147,17 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
   useEffect(() => {
     try { localStorage.setItem(COLLAPSED_KEY, JSON.stringify(Array.from(collapsedKinds))); } catch { /* ignore */ }
   }, [collapsedKinds]);
+
+  // layoutDir + minimapKinds 영속
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LAYOUT_DIR_KEY);
+      if (raw === "TB" || raw === "LR") setLayoutDir(raw);
+    } catch { /* ignore */ }
+  }, []);
+  useEffect(() => {
+    try { localStorage.setItem(LAYOUT_DIR_KEY, layoutDir); } catch { /* ignore */ }
+  }, [layoutDir]);
 
   const toggleSectorCollapse = useCallback((kind: NodeKind) => {
     setCollapsedKinds((prev) => {
@@ -263,21 +280,37 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
     }, 600);
   }, [cloudHydrated]);
 
-  // Dagre 자동 정렬 — 트리 형태로 깔끔히 재배치 + 영속.
-  const handleAutoLayout = useCallback((direction: "TB" | "LR" = "TB") => {
+  // Dagre 자동 정렬 — 트리 형태로 재배치 + 영속.
+  // direction: TB(상하) / LR(좌우). nodeIds 지정 시 그 노드들만 부분 정렬.
+  const handleAutoLayout = useCallback((direction?: LayoutDirection, nodeIds?: string[]) => {
     const inst = rfRef.current;
     if (!inst) return;
-    const cur = inst.getNodes();
-    const ce = inst.getEdges();
+    const allCur = inst.getNodes();
+    const allEdgesNow = inst.getEdges();
+    const dir = direction ?? layoutDir;
+
+    // 부분 정렬 — 선택된 노드만 dagre 적용, 나머지는 기존 위치 유지.
+    let cur = allCur;
+    let ce = allEdgesNow;
+    if (nodeIds && nodeIds.length > 1) {
+      const idSet = new Set(nodeIds);
+      cur = allCur.filter((n) => idSet.has(n.id));
+      ce = allEdgesNow.filter((e) => idSet.has(e.source) && idSet.has(e.target));
+    }
     if (cur.length === 0) return;
-    const positions = dagreLayout(cur, ce, direction);
+
+    const positions = dagreLayout(cur, ce, dir);
     if (Object.keys(positions).length === 0) return;
-    setSavedPositions(positions);
-    try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(positions)); } catch { /* ignore */ }
-    queueLayoutSync(positions);
-    // 새 레이아웃 보이게 카메라 fit
+
+    // 기존 savedPositions 와 머지 — 부분 정렬 시 다른 노드는 그대로
+    setSavedPositions((prev) => {
+      const next = { ...prev, ...positions };
+      try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      queueLayoutSync(next);
+      return next;
+    });
     setTimeout(() => inst.fitView({ padding: 0.2, duration: 600 }), 50);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [layoutDir]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onNodeDragStop: NodeDragHandler = useCallback((_, node) => {
     setSavedPositions((prev) => {
@@ -452,6 +485,40 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
     setSelected({ ...(node.data as MindMapNodeData), id: node.id });
   }, []);
 
+  // 다중 선택 핸들러 — reactflow 가 shift+drag/click 으로 다중 선택할 때 갱신.
+  const onSelectionChange = useCallback((sel: { nodes: RFNode[]; edges: RFEdge[] }) => {
+    // sector halo / center 는 비편집 → 선택에서 제외
+    const filteredNodes = sel.nodes.filter(
+      (n) => n.id !== "center" && n.type !== "sector",
+    );
+    setSelection({ nodes: filteredNodes, edges: sel.edges });
+  }, []);
+
+  // 선택만 정렬 — 부분 dagre.
+  const handleAlignSelection = useCallback(() => {
+    if (selection.nodes.length < 2) return;
+    handleAutoLayout(undefined, selection.nodes.map((n) => n.id));
+  }, [selection.nodes, handleAutoLayout]);
+
+  // 선택된 사용자 엣지 일괄 삭제 — 자동 엣지는 도메인 데이터 변경으로만 사라짐
+  const handleDeleteSelectedEdges = useCallback(() => {
+    const userIds = selection.edges
+      .filter((e) => (e.data as { isUser?: boolean } | undefined)?.isUser)
+      .map((e) => e.id.startsWith("user-") ? e.id.slice("user-".length) : e.id);
+    if (userIds.length === 0) {
+      toast.info("자동 관계는 삭제할 수 없어요");
+      return;
+    }
+    setUserEdges((prev) => prev.filter((e) => !userIds.includes(e.id)));
+    setSelection({ nodes: selection.nodes, edges: [] });
+    Promise.all(
+      userIds.map((id) =>
+        fetch(`/api/dashboard/mindmap/edges?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => undefined),
+      ),
+    );
+    toast.success(`${userIds.length}개 연결 삭제`);
+  }, [selection]);
+
   // 우클릭 컨텍스트 메뉴 — 노드 또는 사용자 엣지에서.
   const [ctxMenu, setCtxMenu] = useState<ContextMenuTarget | null>(null);
   const onNodeContextMenu: NodeMouseHandler = useCallback((e, node) => {
@@ -466,6 +533,34 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
       href: d.href,
     });
   }, []);
+  // 엣지 라벨 편집 — 사용자 엣지 더블클릭으로 열림.
+  const [edgeLabelTarget, setEdgeLabelTarget] = useState<{ edgeId: string; current: string | null; x: number; y: number } | null>(null);
+  const onEdgeDoubleClick: EdgeMouseHandler = useCallback((e, edge) => {
+    const isUser = (edge.data as { isUser?: boolean } | undefined)?.isUser;
+    if (!isUser) {
+      toast.info("자동 관계는 라벨을 바꿀 수 없어요");
+      return;
+    }
+    e.preventDefault();
+    setEdgeLabelTarget({
+      edgeId: edge.id,
+      current: typeof edge.label === "string" ? edge.label : null,
+      x: e.clientX,
+      y: e.clientY,
+    });
+  }, []);
+  const saveEdgeLabel = useCallback((edgeId: string, label: string | null) => {
+    if (!edgeId.startsWith("user-")) return;
+    const realId = edgeId.slice("user-".length);
+    // optimistic
+    setUserEdges((prev) => prev.map((e) => (e.id === realId ? { ...e, label } : e)));
+    void fetch(`/api/dashboard/mindmap/edges?id=${encodeURIComponent(realId)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label }),
+    }).catch(() => toast.error("라벨 저장 실패"));
+  }, []);
+
   const onEdgeContextMenu: EdgeMouseHandler = useCallback((e, edge) => {
     e.preventDefault();
     const isUser = (edge.data as { isUser?: boolean } | undefined)?.isUser === true;
@@ -652,16 +747,59 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
           >
             <Camera size={11} /> {exporting ? "저장 중…" : "PNG 저장"}
           </button>
-          {/* Auto-layout — Dagre 트리. radial 모드에서만 의미 있음. */}
+          {/* Auto-layout — Dagre 트리. radial 모드에서만 의미 있음.
+              Split button: 본체 = 현재 방향으로 정렬 / chevron = 방향 메뉴 */}
           {viewMode === "radial" && (
-            <button
-              type="button"
-              onClick={() => handleAutoLayout("TB")}
-              className="font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 border border-nu-ink/30 hover:bg-nu-cream flex items-center gap-1"
-              title="Dagre 트리로 자동 정렬 — 노드가 겹치지 않게 재배치"
-            >
-              <Wand2 size={11} /> 정렬
-            </button>
+            <div className="relative inline-flex border border-nu-ink/30">
+              <button
+                type="button"
+                onClick={() => handleAutoLayout()}
+                className="font-mono-nu text-[10px] uppercase tracking-widest px-2 py-1 hover:bg-nu-cream flex items-center gap-1"
+                title={`${layoutDir === "TB" ? "위→아래" : "좌→우"} 방향으로 자동 정렬`}
+              >
+                <Wand2 size={11} />
+                {layoutDir === "TB" ? <ArrowDown size={10} /> : <ArrowRight size={10} />}
+                정렬
+              </button>
+              <button
+                type="button"
+                onClick={() => setLayoutMenuOpen((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={layoutMenuOpen}
+                className="px-1 py-1 border-l border-nu-ink/30 hover:bg-nu-cream"
+                title="정렬 방향 선택"
+              >
+                <ChevronDown size={11} />
+              </button>
+              {layoutMenuOpen && (
+                <div
+                  role="menu"
+                  className="absolute top-full right-0 mt-0.5 z-50 bg-white border-[2px] border-nu-ink shadow-[2px_2px_0_0_#0D0F14] min-w-[140px]"
+                  onMouseLeave={() => setLayoutMenuOpen(false)}
+                >
+                  {([
+                    { dir: "TB" as const, label: "위 → 아래", Icon: ArrowDown },
+                    { dir: "LR" as const, label: "좌 → 우",   Icon: ArrowRight },
+                  ]).map(({ dir, label, Icon }) => (
+                    <button
+                      key={dir}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={layoutDir === dir}
+                      onClick={() => {
+                        setLayoutDir(dir);
+                        setLayoutMenuOpen(false);
+                        handleAutoLayout(dir);
+                      }}
+                      className={`w-full text-left flex items-center gap-2 px-2 py-1 font-mono-nu text-[10px] uppercase tracking-widest hover:bg-nu-cream ${layoutDir === dir ? "bg-nu-cream" : ""}`}
+                    >
+                      <Icon size={11} /> {label}
+                      {layoutDir === dir && <span className="ml-auto text-nu-pink">●</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
           {Object.keys(savedPositions).length > 0 && (
             <button
@@ -736,6 +874,46 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
         role="region"
         aria-label="Genesis 마인드맵 — 너트, 볼트, 일정, 이슈, 탭, 와셔 노드 그래프"
       >
+        {/* 다중 선택 액션바 — 2개 이상 선택 시 캔버스 상단 가운데 떠오름 */}
+        {(selection.nodes.length + selection.edges.length) > 1 && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 bg-white border-[3px] border-nu-ink shadow-[3px_3px_0_0_#0D0F14] flex items-center gap-1 px-2 py-1.5">
+            <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted mr-1">
+              {selection.nodes.length}개 노드 / {selection.edges.length}개 엣지
+            </span>
+            {selection.nodes.length > 1 && viewMode === "radial" && (
+              <button
+                type="button"
+                onClick={handleAlignSelection}
+                className="font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 border-[2px] border-nu-ink hover:bg-nu-cream flex items-center gap-1"
+                title="선택된 노드만 dagre 트리로 정렬"
+              >
+                <Wand2 size={10} /> 선택만 정렬
+              </button>
+            )}
+            {selection.edges.some((e) => (e.data as { isUser?: boolean } | undefined)?.isUser) && (
+              <button
+                type="button"
+                onClick={handleDeleteSelectedEdges}
+                className="font-mono-nu text-[10px] uppercase tracking-widest px-2 py-0.5 border-[2px] border-red-700 text-red-700 hover:bg-red-50 flex items-center gap-1"
+                title="선택된 사용자 연결 일괄 삭제"
+              >
+                <Trash2 size={10} /> 연결 삭제
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                rfRef.current?.setNodes((ns) => ns.map((n) => ({ ...n, selected: false })));
+                rfRef.current?.setEdges((es) => es.map((e) => ({ ...e, selected: false })));
+                setSelection({ nodes: [], edges: [] });
+              }}
+              className="font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 hover:bg-nu-cream"
+              title="선택 해제"
+            >
+              <X size={11} />
+            </button>
+          </div>
+        )}
         {filterActive && visibleNonCenterCount === 0 && (
           <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
             <div className="pointer-events-auto bg-white border-[3px] border-nu-ink shadow-[3px_3px_0_0_#0D0F14] px-4 py-3 max-w-xs text-center">
@@ -762,7 +940,11 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
           onNodeDragStop={onNodeDragStop}
           onNodeContextMenu={onNodeContextMenu}
           onEdgeContextMenu={onEdgeContextMenu}
+          onEdgeDoubleClick={onEdgeDoubleClick}
           onConnect={onConnect}
+          onSelectionChange={onSelectionChange}
+          selectionOnDrag
+          multiSelectionKeyCode={["Meta", "Shift", "Control"]}
           connectionRadius={30}
           fitView
           minZoom={0.3}
@@ -783,9 +965,13 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
             pannable
             zoomable
             nodeStrokeColor="#0D0F14"
+            // 필터 칩이 활성이면 미니맵도 그에 맞춰 색깔 표시 — "내 너트만 보고 싶다" UX 일관성.
+            // 필터 미적용 시: 모든 kind 풀컬러. 필터 적용 시: 매칭 kind 만 컬러, 나머지 회색.
             nodeColor={(node) => {
               const kind = (node.data as MindMapNodeData)?.kind;
-              return kind ? MINIMAP_COLOR[kind] : "#888";
+              if (!kind) return "#888";
+              if (filterKinds.size > 0 && !filterKinds.has(kind)) return "#D1D5DB";
+              return MINIMAP_COLOR[kind] ?? "#888";
             }}
             nodeStrokeWidth={2}
             className="!border-[2px] !border-nu-ink !shadow-[2px_2px_0_0_#0D0F14]"
@@ -804,6 +990,11 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
         onClose={() => setCtxMenu(null)}
         onOpenDrawer={openDrawerById}
         onDeleteEdge={deleteUserEdge}
+      />
+      <EdgeLabelEditor
+        target={edgeLabelTarget}
+        onClose={() => setEdgeLabelTarget(null)}
+        onSave={saveEdgeLabel}
       />
     </div>
   );
