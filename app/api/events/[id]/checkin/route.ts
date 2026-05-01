@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import crypto from "crypto";
 
@@ -8,7 +10,7 @@ import crypto from "crypto";
  * - Action: "redeem" — 참석자, token 검증 후 event_checkins insert
  * - Action: "info" — token 메타 조회 (공개 — 리덤션 페이지용)
  */
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export const POST = withRouteLog("events.id.checkin.post", async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id: eventId } = await params;
   const body = await req.json().catch(() => ({}));
   const action = body.action as "generate" | "redeem" | "info" | undefined;
@@ -103,10 +105,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });
-}
+});
 
 // GET /api/events/[id]/checkin — 호스트/제작자/admin 만 전체 목록, 일반 유저는 본인 것만
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = withRouteLog("events.id.checkin.get", async (_req: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id: eventId } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -139,4 +141,4 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const { data: checkins } = await q;
   return NextResponse.json({ checkins: checkins || [], isOwner });
-}
+});

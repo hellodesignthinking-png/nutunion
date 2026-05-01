@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 /**
  * GET /api/admin/metrics — Overview 메트릭 + Alerts + Top 활동
  */
-export async function GET() {
+export const GET = withRouteLog("admin.metrics", async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -65,4 +67,4 @@ export async function GET() {
     daily: (daily as any)?.data ?? daily ?? [],
     ts: now.toISOString(),
   });
-}
+});

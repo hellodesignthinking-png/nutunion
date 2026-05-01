@@ -6,13 +6,15 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 type Table = "file_attachments" | "project_resources";
 
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("files.versions", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -42,4 +44,4 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({ versions: data || [] });
-}
+});

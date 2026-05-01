@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -6,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
  * 마감된 볼트의 closure_summary 를 wiki_pages 에 승격.
  * 069 마이그레이션의 트리거 백업 — 누락된 환경에서도 수동 호출로 동작.
  */
-export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export const POST = withRouteLog("projects.id.archive-to-wiki", async (_req: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -57,4 +59,4 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   }
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true, slug, url: `/wiki/${slug}` });
-}
+});

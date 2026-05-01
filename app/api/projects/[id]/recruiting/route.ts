@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
@@ -11,7 +13,7 @@ const Schema = z.object({
 });
 
 /** POST /api/projects/[id]/recruiting — 호스트/admin 만 */
-export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export const POST = withRouteLog("projects.id.recruiting", async (req: NextRequest, ctx: { params: Promise<{ id: string }> }) => {
   const { id } = await ctx.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -38,4 +40,4 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   const { error } = await supabase.from("projects").update(updates).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
-}
+});

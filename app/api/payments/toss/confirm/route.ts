@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -13,7 +15,7 @@ import { createClient } from "@/lib/supabase/server";
  * Payload:
  *   { paymentKey: string, orderId: string, amount: number, escrowId?: string }
  */
-export async function POST(req: Request) {
+export const POST = withRouteLog("payments.toss.confirm", async (req: Request) => {
   const { paymentKey, orderId, amount, escrowId } = await req.json();
   if (!paymentKey || !orderId || !amount) {
     return NextResponse.json({ error: "Missing paymentKey/orderId/amount" }, { status: 400 });
@@ -74,4 +76,4 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ success: true, paymentKey, orderId, amount });
-}
+});

@@ -3,12 +3,14 @@
  * DELETE /api/chat/messages/[id]/react?emoji=❤️ — 리액션 제거
  */
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
 
-export async function POST(req: NextRequest, { params }: Ctx) {
+export const POST = withRouteLog("chat.messages.id.react.post", async (req: NextRequest, { params }: Ctx) => {
   const { id: messageId } = await params;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -36,9 +38,9 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     .insert({ message_id: messageId, user_id: auth.user.id, emoji });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ toggled: "added" });
-}
+});
 
-export async function DELETE(req: NextRequest, { params }: Ctx) {
+export const DELETE = withRouteLog("chat.messages.id.react.delete", async (req: NextRequest, { params }: Ctx) => {
   const { id: messageId } = await params;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -52,4 +54,4 @@ export async function DELETE(req: NextRequest, { params }: Ctx) {
     .eq("user_id", auth.user.id)
     .eq("emoji", emoji);
   return NextResponse.json({ ok: true });
-}
+});

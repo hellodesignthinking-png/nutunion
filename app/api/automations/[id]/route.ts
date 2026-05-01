@@ -3,12 +3,14 @@
  * DELETE /api/automations/:id
  */
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
 
-export async function PATCH(req: NextRequest, { params }: Ctx) {
+export const PATCH = withRouteLog("automations.id.patch", async (req: NextRequest, { params }: Ctx) => {
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -33,9 +35,9 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ rule: data });
-}
+});
 
-export async function DELETE(_: NextRequest, { params }: Ctx) {
+export const DELETE = withRouteLog("automations.id.delete", async (_: NextRequest, { params }: Ctx) => {
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -48,4 +50,4 @@ export async function DELETE(_: NextRequest, { params }: Ctx) {
     .eq("owner_id", user.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
-}
+});

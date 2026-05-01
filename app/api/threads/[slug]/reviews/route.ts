@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
-export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: string }> }) {
+export const POST = withRouteLog("threads.slug.reviews.post", async (req: NextRequest, ctx: { params: Promise<{ slug: string }> }) => {
   const { slug } = await ctx.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -29,9 +31,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: stri
   await supabase.from("threads").update({ avg_rating: avg }).eq("id", thread.id);
 
   return NextResponse.json({ ok: true });
-}
+});
 
-export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ slug: string }> }) {
+export const DELETE = withRouteLog("threads.slug.reviews.delete", async (_req: NextRequest, ctx: { params: Promise<{ slug: string }> }) => {
   const { slug } = await ctx.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -53,4 +55,4 @@ export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ slug: s
   await supabase.from("threads").update({ avg_rating: avg }).eq("id", thread.id);
 
   return NextResponse.json({ ok: true });
-}
+});

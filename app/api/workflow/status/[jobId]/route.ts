@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { fetchJob } from "@/lib/workflow/queue";
 
@@ -6,10 +8,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** GET /api/workflow/status/[jobId] — 잡 상태 폴링 (본인 잡만) */
-export async function GET(
+export const GET = withRouteLog("workflow.status.jobId", async (
   _req: NextRequest,
   ctx: { params: Promise<{ jobId: string }> }
-) {
+) => {
   const { jobId } = await ctx.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -33,4 +35,4 @@ export async function GET(
     startedAt: job.started_at,
     completedAt: job.completed_at,
   });
-}
+});

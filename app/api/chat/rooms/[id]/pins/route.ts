@@ -5,6 +5,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
@@ -28,7 +30,7 @@ async function assertMember(db: any, roomId: string, userId: string): Promise<bo
   return !!data;
 }
 
-export async function GET(_req: NextRequest, { params }: Ctx) {
+export const GET = withRouteLog("chat.rooms.id.pins.get", async (_req: NextRequest, { params }: Ctx) => {
   const { id: roomId } = await params;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -71,9 +73,9 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   }
 
   return NextResponse.json({ pins: data || [] });
-}
+});
 
-export async function POST(req: NextRequest, { params }: Ctx) {
+export const POST = withRouteLog("chat.rooms.id.pins.post", async (req: NextRequest, { params }: Ctx) => {
   const { id: roomId } = await params;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -104,9 +106,9 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return NextResponse.json({ pin: data });
-}
+});
 
-export async function DELETE(req: NextRequest, { params }: Ctx) {
+export const DELETE = withRouteLog("chat.rooms.id.pins.delete", async (req: NextRequest, { params }: Ctx) => {
   const { id: roomId } = await params;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -128,4 +130,4 @@ export async function DELETE(req: NextRequest, { params }: Ctx) {
     .eq("message_id", messageId);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
-}
+});

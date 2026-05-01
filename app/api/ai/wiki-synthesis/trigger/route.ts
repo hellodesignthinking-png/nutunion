@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { enqueue } from "@/lib/workflow/queue";
@@ -11,7 +13,7 @@ export const runtime = "nodejs";
  * 즉시 202 + jobId 반환. 실제 실행은 /api/cron/process-jobs 에서.
  * 클라이언트는 /api/workflow/status/[jobId] 를 폴링.
  */
-export async function POST(request: NextRequest) {
+export const POST = withRouteLog("ai.wiki-synthesis.trigger", async (request: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return aiError("auth", "ai/wiki-synthesis/trigger");
@@ -62,4 +64,4 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ jobId: result.jobId, status: "pending" }, { status: 202 });
-}
+});

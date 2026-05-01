@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { PROVIDERS, signState } from "@/lib/oauth/integrations";
 
@@ -6,7 +8,7 @@ import { PROVIDERS, signState } from "@/lib/oauth/integrations";
  * GET /api/integrations/[provider]/connect?projectId=xxx&returnTo=/projects/xxx
  * Slack/Notion/GitHub OAuth 시작 — 공급자 authorize URL 로 302 리다이렉트.
  */
-export async function GET(req: Request, { params }: { params: Promise<{ provider: string }> }) {
+export const GET = withRouteLog("integrations.provider.connect", async (req: Request, { params }: { params: Promise<{ provider: string }> }) => {
   const { provider } = await params;
   if (!(provider in PROVIDERS)) {
     return NextResponse.json({ error: "Unsupported provider" }, { status: 400 });
@@ -41,4 +43,4 @@ export async function GET(req: Request, { params }: { params: Promise<{ provider
     scopes: sp.get("scopes") || cfg.defaultScopes,
   });
   return NextResponse.redirect(authUrl);
-}
+});

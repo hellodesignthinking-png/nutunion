@@ -3,12 +3,14 @@
  *  → upsert chat_thread_reads (current user, parent_message_id=id).
  */
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
 
-export async function POST(_req: NextRequest, { params }: Ctx) {
+export const POST = withRouteLog("chat.messages.id.thread.read", async (_req: NextRequest, { params }: Ctx) => {
   const { id } = await params;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -25,4 +27,4 @@ export async function POST(_req: NextRequest, { params }: Ctx) {
     return NextResponse.json({ ok: false, hint: "migration 119 needed" }, { status: 501 });
   }
   return NextResponse.json({ ok: true });
-}
+});

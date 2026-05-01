@@ -6,6 +6,8 @@
  * with `parent_message_id` in body.
  */
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
@@ -24,7 +26,7 @@ const SELECT =
 const SELECT_FALLBACK =
   "id, room_id, sender_id, content, attachment_url, attachment_type, attachment_name, attachment_size, is_system, created_at, edited_at, sender:profiles!chat_messages_sender_id_fkey(id, nickname, avatar_url), reactions:chat_reactions(emoji, user_id)";
 
-export async function GET(_req: NextRequest, { params }: Ctx) {
+export const GET = withRouteLog("chat.messages.id.thread", async (_req: NextRequest, { params }: Ctx) => {
   const { id } = await params;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -63,4 +65,4 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   }
 
   return NextResponse.json({ parent, replies: repliesRes.data || [] });
-}
+});

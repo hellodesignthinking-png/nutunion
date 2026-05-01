@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -8,7 +10,7 @@ import { createClient } from "@/lib/supabase/server";
  *
  * GET /api/admin/payment-test — 최근 테스트 거래 + 웹훅 원장 조회
  */
-export async function POST(req: Request) {
+export const POST = withRouteLog("admin.payment-test.post", async (req: Request) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -50,9 +52,9 @@ export async function POST(req: Request) {
     amount,
     testMode: true,
   });
-}
+});
 
-export async function GET() {
+export const GET = withRouteLog("admin.payment-test.get", async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -78,4 +80,4 @@ export async function GET() {
     escrows: escrowRes.data || [],
     webhooks: webhookRes.data || [],
   });
-}
+});

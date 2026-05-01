@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -164,7 +166,7 @@ _(중략 — 실제 상품에는 19개 리스크 전체)_
   },
 ];
 
-export async function POST(req: Request) {
+export const POST = withRouteLog("admin.seed-tap-products", async (req: Request) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -212,4 +214,4 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ sellerId, total: SEED_PRODUCTS.length, results });
-}
+});

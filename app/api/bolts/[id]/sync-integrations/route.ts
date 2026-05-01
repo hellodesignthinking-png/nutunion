@@ -8,6 +8,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { syncCarriageDaily } from "@/lib/bolt/integrations";
 import { dispatchNotification } from "@/lib/notifications/dispatch";
@@ -16,7 +18,7 @@ export const maxDuration = 30;
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
-export async function POST(_req: NextRequest, { params }: RouteCtx) {
+export const POST = withRouteLog("bolts.id.sync-integrations", async (_req: NextRequest, { params }: RouteCtx) => {
   const { id } = await params;
   const supabase = await createClient();
 
@@ -108,4 +110,4 @@ export async function POST(_req: NextRequest, { params }: RouteCtx) {
       posthog: result.posthog !== null,
     },
   });
-}
+});

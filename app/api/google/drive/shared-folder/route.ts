@@ -6,11 +6,13 @@
  * 호출자 응답 호환을 위해 { folderUrl, sharedFolder: true } 형태 유지.
  */
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { getCurrentUserId } from "@/lib/google/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getSharedFolderId } from "@/lib/google/drive-config";
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("google.drive.shared-folder.post", async (req: NextRequest) => {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
 
@@ -98,12 +100,12 @@ export async function POST(req: NextRequest) {
     folderUrl,
     folderName: "nutunion 공유 자료",
   });
-}
+});
 
 /**
  * GET — 호환용. 항상 공유 폴더 URL 반환.
  */
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("google.drive.shared-folder.get", async (req: NextRequest) => {
   const sharedFolderId = getSharedFolderId();
   const { searchParams } = new URL(req.url);
   const targetType = searchParams.get("targetType");
@@ -134,4 +136,4 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({ folder });
-}
+});

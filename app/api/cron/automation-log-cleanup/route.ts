@@ -10,13 +10,15 @@
  * Auth: `Authorization: Bearer <CRON_SECRET>`.
  */
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("cron.automation-log-cleanup", async (req: NextRequest) => {
   const auth = req.headers.get("authorization");
   const expected = process.env.CRON_SECRET;
   if (!expected) {
@@ -58,4 +60,4 @@ export async function GET(req: NextRequest) {
     cutoff,
     errors: errors.length ? errors : undefined,
   });
-}
+});

@@ -6,6 +6,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { dispatchNotification } from "@/lib/notifications/dispatch";
@@ -20,7 +22,7 @@ function getAdminClient() {
   return createAdminClient(url, key, { auth: { persistSession: false } });
 }
 
-export async function PATCH(req: NextRequest, { params }: Ctx) {
+export const PATCH = withRouteLog("projects.id.applications.applicantId", async (req: NextRequest, { params }: Ctx) => {
   const { id: projectId, applicantId } = await params;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -79,4 +81,4 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   });
 
   return NextResponse.json({ ok: true, action });
-}
+});

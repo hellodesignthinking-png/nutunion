@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { paidNutsEnabled } from "@/lib/flags";
 
@@ -13,7 +15,7 @@ import { paidNutsEnabled } from "@/lib/flags";
  *   4) { escrowId, orderId, amount } 반환 → 클라이언트가 결제 위젯 호출
  *   5) 결제 성공 후 webhook → escrow=held → subscription=active 전환은 별도 API
  */
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export const POST = withRouteLog("nuts.id.subscribe.post", async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
   if (!(await paidNutsEnabled())) {
     return NextResponse.json({ error: "유료 너트 기능이 아직 활성화되지 않았습니다" }, { status: 403 });
   }
@@ -121,12 +123,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     feeAmount,
     groupName: group.name,
   });
-}
+});
 
 /**
  * DELETE /api/nuts/[id]/subscribe — 구독 취소
  */
-export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export const DELETE = withRouteLog("nuts.id.subscribe.delete", async (_req: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id: groupId } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -139,4 +141,4 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     .eq("user_id", user.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
-}
+});

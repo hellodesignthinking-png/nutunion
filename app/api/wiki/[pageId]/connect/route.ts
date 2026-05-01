@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
@@ -11,7 +13,7 @@ const Schema = z.object({
 });
 
 /** POST /api/wiki/[pageId]/connect — 탭 ↔ 탭 관계 생성 */
-export async function POST(req: NextRequest, ctx: { params: Promise<{ pageId: string }> }) {
+export const POST = withRouteLog("wiki.pageId.connect.post", async (req: NextRequest, ctx: { params: Promise<{ pageId: string }> }) => {
   const { pageId } = await ctx.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -31,10 +33,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ pageId: st
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
-}
+});
 
 /** DELETE — 연결 해제 (작성자 또는 admin) */
-export async function DELETE(req: NextRequest, ctx: { params: Promise<{ pageId: string }> }) {
+export const DELETE = withRouteLog("wiki.pageId.connect.delete", async (req: NextRequest, ctx: { params: Promise<{ pageId: string }> }) => {
   const { pageId } = await ctx.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -50,4 +52,4 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ pageId: 
   const { error } = await q;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
-}
+});

@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -6,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
  * 통합 검색 — 너트 · 볼트 · 와셔 · 탭 · 명령.
  * 한글 초성 지원은 client-side Fuse.js 보조. 서버는 ILIKE 기반.
  */
-export async function GET(req: Request) {
+export const GET = withRouteLog("search.universal", async (req: Request) => {
   const url = new URL(req.url);
   const q = url.searchParams.get("q")?.trim() ?? "";
   if (!q) return NextResponse.json({ nuts: [], bolts: [], washers: [], taps: [] });
@@ -47,4 +49,4 @@ export async function GET(req: Request) {
     washers: washersRes.data ?? [],
     taps: (tapsRes as any).data ?? [],
   });
-}
+});

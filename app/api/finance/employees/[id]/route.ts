@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { writeAuditLog, extractRequestMeta } from "@/lib/finance/audit-log";
 import { checkRateLimit, rateLimitResponse } from "@/lib/finance/rate-limit";
@@ -17,7 +19,7 @@ async function checkPermission() {
 
 const NUMERIC_FIELDS = ["annual_salary", "annual_leave_total", "annual_leave_used", "hourly_wage", "weekly_days", "daily_hours"];
 
-export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+export const PATCH = withRouteLog("finance.employees.id.patch", async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   const { id } = await context.params;
   const check = await checkPermission();
   if (!check.ok) return NextResponse.json({ error: check.message }, { status: check.status });
@@ -97,9 +99,9 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
   }, extractRequestMeta(req));
 
   return NextResponse.json({ success: true });
-}
+});
 
-export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+export const DELETE = withRouteLog("finance.employees.id.delete", async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   const { id } = await context.params;
   const check = await checkPermission();
   if (!check.ok) return NextResponse.json({ error: check.message }, { status: check.status });
@@ -147,4 +149,4 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
     success: true,
     cancelled_pending_contract: cancelledContract,
   });
-}
+});

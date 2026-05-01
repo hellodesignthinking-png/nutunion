@@ -3,12 +3,14 @@
  * DELETE /api/chat/messages/[id] — 메시지 삭제 (본인만)
  */
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
 
-export async function PATCH(req: NextRequest, { params }: Ctx) {
+export const PATCH = withRouteLog("chat.messages.id.patch", async (req: NextRequest, { params }: Ctx) => {
   const { id } = await params;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -28,9 +30,9 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!data) return NextResponse.json({ error: "not found or not your message" }, { status: 404 });
   return NextResponse.json({ message: data });
-}
+});
 
-export async function DELETE(_req: NextRequest, { params }: Ctx) {
+export const DELETE = withRouteLog("chat.messages.id.delete", async (_req: NextRequest, { params }: Ctx) => {
   const { id } = await params;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -43,4 +45,4 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
     .eq("sender_id", auth.user.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
-}
+});

@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { registry } from "@/lib/threads/bootstrap";
 
 // POST /api/threads/sync-registry
 //   Admin-only. UPSERTs every Thread definition in the runtime registry into the `threads` table.
-export async function POST(_req: NextRequest) {
+export const POST = withRouteLog("threads.sync-registry", async (_req: NextRequest) => {
   // Auth: admin only
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -49,4 +51,4 @@ export async function POST(_req: NextRequest) {
   }
 
   return NextResponse.json({ synced: data?.length ?? 0, slugs: (data || []).map((r: any) => r.slug) });
-}
+});

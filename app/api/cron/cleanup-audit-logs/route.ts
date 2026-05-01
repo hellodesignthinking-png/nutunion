@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
@@ -16,7 +18,7 @@ export const maxDuration = 60;
  *   · ai_usage_logs: 180일 이상
  *   · rate_limits: 1일 이상 (updated_at 기준, 만료된 카운터만)
  */
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("cron.cleanup-audit-logs", async (req: NextRequest) => {
   const auth = req.headers.get("authorization");
   const expected = process.env.CRON_SECRET;
   if (!expected) {
@@ -83,4 +85,4 @@ export async function GET(req: NextRequest) {
     total_deleted: totalDeleted,
     results,
   });
-}
+});

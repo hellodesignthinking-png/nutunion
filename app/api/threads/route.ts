@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 // GET /api/threads — list public threads
 //   ?scope=nut|bolt  &category=<cat>
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("threads", async (req: NextRequest) => {
   const supabase = await createClient();
   const url = new URL(req.url);
   const scope = url.searchParams.get("scope");
@@ -36,4 +38,4 @@ export async function GET(req: NextRequest) {
       "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
     },
   });
-}
+});

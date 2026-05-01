@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 function generateSlug(name: string): string {
@@ -27,7 +29,7 @@ async function verifyHost(supabase: import("@supabase/supabase-js").SupabaseClie
 }
 
 // ── POST: Publish the entire group wiki as one "너트 탭" ────────────────
-export async function POST(request: NextRequest) {
+export const POST = withRouteLog("wiki.publish.post", async (request: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "로그인 필요" }, { status: 401 });
@@ -95,10 +97,10 @@ export async function POST(request: NextRequest) {
   if (groupError) return NextResponse.json({ error: groupError.message }, { status: 500 });
 
   return NextResponse.json({ slug, url: `/wiki/${slug}` });
-}
+});
 
 // ── PATCH: Update tab goal/description (no publish) ────────────────────
-export async function PATCH(request: NextRequest) {
+export const PATCH = withRouteLog("wiki.publish.patch", async (request: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "로그인 필요" }, { status: 401 });
@@ -117,10 +119,10 @@ export async function PATCH(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ success: true });
-}
+});
 
 // ── DELETE: Unpublish (reset to building) ──────────────────────────────
-export async function DELETE(request: NextRequest) {
+export const DELETE = withRouteLog("wiki.publish.delete", async (request: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "로그인 필요" }, { status: 401 });
@@ -178,7 +180,7 @@ export async function DELETE(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ success: true });
-}
+});
 
 // ── Legacy: publish single topic ───────────────────────────────────────
 async function publishSingleTopic(supabase: import("@supabase/supabase-js").SupabaseClient, topicId: string, publicDescription: string, userId: string) {

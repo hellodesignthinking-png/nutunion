@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -6,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
  * 와셔 크리에이터에게 월/연 구독 시작 → 탭 콘텐츠 전체 접근.
  * Body: { tier: 'monthly'|'yearly' }
  */
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export const POST = withRouteLog("creators.id.subscribe.post", async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id: creatorId } = await params;
   const { tier } = await req.json();
   if (!["monthly", "yearly"].includes(tier)) return NextResponse.json({ error: "Invalid tier" }, { status: 400 });
@@ -71,9 +73,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     amount,
     creator: creator.nickname,
   });
-}
+});
 
-export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export const DELETE = withRouteLog("creators.id.subscribe.delete", async (_req: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id: creatorId } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -85,4 +87,4 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     .eq("subscriber_id", user.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
-}
+});

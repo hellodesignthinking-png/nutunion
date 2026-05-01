@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { creatorEconomyEnabled } from "@/lib/flags";
 
@@ -8,7 +10,7 @@ import { creatorEconomyEnabled } from "@/lib/flags";
  *
  * 가격 0원이면 즉시 완료.
  */
-export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export const POST = withRouteLog("tap-store.id.purchase", async (_req: Request, { params }: { params: Promise<{ id: string }> }) => {
   if (!(await creatorEconomyEnabled())) {
     return NextResponse.json({ error: "크리에이터 이코노미 기능이 아직 활성화되지 않았습니다" }, { status: 403 });
   }
@@ -96,4 +98,4 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     platformFee,
     productTitle: product.title,
   });
-}
+});

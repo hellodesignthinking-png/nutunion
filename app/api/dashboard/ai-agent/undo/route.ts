@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
@@ -21,7 +23,7 @@ const ALLOWED_TABLES = new Set([
   "chat_messages",
 ]);
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("dashboard.ai-agent.undo", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -60,4 +62,4 @@ export async function POST(req: NextRequest) {
 
   await db.from("user_ai_actions").delete().eq("id", action.id).eq("user_id", user.id);
   return NextResponse.json({ ok: true });
-}
+});

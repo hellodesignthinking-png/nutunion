@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 import { autoTagInsight } from "@/lib/venture/auto-tag";
@@ -47,7 +49,7 @@ const Body = z.discriminatedUnion("kind", [
   InsightSchema, ProblemSchema, IdeaSchema, TaskSchema, FeedbackSchema,
 ]);
 
-export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) {
+export const POST = withRouteLog("venture.projectId", async (req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) => {
   const { projectId } = await ctx.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -131,4 +133,4 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId:
   }
 
   return NextResponse.json({ success: true, item: result.data });
-}
+});

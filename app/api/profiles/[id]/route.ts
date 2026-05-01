@@ -10,6 +10,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
@@ -24,7 +26,7 @@ function getAdminClient() {
   return createAdminClient(url, key, { auth: { persistSession: false } });
 }
 
-export async function GET(_req: NextRequest, { params }: Ctx) {
+export const GET = withRouteLog("profiles.id", async (_req: NextRequest, { params }: Ctx) => {
   const { id } = await params;
   if (!id || id.length < 8) {
     return NextResponse.json({ error: "invalid id" }, { status: 400 });
@@ -50,4 +52,4 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
       "Cache-Control": "private, max-age=30",
     },
   });
-}
+});

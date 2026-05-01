@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 /** GET /api/personal/tasks?status=todo&limit=20 */
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("personal.tasks.get", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -27,10 +29,10 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ rows: data }, {
     headers: { "Cache-Control": "private, max-age=30, must-revalidate" },
   });
-}
+});
 
 /** POST /api/personal/tasks — 생성 */
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("personal.tasks.post", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -53,10 +55,10 @@ export async function POST(req: NextRequest) {
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ row: data });
-}
+});
 
 /** PATCH /api/personal/tasks — { id, patch } */
-export async function PATCH(req: NextRequest) {
+export const PATCH = withRouteLog("personal.tasks.patch", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -73,10 +75,10 @@ export async function PATCH(req: NextRequest) {
     .maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ row: data });
-}
+});
 
 /** DELETE /api/personal/tasks?id=xxx */
-export async function DELETE(req: NextRequest) {
+export const DELETE = withRouteLog("personal.tasks.delete", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -91,4 +93,4 @@ export async function DELETE(req: NextRequest) {
     .eq("user_id", auth.user.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
-}
+});

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
@@ -13,7 +15,7 @@ const SubmitSchema = z.object({
 });
 
 /** POST /api/funding — 사업계획서 펀딩 제출 (멤버+) */
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("funding", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -55,4 +57,4 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true, submission: inserted });
-}
+});

@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 /**
  * GET /api/admin/duplicate-bolts — 동일한 description 을 가진 볼트 그룹 검출.
  * 관리자가 즉시 개별화해야 할 볼트 리스트.
  */
-export async function GET() {
+export const GET = withRouteLog("admin.duplicate-bolts", async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -44,4 +46,4 @@ export async function GET() {
     affected_bolts: duplicates.reduce((s, g) => s + g.count, 0),
     groups: duplicates,
   });
-}
+});

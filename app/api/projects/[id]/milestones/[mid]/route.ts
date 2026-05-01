@@ -6,6 +6,8 @@
  * automation 이벤트 `project.milestone_completed` 를 dispatch.
  */
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { dispatchEvent } from "@/lib/automation/engine";
 
@@ -13,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 type Ctx = { params: Promise<{ id: string; mid: string }> };
 
-export async function PATCH(req: NextRequest, { params }: Ctx) {
+export const PATCH = withRouteLog("projects.id.milestones.mid.patch", async (req: NextRequest, { params }: Ctx) => {
   const { id, mid } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -63,9 +65,9 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   }
 
   return NextResponse.json({ milestone: data });
-}
+});
 
-export async function DELETE(_: NextRequest, { params }: Ctx) {
+export const DELETE = withRouteLog("projects.id.milestones.mid.delete", async (_: NextRequest, { params }: Ctx) => {
   const { id, mid } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -80,4 +82,4 @@ export async function DELETE(_: NextRequest, { params }: Ctx) {
     .eq("project_id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
-}
+});

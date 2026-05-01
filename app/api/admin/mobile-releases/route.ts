@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -7,7 +9,7 @@ import { createClient } from "@/lib/supabase/server";
  *
  * GET /api/admin/mobile-releases?channel=preview — 채널별 최근 릴리스 목록
  */
-export async function POST(req: Request) {
+export const POST = withRouteLog("admin.mobile-releases.post", async (req: Request) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -36,9 +38,9 @@ export async function POST(req: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ release: data });
-}
+});
 
-export async function GET(req: Request) {
+export const GET = withRouteLog("admin.mobile-releases.get", async (req: Request) => {
   const url = new URL(req.url);
   const channel = url.searchParams.get("channel");
 
@@ -54,4 +56,4 @@ export async function GET(req: Request) {
 
   const { data } = await q;
   return NextResponse.json({ releases: data || [] });
-}
+});

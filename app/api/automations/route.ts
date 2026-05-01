@@ -3,12 +3,14 @@
  * POST /api/automations         — create rule from template
  */
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { findTemplate } from "@/lib/automation/templates";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export const GET = withRouteLog("automations.get", async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -25,9 +27,9 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return NextResponse.json({ rules: data || [] });
-}
+});
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("automations.post", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -67,4 +69,4 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ rule: data });
-}
+});

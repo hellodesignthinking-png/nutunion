@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { getCompanyTransactions } from "@/lib/finance/company-queries";
 import { parseYearMonth, firstDayOfMonth, lastDayOfMonth } from "@/lib/finance/date-utils";
@@ -14,7 +16,7 @@ function csvEscape(value: unknown): string {
   return s;
 }
 
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("finance.transactions.export", async (req: NextRequest) => {
   // 권한 체크
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -92,4 +94,4 @@ export async function GET(req: NextRequest) {
       "Content-Disposition": `attachment; filename*=UTF-8''${encoded}`,
     },
   });
-}
+});

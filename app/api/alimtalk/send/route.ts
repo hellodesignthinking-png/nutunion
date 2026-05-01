@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { sendAlimtalk, type AlimtalkTemplate } from "@/lib/alimtalk/send";
 
@@ -8,7 +10,7 @@ import { sendAlimtalk, type AlimtalkTemplate } from "@/lib/alimtalk/send";
  * Body: { userId?, phone?, template, variables }
  *   - userId 있으면 profiles.phone 자동 조회
  */
-export async function POST(req: Request) {
+export const POST = withRouteLog("alimtalk.send", async (req: Request) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -32,4 +34,4 @@ export async function POST(req: Request) {
 
   const result = await sendAlimtalk({ userId, phone, template, variables: variables || {} });
   return NextResponse.json(result, { status: result.ok ? 200 : 500 });
-}
+});

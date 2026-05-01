@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 
 /**
  * 토스 결제 성공 리다이렉트 핸들러.
  * 토스는 successUrl 로 paymentKey/orderId/amount 를 쿼리 파라미터로 전달함.
  * 여기서 confirm API 를 호출 → 결과에 따라 UI 로 리다이렉트.
  */
-export async function GET(req: Request) {
+export const GET = withRouteLog("payments.toss.success", async (req: Request) => {
   const url = new URL(req.url);
   const paymentKey = url.searchParams.get("paymentKey");
   const orderId = url.searchParams.get("orderId");
@@ -30,4 +32,4 @@ export async function GET(req: Request) {
     return NextResponse.redirect(new URL("/dashboard?payment=failed", req.url));
   }
   return NextResponse.redirect(new URL("/dashboard?payment=success", req.url));
-}
+});

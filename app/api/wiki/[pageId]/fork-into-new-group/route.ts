@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
@@ -17,7 +19,7 @@ const Schema = z.object({
  * 원클릭: 새 너트(그룹) 생성 → 기본 토픽 생성 → 페이지 파생.
  * 생성자는 호스트가 됨. 원본 페이지의 original_author_id 는 보존.
  */
-export async function POST(req: NextRequest, ctx: { params: Promise<{ pageId: string }> }) {
+export const POST = withRouteLog("wiki.pageId.fork-into-new-group", async (req: NextRequest, ctx: { params: Promise<{ pageId: string }> }) => {
   const { pageId } = await ctx.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -93,4 +95,4 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ pageId: st
     topic_id: topic.id,
     page_id: forked.id,
   });
-}
+});

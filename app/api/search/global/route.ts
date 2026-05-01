@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +26,7 @@ function snip(text: string | null | undefined, q: string, len = 150): string {
   return (start > 0 ? "…" : "") + text.slice(start, end) + (end < text.length ? "…" : "");
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("search.global", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -99,4 +101,4 @@ export async function POST(req: NextRequest) {
   for (const r of results) counts[r.kind] = (counts[r.kind] || 0) + 1;
 
   return NextResponse.json({ results, counts });
-}
+});

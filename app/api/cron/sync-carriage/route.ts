@@ -8,6 +8,8 @@
  */
 
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@supabase/supabase-js";
 import { syncCarriageDaily } from "@/lib/bolt/integrations";
 import { dispatchNotification } from "@/lib/notifications/dispatch";
@@ -15,7 +17,7 @@ import { dispatchNotification } from "@/lib/notifications/dispatch";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-export async function GET(req: Request) {
+export const GET = withRouteLog("cron.sync-carriage", async (req: Request) => {
   const auth = req.headers.get("authorization") || "";
   if (process.env.CRON_SECRET && auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -107,4 +109,4 @@ export async function GET(req: Request) {
 
   console.log("[cron sync-carriage]", summary);
   return NextResponse.json(summary);
-}
+});

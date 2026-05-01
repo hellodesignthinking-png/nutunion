@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
 /** GET /api/chat-digest/[id] */
-export async function GET(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
+export const GET = withRouteLog("chat-digest.id.get", async (_req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   const { id } = await context.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -19,10 +21,10 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!data) return NextResponse.json({ error: "없음" }, { status: 404 });
   return NextResponse.json({ digest: data });
-}
+});
 
 /** PATCH /api/chat-digest/[id] — 작성자 또는 admin/staff 만 */
-export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+export const PATCH = withRouteLog("chat-digest.id.patch", async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   const { id } = await context.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -45,10 +47,10 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
-}
+});
 
 /** DELETE /api/chat-digest/[id] */
-export async function DELETE(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
+export const DELETE = withRouteLog("chat-digest.id.delete", async (_req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   const { id } = await context.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -57,4 +59,4 @@ export async function DELETE(_req: NextRequest, context: { params: Promise<{ id:
   const { error } = await supabase.from("chat_digests").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
-}
+});

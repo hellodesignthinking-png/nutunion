@@ -6,11 +6,13 @@
  */
 
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export const GET = withRouteLog("google.auth.status", async () => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) {
@@ -30,4 +32,4 @@ export async function GET() {
     connected: true,
     scopes: (data as any).scopes || null,
   });
-}
+});

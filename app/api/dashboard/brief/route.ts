@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -12,7 +14,7 @@ export const dynamic = "force-dynamic";
  *   - 오늘/지난 할일 (staff_tasks, project_tasks)
  *   - 가입/관리 중인 너트/볼트 진행 상황
  */
-export async function GET(_req: NextRequest) {
+export const GET = withRouteLog("dashboard.brief", async (_req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -165,4 +167,4 @@ export async function GET(_req: NextRequest) {
       dueSoon: dueSoon.length,
     },
   });
-}
+});

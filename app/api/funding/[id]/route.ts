@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 import { dispatchPushToUsers } from "@/lib/push/dispatch";
@@ -11,7 +13,7 @@ const UpdateSchema = z.object({
 });
 
 /** PATCH /api/funding/[id] — admin/staff 만 상태 변경 */
-export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export const PATCH = withRouteLog("funding.id", async (req: NextRequest, ctx: { params: Promise<{ id: string }> }) => {
   const { id } = await ctx.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -79,4 +81,4 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   }
 
   return NextResponse.json({ success: true });
-}
+});

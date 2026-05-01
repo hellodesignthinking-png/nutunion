@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -9,7 +11,7 @@ import { createClient } from "@/lib/supabase/server";
  *
  * 코호트: 가입 주차별 → N주차 retention (stiffness 변동 또는 updated_at 최근성)
  */
-export async function GET() {
+export const GET = withRouteLog("admin.analytics", async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -90,4 +92,4 @@ export async function GET() {
     cohorts: cohortRows,
     generated_at: new Date().toISOString(),
   });
-}
+});

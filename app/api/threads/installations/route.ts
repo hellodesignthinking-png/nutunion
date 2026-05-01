@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 // GET /api/threads/installations?target_type=&target_id=
-export async function GET(req: NextRequest) {
+export const GET = withRouteLog("threads.installations", async (req: NextRequest) => {
   const supabase = await createClient();
   const url = new URL(req.url);
   const target_type = url.searchParams.get("target_type");
@@ -37,4 +39,4 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({ installations: data || [] });
-}
+});

@@ -2,6 +2,8 @@
  * GET /api/chat/rooms/[id] — 방 메타 (RLS 우회용 service_role 쿼리)
  */
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
@@ -15,7 +17,7 @@ function getAdminClient() {
   return createAdminClient(url, key, { auth: { persistSession: false } });
 }
 
-export async function GET(_req: NextRequest, { params }: Ctx) {
+export const GET = withRouteLog("chat.rooms.id", async (_req: NextRequest, { params }: Ctx) => {
   const { id } = await params;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -45,4 +47,4 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return NextResponse.json({ room });
-}
+});

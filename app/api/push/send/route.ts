@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { z } from "zod";
@@ -24,7 +26,7 @@ const SendSchema = z.object({
  * - admin/staff 만 다른 사용자에게 발송 가능
  * - target: "self" 는 본인에게 테스트 발송
  */
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("push.send", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -111,4 +113,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ success: true, sent, expired });
-}
+});

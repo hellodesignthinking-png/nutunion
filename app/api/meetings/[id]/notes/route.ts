@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -8,7 +10,7 @@ import { createClient } from "@/lib/supabase/server";
  * Tries meetings.notes first (migration 110). Falls back to meeting_notes
  * single-row upsert (type='live', content=notes) when the column is missing.
  */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const POST = withRouteLog("meetings.id.notes", async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   const { id: meetingId } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -67,4 +69,4 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   return NextResponse.json({ ok: true });
-}
+});

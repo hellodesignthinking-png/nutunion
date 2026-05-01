@@ -11,6 +11,8 @@
  */
 
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import {
   getDriveStorageTarget,
@@ -19,7 +21,7 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export const GET = withRouteLog("google.drive.storage-status", async () => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -45,4 +47,4 @@ export async function GET() {
         ? "GOOGLE_SHARED_DRIVE_ID 환경변수 설정 시 호스트 탈퇴 영향 없는 공유 드라이브로 전환됩니다."
         : null,
   });
-}
+});

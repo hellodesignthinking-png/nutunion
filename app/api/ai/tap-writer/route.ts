@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { askClaude } from "@/lib/ai/client";
 
@@ -10,7 +12,7 @@ export const maxDuration = 30;
  * → Claude 가 회고록 초안 (Markdown, 800~1200자) 생성.
  */
 
-export async function POST(req: Request) {
+export const POST = withRouteLog("ai.tap-writer", async (req: Request) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -53,4 +55,4 @@ A3. ${answers.nextBolt ?? "—"}
 
   if (!result.text) return NextResponse.json({ error: result.error || "AI 호출 실패", stubbed: result.stubbed }, { status: 500 });
   return NextResponse.json({ draft: result.text });
-}
+});

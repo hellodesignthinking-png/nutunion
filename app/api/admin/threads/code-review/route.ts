@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 // POST /api/admin/threads/code-review
 // Body: { thread_id: string, is_public: boolean }
 // Admin-only: toggles public visibility of a code-mode Thread.
 
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("admin.threads.code-review", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -26,4 +28,4 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ ok: true, is_public });
-}
+});

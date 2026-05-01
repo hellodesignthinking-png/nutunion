@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
@@ -15,7 +17,7 @@ function getAdminClient() {
 /**
  * GET /api/chat/rooms — 내가 멤버인 모든 방 + last message preview + unread count
  */
-export async function GET() {
+export const GET = withRouteLog("chat.rooms.get", async () => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -100,13 +102,13 @@ export async function GET() {
   });
 
   return NextResponse.json({ rooms: enriched });
-}
+});
 
 /**
  * POST /api/chat/rooms — DM 시작 or 너트/볼트 방 ensure
  * Body: { dm_target?: userId, group_id?: id, project_id?: id }
  */
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("chat.rooms.post", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -164,4 +166,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ room_id: roomId });
-}
+});

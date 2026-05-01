@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
@@ -14,7 +16,7 @@ const SubscribeSchema = z.object({
 });
 
 /** POST — 새 구독 등록 (upsert on endpoint) */
-export async function POST(req: NextRequest) {
+export const POST = withRouteLog("push.subscribe.post", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -45,10 +47,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "저장 실패" }, { status: 500 });
   }
   return NextResponse.json({ success: true });
-}
+});
 
 /** DELETE — 구독 해제 (endpoint 기준) */
-export async function DELETE(req: NextRequest) {
+export const DELETE = withRouteLog("push.subscribe.delete", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -64,4 +66,4 @@ export async function DELETE(req: NextRequest) {
     .eq("endpoint", endpoint);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
-}
+});

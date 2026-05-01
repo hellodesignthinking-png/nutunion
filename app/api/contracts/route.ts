@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { contractsEnabled } from "@/lib/flags";
 import { renderTemplate, calcWithholding, type ContractTemplateKey } from "@/lib/contracts/templates";
@@ -7,7 +9,7 @@ import { renderTemplate, calcWithholding, type ContractTemplateKey } from "@/lib
  * POST /api/contracts — 계약서 생성
  * Body: { projectId, template, title, amount, startDate, endDate, clientId, contractorId }
  */
-export async function POST(req: Request) {
+export const POST = withRouteLog("contracts.post", async (req: Request) => {
   if (!(await contractsEnabled())) {
     return NextResponse.json({ error: "기능이 아직 활성화되지 않았습니다" }, { status: 403 });
   }
@@ -55,13 +57,13 @@ export async function POST(req: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ id: data.id, termsMd, withholding: calcWithholding(Number(amount) || 0) });
-}
+});
 
 /**
  * PATCH /api/contracts?id=xxx — 서명 / 상태 업데이트
  * Body: { action: 'sign_client' | 'sign_contractor' | 'cancel', signatureName? }
  */
-export async function PATCH(req: Request) {
+export const PATCH = withRouteLog("contracts.patch", async (req: Request) => {
   const url = new URL(req.url);
   const id = url.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
@@ -100,4 +102,4 @@ export async function PATCH(req: Request) {
   const { error } = await supabase.from("project_contracts").update(patch).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true, status: patch.status });
-}
+});

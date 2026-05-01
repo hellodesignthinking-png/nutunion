@@ -158,7 +158,9 @@
       "Bash(grep -rn \"google_drive_folder_id\\\\|drive_folder_id\" /Users/TaiNa0/Desktop/nutunion/supabase/migrations/*.sql)",
       "Bash(grep -l \"meetings\" /Users/TaiNa0/Desktop/nutunion/supabase/migrations/*.sql)",
       "Bash(npm list:*)",
-      "Bash(sudo npm:*)"
+      "Bash(sudo npm:*)",
+      "Bash(python3 /tmp/wrap_remaining.py)",
+      "Bash(echo \"EXIT=$?\")"
     ]
   }
 }

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { resolveFileUrl, isStorageRef } from "@/lib/finance/storage";
 
@@ -12,7 +14,7 @@ import { resolveFileUrl, isStorageRef } from "@/lib/finance/storage";
  *
  * 반환: { url: string | null }
  */
-export async function GET(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
+export const GET = withRouteLog("finance.transactions.id.receipt.view", async (_req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   const { id } = await context.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -38,4 +40,4 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
     url,
     is_storage: isStorageRef(raw),
   });
-}
+});

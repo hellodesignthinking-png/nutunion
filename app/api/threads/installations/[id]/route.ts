@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 // PATCH /api/threads/installations/[id]
 //   body: { position?, config?, is_enabled? }
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const PATCH = withRouteLog("threads.installations.id.patch", async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -31,10 +33,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!data) return NextResponse.json({ error: "not_found_or_forbidden" }, { status: 404 });
 
   return NextResponse.json({ installation: data });
-}
+});
 
 // DELETE /api/threads/installations/[id]
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const DELETE = withRouteLog("threads.installations.id.delete", async (_req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -43,4 +45,4 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const { error } = await supabase.from("thread_installations").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
-}
+});

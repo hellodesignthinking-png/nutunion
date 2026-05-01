@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 // GET /api/threads/[slug] — thread meta + top reviews
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+export const GET = withRouteLog("threads.slug", async (_req: NextRequest, { params }: { params: Promise<{ slug: string }> }) => {
   const { slug } = await params;
   const supabase = await createClient();
 
@@ -37,4 +39,4 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
     reviews: reviews || [],
     install_count: installCount ?? 0,
   });
-}
+});

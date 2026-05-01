@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
@@ -21,7 +23,7 @@ function ytThumb(url: string | null | undefined): string | null {
 }
 
 /** GET — 프로젝트의 모든 source 리스트 */
-export async function GET(_req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) {
+export const GET = withRouteLog("venture.projectId.sources.get", async (_req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) => {
   const { projectId } = await ctx.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -36,10 +38,10 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ projectId:
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ sources: data ?? [] });
-}
+});
 
 /** POST — 새 source 추가 */
-export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) {
+export const POST = withRouteLog("venture.projectId.sources.post", async (req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) => {
   const { projectId } = await ctx.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -94,10 +96,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ projectId:
   // AI 요약은 비동기 트리거 (fire-and-forget, 실패해도 insert 는 성공)
   // 클라이언트는 이후 별도로 summary 생성 요청 가능
   return NextResponse.json({ source: data });
-}
+});
 
 /** DELETE — ?id=xxx */
-export async function DELETE(req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) {
+export const DELETE = withRouteLog("venture.projectId.sources.delete", async (req: NextRequest, ctx: { params: Promise<{ projectId: string }> }) => {
   const { projectId } = await ctx.params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -115,4 +117,4 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ projectI
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
-}
+});

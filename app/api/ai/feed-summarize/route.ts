@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { askClaude } from "@/lib/ai/client";
 
@@ -9,7 +11,7 @@ export const maxDuration = 30;
  * Body: { groupId } — 특정 너트의 이번 주 활동을 3줄로 요약.
  */
 
-export async function POST(req: Request) {
+export const POST = withRouteLog("ai.feed-summarize", async (req: Request) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -73,4 +75,4 @@ ${joinLines}
   });
   if (!result.text) return NextResponse.json({ error: result.error }, { status: 500 });
   return NextResponse.json({ summary: result.text.trim(), groupName: group.name });
-}
+});

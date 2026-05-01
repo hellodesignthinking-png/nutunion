@@ -9,6 +9,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +19,7 @@ type RouteCtx = { params: Promise<{ id: string }> };
 
 const ALLOWED_PERIODS = ["daily", "weekly", "monthly"] as const;
 
-export async function GET(req: NextRequest, { params }: RouteCtx) {
+export const GET = withRouteLog("bolts.id.metrics.get", async (req: NextRequest, { params }: RouteCtx) => {
   const { id } = await params;
   const supabase = await createClient();
 
@@ -48,9 +50,9 @@ export async function GET(req: NextRequest, { params }: RouteCtx) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return NextResponse.json({ rows: data ?? [] });
-}
+});
 
-export async function POST(req: NextRequest, { params }: RouteCtx) {
+export const POST = withRouteLog("bolts.id.metrics.post", async (req: NextRequest, { params }: RouteCtx) => {
   const { id } = await params;
   const supabase = await createClient();
 
@@ -100,4 +102,4 @@ export async function POST(req: NextRequest, { params }: RouteCtx) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return NextResponse.json({ row: data });
-}
+});

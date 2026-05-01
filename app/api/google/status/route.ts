@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
-export async function GET() {
+export const GET = withRouteLog("google.status.get", async () => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -30,10 +32,10 @@ export async function GET() {
     tokenExpired: isExpired,
     connectUrl: "/api/auth/google",
   }, { headers: { "Cache-Control": "no-store, max-age=0" } });
-}
+});
 
 // DELETE: Google 연결 해제
-export async function DELETE() {
+export const DELETE = withRouteLog("google.status.delete", async () => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -53,4 +55,4 @@ export async function DELETE() {
     .eq("id", user.id);
 
   return NextResponse.json({ disconnected: true });
-}
+});

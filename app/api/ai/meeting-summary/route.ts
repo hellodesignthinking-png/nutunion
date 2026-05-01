@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -114,7 +115,7 @@ const SYSTEM_PROMPT = `당신은 NutUnion 플랫폼의 AI 회의록 정리 어�
 - **speakers**: 등장한 모든 화자에 대해 한 줄 기여도 요약
 - 내용이 부족하면 있는 만큼만 정리. 빈 배열/null 허용`;
 
-export async function POST(request: NextRequest) {
+export const POST = withRouteLog("ai.meeting-summary", async (request: NextRequest) => {
   if (!GEMINI_API_KEY) {
     return NextResponse.json(
       { error: "GEMINI_API_KEY가 설정되지 않았습니다. Vercel 환경변수에 GEMINI_API_KEY를 추가해주세요." },
@@ -473,7 +474,7 @@ export async function POST(request: NextRequest) {
     const msg = error instanceof Error ? error.message : "회의록 생성 중 오류가 발생했습니다";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
-}
+});
 
 /**
  * JSON 파싱 시도 — 원본 그대로 / 흔한 LLM 에러 복구 / 실패 시 null.

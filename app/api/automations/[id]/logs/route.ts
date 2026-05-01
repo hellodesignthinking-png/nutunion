@@ -2,12 +2,14 @@
  * GET /api/automations/:id/logs — recent execution logs for rule
  */
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
 
-export async function GET(_: NextRequest, { params }: Ctx) {
+export const GET = withRouteLog("automations.id.logs", async (_: NextRequest, { params }: Ctx) => {
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -31,4 +33,4 @@ export async function GET(_: NextRequest, { params }: Ctx) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ logs: data || [] });
-}
+});

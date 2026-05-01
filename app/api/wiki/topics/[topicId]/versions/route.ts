@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 
 // GET /api/wiki/topics/[topicId]/versions
 // 통합탭의 모든 버전 히스토리 (최신순)
-export async function GET(
+export const GET = withRouteLog("wiki.topics.topicId.versions", async (
   _request: NextRequest,
   { params }: { params: Promise<{ topicId: string }> },
-) {
+) => {
   const { topicId } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -42,4 +44,4 @@ export async function GET(
   }));
 
   return NextResponse.json({ versions });
-}
+});

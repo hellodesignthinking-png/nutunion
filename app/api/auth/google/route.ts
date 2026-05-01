@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createOAuth2Client, GOOGLE_SCOPES } from "@/lib/google/auth";
 
-export async function GET(req: Request) {
+export const GET = withRouteLog("auth.google", async (req: Request) => {
   const urlParams = new URL(req.url).searchParams;
   const returnTo = urlParams.get("returnTo") || "/dashboard";
   
@@ -15,4 +17,4 @@ export async function GET(req: Request) {
   });
 
   return NextResponse.redirect(url);
-}
+});

@@ -6,6 +6,8 @@
  * On reject  → mark rejected. Underlying log gets status = rejected.
  */
 import { NextRequest, NextResponse } from "next/server";
+import { log } from "@/lib/observability/logger";
+import { withRouteLog } from "@/lib/observability/route-handler";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { executeActions } from "@/lib/automation/engine";
@@ -21,7 +23,7 @@ function getAdmin() {
   return createAdminClient(url, key, { auth: { persistSession: false } });
 }
 
-export async function POST(req: NextRequest, { params }: Ctx) {
+export const POST = withRouteLog("automations.approvals.id.decide", async (req: NextRequest, { params }: Ctx) => {
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -89,4 +91,4 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     .eq("id", (approval as any).log_id);
 
   return NextResponse.json({ ok: true, decision, result });
-}
+});
