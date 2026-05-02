@@ -25,7 +25,7 @@ import { createClient } from "@/lib/supabase/server";
 
 type ActivityItem = {
   id: string;
-  source_kind: "space" | "post" | "join" | "milestone" | "application" | "tap";
+  source_kind: "space" | "post" | "join" | "milestone" | "application" | "tap" | "comment" | "reaction";
   owner_type: "nut" | "bolt";
   owner_id: string;
   owner_name: string;
@@ -99,6 +99,30 @@ export const GET = withRouteLog("activity.global.get", async (req: NextRequest) 
   const groupIn = groupIds.length > 0;
   const boltIn  = boltIds.length > 0;
 
+  // 댓글 호출용 — 30일 이내 부모 글 id 맵 (comments.target_id 가 매칭될 후보)
+  const COMMENT_PARENT_WINDOW = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+  const [parentUpdateIds, parentCrewIds] = await Promise.all([
+    boltIn
+      ? supabase.from("project_updates")
+          .select("id, project_id")
+          .in("project_id", boltIds)
+          .gte("created_at", COMMENT_PARENT_WINDOW)
+      : Promise.resolve({ data: [] as Row[] }),
+    groupIn
+      ? supabase.from("crew_posts")
+          .select("id, group_id")
+          .in("group_id", groupIds)
+          .gte("created_at", COMMENT_PARENT_WINDOW)
+      : Promise.resolve({ data: [] as Row[] }),
+  ]);
+  const updateIdToProject = new Map<string, string>();
+  for (const r of (parentUpdateIds.data || []) as Row[]) updateIdToProject.set(r.id as string, r.project_id as string);
+  const crewIdToGroup = new Map<string, string>();
+  for (const r of (parentCrewIds.data || []) as Row[]) crewIdToGroup.set(r.id as string, r.group_id as string);
+
+  const updateIds = [...updateIdToProject.keys()];
+  const crewIds   = [...crewIdToGroup.keys()];
+
   const [
     spaceRes,
     postsRes,
@@ -106,6 +130,8 @@ export const GET = withRouteLog("activity.global.get", async (req: NextRequest) 
     joinsRes,
     msRes,
     appsRes,
+    cmtUpdateRes,
+    cmtCrewRes,
   ] = await Promise.all([
     (groupIn || boltIn)
       ? supabase.from("space_activity_log")
@@ -159,6 +185,24 @@ export const GET = withRouteLog("activity.global.get", async (req: NextRequest) 
           .select("id, project_id, status, created_at, applicant:profiles!project_applications_applicant_id_fkey(id, nickname, avatar_url)")
           .in("project_id", [...iAmPm])
           .eq("status", "pending")
+          .gte("created_at", since)
+          .order("created_at", { ascending: false })
+          .limit(20)
+      : Promise.resolve({ data: [] as Row[] }),
+    updateIds.length > 0
+      ? supabase.from("comments")
+          .select("id, target_id, content, created_at, author:profiles!comments_author_id_fkey(id, nickname, avatar_url)")
+          .eq("target_type", "project_update")
+          .in("target_id", updateIds)
+          .gte("created_at", since)
+          .order("created_at", { ascending: false })
+          .limit(20)
+      : Promise.resolve({ data: [] as Row[] }),
+    crewIds.length > 0
+      ? supabase.from("comments")
+          .select("id, target_id, content, created_at, author:profiles!comments_author_id_fkey(id, nickname, avatar_url)")
+          .eq("target_type", "crew_post")
+          .in("target_id", crewIds)
           .gte("created_at", since)
           .order("created_at", { ascending: false })
           .limit(20)
@@ -294,6 +338,50 @@ export const GET = withRouteLog("activity.global.get", async (req: NextRequest) 
       summary: `신규 지원 — ${a?.nickname || "와셔"}`,
       href: `/projects/${pid}/applications`,
       importance: 2,
+      created_at: r.created_at as string,
+    });
+  }
+
+  // 3-7) comments on project_updates (볼트 활동 글에 달린 댓글)
+  for (const r of (cmtUpdateRes.data || []) as Row[]) {
+    const pid = updateIdToProject.get(r.target_id as string);
+    if (!pid) continue;
+    const a = pickOne<{ id: string; nickname: string; avatar_url: string | null }>(r.author);
+    items.push({
+      id: `cmt-pu-${r.id as string}`,
+      source_kind: "comment",
+      owner_type: "bolt",
+      owner_id: pid,
+      owner_name: projectNames.get(pid) || "볼트",
+      actor_id: a?.id ?? null,
+      actor_nickname: a?.nickname ?? null,
+      actor_avatar: a?.avatar_url ?? null,
+      action: "comment.added",
+      summary: `댓글 — ${(r.content as string || "").slice(0, 80)}`,
+      href: `/projects/${pid}?tab=activity`,
+      importance: 1,
+      created_at: r.created_at as string,
+    });
+  }
+
+  // 3-8) comments on crew_posts (너트 게시물에 달린 댓글)
+  for (const r of (cmtCrewRes.data || []) as Row[]) {
+    const gid = crewIdToGroup.get(r.target_id as string);
+    if (!gid) continue;
+    const a = pickOne<{ id: string; nickname: string; avatar_url: string | null }>(r.author);
+    items.push({
+      id: `cmt-cp-${r.id as string}`,
+      source_kind: "comment",
+      owner_type: "nut",
+      owner_id: gid,
+      owner_name: groupNames.get(gid) || "너트",
+      actor_id: a?.id ?? null,
+      actor_nickname: a?.nickname ?? null,
+      actor_avatar: a?.avatar_url ?? null,
+      action: "comment.added",
+      summary: `댓글 — ${(r.content as string || "").slice(0, 80)}`,
+      href: `/groups/${gid}`,
+      importance: 1,
       created_at: r.created_at as string,
     });
   }

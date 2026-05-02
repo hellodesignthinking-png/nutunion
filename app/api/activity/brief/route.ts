@@ -23,19 +23,15 @@ const BriefSchema = z.object({
   })).max(6),
 });
 
-function periodOfDay(): "morning" | "evening" | "realtime" {
-  const h = new Date().getHours();
-  if (h < 12) return "morning";
-  if (h < 22) return "realtime";
-  return "evening";
-}
+/** 같은 날 동일 캐시 — 새로고침 버튼으로 강제 재생성. */
+const BRIEF_TYPE = "realtime" as const;
 
 export const GET = withRouteLog("activity.brief.get", async (req: NextRequest) => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const period = periodOfDay();
+  const period = BRIEF_TYPE;
   const today = new Date().toISOString().slice(0, 10);
   const force = req.nextUrl.searchParams.get("refresh") === "1";
 

@@ -148,10 +148,15 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
   const [layoutMenuOpen, setLayoutMenuOpen] = useState(false);
   // 다중 선택 — reactflow onSelectionChange 가 갱신.
   const [selection, setSelection] = useState<{ nodes: RFNode[]; edges: RFEdge[] }>({ nodes: [], edges: [] });
-  // L11 — owner(nut/bolt) 별 미확인 활동 카운트. /api/activity/global?summary=1 폴링.
+  // L11.1 — owner(nut/bolt) 별 미확인 카운트.
+  //  • 초기 + 백업 폴링 (5분)
+  //  • Realtime: 새 활동/댓글 INSERT 시 즉시 재조회 (debounce 300ms)
   const [unreadByOwner, setUnreadByOwner] = useState<Record<string, number>>({});
   useEffect(() => {
     let alive = true;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const supabase = createBrowserClient();
+
     const fetchUnread = async () => {
       try {
         const r = await fetch("/api/activity/global?summary=1&limit=1");
@@ -159,9 +164,26 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
         if (alive && j?.summary?.unread) setUnreadByOwner(j.summary.unread);
       } catch { /* ignore */ }
     };
+    const debouncedFetch = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(fetchUnread, 300);
+    };
+
     fetchUnread();
-    const t = setInterval(fetchUnread, 90_000);
-    return () => { alive = false; clearInterval(t); };
+    const ch = supabase.channel("mindmap-activity-badges")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "space_activity_log" }, debouncedFetch)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "project_updates"   }, debouncedFetch)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "crew_posts"        }, debouncedFetch)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "comments"          }, debouncedFetch)
+      .subscribe();
+    const t = setInterval(fetchUnread, 5 * 60_000);
+
+    return () => {
+      alive = false;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      clearInterval(t);
+      supabase.removeChannel(ch);
+    };
   }, []);
 
   // collapsed 복원/저장 — localStorage 만 (서버 영속은 과한 비용)
