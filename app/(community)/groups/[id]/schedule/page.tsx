@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Clock, MapPin, Calendar, BookOpen, Download, X, Trash2, Edit3, ExternalLink } from "lucide-react";
 import { GoogleCalendarButton } from "@/components/integrations/google-calendar-button";
 import { EventRsvpButton } from "@/components/groups/event-rsvp-button";
+import { MeetingNotesHistory } from "@/components/groups/meeting-notes-history";
 
 interface EventItem {
   id: string;
@@ -615,6 +616,9 @@ export default function SchedulePage() {
           <p className="text-nu-muted text-xs mt-1">달력 날짜를 클릭하여 일정을 추가하세요</p>
         </div>
       )}
+
+      {/* 회의록 히스토리 — 지난 미팅의 결정·액션·메모 누적 */}
+      <MeetingNotesHistory groupId={groupId} />
 
       {/* ========== Day Modal ========== */}
       {dayModalDate && (
