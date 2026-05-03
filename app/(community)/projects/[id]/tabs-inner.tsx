@@ -33,6 +33,8 @@ import {
   HelpCircle,
   Archive,
   Sparkles,
+  Brain,
+  Share2,
 } from "lucide-react";
 import { MilestoneList } from "@/components/projects/milestone-list";
 import { ProjectActivityFeed } from "@/components/projects/project-activity-feed";
@@ -56,6 +58,8 @@ import { TorqueView } from "@/components/bolt/torque/TorqueView";
 import { BoltCalendar } from "@/components/bolt/bolt-calendar";
 import { ConsultingAddonManager } from "@/components/bolt/consulting-addon-manager";
 import { ProjectModulesBoard } from "@/components/projects/project-modules-board";
+import { ProjectOsPanel } from "@/components/projects/project-os-panel";
+import { ProjectShareModal } from "@/components/projects/project-share-modal";
 import { MeetingArchiveTimeline } from "@/components/meetings/meeting-archive-timeline";
 
 // 메뉴 통일 (2026-04) — 단일 탭바 한 줄로 모든 기능 접근.
@@ -63,6 +67,7 @@ import { MeetingArchiveTimeline } from "@/components/meetings/meeting-archive-ti
 // insights/modules/calendar 는 각 영역 내부에서 접근 (탭바 노출 안 함).
 const baseTabs = [
   { key: "overview",   label: "홈",       icon: Target },
+  { key: "os",         label: "OS",       icon: Brain },
   { key: "kanban",     label: "할 일",    icon: CheckSquare },
   { key: "milestones", label: "마일스톤", icon: Layers },
   { key: "meetings",   label: "일정",     icon: FileText },
@@ -155,6 +160,7 @@ export function TabsInner({
   const archivedMeetings = archivedMeetingsData ? JSON.parse(archivedMeetingsData) : [];
 
   // ── Live task stats (refreshable on client) ──
+  const [shareOpen, setShareOpen] = useState(false);
   const [liveTaskStats, setLiveTaskStats] = useState(taskStats);
   const [liveTotalTasks, setLiveTotalTasks] = useState(totalTasks);
   const [liveProgressPct, setLiveProgressPct] = useState(progressPct);
@@ -726,6 +732,32 @@ export function TabsInner({
           />
         </div>
       )}
+
+      {/* OS Tab — AI PM 브리핑 + 결정 로그 + 리스크 (협업 OS 핵심) */}
+      {activeTab === "os" && (
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div>
+              <h1 className="font-head text-2xl font-extrabold text-nu-ink">프로젝트 OS</h1>
+              <p className="text-[12px] text-nu-muted mt-0.5">
+                AI 가 분석한 우선순위 · 결정 로그 · 리스크 + 외부 공유 링크 4단 권한.
+              </p>
+            </div>
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => setShareOpen(true)}
+                className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-4 py-2 bg-nu-pink text-nu-paper hover:bg-nu-pink/90 inline-flex items-center gap-1.5"
+              >
+                <Share2 size={12} /> 외부 공유
+              </button>
+            )}
+          </div>
+          <ProjectOsPanel projectId={projectId} canEdit={canEdit} />
+        </div>
+      )}
+
+      <ProjectShareModal projectId={projectId} open={shareOpen} onClose={() => setShareOpen(false)} />
 
       {/* ── Wiki/Tap Tab — 빈 탭 사용법 가이드 + 풀 에디터 진입 ─────────── */}
       {activeTab === "wiki" && (
