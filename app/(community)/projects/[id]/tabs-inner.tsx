@@ -55,6 +55,7 @@ import { WingDashboard } from "@/components/bolt/wing/wing-dashboard";
 import { TorqueView } from "@/components/bolt/torque/TorqueView";
 import { BoltCalendar } from "@/components/bolt/bolt-calendar";
 import { ConsultingAddonManager } from "@/components/bolt/consulting-addon-manager";
+import { ProjectModulesBoard } from "@/components/projects/project-modules-board";
 import { MeetingArchiveTimeline } from "@/components/meetings/meeting-archive-timeline";
 
 // 메뉴 통일 (2026-04) — 단일 탭바 한 줄로 모든 기능 접근.
@@ -72,7 +73,7 @@ const baseTabs = [
   { key: "settings",   label: "설정",     icon: Settings, leadOnly: true },
   // 숨김 탭 — URL ?tab= 또는 내부 링크로만 접근
   { key: "insights",   label: "인사이트", icon: BarChart3, hidden: true },
-  { key: "modules",    label: "모듈",     icon: Puzzle,    hidden: true },
+  { key: "modules",    label: "모듈",     icon: Puzzle },
   { key: "calendar",   label: "캘린더",   icon: Calendar,  hidden: true },
 ];
 
@@ -242,16 +243,6 @@ export function TabsInner({
             projectId={projectId}
             projectTitle={project?.title || "컨설팅"}
             torqueMeta={null}
-          />
-        </div>
-      )}
-
-      {/* 모듈 탭 — 모든 볼트 유형에서 접근 가능 */}
-      {activeTab === "modules" && (
-        <div className="max-w-5xl mx-auto py-6">
-          <ConsultingAddonManager
-            projectId={projectId}
-            canEdit={canEdit}
           />
         </div>
       )}
@@ -594,10 +585,15 @@ export function TabsInner({
         />
       )}
 
-      {/* Modules 탭 — Quick Actions 또는 ?tab=modules 로 접근 */}
+      {/* Modules 탭 — 자유 모듈 보드 (노션처럼) + 컨설팅 애드온 관리 (consulting 타입 전용) */}
       {activeTab === "modules" && (
-        <div className="max-w-5xl mx-auto py-6">
-          <ConsultingAddonManager projectId={projectId} canEdit={canEdit} />
+        <div className="max-w-6xl mx-auto py-6 space-y-8">
+          <ProjectModulesBoard projectId={projectId} canEdit={canEdit} />
+          {project?.type === "torque" && (
+            <div className="border-t-2 border-nu-ink/10 pt-6">
+              <ConsultingAddonManager projectId={projectId} canEdit={canEdit} />
+            </div>
+          )}
         </div>
       )}
 
