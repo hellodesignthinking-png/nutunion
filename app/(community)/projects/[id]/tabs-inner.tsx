@@ -35,6 +35,7 @@ import {
   Sparkles,
   Brain,
   Share2,
+  MessageSquare,
 } from "lucide-react";
 import { MilestoneList } from "@/components/projects/milestone-list";
 import { ProjectActivityFeed } from "@/components/projects/project-activity-feed";
@@ -60,6 +61,7 @@ import { ConsultingAddonManager } from "@/components/bolt/consulting-addon-manag
 import { ProjectModulesBoard } from "@/components/projects/project-modules-board";
 import { ProjectOsPanel } from "@/components/projects/project-os-panel";
 import { ProjectShareModal } from "@/components/projects/project-share-modal";
+import { ProjectChatPanel } from "@/components/projects/project-chat-panel";
 import { MeetingArchiveTimeline } from "@/components/meetings/meeting-archive-timeline";
 
 // 메뉴 통일 (2026-04) — 단일 탭바 한 줄로 모든 기능 접근.
@@ -68,6 +70,7 @@ import { MeetingArchiveTimeline } from "@/components/meetings/meeting-archive-ti
 const baseTabs = [
   { key: "overview",   label: "홈",       icon: Target },
   { key: "os",         label: "OS",       icon: Brain },
+  { key: "chat",       label: "채팅",     icon: MessageSquare },
   { key: "kanban",     label: "할 일",    icon: CheckSquare },
   { key: "milestones", label: "마일스톤", icon: Layers },
   { key: "meetings",   label: "일정",     icon: FileText },
@@ -758,6 +761,19 @@ export function TabsInner({
       )}
 
       <ProjectShareModal projectId={projectId} open={shareOpen} onClose={() => setShareOpen(false)} />
+
+      {/* Chat Tab — 프로젝트 전용 채널, 메시지 → 태스크/결정/리스크 변환 */}
+      {activeTab === "chat" && (
+        <div className="max-w-4xl mx-auto">
+          <div className="mb-3">
+            <h1 className="font-head text-2xl font-extrabold text-nu-ink">프로젝트 채팅</h1>
+            <p className="text-[12px] text-nu-muted mt-0.5">
+              메시지에 '결정', '마감', '리스크' 같은 키워드가 있으면 변환 칩이 자동 표시됩니다.
+            </p>
+          </div>
+          <ProjectChatPanel projectId={projectId} userId={userId} isMember={isMember} />
+        </div>
+      )}
 
       {/* ── Wiki/Tap Tab — 빈 탭 사용법 가이드 + 풀 에디터 진입 ─────────── */}
       {activeTab === "wiki" && (

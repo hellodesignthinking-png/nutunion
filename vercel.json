@@ -56,6 +56,10 @@
     {
       "path": "/api/cron/cleanup-leases",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/automation-tick",
+      "schedule": "5 * * * *"
     }
   ]
 }

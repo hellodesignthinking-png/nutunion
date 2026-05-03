@@ -3,12 +3,14 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Sparkles, Brain, AlertTriangle, ListChecks, ShieldCheck,
-  Loader2, Plus, Trash2, RefreshCw, Edit3, X,
+  Loader2, Plus, Trash2, RefreshCw, Edit3, X, Zap,
   CheckCircle2, Circle, AlertOctagon, Flame, Info,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
+import { ProjectAutomationManager } from "./project-automation-manager";
+import { ProjectCustomFields } from "./project-custom-fields";
 
 /**
  * ProjectOsPanel — "프로젝트 OS" 통합 패널.
@@ -60,6 +62,7 @@ const RISK_STATUS_META: Record<Risk["status"], { label: string; color: string }>
 interface Props { projectId: string; canEdit: boolean; }
 
 export function ProjectOsPanel({ projectId, canEdit }: Props) {
+  const [autoOpen, setAutoOpen] = useState(false);
   return (
     <div className="space-y-6">
       <PmBriefSection projectId={projectId} />
@@ -67,6 +70,23 @@ export function ProjectOsPanel({ projectId, canEdit }: Props) {
         <DecisionsSection projectId={projectId} canEdit={canEdit} />
         <RisksSection projectId={projectId} canEdit={canEdit} />
       </div>
+      <ProjectCustomFields projectId={projectId} canEdit={canEdit} />
+      {canEdit && (
+        <div className="flex items-center justify-between bg-nu-cream/40 border-2 border-nu-ink/15 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Zap size={14} className="text-nu-pink" />
+            <div>
+              <div className="font-bold text-[13px] text-nu-ink">자동화 룰</div>
+              <div className="text-[11px] text-nu-muted">IF / THEN — 마감 임박 알림, 마감 지난 태스크 → 리스크, 긴급 리스크 → 태스크 등</div>
+            </div>
+          </div>
+          <button onClick={() => setAutoOpen(true)}
+            className="font-mono-nu text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-pink text-nu-pink hover:bg-nu-pink hover:text-nu-paper">
+            룰 관리
+          </button>
+        </div>
+      )}
+      <ProjectAutomationManager projectId={projectId} open={autoOpen} onClose={() => setAutoOpen(false)} />
     </div>
   );
 }

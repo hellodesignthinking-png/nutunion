@@ -25,6 +25,8 @@ import { ResourcePreviewModal } from "@/components/shared/resource-preview-modal
 import { AiAgendaManager } from "@/components/meetings/ai-agenda-manager";
 import { AiMeetingAssistant } from "@/components/meetings/ai-meeting-assistant";
 import { WikiSyncPanel } from "@/components/wiki/wiki-sync-panel";
+import { MeetingDecisionsExtractor } from "@/components/groups/meeting-decisions-extractor";
+import { ListChecks } from "lucide-react";
 import { WeeklyDigestEngine } from "@/components/wiki/weekly-digest-engine";
 import { AiErrorBoundary } from "@/components/shared/ai-error-boundary";
 import { MeetingRecorder, type MeetingRecorderHandle } from "@/components/meetings/meeting-recorder";
@@ -219,6 +221,24 @@ export default function MeetingDetailPage() {
   const [showSummaryInput, setShowSummaryInput] = useState(false);
   const [summary, setSummary]                   = useState("");
   const [actionLoading, setActionLoading]       = useState(false);
+  const [extractDecisionsOpen, setExtractDecisionsOpen] = useState(false);
+  const [userProjects, setUserProjects] = useState<Array<{ id: string; title: string }>>([]);
+
+  // 결정 추출 다이얼로그용 — 사용자가 멤버인 프로젝트
+  useEffect(() => {
+    (async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: pms } = await supabase
+        .from("project_members").select("project_id").eq("user_id", user.id);
+      const ids = (pms || []).map((m) => m.project_id);
+      if (ids.length === 0) return;
+      const { data: ps } = await supabase
+        .from("projects").select("id, title").in("id", ids).order("created_at", { ascending: false });
+      setUserProjects(ps as Array<{ id: string; title: string }> || []);
+    })();
+  }, []);
   const [editingSummary, setEditingSummary]     = useState(false);
   const [editedSummary, setEditedSummary]       = useState("");
   const [showPromote, setShowPromote]           = useState(false);
@@ -804,6 +824,14 @@ export default function MeetingDetailPage() {
               <FileText size={12} /> 📋 회의록
             </p>
             <div className="flex items-center gap-3 flex-wrap">
+              {canEdit && userProjects.length > 0 && (
+                <button
+                  onClick={() => setExtractDecisionsOpen(true)}
+                  className="font-mono-nu text-[12px] font-bold uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-pink text-nu-pink hover:bg-nu-pink hover:text-nu-paper transition-all flex items-center gap-1.5"
+                >
+                  <ListChecks size={11} /> 결정 추출
+                </button>
+              )}
               {(meeting as any).google_doc_url && (
                 <a
                   href={(meeting as any).google_doc_url}
@@ -1421,6 +1449,14 @@ export default function MeetingDetailPage() {
           }}
         />
       )}
+
+      {/* L14 — 회의록 → 결정 자동 추출 */}
+      <MeetingDecisionsExtractor
+        meetingId={meetingId}
+        candidateProjects={userProjects}
+        open={extractDecisionsOpen}
+        onClose={() => setExtractDecisionsOpen(false)}
+      />
     </div>
   );
 }

@@ -171,7 +171,8 @@
       "Bash(grep -n \"ReactFlow$\\\\|nodes={nodes}\" /Users/TaiNa0/Desktop/nutunion/components/dashboard/mindmap/mindmap-dashboard.tsx)",
       "Bash(vercel alias *)",
       "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
-      "Bash(grep -E \"\\\\.tsx$\")"
+      "Bash(grep -E \"\\\\.tsx$\")",
+      "Bash(grep -n \"^}$\\\\|^export default function MeetingDetailPage\\\\|return.*null;\" /Users/TaiNa0/Desktop/nutunion/app/\\\\\\(community\\\\\\)/groups/\\\\[id\\\\]/meetings/\\\\[meetingId\\\\]/page.tsx)"
     ]
   }
 }
