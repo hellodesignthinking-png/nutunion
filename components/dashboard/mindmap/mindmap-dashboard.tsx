@@ -423,12 +423,12 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
     const d = dataRef.current;
     const matchedIds = new Set<string>();
     const candidates: Array<{ id: string; text: string }> = [
-      ...d.nuts.map((n) => ({ id: `nut-${n.id}`, text: n.name.toLowerCase() })),
-      ...d.bolts.map((b) => ({ id: `bolt-${b.id}`, text: b.title.toLowerCase() })),
-      ...d.schedule.map((s) => ({ id: `sched-${s.id}`, text: s.title.toLowerCase() })),
-      ...d.issues.map((i) => ({ id: `issue-${i.id}`, text: i.title.toLowerCase() })),
-      ...d.topics.map((t) => ({ id: `topic-${t.id}`, text: t.name.toLowerCase() })),
-      ...d.washers.map((w) => ({ id: `washer-${w.id}`, text: w.nickname.toLowerCase() })),
+      ...d.nuts.map((n)     => ({ id: `nut-${n.id}`,     text: (n.name     || "").toLowerCase() })),
+      ...d.bolts.map((b)    => ({ id: `bolt-${b.id}`,    text: (b.title    || "").toLowerCase() })),
+      ...d.schedule.map((s) => ({ id: `sched-${s.id}`,   text: (s.title    || "").toLowerCase() })),
+      ...d.issues.map((i)   => ({ id: `issue-${i.id}`,   text: (i.title    || "").toLowerCase() })),
+      ...d.topics.map((t)   => ({ id: `topic-${t.id}`,   text: (t.name     || "").toLowerCase() })),
+      ...d.washers.map((w)  => ({ id: `washer-${w.id}`,  text: (w.nickname || "").toLowerCase() })),
     ];
     for (const c of candidates) {
       for (const kw of result.keywords) {
@@ -616,9 +616,12 @@ export function MindMapDashboard({ nickname, data, userId, fillContainer = false
       let isHighlighted = highlighted.has(n.id);
       let isDimmed = false;
       if (filterActive && data.kind !== "center") {
+        // sector/halo 노드는 data.title 이 비어 있을 수 있어 옵셔널 가드.
+        const titleLower    = (data.title    || "").toLowerCase();
+        const subtitleLower = (data.subtitle || "").toLowerCase();
         const matchesText = !filterLower
-          || data.title.toLowerCase().includes(filterLower)
-          || (data.subtitle?.toLowerCase().includes(filterLower) ?? false);
+          || titleLower.includes(filterLower)
+          || subtitleLower.includes(filterLower);
         const matchesKind = filterKinds.size === 0 || filterKinds.has(data.kind);
         isDimmed = !(matchesText && matchesKind);
       }
