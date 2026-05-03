@@ -59,7 +59,7 @@
     },
     {
       "path": "/api/cron/automation-tick",
-      "schedule": "5 * * * *"
+      "schedule": "5 0 * * *"
     }
   ]
 }
