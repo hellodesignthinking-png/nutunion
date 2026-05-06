@@ -8,7 +8,6 @@ import {
   Target,
   Calendar,
   FolderOpen,
-  Sparkles,
   CreditCard,
   Activity,
   Settings,
@@ -29,13 +28,11 @@ interface Props {
   isAdmin?: boolean;
 }
 
-// NUT 와 동일한 핵심 5개 (홈/일정/탭/자료실/정산) 를 같은 순서로.
-// 그 다음에 볼트 전용 탭 (활동/할일/마일스톤) 을 모음 → 마지막은 설정.
-// 메뉴 일관성: 너트와 볼트 어디에 있든 1-5번 위치는 항상 동일한 메뉴.
+// 핵심 메뉴 — "탭" 은 폐지 (페이지는 홈에 통합).
+// 너트의 탭/위키 은 별개 시스템이라 너트는 그대로, 볼트 탭바에서만 wiki 제거.
 const NAV_ITEMS = [
   { key: "overview", label: "홈", icon: Home },
   { key: "meetings", label: "일정", icon: Calendar },
-  { key: "wiki", label: "탭", icon: Sparkles },
   { key: "resources", label: "자료실", icon: FolderOpen },
   { key: "finance", label: "정산", icon: CreditCard },
   // 볼트 전용 — 작업 관리 (key 는 TabsInner 의 activeTab 과 정확히 일치해야 함)
