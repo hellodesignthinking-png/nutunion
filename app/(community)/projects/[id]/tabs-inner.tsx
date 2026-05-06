@@ -76,8 +76,9 @@ const baseTabs = [
   { key: "milestones", label: "마일스톤", icon: Layers },
   { key: "meetings",   label: "일정",     icon: FileText },
   { key: "resources",  label: "자료실",   icon: FolderOpen },
-  { key: "wiki",       label: "탭",       icon: Sticker },
   { key: "finance",    label: "정산",     icon: Wallet },
+  // wiki 는 탭바에서 숨김 — 페이지는 홈에 통합, /tap 풀 에디터는 자료실/홈에서 진입
+  { key: "wiki",       label: "탭",       icon: Sticker, hidden: true },
   { key: "activity",   label: "활동",     icon: Activity },
   { key: "settings",   label: "설정",     icon: Settings, leadOnly: true },
   // 숨김 탭 — URL ?tab= 또는 내부 링크로만 접근
@@ -584,6 +585,43 @@ export function TabsInner({
             )}
 
           </div>
+        </div>
+      )}
+
+      {/* 페이지 — hex(기본) overview 하단에 인라인. 별도 탭 폐지 후 홈으로 통합. */}
+      {activeTab === "overview" && (!project?.type || project?.type === "hex") && userId && (
+        <div className="max-w-6xl mx-auto mt-8">
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+            <div className="flex items-center gap-2">
+              <FileText size={16} className="text-nu-pink" />
+              <h2 className="font-head text-xl font-extrabold text-nu-ink">페이지</h2>
+              <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">
+                멤버 누구나 추가·편집·삭제
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Link
+                href={`/projects/${projectId}/tap`}
+                className="font-mono-nu text-[11px] uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-ink/20 text-nu-graphite hover:bg-nu-ink hover:text-nu-paper inline-flex items-center gap-1.5 no-underline transition-colors"
+              >
+                <BookOpen size={11} /> 풀 에디터
+              </Link>
+              {canEdit && (
+                <Link
+                  href={`/projects/${projectId}/tap?compose=ai`}
+                  className="font-mono-nu text-[11px] uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-pink text-nu-pink hover:bg-nu-pink hover:text-nu-paper inline-flex items-center gap-1.5 no-underline transition-colors"
+                >
+                  <Sparkles size={11} /> AI 초안
+                </Link>
+              )}
+            </div>
+          </div>
+          <SpacePages
+            ownerType="bolt"
+            ownerId={projectId}
+            ownerName={project?.title || "볼트"}
+            currentUserId={userId}
+          />
         </div>
       )}
 
