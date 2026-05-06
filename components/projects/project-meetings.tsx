@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { MeetingNotes } from "@/components/meetings/meeting-notes";
 import { AiMeetingAssistant } from "@/components/meetings/ai-meeting-assistant";
@@ -106,6 +107,19 @@ export function ProjectMeetings({
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // ?m=<meetingId> deep-link — /projects/[id]/meetings/[mid] 에서 redirect 된 경우 자동 확장 + 스크롤
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const target = searchParams.get("m");
+    if (!target || meetings.length === 0) return;
+    if (!meetings.some((m) => m.id === target)) return;
+    setExpandedId(target);
+    requestAnimationFrame(() => {
+      const el = document.getElementById(`meeting-${target}`);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [searchParams, meetings]);
 
   // Form state
   const [title, setTitle] = useState("");
@@ -571,7 +585,8 @@ function MeetingCard({
 
   return (
     <div
-      className={`bg-nu-white border-[2px] border-nu-ink/[0.08] overflow-hidden border-l-[4px] ${overdueUpcoming ? "border-l-nu-ink/20 opacity-75" : cfg.borderColor}`}
+      id={`meeting-${meeting.id}`}
+      className={`bg-nu-white border-[2px] border-nu-ink/[0.08] overflow-hidden border-l-[4px] ${overdueUpcoming ? "border-l-nu-ink/20 opacity-75" : cfg.borderColor} scroll-mt-24`}
     >
       {/* Header */}
       <button
