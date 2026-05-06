@@ -776,122 +776,75 @@ export function TabsInner({
         </div>
       )}
 
-      {/* ── Wiki/Tap Tab — 빈 탭 사용법 가이드 + 풀 에디터 진입 ─────────── */}
+      {/* ── Wiki/Tap Tab — SpacePages 본문 우선, 보조 도구는 한 줄 액션바 ────── */}
       {activeTab === "wiki" && (
-        <div className="max-w-4xl mx-auto space-y-6">
-          {/* 📄 페이지 — 노션 스타일 인라인 에디터 (멤버 누구나 추가·편집·삭제) */}
-          {userId && (
-            <div>
-              <div className="mb-2 flex items-center gap-2">
-                <FileText size={14} className="text-nu-pink" />
-                <h2 className="font-head text-[16px] font-extrabold text-nu-ink">페이지</h2>
-                <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">
-                  멤버 누구나 추가·편집·삭제
-                </span>
-              </div>
-              <SpacePages
-                ownerType="bolt"
-                ownerId={projectId}
-                ownerName={project?.title || "볼트"}
-                currentUserId={userId}
-              />
+        <div className="max-w-4xl mx-auto space-y-4">
+          {/* 헤더 + 보조 액션 한 줄 */}
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <FileText size={16} className="text-nu-pink" />
+              <h2 className="font-head text-xl font-extrabold text-nu-ink">페이지</h2>
+              <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">
+                멤버 누구나 추가·편집·삭제
+              </span>
             </div>
-          )}
-
-          {/* 사용법 가이드 카드 — 접기로 변경해 노이즈 줄임 */}
-          <details className="border-[2px] border-nu-ink/15 bg-nu-cream/30">
-            <summary className="cursor-pointer px-4 py-2.5 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted hover:bg-nu-cream/50 select-none flex items-center gap-2">
-              <Sticker size={12} className="text-nu-pink" /> "탭" 풀 에디터·아카이브 가이드
-            </summary>
-          <div className="border-t-[2px] border-nu-ink/10 bg-nu-cream/50 p-6">
-            <div className="flex items-start gap-3 mb-4">
-              <Sticker size={22} className="text-nu-pink mt-0.5 shrink-0" />
-              <div>
-                <h3 className="font-head text-xl font-extrabold text-nu-ink mb-1">탭이란?</h3>
-                <p className="text-[13px] text-nu-graphite leading-relaxed">
-                  볼트의 <strong>지식 베이스</strong>입니다. 회의록·자료·아이디어를 한 곳에 모아
-                  AI 가 주간 단위로 통합 정리하는 위키 시스템.
-                </p>
-              </div>
-            </div>
-
-            <div className="border-l-[3px] border-nu-pink pl-4 mb-5 space-y-1.5">
-              <p className="font-mono-nu text-[10px] uppercase tracking-[0.25em] text-nu-pink font-bold mb-1">시작하는 방법</p>
-              <p className="text-[13px] text-nu-graphite"><span className="font-mono-nu font-bold text-nu-ink mr-1.5">1.</span>아래 <b>탭 열기</b> 버튼으로 풀 에디터 진입</p>
-              <p className="text-[13px] text-nu-graphite"><span className="font-mono-nu font-bold text-nu-ink mr-1.5">2.</span>아카이브 / 위키 / 대시보드 모드 선택</p>
-              <p className="text-[13px] text-nu-graphite"><span className="font-mono-nu font-bold text-nu-ink mr-1.5">3.</span>회의 녹음 → AI 가 회의록 초안 자동 생성</p>
-              <p className="text-[13px] text-nu-graphite"><span className="font-mono-nu font-bold text-nu-ink mr-1.5">4.</span>볼트 마감 시 영구 아카이브로 승격</p>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <Link
                 href={`/projects/${projectId}/tap`}
-                className="h-10 px-5 border-[2.5px] border-nu-ink bg-nu-pink text-nu-paper font-mono-nu text-[11px] font-black uppercase tracking-widest no-underline hover:bg-nu-ink inline-flex items-center gap-2 transition-colors"
+                className="font-mono-nu text-[11px] uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-ink/20 text-nu-graphite hover:bg-nu-ink hover:text-nu-paper inline-flex items-center gap-1.5 no-underline transition-colors"
               >
-                <BookOpen size={14} /> 탭 열기
+                <BookOpen size={11} /> 탭 풀 에디터
               </Link>
               {canEdit && (
                 <Link
                   href={`/projects/${projectId}/tap?compose=ai`}
-                  className="h-10 px-5 border-[2.5px] border-nu-ink bg-nu-paper text-nu-ink font-mono-nu text-[11px] uppercase tracking-widest no-underline hover:bg-nu-ink hover:text-nu-paper inline-flex items-center gap-2 transition-colors"
+                  className="font-mono-nu text-[11px] uppercase tracking-widest px-3 py-1.5 border-[2px] border-nu-pink text-nu-pink hover:bg-nu-pink hover:text-nu-paper inline-flex items-center gap-1.5 no-underline transition-colors"
                 >
-                  <Sparkles size={14} /> AI 3문 인터뷰로 초안
+                  <Sparkles size={11} /> AI 초안
                 </Link>
               )}
             </div>
           </div>
 
-          {/* 마감 후 영구 아카이브 가이드 — 4단계 체크리스트 */}
-          {canEdit && (
-            <div className="border-[3px] border-nu-ink bg-nu-paper p-6">
-              <div className="flex items-center gap-2 mb-3">
-                <Archive size={18} className="text-nu-ink" />
-                <h3 className="font-head text-lg font-extrabold text-nu-ink">마감 → 영구 아카이브</h3>
-              </div>
-              <p className="text-[13px] text-nu-graphite leading-relaxed mb-4">
-                볼트가 마감되면 이 탭이 <strong>영구 아카이브</strong>로 굳어집니다.
-                마감 전에 아래 4가지를 정리하세요.
-              </p>
-
-              <div className="space-y-2 mb-5">
-                {[
-                  { n: 1, label: "회고 작성", hint: "탭 에디터 → 아카이브 모드", href: `/projects/${projectId}/tap` },
-                  { n: 2, label: "산출물 정리", hint: "자료실에 최종본 업로드", tab: "resources" },
-                  { n: 3, label: "배운 점 기록", hint: "탭 위키 모드로 인사이트 정리", href: `/projects/${projectId}/tap` },
-                  { n: 4, label: "마감 확정", hint: "상단 [볼트 마감] 버튼 → 영구 아카이브 승격", admin: true },
-                ].map((step) => (
-                  <div key={step.n} className="flex items-center gap-3 p-3 border-[2px] border-nu-ink/10 bg-nu-cream/30">
-                    <span className="w-7 h-7 shrink-0 bg-nu-ink text-nu-paper font-mono-nu text-[12px] font-black flex items-center justify-center">
-                      {step.n}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-nu-ink">{step.label}</p>
-                      <p className="text-[11px] text-nu-muted">{step.hint}</p>
-                    </div>
-                    {step.tab ? (
-                      <button
-                        onClick={() => setActiveTab(step.tab as string)}
-                        className="font-mono-nu text-[10px] uppercase tracking-widest px-2.5 py-1 border border-nu-ink/20 text-nu-ink hover:bg-nu-ink hover:text-nu-paper"
-                      >
-                        이동
-                      </button>
-                    ) : step.href ? (
-                      <Link
-                        href={step.href}
-                        className="font-mono-nu text-[10px] uppercase tracking-widest px-2.5 py-1 border border-nu-ink/20 text-nu-ink hover:bg-nu-ink hover:text-nu-paper no-underline"
-                      >
-                        이동
-                      </Link>
-                    ) : (
-                      <span className="font-mono-nu text-[10px] uppercase tracking-widest px-2.5 py-1 border border-nu-ink/10 text-nu-muted">
-                        호스트
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
+          {/* 📄 SpacePages — 노션 스타일 인라인 에디터 */}
+          {userId && (
+            <SpacePages
+              ownerType="bolt"
+              ownerId={projectId}
+              ownerName={project?.title || "볼트"}
+              currentUserId={userId}
+            />
           )}
+
+          {/* 사용법 + 마감 체크리스트 — 접힌 details 한 곳에 모아 노이즈 최소화 */}
+          <details className="border-[2px] border-nu-ink/15 bg-nu-cream/20">
+            <summary className="cursor-pointer px-3 py-2 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted hover:bg-nu-cream/40 select-none flex items-center gap-2">
+              <Sticker size={11} className="text-nu-pink" /> 탭 사용법 · 마감 체크리스트
+            </summary>
+            <div className="border-t border-nu-ink/10 p-4 space-y-4">
+              <div>
+                <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-pink font-bold mb-1">시작하는 방법</p>
+                <ul className="text-[12px] text-nu-graphite space-y-0.5 list-none p-0 m-0">
+                  <li>• 위 <b>+ 새 페이지</b> 로 인라인 페이지 추가</li>
+                  <li>• <b>탭 풀 에디터</b> 로 아카이브 / 위키 / 대시보드 모드 진입</li>
+                  <li>• 회의 녹음 → AI 가 회의록 초안 자동 생성</li>
+                  <li>• 볼트 마감 시 영구 아카이브로 승격</li>
+                </ul>
+              </div>
+              {canEdit && (
+                <div className="border-t border-nu-ink/10 pt-3">
+                  <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-ink font-bold mb-1.5 flex items-center gap-1.5">
+                    <Archive size={11} /> 마감 → 영구 아카이브 4단계
+                  </p>
+                  <ul className="text-[12px] text-nu-graphite space-y-0.5 list-none p-0 m-0">
+                    <li><b>1.</b> 회고 작성 — 탭 에디터 아카이브 모드</li>
+                    <li><b>2.</b> 산출물 정리 — <button onClick={() => setActiveTab("resources")} className="underline text-nu-blue hover:text-nu-ink">자료실</button>에 최종본 업로드</li>
+                    <li><b>3.</b> 배운 점 기록 — 탭 위키 모드로 인사이트 정리</li>
+                    <li><b>4.</b> 마감 확정 — 상단 [볼트 마감] 버튼 → 영구 아카이브 승격</li>
+                  </ul>
+                </div>
+              )}
+            </div>
           </details>
         </div>
       )}
