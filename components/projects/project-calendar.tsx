@@ -1,18 +1,25 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin, Plus, X, BookOpen } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin, Plus, X, BookOpen, Flag } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
 /**
  * ProjectCalendar — 볼트의 "일정" 탭. 너트 schedule 페이지와 동일한 시각 패턴.
  *
- * 데이터: project_meetings (scheduled_at + duration_min). 너트 events 같은 별도 테이블은 없음.
- * 뷰: 월/주/목록.
- * 호스트(lead/admin) 는 "+미팅" 버튼으로 즉시 미팅 추가.
+ * 데이터:
+ *   - meetings (scheduled_at + duration_min) — 미팅
+ *   - project_milestones (due_date) — 마일스톤이 due_date 가지면 자동으로 일정에 표시
+ *
+ * 뷰: 월/주/목록. 호스트(lead/admin) 는 "+일정" 버튼으로 즉시 미팅 추가.
+ *
+ * 마일스톤은 자동 노출 — 별도 등록 없이 마일스톤 페이지에서 due_date 만 정하면
+ * 일정 캘린더에 즉시 표시. 클릭 시 마일스톤 탭으로 이동.
  */
+
+type CalKind = "meeting" | "milestone";
 
 interface MeetingItem {
   id: string;
@@ -22,7 +29,20 @@ interface MeetingItem {
   location: string | null;
   description: string | null;
   status: string;
+  kind: "meeting";
 }
+
+interface MilestoneCalItem {
+  id: string;
+  title: string;
+  /** scheduled_at 으로 통일해 같은 정렬 사용 — meetings 의 scheduled_at 과 동일하게 사용 */
+  scheduled_at: string;
+  description: string | null;
+  status: string;
+  kind: "milestone";
+}
+
+type CalItem = MeetingItem | MilestoneCalItem;
 
 interface Props {
   projectId: string;
@@ -45,10 +65,18 @@ export function ProjectCalendar({ projectId, isAdmin = false, isMember = false, 
   const [view, setView] = useState<"month" | "week" | "list">("month");
   const seeded = Array.isArray(initialMeetings) && initialMeetings.length > 0;
   const [meetings, setMeetings] = useState<MeetingItem[]>(
-    seeded ? (initialMeetings as MeetingItem[]) : [],
+    seeded ? (initialMeetings as MeetingItem[]).map((m) => ({ ...m, kind: "meeting" as const })) : [],
   );
+  const [milestones, setMilestones] = useState<MilestoneCalItem[]>([]);
   // Skip the loading flash when we already have server-rendered data.
   const [loading, setLoading] = useState(!seeded);
+
+  // 미팅 + 마일스톤 통합 — 시간순 정렬
+  const items = useMemo<CalItem[]>(() => {
+    const merged: CalItem[] = [...meetings, ...milestones];
+    merged.sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+    return merged;
+  }, [meetings, milestones]);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createDate, setCreateDate] = useState<Date | null>(null);
@@ -59,7 +87,7 @@ export function ProjectCalendar({ projectId, isAdmin = false, isMember = false, 
   const [formDescription, setFormDescription] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const [detail, setDetail] = useState<MeetingItem | null>(null);
+  const [detail, setDetail] = useState<CalItem | null>(null);
 
   const canManage = isAdmin;
 
@@ -81,14 +109,35 @@ export function ProjectCalendar({ projectId, isAdmin = false, isMember = false, 
       start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
       end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59);
     }
-    const { data } = await supabase
-      .from("meetings")
-      .select("id, title, scheduled_at, duration_min, location, description, status")
-      .eq("project_id", projectId)
-      .gte("scheduled_at", start.toISOString())
-      .lte("scheduled_at", end.toISOString())
-      .order("scheduled_at");
-    setMeetings((data as MeetingItem[]) || []);
+    const startStr = start.toISOString().slice(0, 10);   // due_date 는 date 컬럼 → YYYY-MM-DD 비교
+    const endStr   = end.toISOString().slice(0, 10);
+    const [meetingsRes, milestonesRes] = await Promise.all([
+      supabase
+        .from("meetings")
+        .select("id, title, scheduled_at, duration_min, location, description, status")
+        .eq("project_id", projectId)
+        .gte("scheduled_at", start.toISOString())
+        .lte("scheduled_at", end.toISOString())
+        .order("scheduled_at"),
+      supabase
+        .from("project_milestones")
+        .select("id, title, description, due_date, status")
+        .eq("project_id", projectId)
+        .not("due_date", "is", null)
+        .gte("due_date", startStr)
+        .lte("due_date", endStr)
+        .order("due_date"),
+    ]);
+    setMeetings(((meetingsRes.data ?? []) as Omit<MeetingItem, "kind">[]).map((m) => ({ ...m, kind: "meeting" as const })));
+    // due_date(date 만) → 09:00 KST 로 표시
+    setMilestones(((milestonesRes.data ?? []) as Array<{ id: string; title: string; description: string | null; due_date: string; status: string }>).map((m) => ({
+      id: m.id,
+      title: m.title,
+      description: m.description,
+      status: m.status,
+      scheduled_at: `${m.due_date}T09:00:00+09:00`,
+      kind: "milestone" as const,
+    })));
     setLoading(false);
   }, [projectId, currentDate, view]);
 
@@ -129,14 +178,14 @@ export function ProjectCalendar({ projectId, isAdmin = false, isMember = false, 
   });
 
   function getForDay(day: number) {
-    return meetings.filter((m) => {
-      const d = new Date(m.scheduled_at);
+    return items.filter((it) => {
+      const d = new Date(it.scheduled_at);
       return d.getDate() === day && d.getMonth() === month && d.getFullYear() === year;
     });
   }
   function getForDate(target: Date) {
-    return meetings.filter((m) => {
-      const d = new Date(m.scheduled_at);
+    return items.filter((it) => {
+      const d = new Date(it.scheduled_at);
       return d.getDate() === target.getDate() && d.getMonth() === target.getMonth() && d.getFullYear() === target.getFullYear();
     });
   }
@@ -256,19 +305,28 @@ export function ProjectCalendar({ projectId, isAdmin = false, isMember = false, 
                       {canManage && <Plus size={12} className="text-nu-muted/0 group-hover:text-nu-pink transition-colors" />}
                     </div>
                     <div className="space-y-1">
-                      {items.slice(0, 3).map((m) => (
-                        <div
-                          key={m.id}
-                          onClick={(e) => { e.stopPropagation(); setDetail(m); }}
-                          className="border-l-[3px] px-2 py-1 hover:opacity-80 transition-opacity cursor-pointer bg-nu-blue/10 border-nu-blue"
-                        >
-                          <p className="text-[11px] font-medium truncate text-nu-ink">
-                            <BookOpen size={9} className="inline mr-1 text-nu-blue" />
-                            {m.title}
-                          </p>
-                          <p className="text-[10px] text-nu-muted">{new Date(m.scheduled_at).toLocaleTimeString("ko", { hour: "2-digit", minute: "2-digit" })}</p>
-                        </div>
-                      ))}
+                      {items.slice(0, 3).map((it) => {
+                        const isMs = it.kind === "milestone";
+                        return (
+                          <div
+                            key={`${it.kind}-${it.id}`}
+                            onClick={(e) => { e.stopPropagation(); setDetail(it); }}
+                            className={`border-l-[3px] px-2 py-1 hover:opacity-80 transition-opacity cursor-pointer ${
+                              isMs ? "bg-nu-amber/15 border-nu-amber" : "bg-nu-blue/10 border-nu-blue"
+                            }`}
+                          >
+                            <p className="text-[11px] font-medium truncate text-nu-ink">
+                              {isMs
+                                ? <Flag size={9} className="inline mr-1 text-nu-amber" />
+                                : <BookOpen size={9} className="inline mr-1 text-nu-blue" />}
+                              {it.title}
+                            </p>
+                            <p className="text-[10px] text-nu-muted">
+                              {isMs ? "🏁 마감" : new Date(it.scheduled_at).toLocaleTimeString("ko", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        );
+                      })}
                       {items.length > 3 && <p className="text-[10px] text-nu-muted font-mono-nu pl-2">+{items.length - 3}개 더</p>}
                     </div>
                   </button>
@@ -305,23 +363,31 @@ export function ProjectCalendar({ projectId, isAdmin = false, isMember = false, 
                   {items.length === 0 ? (
                     canManage && <div className="text-[11px] text-nu-muted/50 italic opacity-0 group-hover:opacity-100">+ 일정</div>
                   ) : (
-                    items.map((m) => (
-                      <div
-                        key={m.id}
-                        onClick={(e) => { e.stopPropagation(); setDetail(m); }}
-                        className="border-l-[3px] px-2 py-1.5 hover:opacity-80 transition-opacity cursor-pointer bg-nu-blue/10 border-nu-blue"
-                      >
-                        <p className="text-[11px] font-bold text-nu-ink truncate">
-                          <BookOpen size={9} className="inline mr-1 text-nu-blue" />
-                          {m.title}
-                        </p>
-                        <p className="text-[10px] text-nu-muted">
-                          {new Date(m.scheduled_at).toLocaleTimeString("ko", { hour: "2-digit", minute: "2-digit" })}
-                          {m.duration_min && ` · ${m.duration_min}분`}
-                        </p>
-                        {m.location && <p className="text-[10px] text-nu-muted truncate">📍 {m.location}</p>}
-                      </div>
-                    ))
+                    items.map((it) => {
+                      const isMs = it.kind === "milestone";
+                      return (
+                        <div
+                          key={`${it.kind}-${it.id}`}
+                          onClick={(e) => { e.stopPropagation(); setDetail(it); }}
+                          className={`border-l-[3px] px-2 py-1.5 hover:opacity-80 transition-opacity cursor-pointer ${
+                            isMs ? "bg-nu-amber/15 border-nu-amber" : "bg-nu-blue/10 border-nu-blue"
+                          }`}
+                        >
+                          <p className="text-[11px] font-bold text-nu-ink truncate">
+                            {isMs
+                              ? <Flag size={9} className="inline mr-1 text-nu-amber" />
+                              : <BookOpen size={9} className="inline mr-1 text-nu-blue" />}
+                            {it.title}
+                          </p>
+                          <p className="text-[10px] text-nu-muted">
+                            {isMs
+                              ? "🏁 마감일"
+                              : `${new Date(it.scheduled_at).toLocaleTimeString("ko", { hour: "2-digit", minute: "2-digit" })}${(it as MeetingItem).duration_min ? ` · ${(it as MeetingItem).duration_min}분` : ""}`}
+                          </p>
+                          {!isMs && (it as MeetingItem).location && <p className="text-[10px] text-nu-muted truncate">📍 {(it as MeetingItem).location}</p>}
+                        </div>
+                      );
+                    })
                   )}
                 </button>
               );
@@ -330,49 +396,66 @@ export function ProjectCalendar({ projectId, isAdmin = false, isMember = false, 
         </div>
       )}
 
-      {/* List view */}
-      {meetings.length > 0 && view === "list" && (
+      {/* List view — 미팅 + 마일스톤 통합 */}
+      {items.length > 0 && view === "list" && (
         <div className="flex flex-col gap-3">
-          {meetings.map((m) => (
-            <button
-              key={m.id}
-              onClick={() => setDetail(m)}
-              className="bg-nu-white border-[2px] border-nu-ink/[0.08] hover:border-nu-pink/40 transition-all overflow-hidden flex flex-col relative group text-left"
-            >
-              <div className="flex items-center gap-4 p-4">
-                <div className="w-12 h-12 flex flex-col items-center justify-center shrink-0 bg-nu-blue/10">
-                  <span className="font-head text-base font-extrabold leading-none text-nu-blue">{new Date(m.scheduled_at).getDate()}</span>
-                  <span className="font-mono-nu text-[10px] text-nu-blue/70">{new Date(m.scheduled_at).toLocaleDateString("ko", { month: "short" })}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-head text-sm font-bold text-nu-ink truncate">{m.title}</p>
-                  <div className="flex flex-wrap gap-3 mt-1 text-xs text-nu-muted">
-                    <span className="flex items-center gap-1"><Clock size={10} />{new Date(m.scheduled_at).toLocaleTimeString("ko", { hour: "2-digit", minute: "2-digit" })} ({m.duration_min}분)</span>
-                    {m.location && <span className="flex items-center gap-1"><MapPin size={10} />{m.location}</span>}
+          {items.map((it) => {
+            const isMs = it.kind === "milestone";
+            return (
+              <button
+                key={`${it.kind}-${it.id}`}
+                onClick={() => setDetail(it)}
+                className="bg-nu-white border-[2px] border-nu-ink/[0.08] hover:border-nu-pink/40 transition-all overflow-hidden flex flex-col relative group text-left"
+              >
+                <div className="flex items-center gap-4 p-4">
+                  <div className={`w-12 h-12 flex flex-col items-center justify-center shrink-0 ${isMs ? "bg-nu-amber/15" : "bg-nu-blue/10"}`}>
+                    <span className={`font-head text-base font-extrabold leading-none ${isMs ? "text-nu-amber" : "text-nu-blue"}`}>{new Date(it.scheduled_at).getDate()}</span>
+                    <span className={`font-mono-nu text-[10px] ${isMs ? "text-nu-amber/70" : "text-nu-blue/70"}`}>{new Date(it.scheduled_at).toLocaleDateString("ko", { month: "short" })}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-head text-sm font-bold text-nu-ink truncate">{it.title}</p>
+                      <span className={`font-mono-nu text-[10px] uppercase tracking-widest px-1.5 py-0.5 ${isMs ? "bg-nu-amber/15 text-nu-amber" : "bg-nu-blue/10 text-nu-blue"}`}>
+                        {isMs ? "🏁 마일스톤" : "미팅"}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-3 mt-1 text-xs text-nu-muted">
+                      <span className="flex items-center gap-1">
+                        <Clock size={10} />
+                        {isMs
+                          ? "마감일"
+                          : `${new Date(it.scheduled_at).toLocaleTimeString("ko", { hour: "2-digit", minute: "2-digit" })} (${(it as MeetingItem).duration_min}분)`}
+                      </span>
+                      {!isMs && (it as MeetingItem).location && <span className="flex items-center gap-1"><MapPin size={10} />{(it as MeetingItem).location}</span>}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </div>
       )}
 
-      {meetings.length === 0 && (
+      {items.length === 0 && (
         <div className="bg-nu-white border-[2px] border-dashed border-nu-ink/15 p-12 text-center">
           <Calendar size={32} className="text-nu-muted mx-auto mb-3" />
           <p className="text-nu-gray text-sm">{view === "month" ? "이번 달" : view === "week" ? "이번 주" : ""} 등록된 일정이 없어요</p>
-          {canManage && <p className="text-nu-muted text-xs mt-1">달력 날짜를 클릭하거나 "일정 추가" 로 새 미팅을 등록하세요</p>}
+          {canManage && <p className="text-nu-muted text-xs mt-1">달력 날짜를 클릭하거나 "일정 추가" 로 새 미팅을 등록하세요. 마일스톤에 마감일이 있으면 자동으로 표시됩니다.</p>}
         </div>
       )}
 
-      {/* Detail modal */}
+      {/* Detail modal — 미팅·마일스톤 분기 */}
       {detail && (
         <div className="fixed inset-0 z-[100] bg-nu-ink/60 flex items-center justify-center p-4" onClick={() => setDetail(null)} role="presentation">
           <div role="dialog" aria-modal="true" className="bg-nu-paper border-[2.5px] border-nu-ink shadow-[8px_8px_0_0_rgba(13,13,13,0.4)] w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-5 py-4 border-b-[2px] border-nu-ink bg-nu-blue/5">
+            <div className={`flex items-center justify-between px-5 py-4 border-b-[2px] border-nu-ink ${detail.kind === "milestone" ? "bg-nu-amber/10" : "bg-nu-blue/5"}`}>
               <div className="flex items-center gap-2">
-                <BookOpen size={16} className="text-nu-blue" />
-                <span className="font-mono-nu text-[10px] uppercase tracking-[0.25em] text-nu-blue">미팅</span>
+                {detail.kind === "milestone"
+                  ? <Flag size={16} className="text-nu-amber" />
+                  : <BookOpen size={16} className="text-nu-blue" />}
+                <span className={`font-mono-nu text-[10px] uppercase tracking-[0.25em] ${detail.kind === "milestone" ? "text-nu-amber" : "text-nu-blue"}`}>
+                  {detail.kind === "milestone" ? "🏁 마일스톤" : "미팅"}
+                </span>
               </div>
               <button onClick={() => setDetail(null)} aria-label="닫기" className="p-1 hover:bg-nu-ink/10"><X size={18} /></button>
             </div>
@@ -381,20 +464,40 @@ export function ProjectCalendar({ projectId, isAdmin = false, isMember = false, 
               <div className="text-sm text-nu-graphite space-y-1.5">
                 <p className="flex items-center gap-2">
                   <Clock size={13} className="text-nu-muted" />
-                  {new Date(detail.scheduled_at).toLocaleString("ko", { month: "short", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit" })}
-                  <span className="text-nu-muted"> · {detail.duration_min}분</span>
+                  {detail.kind === "milestone"
+                    ? `${new Date(detail.scheduled_at).toLocaleDateString("ko", { month: "short", day: "numeric", weekday: "short" })} 마감`
+                    : (
+                      <>
+                        {new Date(detail.scheduled_at).toLocaleString("ko", { month: "short", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit" })}
+                        <span className="text-nu-muted"> · {(detail as MeetingItem).duration_min}분</span>
+                      </>
+                    )}
                 </p>
-                {detail.location && <p className="flex items-center gap-2"><MapPin size={13} className="text-nu-muted" />{detail.location}</p>}
+                {detail.kind === "meeting" && (detail as MeetingItem).location && (
+                  <p className="flex items-center gap-2"><MapPin size={13} className="text-nu-muted" />{(detail as MeetingItem).location}</p>
+                )}
+                {detail.kind === "milestone" && (
+                  <p className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">상태 · {detail.status}</p>
+                )}
               </div>
               {detail.description && <p className="text-sm text-nu-graphite whitespace-pre-wrap pt-2 border-t border-nu-ink/10">{detail.description}</p>}
             </div>
             <div className="flex gap-2 px-5 py-4 border-t-[2px] border-nu-ink/10 bg-nu-cream/20">
-              <Link
-                href={`/projects/${projectId}/meetings/${detail.id}`}
-                className="flex-1 px-3 py-2 border-[2px] border-nu-ink/20 font-mono-nu text-[11px] uppercase tracking-widest hover:bg-nu-ink/5 inline-flex items-center justify-center gap-1.5 no-underline text-nu-ink"
-              >
-                미팅 상세 →
-              </Link>
+              {detail.kind === "milestone" ? (
+                <Link
+                  href={`/projects/${projectId}?tab=milestones`}
+                  className="flex-1 px-3 py-2 border-[2px] border-nu-amber text-nu-amber font-mono-nu text-[11px] uppercase tracking-widest hover:bg-nu-amber hover:text-nu-paper inline-flex items-center justify-center gap-1.5 no-underline transition-colors"
+                >
+                  마일스톤으로 →
+                </Link>
+              ) : (
+                <Link
+                  href={`/projects/${projectId}/meetings/${detail.id}`}
+                  className="flex-1 px-3 py-2 border-[2px] border-nu-ink/20 font-mono-nu text-[11px] uppercase tracking-widest hover:bg-nu-ink/5 inline-flex items-center justify-center gap-1.5 no-underline text-nu-ink"
+                >
+                  미팅 상세 →
+                </Link>
+              )}
             </div>
           </div>
         </div>
