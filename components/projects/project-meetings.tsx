@@ -215,6 +215,48 @@ export function ProjectMeetings({
   }
 
   async function handleStatusChange(meetingId: string, newStatus: string) {
+    // 완료 전환 — AI 회의록 생성 + 상태 일괄 처리 (너트 회의 페이지와 동일 흐름)
+    if (newStatus === "completed") {
+      const target = meetings.find((m) => m.id === meetingId);
+      const ok = window.confirm(
+        target?.summary
+          ? "회의를 종료하시겠습니까? 기존 요약과 노트·녹음을 종합해 AI 가 회의록을 다시 정리합니다."
+          : "회의를 종료하시겠습니까? 노트·녹음을 종합해 AI 가 회의록 초안을 자동 생성합니다."
+      );
+      if (!ok) return;
+
+      const tid = toast.loading("🧠 AI 가 회의록을 정리하고 있습니다…");
+      try {
+        // 안건 정보도 같이 — conclude 엔드포인트가 활용
+        const supabase = createClient();
+        const { data: agendas } = await supabase
+          .from("meeting_agendas")
+          .select("topic, description, sort_order")
+          .eq("meeting_id", meetingId)
+          .order("sort_order");
+        const r = await fetch(`/api/meetings/${meetingId}/conclude`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            notes: target?.summary || "",
+            agendas: agendas ?? [],
+          }),
+        });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j?.error || "회의록 생성 실패");
+        toast.success("회의가 종료되었습니다. 회의록이 저장되었어요.", { id: tid });
+        await loadData();
+      } catch (e) {
+        // AI 실패해도 status 만 강제 전환
+        const supabase = createClient();
+        await supabase.from("meetings").update({ status: "completed" }).eq("id", meetingId);
+        toast.error(e instanceof Error ? `AI 정리 실패 — 상태만 변경됨: ${e.message}` : "AI 정리 실패", { id: tid });
+        await loadData();
+      }
+      return;
+    }
+
+    // 일반 상태 변경 (upcoming → in_progress / cancelled 등)
     const supabase = createClient();
     const { error } = await supabase
       .from("meetings")
@@ -222,8 +264,9 @@ export function ProjectMeetings({
       .eq("id", meetingId);
 
     if (error) {
-      toast.error("상태 변경 실패");
+      toast.error("상태 변경 실패: " + error.message);
     } else {
+      if (newStatus === "in_progress") toast.success("회의가 시작되었습니다");
       await loadData();
     }
   }
@@ -648,6 +691,11 @@ function MeetingCard({
       {/* Expanded Content */}
       {expanded && (
         <div className="border-t border-nu-ink/[0.08] px-5 py-5 space-y-6">
+          {/* In-progress 라이브 타이머 — 너트 회의 페이지와 동일 */}
+          {meeting.status === "in_progress" && (
+            <MeetingLiveTimer startedAt={meeting.scheduled_at} />
+          )}
+
           {/* Status Actions */}
           {canEdit && (
             <div className="flex items-center gap-2 flex-wrap">
@@ -1037,6 +1085,43 @@ function MeetingInfoEditor({
           </span>
         )}
       </div>
+    </div>
+  );
+}
+
+
+/* ── Live Timer ─────────────────────────────────────────────────────
+ * 회의가 in_progress 상태일 때 expanded 영역 상단에 표시.
+ * scheduled_at 보다 늦게 시작된 경우에도 그 시각 기준으로 카운트.
+ */
+function MeetingLiveTimer({ startedAt }: { startedAt: string }) {
+  const [elapsed, setElapsed] = useState("0:00");
+  useEffect(() => {
+    const start = new Date(startedAt).getTime();
+    const tick = () => {
+      const diff = Math.max(0, Date.now() - start);
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setElapsed(
+        h > 0
+          ? h + ":" + String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0")
+          : m + ":" + String(s).padStart(2, "0")
+      );
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [startedAt]);
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border-2 border-green-200">
+      <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+      <span className="font-mono-nu text-[12px] uppercase tracking-widest text-green-700 font-bold">
+        회의 진행 중
+      </span>
+      <span className="font-mono-nu text-[13px] text-green-800 font-black tabular-nums">
+        {elapsed}
+      </span>
     </div>
   );
 }
