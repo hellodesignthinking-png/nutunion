@@ -62,6 +62,7 @@ import { ProjectModulesBoard } from "@/components/projects/project-modules-board
 import { ProjectOsPanel } from "@/components/projects/project-os-panel";
 import { ProjectShareModal } from "@/components/projects/project-share-modal";
 import { ProjectChatPanel } from "@/components/projects/project-chat-panel";
+import { SpacePages } from "@/components/spaces/space-pages";
 import { MeetingArchiveTimeline } from "@/components/meetings/meeting-archive-timeline";
 
 // 메뉴 통일 (2026-04) — 단일 탭바 한 줄로 모든 기능 접근.
@@ -778,8 +779,31 @@ export function TabsInner({
       {/* ── Wiki/Tap Tab — 빈 탭 사용법 가이드 + 풀 에디터 진입 ─────────── */}
       {activeTab === "wiki" && (
         <div className="max-w-4xl mx-auto space-y-6">
-          {/* 사용법 가이드 카드 */}
-          <div className="border-[3px] border-nu-ink bg-nu-cream/50 p-6">
+          {/* 📄 페이지 — 노션 스타일 인라인 에디터 (멤버 누구나 추가·편집·삭제) */}
+          {userId && (
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <FileText size={14} className="text-nu-pink" />
+                <h2 className="font-head text-[16px] font-extrabold text-nu-ink">페이지</h2>
+                <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">
+                  멤버 누구나 추가·편집·삭제
+                </span>
+              </div>
+              <SpacePages
+                ownerType="bolt"
+                ownerId={projectId}
+                ownerName={project?.title || "볼트"}
+                currentUserId={userId}
+              />
+            </div>
+          )}
+
+          {/* 사용법 가이드 카드 — 접기로 변경해 노이즈 줄임 */}
+          <details className="border-[2px] border-nu-ink/15 bg-nu-cream/30">
+            <summary className="cursor-pointer px-4 py-2.5 font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted hover:bg-nu-cream/50 select-none flex items-center gap-2">
+              <Sticker size={12} className="text-nu-pink" /> "탭" 풀 에디터·아카이브 가이드
+            </summary>
+          <div className="border-t-[2px] border-nu-ink/10 bg-nu-cream/50 p-6">
             <div className="flex items-start gap-3 mb-4">
               <Sticker size={22} className="text-nu-pink mt-0.5 shrink-0" />
               <div>
@@ -868,6 +892,7 @@ export function TabsInner({
               </div>
             </div>
           )}
+          </details>
         </div>
       )}
 

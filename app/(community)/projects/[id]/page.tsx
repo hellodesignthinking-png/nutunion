@@ -23,8 +23,6 @@ import { CloseProjectModal } from "@/components/project-closure/close-project-mo
 import { ProjectClosureBanner } from "@/components/project-closure/project-closure-banner";
 import { VentureStageBadge } from "@/components/venture/venture-stage-badge";
 import { ThreadBetaSection } from "@/components/threads/thread-beta-section";
-import { SpacePages } from "@/components/spaces/space-pages";
-import { FileText } from "lucide-react";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   try {
@@ -536,19 +534,7 @@ async function ProjectTabsWrapper({ id, userId, isAdmin, project }: any) {
           progressPct={progressPct}
         />
       </Suspense>
-      {/* 📄 자유 페이지 — 노션 스타일 */}
-      {userId && (
-        <div className="max-w-[1200px] mx-auto px-4 md:px-6 pb-6">
-          <div className="mb-2 flex items-center gap-2">
-            <FileText size={14} className="text-nu-pink" />
-            <h2 className="font-head text-[16px] font-extrabold text-nu-ink">페이지</h2>
-            <span className="font-mono-nu text-[10px] uppercase tracking-widest text-nu-muted">
-              볼트 멤버 누구나 추가·편집·삭제 가능
-            </span>
-          </div>
-          <SpacePages ownerType="bolt" ownerId={id} ownerName={project.title} currentUserId={userId || undefined} />
-        </div>
-      )}
+      {/* 📄 페이지 (SpacePages) 는 "탭" 탭 안으로 통합됨 — 곳곳에 있어 혼란 유발하던 글로벌 노출 제거 */}
 
       {/* 🧪 Thread Beta — 메뉴 통일 (2026-04) 후 lead 전용으로 노출.
           일반 멤버에게는 혼란만 유발했던 영역. lead는 [설정] 탭의 모듈 안내에서도 접근 가능. */}
